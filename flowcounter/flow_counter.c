@@ -10,7 +10,7 @@
 #include <stdint.h>
 
 #include <libtrap/trap.h>
-#include "unirec.h"
+#include "../unirec.h"
 
 /* ****************************** Modify here ****************************** */
 // Struct with information about module

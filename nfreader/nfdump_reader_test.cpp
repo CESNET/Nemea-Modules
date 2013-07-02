@@ -18,7 +18,7 @@ extern "C" {
 #include <libtrap/trap.h>
 #include "nfreader.h"
 }
-#include "unirec.h"
+#include "../unirec.h"
 
 using namespace std;
 
