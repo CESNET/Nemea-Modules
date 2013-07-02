@@ -18,7 +18,7 @@ extern "C" {
 #include <libtrap/trap.h>
 #include "nfreader.h"
 }
-#include "unirec.h"
+#include "../unirec.h"
 
 using namespace std;
 
@@ -137,9 +137,11 @@ int main(int argc, char **argv)
       rec2.tcp_flags = rec.tcp_flags;
       rec2.packets = rec.dPkts;
       rec2.bytes = rec.dOctets;
-      rec2.first = (((uint64_t)rec.first)<<32) | rec.msec_first;   // Merge secs and msecs together
-      rec2.last = (((uint64_t)rec.last)<<32) | rec.msec_last;      // Merge secs and msecs together
-      
+      // Merge secs and msecs together (temporary with Magic Binary Constant (2^32/1000 in fixed-point))
+      rec2.first = (((uint64_t)rec.first)<<32) | ((((uint64_t)rec.msec_first) * 0b01000001100010010011011101001011110001101010011111101111)>>32);
+      rec2.last  = (((uint64_t)rec.last)<<32)  | ((((uint64_t)rec.msec_last)  * 0b01000001100010010011011101001011110001101010011111101111)>>32);         
+
+
       // assign value for link and direction of the flow
       if ((cnt_rec % (rand() % 5000 + 5000)) == 0) {
           rec2.linkbitfield = 0x01;

@@ -12,7 +12,7 @@
 
 #include <libtrap/trap.h>
 #include "nfreader.h"
-#include "unirec.h"
+#include "../unirec.h"
 
 // Struct with information about module
 trap_module_info_t module_info = {
@@ -145,28 +145,11 @@ int main(int argc, char **argv)
           rec2.src_addr = ip_from_16_bytes_le((char *)rec.ip_union._v6.srcaddr);
           rec2.dst_addr = ip_from_16_bytes_le((char *)rec.ip_union._v6.dstaddr);
 
-         /*// rec.ip_union._v6.srcaddr is uint64_t[2]
-         rec2.src_addr.ui32[0] = rec.ip_union._v6.srcaddr[0];
-         rec2.src_addr.ui32[1] = rec.ip_union._v6.srcaddr[0] >> 32;
-         rec2.src_addr.ui32[2] = rec.ip_union._v6.srcaddr[1];
-         rec2.src_addr.ui32[3] = rec.ip_union._v6.srcaddr[1] >> 32;
-         rec2.dst_addr.ui32[0] = rec.ip_union._v6.dstaddr[0];
-         rec2.dst_addr.ui32[1] = rec.ip_union._v6.dstaddr[0] >> 32;
-         rec2.dst_addr.ui32[2] = rec.ip_union._v6.dstaddr[1];
-         rec2.dst_addr.ui32[3] = rec.ip_union._v6.dstaddr[1] >> 32;*/
-      }
+            }
       else { // IPv4  
          rec2.src_addr = ip_from_4_bytes_le((char *)&rec.ip_union._v4.srcaddr);
          rec2.dst_addr = ip_from_4_bytes_le((char *)&rec.ip_union._v4.dstaddr);
 
-         /*rec2.src_addr.ui32[0] = rec.ip_union._v4.srcaddr;
-         rec2.src_addr.ui32[1] = 0;
-         rec2.src_addr.ui32[2] = 0;
-         rec2.src_addr.ui32[3] = 0;
-         rec2.dst_addr.ui32[0] = rec.ip_union._v4.dstaddr;
-         rec2.dst_addr.ui32[1] = 0;
-         rec2.dst_addr.ui32[2] = 0;
-         rec2.dst_addr.ui32[3] = 0;*/
       }
       rec2.src_port = rec.srcport;
       rec2.dst_port = rec.dstport;
@@ -174,8 +157,9 @@ int main(int argc, char **argv)
       rec2.tcp_flags = rec.tcp_flags;
       rec2.packets = rec.dPkts;
       rec2.bytes = rec.dOctets;
-      rec2.first = (((uint64_t)rec.first)<<32) | rec.msec_first; // Merge secs and msecs together
-      rec2.last = (((uint64_t)rec.last)<<32) | rec.msec_last;    // Merge secs and msecs together
+       // Merge secs and msecs together (temporary with Magic Binary Constant (2^32/1000 in fixed-point))
+      rec2.first = (((uint64_t)rec.first)<<32) | ((((uint64_t)rec.msec_first) * 0b01000001100010010011011101001011110001101010011111101111)>>32);
+      rec2.last  = (((uint64_t)rec.last)<<32)  | ((((uint64_t)rec.msec_last)  * 0b01000001100010010011011101001011110001101010011111101111)>>32);
       
 
       // Send data to output interface

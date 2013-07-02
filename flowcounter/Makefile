@@ -5,19 +5,14 @@ CXXFLAGS=-O2
 LDFLAGS=
 LDLIBS=-ltrap -lcommlbr -lrt
 
-SUBDIRS=nfreader flowcounter transitfilter
 
 
 # if no special flags or libraries are needed, it's sufficient to add the name
 # of a new module here (when no rule is found, make uses default one)
+MODULES=flow_counter
 
-all: others
+all: ${MODULES}
 
-.PHONY: others
-others:
-	@for directory in $(SUBDIRS); do \
-		make -C "$$directory"; \
-	done
 
 clean:
 	rm -f *.o ${MODULES}
