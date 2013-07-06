@@ -60,6 +60,7 @@ int main(int argc, char **argv)
    ret = trap_init(&module_info, ifc_spec);
    if (ret != TRAP_E_OK) {
       fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
+      return 2;
    }
    trap_free_ifc_spec(ifc_spec);
    
