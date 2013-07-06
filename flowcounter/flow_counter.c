@@ -8,6 +8,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <getopt.h>
 
 #include <libtrap/trap.h>
 #include "../../unirec/unirec.h"
@@ -43,9 +44,6 @@ int main(int argc, char **argv)
    unsigned long cnt_packets = 0;
    unsigned long cnt_bytes = 0;
    
-   // ***** Create UniRec template *****
-   ur_template_t *tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS");
-   
    // ***** TRAP initialization *****
    trap_ifc_spec_t ifc_spec;
    
@@ -69,6 +67,29 @@ int main(int argc, char **argv)
    
    signal(SIGTERM, signal_handler);
    signal(SIGINT, signal_handler);
+   
+   // ***** Create UniRec template *****
+   
+   char *unirec_specifier = "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS";
+   char opt;
+   while ((opt = getopt(argc, argv, "u:")) != -1) {
+      switch (opt) {
+         case 'u':
+            unirec_specifier = optarg;
+            break;
+         default:
+            fprintf(stderr, "Invalid arguments.\n");
+            return 3;
+      }
+   }
+   
+   ur_template_t *tmplt = ur_create_template(unirec_specifier);
+   if (tmplt == NULL) {
+      fprintf(stderr, "Error: Invalid UniRec specifier.\n");
+      trap_finalize();
+      return 4;
+   }
+   
    
    // ***** Main processing loop *****
    
