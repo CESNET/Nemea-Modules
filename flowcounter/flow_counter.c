@@ -10,7 +10,7 @@
 #include <stdint.h>
 
 #include <libtrap/trap.h>
-#include "../unirec.h"
+#include "../../unirec/unirec.h"
 
 /* ****************************** Modify here ****************************** */
 // Struct with information about module
@@ -19,7 +19,7 @@ trap_module_info_t module_info = {
    // Module description
    "Example module for counting number of incoming flow records.\n"
    "Interfaces:\n"
-   "   Inputs: 1 (ur_basic_flow)\n"
+   "   Inputs: 1 (flow records)\n"
    "   Outputs: 0\n",
    1, // Number of input interfaces
    0, // Number of output interfaces
@@ -42,6 +42,9 @@ int main(int argc, char **argv)
    unsigned long cnt_flows = 0;
    unsigned long cnt_packets = 0;
    unsigned long cnt_bytes = 0;
+   
+   // ***** Create UniRec template *****
+   ur_template_t *tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS");
    
    // ***** TRAP initialization *****
    trap_ifc_spec_t ifc_spec;
@@ -85,25 +88,21 @@ int main(int argc, char **argv)
       }
       
       // Check size of received data
-      if (data_size != sizeof(ur_basic_flow_t)) {
+      if (data_size < ur_record_size(tmplt)) {
          if (data_size <= 1) {
-            break; // End of data
+            break; // End of data (used for testing purposes)
          }
          else {
-            fprintf(stderr, "Error: data with wrong size received (expected size: %i, received size: %i)\n",
-                    sizeof(ur_basic_flow_t), data_size);
+            fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
+                    ur_record_size(tmplt), data_size);
             break;
          }
       }
       
-      // Reinterpret data as flow record
-      ur_basic_flow_t *rec = (ur_basic_flow_t*)data;
-      
       // Update counters
       cnt_flows += 1;
-      cnt_packets += rec->packets;
-      cnt_bytes += rec->bytes;
-      
+      cnt_packets += ur_get(tmplt, data, UR_PACKETS);
+      cnt_bytes += ur_get(tmplt, data, UR_BYTES);
    }
    
    // ***** Print results *****
@@ -117,6 +116,8 @@ int main(int argc, char **argv)
    // Do all necessary cleanup before exiting
    // (close interfaces and free allocated memory)
    trap_finalize();
+   
+   ur_free_template(tmplt);
    
    return 0;
 }
