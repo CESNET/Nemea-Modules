@@ -89,13 +89,13 @@ int main(int argc, char **argv)
       }
       
       // Check size of received data
-      if (data_size < ur_record_size(tmplt)) {
+      if (data_size < ur_rec_static_size(tmplt)) {
          if (data_size <= 1) {
             break; // End of data (used for testing purposes)
          }
          else {
             fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
-                    ur_record_size(tmplt), data_size);
+                    ur_rec_static_size(tmplt), data_size);
             break;
          }
       }
