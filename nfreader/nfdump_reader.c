@@ -182,7 +182,7 @@ int main(int argc, char **argv)
       */
       
       // Send data to output interface
-      trap_send_data(0, rec2, ur_record_size(tmplt), TRAP_WAIT);
+      trap_send_data(0, rec2, ur_rec_static_size(tmplt), TRAP_WAIT);
       counter++;
       //usleep(100);
       
