@@ -90,6 +90,7 @@ int main(int argc, char **argv)
    if (ret != TRAP_E_OK) {
       nf_close(&file);
       fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
+      return 4;
    }
    trap_free_ifc_spec(ifc_spec); // We don't need ifc_spec anymore
    
