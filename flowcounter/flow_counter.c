@@ -8,6 +8,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <getopt.h>
 
 #include <libtrap/trap.h>
@@ -19,6 +20,9 @@ trap_module_info_t module_info = {
    "Flow-counter module", // Module name
    // Module description
    "Example module for counting number of incoming flow records.\n"
+   "Parameters:\n"
+   "   -u TMPLT    Specify UniRec template expected on the input interface.\n"
+   "   -p N        Show progess - print a dot every N flows.\n"
    "Interfaces:\n"
    "   Inputs: 1 (flow records)\n"
    "   Outputs: 0\n",
@@ -28,6 +32,7 @@ trap_module_info_t module_info = {
 /* ************************************************************************* */
 
 static int stop = 0;
+static int progress = 0;
 
 void signal_handler(int signal)
 {
@@ -72,10 +77,13 @@ int main(int argc, char **argv)
    
    char *unirec_specifier = "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS";
    char opt;
-   while ((opt = getopt(argc, argv, "u:")) != -1) {
+   while ((opt = getopt(argc, argv, "u:p:")) != -1) {
       switch (opt) {
          case 'u':
             unirec_specifier = optarg;
+            break;
+         case 'p':
+            progress = atoi(optarg);
             break;
          default:
             fprintf(stderr, "Invalid arguments.\n");
@@ -121,6 +129,11 @@ int main(int argc, char **argv)
          }
       }
       
+      if (progress > 0 && cnt_flows % progress == 0) {
+         printf(".");
+         fflush(stdout);
+      }
+      
       // Update counters
       cnt_flows += 1;
       cnt_packets += ur_get(tmplt, data, UR_PACKETS);
@@ -129,6 +142,9 @@ int main(int argc, char **argv)
    
    // ***** Print results *****
 
+   if (progress > 0) {
+      printf("\n");
+   }
    printf("Flows:   %20lu\n", cnt_flows);
    printf("Packets: %20lu\n", cnt_packets);
    printf("Bytes:   %20lu\n", cnt_bytes);
