@@ -168,20 +168,8 @@ int main(int argc, char **argv)
       uint64_t first = (((uint64_t)rec.first)<<32) | ((((uint64_t)rec.msec_first) * 0b01000001100010010011011101001011110001101010011111101111)>>32);
       uint64_t last  = (((uint64_t)rec.last)<<32)  | ((((uint64_t)rec.msec_last)  * 0b01000001100010010011011101001011110001101010011111101111)>>32);
       ur_set(tmplt, rec2, UR_TIME_FIRST, first);
-      ur_set(tmplt, rec2, UR_TIME_LAST, last);
-      
-      // assign value for link and direction of the flow
-      /*if ((counter % (rand() % 50000 + 50000)) == 0) {
-          ur_set(tmplt, rec2, UR_LINK_BIT_FIELD, 0x01);
-      } else if ((counter % (rand() % 40000 + 1))) {
-          ur_set(tmplt, rec2, UR_LINK_BIT_FIELD, 0x02);
-      } else {
-          ur_set(tmplt, rec2, UR_LINK_BIT_FIELD, 0x04);
-      }
-      
-      ur_set(tmplt, rec2, UR_DIR_BIT_FIELD, rec.input);
-      */
-      
+      ur_set(tmplt, rec2, UR_TIME_LAST, last);               
+
       // Send data to output interface
       trap_send_data(0, rec2, ur_rec_static_size(tmplt), TRAP_WAIT);
       counter++;
