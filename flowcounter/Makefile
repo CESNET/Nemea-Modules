@@ -1,9 +1,9 @@
 CC=gcc
 CXX=g++
-CFLAGS=-O2
+CFLAGS=-std=c99 -O2
 CXXFLAGS=-O2
 LDFLAGS=
-LDLIBS=-ltrap -lcommlbr -lrt
+LDLIBS=../../unirec/unirec.o -ltrap -lcommlbr -lrt
 
 
 

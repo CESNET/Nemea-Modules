@@ -8,9 +8,11 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <getopt.h>
 
 #include <libtrap/trap.h>
-#include "../unirec.h"
+#include "../../unirec/unirec.h"
 
 /* ****************************** Modify here ****************************** */
 // Struct with information about module
@@ -18,8 +20,11 @@ trap_module_info_t module_info = {
    "Flow-counter module", // Module name
    // Module description
    "Example module for counting number of incoming flow records.\n"
+   "Parameters:\n"
+   "   -u TMPLT    Specify UniRec template expected on the input interface.\n"
+   "   -p N        Show progess - print a dot every N flows.\n"
    "Interfaces:\n"
-   "   Inputs: 1 (ur_basic_flow)\n"
+   "   Inputs: 1 (flow records)\n"
    "   Outputs: 0\n",
    1, // Number of input interfaces
    0, // Number of output interfaces
@@ -27,6 +32,7 @@ trap_module_info_t module_info = {
 /* ************************************************************************* */
 
 static int stop = 0;
+static int progress = 0;
 
 void signal_handler(int signal)
 {
@@ -60,11 +66,38 @@ int main(int argc, char **argv)
    ret = trap_init(&module_info, ifc_spec);
    if (ret != TRAP_E_OK) {
       fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
+      return 2;
    }
    trap_free_ifc_spec(ifc_spec);
    
    signal(SIGTERM, signal_handler);
    signal(SIGINT, signal_handler);
+   
+   // ***** Create UniRec template *****
+   
+   char *unirec_specifier = "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS";
+   char opt;
+   while ((opt = getopt(argc, argv, "u:p:")) != -1) {
+      switch (opt) {
+         case 'u':
+            unirec_specifier = optarg;
+            break;
+         case 'p':
+            progress = atoi(optarg);
+            break;
+         default:
+            fprintf(stderr, "Invalid arguments.\n");
+            return 3;
+      }
+   }
+   
+   ur_template_t *tmplt = ur_create_template(unirec_specifier);
+   if (tmplt == NULL) {
+      fprintf(stderr, "Error: Invalid UniRec specifier.\n");
+      trap_finalize();
+      return 4;
+   }
+   
    
    // ***** Main processing loop *****
    
@@ -85,29 +118,33 @@ int main(int argc, char **argv)
       }
       
       // Check size of received data
-      if (data_size != sizeof(ur_basic_flow_t)) {
+      if (data_size < ur_rec_static_size(tmplt)) {
          if (data_size <= 1) {
-            break; // End of data
+            break; // End of data (used for testing purposes)
          }
          else {
-            fprintf(stderr, "Error: data with wrong size received (expected size: %i, received size: %i)\n",
-                    sizeof(ur_basic_flow_t), data_size);
+            fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
+                    ur_rec_static_size(tmplt), data_size);
             break;
          }
       }
       
-      // Reinterpret data as flow record
-      ur_basic_flow_t *rec = (ur_basic_flow_t*)data;
+      if (progress > 0 && cnt_flows % progress == 0) {
+         printf(".");
+         fflush(stdout);
+      }
       
       // Update counters
       cnt_flows += 1;
-      cnt_packets += rec->packets;
-      cnt_bytes += rec->bytes;
-      
+      cnt_packets += ur_get(tmplt, data, UR_PACKETS);
+      cnt_bytes += ur_get(tmplt, data, UR_BYTES);
    }
    
    // ***** Print results *****
 
+   if (progress > 0) {
+      printf("\n");
+   }
    printf("Flows:   %20lu\n", cnt_flows);
    printf("Packets: %20lu\n", cnt_packets);
    printf("Bytes:   %20lu\n", cnt_bytes);
@@ -117,6 +154,8 @@ int main(int argc, char **argv)
    // Do all necessary cleanup before exiting
    // (close interfaces and free allocated memory)
    trap_finalize();
+   
+   ur_free_template(tmplt);
    
    return 0;
 }

@@ -8,11 +8,13 @@
 
 #include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 #include <getopt.h>
 
 #include <libtrap/trap.h>
 #include "nfreader.h"
-#include "../unirec.h"
+#include "../../unirec/unirec.h"
 
 // Struct with information about module
 trap_module_info_t module_info = {
@@ -22,7 +24,7 @@ trap_module_info_t module_info = {
    "UniRec format.\n"
    "Interfaces:\n"
    "   Inputs: 0\n"
-   "   Outputs: 1 (ur_basic_flow)\n",
+   "   Outputs: 1 (flow records)\n",
    0, // Number of input interfaces
    1, // Number of output interfaces
 };
@@ -47,6 +49,10 @@ int main(int argc, char **argv)
    int send_eof = 1;
    int verbose = 0;
    
+   // Create UniRec template
+   ur_template_t *tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS");
+   //ur_template_t *tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD");
+   
    // Let TRAP library parse command-line arguments and extract its parameters
    ret = trap_parse_params(&argc, argv, &ifc_spec);
    if (ret != TRAP_E_OK) {
@@ -60,6 +66,7 @@ int main(int argc, char **argv)
    
    verbose = (trap_get_verbose_level() >= 0);
    
+   // Parse remaining parameters
    char opt;
    while ((opt = getopt(argc, argv, "c:n")) != -1) {
       switch (opt) {
@@ -102,6 +109,7 @@ int main(int argc, char **argv)
    if (ret != TRAP_E_OK) {
       nf_close(&file);
       fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
+      return 4;
    }
    trap_free_ifc_spec(ifc_spec); // We don't need ifc_spec anymore
    
@@ -112,6 +120,11 @@ int main(int argc, char **argv)
    if (verbose) {
       printf("Sending records ...\n");
    }
+
+   // Allocate memory for output UniRec record (0 bytes for dynamic fields)
+   void *rec2 = ur_create(tmplt, 0);
+   
+   srand(time(NULL));
    while (!stop && (max_records == 0 || counter < max_records)) {
       master_record_t rec;
 
@@ -126,14 +139,9 @@ int main(int argc, char **argv)
          return 3;
       }
 
- 
-
-     ur_basic_flow_t rec2;
-     uint64_t tmp_ip_v6_addr; 
-
-      // Copy data from master_record_t to ur_basic_flow_t
-      // TODO check endinanness
+      // Copy data from master_record_t to UniRec record
       if (rec.flags & 0x01) { // IPv6
+         uint64_t tmp_ip_v6_addr;
          // Swap IPv6 halves
          tmp_ip_v6_addr = rec.ip_union._v6.srcaddr[0];
          rec.ip_union._v6.srcaddr[0] = rec.ip_union._v6.srcaddr[1];
@@ -142,28 +150,28 @@ int main(int argc, char **argv)
          rec.ip_union._v6.dstaddr[0] = rec.ip_union._v6.dstaddr[1];
          rec.ip_union._v6.dstaddr[1] = tmp_ip_v6_addr;
 
-          rec2.src_addr = ip_from_16_bytes_le((char *)rec.ip_union._v6.srcaddr);
-          rec2.dst_addr = ip_from_16_bytes_le((char *)rec.ip_union._v6.dstaddr);
-
-            }
+         ur_set(tmplt, rec2, UR_SRC_IP, ip_from_16_bytes_le((char *)rec.ip_union._v6.srcaddr));
+         ur_set(tmplt, rec2, UR_DST_IP, ip_from_16_bytes_le((char *)rec.ip_union._v6.dstaddr));
+      }
       else { // IPv4  
-         rec2.src_addr = ip_from_4_bytes_le((char *)&rec.ip_union._v4.srcaddr);
-         rec2.dst_addr = ip_from_4_bytes_le((char *)&rec.ip_union._v4.dstaddr);
+         ur_set(tmplt, rec2, UR_SRC_IP, ip_from_4_bytes_le((char *)&rec.ip_union._v4.srcaddr));
+         ur_set(tmplt, rec2, UR_DST_IP, ip_from_4_bytes_le((char *)&rec.ip_union._v4.dstaddr));
 
       }
-      rec2.src_port = rec.srcport;
-      rec2.dst_port = rec.dstport;
-      rec2.proto = rec.prot;
-      rec2.tcp_flags = rec.tcp_flags;
-      rec2.packets = rec.dPkts;
-      rec2.bytes = rec.dOctets;
+      ur_set(tmplt, rec2, UR_SRC_PORT, rec.srcport);
+      ur_set(tmplt, rec2, UR_DST_PORT, rec.dstport);
+      ur_set(tmplt, rec2, UR_PROTOCOL, rec.prot);
+      ur_set(tmplt, rec2, UR_TCP_FLAGS, rec.tcp_flags);
+      ur_set(tmplt, rec2, UR_PACKETS, rec.dPkts);
+      ur_set(tmplt, rec2, UR_BYTES, rec.dOctets);
        // Merge secs and msecs together (temporary with Magic Binary Constant (2^32/1000 in fixed-point))
-      rec2.first = (((uint64_t)rec.first)<<32) | ((((uint64_t)rec.msec_first) * 0b01000001100010010011011101001011110001101010011111101111)>>32);
-      rec2.last  = (((uint64_t)rec.last)<<32)  | ((((uint64_t)rec.msec_last)  * 0b01000001100010010011011101001011110001101010011111101111)>>32);
-      
+      uint64_t first = (((uint64_t)rec.first)<<32) | ((((uint64_t)rec.msec_first) * 0b01000001100010010011011101001011110001101010011111101111)>>32);
+      uint64_t last  = (((uint64_t)rec.last)<<32)  | ((((uint64_t)rec.msec_last)  * 0b01000001100010010011011101001011110001101010011111101111)>>32);
+      ur_set(tmplt, rec2, UR_TIME_FIRST, first);
+      ur_set(tmplt, rec2, UR_TIME_LAST, last);               
 
       // Send data to output interface
-      trap_send_data(0, &rec2, sizeof(rec2), TRAP_WAIT);
+      trap_send_data(0, rec2, ur_rec_static_size(tmplt), TRAP_WAIT);
       counter++;
       //usleep(100);
       
@@ -178,7 +186,7 @@ int main(int argc, char **argv)
    }
    
    nf_close(&file);
-
+   
    printf("%lu flow records sent\n", counter);
    
    // Send data with zero length to signalize end
@@ -191,7 +199,7 @@ int main(int argc, char **argv)
    }
    
    // Do all necessary cleanup before exiting
-   // (close interfaces and free allocated memory)
+   ur_free(rec2);
    trap_finalize();
 
    return 0;
