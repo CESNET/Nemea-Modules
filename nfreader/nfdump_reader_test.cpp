@@ -166,7 +166,6 @@ int main(int argc, char **argv)
       ur_set(tmplt, rec2, UR_DIR_BIT_FIELD, rec.input);
       */
 
-      printf("%x\n", rec.input);
    }
 
    nf_close(&file);
