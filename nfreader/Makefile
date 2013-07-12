@@ -11,7 +11,7 @@ MODULES=nfdump_reader nfdump_reader_test
 all: ${MODULES}
 
 nfdump_reader.o: nfdump_reader.c
-	$(CXX) -c -o nfdump_reader.o nfdump_reader.c
+	$(CXX) $(CFLAGS) -c -o nfdump_reader.o nfdump_reader.c
 
 nfdump_reader: nfdump_reader.o
 	$(CXX) ${LDFLAGS} -o nfdump_reader nfdump_reader.o ./nfreader.so ${LDLIBS}
