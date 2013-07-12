@@ -1,7 +1,9 @@
 CC=gcc
 CXX=g++
-CFLAGS=-std=c99 -O2
-CXXFLAGS=-std=c99 -O2
+CFLAGS=-O2
+CXXFLAGS=-O2
+#CFLAGS=-g
+#CXXFLAGS=-g
 LDFLAGS=
 LDLIBS=../../unirec/unirec.o -ltrap -lcommlbr -lrt
 
@@ -11,7 +13,7 @@ MODULES=nfdump_reader nfdump_reader_test
 all: ${MODULES}
 
 nfdump_reader.o: nfdump_reader.c
-	$(CXX) -c -o nfdump_reader.o nfdump_reader.c
+	$(CXX) $(CFLAGS) -c -o nfdump_reader.o nfdump_reader.c
 
 nfdump_reader: nfdump_reader.o
 	$(CXX) ${LDFLAGS} -o nfdump_reader nfdump_reader.o ./nfreader.so ${LDLIBS}
