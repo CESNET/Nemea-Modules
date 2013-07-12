@@ -18,9 +18,9 @@
 
 // Struct with information about module
 trap_module_info_t module_info = {
-   "Nfdump-reader module", // Module name
+   (char *) "Nfdump-reader module", // Module name
    // Module description
-   "This module module reads a given nfdump file and outputs flow records in \n"
+   (char *) "This module module reads a given nfdump file and outputs flow records in \n"
    "UniRec format.\n"
    "Interfaces:\n"
    "   Inputs: 0\n"
@@ -28,6 +28,9 @@ trap_module_info_t module_info = {
    0, // Number of input interfaces
    1, // Number of output interfaces
 };
+
+#define COMMONTIMEOUT TRAP_WAIT
+//#define COMMONTIMEOUT TRAP_HALFWAIT
 
 static int stop = 0;
 
@@ -171,7 +174,7 @@ int main(int argc, char **argv)
       ur_set(tmplt, rec2, UR_TIME_LAST, last);               
 
       // Send data to output interface
-      trap_send_data(0, rec2, ur_rec_static_size(tmplt), TRAP_WAIT);
+      trap_send_data(0, rec2, ur_rec_static_size(tmplt), COMMONTIMEOUT);
       counter++;
       //usleep(100);
       
@@ -195,7 +198,7 @@ int main(int argc, char **argv)
       if (verbose) {
          printf("Sending EOF message (zero-length record)\n");
       }
-      trap_send_data(0, dummy, 1, TRAP_WAIT); // FIXME: zero-length messages doesn't work, send message of length 1
+      trap_send_data(0, dummy, 1, COMMONTIMEOUT); // FIXME: zero-length messages doesn't work, send message of length 1
    }
    
    // Do all necessary cleanup before exiting
