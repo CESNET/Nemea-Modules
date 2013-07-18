@@ -84,7 +84,7 @@ void module_init(trap_module_info_t *module, int ifc_in, int ifc_out);
  * \brief Traffic repeater initialization.
  * Function to initialize the traffic repeater. 
  * \param[in] module_info Pointer to module structure used by TRAP.
- * \param[in] ifc_out Pointer to interface structure used by TRAP.
+ * \param[in] ifc_spec Pointer to interface structure used by TRAP.
  * \return EXIT_SUCCESS on success, otherwise EXIT_FAILURE.
  */
 int repeater_init(trap_module_info_t *module_info, trap_ifc_spec_t *ifc_spec);
