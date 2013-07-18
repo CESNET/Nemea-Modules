@@ -21,7 +21,7 @@ dir:
 	mkdir -p ./src/bin
 
 doc: 
-	$(DOXY)
+#	$(DOXY)
 
 traffic_repeater: ./src/bin/traffic_repeater.o	
 	$(CC) -o traffic_repeater ./src/bin/traffic_repeater.o $(LDLIBS)
