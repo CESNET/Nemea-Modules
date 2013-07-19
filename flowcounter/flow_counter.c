@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include <time.h>
 
 #include <libtrap/trap.h>
 #include "../../unirec/unirec.h"
@@ -32,6 +33,7 @@ trap_module_info_t module_info = {
 /* ************************************************************************* */
 
 static int stop = 0;
+static int stats = 0;
 static int progress = 0;
 
 void signal_handler(int signal)
@@ -39,6 +41,8 @@ void signal_handler(int signal)
    if (signal == SIGTERM || signal == SIGINT) {
       stop = 1;
       trap_terminate();
+   } else if (signal == SIGUSR1) {
+      stats = 1;
    }
 }
 
@@ -72,6 +76,7 @@ int main(int argc, char **argv)
    
    signal(SIGTERM, signal_handler);
    signal(SIGINT, signal_handler);
+   signal(SIGUSR1, signal_handler);
    
    // ***** Create UniRec template *****
    
@@ -138,6 +143,14 @@ int main(int argc, char **argv)
       cnt_flows += 1;
       cnt_packets += ur_get(tmplt, data, UR_PACKETS);
       cnt_bytes += ur_get(tmplt, data, UR_BYTES);
+      if (stats == 1) {
+         printf("Time: %lu\n", (long unsigned int) time(NULL));
+         printf("Flows:   %20lu\n", cnt_flows);
+         printf("Packets: %20lu\n", cnt_packets);
+         printf("Bytes:   %20lu\n", cnt_bytes);
+         signal(SIGUSR1, signal_handler);
+         stats = 0;
+      }
    }
    
    // ***** Print results *****
