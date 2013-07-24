@@ -54,25 +54,8 @@ int main(int argc, char **argv)
    unsigned long cnt_bytes = 0;
    
    // ***** TRAP initialization *****
-   trap_ifc_spec_t ifc_spec;
    
-   // Let TRAP library parse command-line arguments and extract its parameters
-   ret = trap_parse_params(&argc, argv, &ifc_spec);
-   if (ret != TRAP_E_OK) {
-      if (ret == TRAP_E_HELP) { // "-h" was found
-         trap_print_help(&module_info);
-         return 0;
-      }
-      fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
-      return 1;
-   }
-   // Initialize TRAP library (create and init all interfaces)
-   ret = trap_init(&module_info, ifc_spec);
-   if (ret != TRAP_E_OK) {
-      fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
-      return 2;
-   }
-   trap_free_ifc_spec(ifc_spec);
+   TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
    
    signal(SIGTERM, signal_handler);
    signal(SIGINT, signal_handler);
@@ -111,16 +94,7 @@ int main(int argc, char **argv)
       const void *data;
       uint16_t data_size;
       ret = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
-      if (ret != TRAP_E_OK) {
-         if (ret == TRAP_E_TERMINATED) {
-            // Module was terminated (e.g. by Ctrl-C)
-            break;
-         } else {
-            // Some error ocurred
-            fprintf(stderr, "Error: trap_get_data() returned %i (%s)\n", ret, trap_last_error_msg);
-            break;
-         }
-      }
+      TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
       
       // Check size of received data
       if (data_size < ur_rec_static_size(tmplt)) {
@@ -165,8 +139,7 @@ int main(int argc, char **argv)
    // ***** Cleanup *****
    
    // Do all necessary cleanup before exiting
-   // (close interfaces and free allocated memory)
-   trap_finalize();
+   TRAP_DEFAULT_FINALIZATION();
    
    ur_free_template(tmplt);
    
