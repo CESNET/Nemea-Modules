@@ -5,7 +5,7 @@ CXXFLAGS=-O2
 #CFLAGS=-g
 #CXXFLAGS=-g
 LDFLAGS=
-LDLIBS=../../unirec/unirec.o -ltrap -lcommlbr -lrt
+LDLIBS=../../unirec/unirec.o -ltrap
 
 
 MODULES=nfdump_reader nfdump_reader_test

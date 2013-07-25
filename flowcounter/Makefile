@@ -3,7 +3,7 @@ CXX=g++
 CFLAGS=-std=c99 -O2
 CXXFLAGS=-O2
 LDFLAGS=
-LDLIBS=../../unirec/unirec.o -ltrap -lcommlbr -lrt
+LDLIBS=../../unirec/unirec.o -ltrap
 
 
 
