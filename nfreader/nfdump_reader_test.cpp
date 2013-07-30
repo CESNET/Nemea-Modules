@@ -19,6 +19,7 @@ extern "C" {
 }
 #include <libtrap/trap.h>
 #include "../../unirec/unirec.h"
+#include "../../common/common.h"
 
 using namespace std;
 
@@ -148,9 +149,8 @@ int main(int argc, char **argv)
       ur_set(tmplt, rec2, UR_TCP_FLAGS, rec.tcp_flags);
       ur_set(tmplt, rec2, UR_PACKETS, rec.dPkts);
       ur_set(tmplt, rec2, UR_BYTES, rec.dOctets);
-       // Merge secs and msecs together (temporary with Magic Binary Constant (2^32/1000 in fixed-point))
-      uint64_t first = (((uint64_t)rec.first)<<32) | ((((uint64_t)rec.msec_first) * 0b01000001100010010011011101001011110001101010011111101111)>>32);
-      uint64_t last  = (((uint64_t)rec.last)<<32)  | ((((uint64_t)rec.msec_last)  * 0b01000001100010010011011101001011110001101010011111101111)>>32);
+      uint64_t first = TIME_CONVERT_NFDUMP_TO_UNIREC(rec.first, rec.msec_first);
+      uint64_t last  = TIME_CONVERT_NFDUMP_TO_UNIREC(rec.last, rec.msec_last);
       ur_set(tmplt, rec2, UR_TIME_FIRST, first);
       ur_set(tmplt, rec2, UR_TIME_LAST, last);
       
