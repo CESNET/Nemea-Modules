@@ -3,7 +3,7 @@
 # neuzija1@fit.cvut.cz
 
 CC		=  gcc
-CFLAGS  = -Wall -pedantic -Wno-long-long -O2 -ggdb
+CFLAGS  = -Wall -pedantic -O2 -ggdb
 LDLIBS	= -ltrap
 TARGETS =  dir doc traffic_repeater
 OBJECTS =  ./src/bin/traffic_repeater.o

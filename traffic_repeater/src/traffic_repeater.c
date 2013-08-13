@@ -42,10 +42,13 @@
 
 #include "traffic_repeater.h"
 
+int verbose = 0;
+
 void signal_handler(int signal)
 {
    if ((signal == SIGTERM) || (signal == SIGINT)) {
-      VERBOSE(CL_VERBOSE_OFF, "Signal termination or interrupt received.\n");
+      if (verbose)
+         printf("Signal termination or interrupt received.\n");
       stop = 1;
       trap_terminate();
    }
@@ -66,14 +69,14 @@ void module_init(trap_module_info_t *module, int ifc_in, int ifc_out)
 
 int repeater_init(trap_module_info_t *module_info, trap_ifc_spec_t *ifc_spec) 
 { 
-   verbose = CL_VERBOSE_OFF;
-   VERBOSE(CL_VERBOSE_OFF, "Initializing traffic repeater...");
+   printf("Initializing traffic repeater...\n");
    
    if (trap_init(module_info, *ifc_spec) != TRAP_E_OK) {
       fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
       trap_finalize();
       return EXIT_FAILURE;
    }
+   trap_free_ifc_spec(*ifc_spec);
    
    traffic_repeater();
    trap_finalize();
@@ -103,7 +106,8 @@ void traffic_repeater(void)
       if (ret == TRAP_E_OK) {
          cnt_r++;
          if (data_size == 1) {
-            VERBOSE(CL_VERBOSE_OFF, "Final record received, terminating repeater...");
+            if (verbose)
+               printf("Final record received, terminating repeater...\n");
             stop = 1;
          }          
          ret = trap_send_data(0, data, data_size, timeout);
@@ -153,6 +157,7 @@ int main(int argc, char **argv)
    snprintf(usage, BUFFER_TMP, "Usage: %s [-h] [-v] [-vv] [-vvv] -i IFC_SPEC\n", argv[0]);
    
    ret = trap_parse_params(&argc, argv, &ifc_spec);
+   verbose = (trap_get_verbose_level() >= 0);
    if (ret != TRAP_E_OK) {
       if (ret == TRAP_E_HELP) {
          trap_print_help(&module_info);
@@ -170,8 +175,8 @@ int main(int argc, char **argv)
       return EXIT_FAILURE;
    }
    
-   if (repeater_init(&module_info, &ifc_spec))
+   if (repeater_init(&module_info, &ifc_spec) == EXIT_SUCCESS)
+      return EXIT_SUCCESS;
+   else
       return EXIT_FAILURE;
-   
-   return EXIT_SUCCESS;
 }
