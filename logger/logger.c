@@ -48,7 +48,6 @@
 #include <libtrap/trap.h>
 #include "../../unirec/unirec.h"
 #include <omp.h>
-#include "../../common/time_convert/time_convert.h" // TODO this should be part of unirec
 
 // Struct with information about module
 trap_module_info_t module_info = {
@@ -207,8 +206,8 @@ void capture_thread(int index)
                      case UR_TYPE_TIME:
                         {
                            // Timestamp - convert to human-readable format and print
-                           time_t sec = TIME_CONVERT_UNIREC_TO_SECS(*(ur_time_t*)ptr);
-                           int msec = TIME_CONVERT_UNIREC_TO_MSECS(*(ur_time_t*)ptr);
+                           time_t sec = ur_time_get_sec(*(ur_time_t*)ptr);
+                           int msec = ur_time_get_msec(*(ur_time_t*)ptr);
                            char str[32];
                            strftime(str, 31, "%FT%T", gmtime(&sec));
                            fprintf(file, "%s.%03i", str, msec);
