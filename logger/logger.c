@@ -363,7 +363,11 @@ int main(int argc, char **argv)
       if (verbose >= 0) {
          printf("Creating output file \"%s\" ...\n", out_filename);
       }
-      file = fopen(out_filename, "w");
+      if (append) {
+         file = fopen(out_filename, "a");
+      } else {
+         file = fopen(out_filename, "w");
+      }
       if (file == NULL) {
          perror("Error: can't open output file:");
          ret = 3;
