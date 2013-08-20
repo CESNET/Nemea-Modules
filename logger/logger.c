@@ -54,13 +54,31 @@
 trap_module_info_t module_info = {
    "Logger", // Module name
    // Module description
-   "This module log all incoming UniRec records into specified files.\n"
-   "Number of input intefaces and UniRec formats are specified on command line\n"
-   "or using a confirugation file.\n"
+   "This module logs all incoming UniRec records to standard output or into a\n" 
+   "specified file. Each record is written as one line containing values of its\n"
+   "fields in human-readable format separated by commas (CSV format).\n"
+   "Number of input intefaces and their UniRec formats are given on command line\n"
+   "(if you specify N UniRec formats, N input interfaces will be created).\n"
+   "Output contains union of all fields of all input formats by default, but it may\n"
+   "be redefined using -o option.\n"
+   "\n"
    "Interfaces:\n"
    "   Inputs: variable\n"
-   "   Outputs: 0\n",
-   1, // Number of input interfaces
+   "   Outputs: 0\n"
+   "\n"
+   "Usage:\n"
+   "   ./logger -i IFC_SPEC [-w|-a FILE] UNIREC_FMT [UNIREC_FMT ...] [-o OUT_FMT] [-t] [-n]\n"
+   "\n"
+   "Module specific parameters:\n"
+   "   UNIREC_FMT   The i-th parameter of this type specifies format of UniRec\n"
+   "                expected on the i-th input interface.\n"
+   "   -w FILE      Write output to FILE instead of stdout (rewrite the file).\n"
+   "   -a FILE      Write output to FILE instead of stdout (append to the end).\n"
+   "   -o OUT_FMT   Set of fields included in the output (UniRec specifier).\n"
+   "   -t           Write names of fields on the first line.\n"
+   "   -n           Add the number of interface the record was received on as the\n"
+   "                first field.\n",
+   -1, // Number of input interfaces (-1 means variable)
    0, // Number of output interfaces
 };
 
