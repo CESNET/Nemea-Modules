@@ -15,7 +15,6 @@
 #include <libtrap/trap.h>
 #include "nfreader.h"
 #include "../../unirec/unirec.h"
-#include "../../common/common.h"
 
 
 // Struct with information about module
@@ -169,8 +168,8 @@ int main(int argc, char **argv)
       ur_set(tmplt, rec2, UR_TCP_FLAGS, rec.tcp_flags);
       ur_set(tmplt, rec2, UR_PACKETS, rec.dPkts);
       ur_set(tmplt, rec2, UR_BYTES, rec.dOctets);
-      uint64_t first = TIME_CONVERT_NFDUMP_TO_UNIREC(rec.first, rec.msec_first);
-      uint64_t last  = TIME_CONVERT_NFDUMP_TO_UNIREC(rec.last, rec.msec_last);
+      uint64_t first = ur_time_from_sec_msec(rec.first, rec.msec_first);
+      uint64_t last  = ur_time_from_sec_msec(rec.last, rec.msec_last);
       ur_set(tmplt, rec2, UR_TIME_FIRST, first);
       ur_set(tmplt, rec2, UR_TIME_LAST, last);               
 
