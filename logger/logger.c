@@ -419,6 +419,7 @@ int main(int argc, char **argv)
          comma = 1;
       }
       fprintf(file, "\n");
+      fflush(file);
    }
    
    // ***** Start a thread for each interface *****
