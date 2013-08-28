@@ -148,8 +148,15 @@ void capture_thread(int index)
             }
             comma = 1;
             if (ur_is_present(templates[index], id)) {
+               // Get pointer to the field (valid for static fields only)
+               void *ptr = ur_get_ptr_by_id(templates[index], rec, id);
                // Print the field
-               if (ur_is_dynamic(id)) {
+               if (id == UR_TIMESLOT) {
+                  char str[32];
+                  time_t ts = *(uint32_t*)ptr;
+                  strftime(str, 31, "%FT%T", gmtime(&ts));
+                  fprintf(file, "%s", str);
+               } else if (ur_is_dynamic(id)) {
                   // Dynamic field - write as a string
                   int size = ur_get_dyn_size(templates[index], rec, id);
                   char *data = ur_get_dyn(templates[index], rec, id);
@@ -160,7 +167,6 @@ void capture_thread(int index)
                   fprintf(file, "\"");
                } else {
                   // Static field - check what type is it and use appropriate format
-                  void *ptr = ur_get_ptr_by_id(templates[index], rec, id);
                   switch (ur_get_type_by_id(id)) {
                      case UR_TYPE_UINT8:
                         fprintf(file, "%u", *(uint8_t*)ptr);
