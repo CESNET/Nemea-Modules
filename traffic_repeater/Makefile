@@ -2,13 +2,13 @@
 # Project: Cesnet modules
 # neuzija1@fit.cvut.cz
 
-CC		=  gcc
+CC	=  gcc
 CFLAGS  = -Wall -pedantic -O2 -ggdb
 LDLIBS	= -ltrap
 TARGETS =  dir doc traffic_repeater
 OBJECTS =  ./src/bin/traffic_repeater.o
 DOXY    =  doxygen
-EXE		=  ./traffic_repeater
+EXE	=  ./traffic_repeater
 
 all: $(TARGETS)
 
