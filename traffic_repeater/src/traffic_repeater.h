@@ -60,16 +60,12 @@
  * \{ */
 #define IFC_DEF 1 /*< Default number of intefaces, do not change. */
 #define BUFFER_TMP 128 /*< Size of a temporary buffer. */
+#define TIMEOUT TRAP_WAIT /*< Default timeout handling, blocking or non-blocking calls. */ 
+#define NANOSECOND 1000000000 /*< Number of nanoseconds in a second. */
 /*! \} */
 
 static char stop = 0; /*!< Global variable used by signal handler to end the traffic repeater. */
-
-/*!
- * \brief Signal function.
- * Function to catch signal termination or interrupt and set the global variable.
- * \param[in] signal Number of signal which have been caught.
- */
-void signal_handler(int signal);
+static int verb = 0; /*< Global variable used to print verbose messages. */
 
 /*!
  * \brief Module initialization.
@@ -79,15 +75,6 @@ void signal_handler(int signal);
  * \param[in] ifc_out Number of server interfaces.
  */
 void module_init(trap_module_info_t *module, int ifc_in, int ifc_out);
-
-/*!
- * \brief Traffic repeater initialization.
- * Function to initialize the traffic repeater. 
- * \param[in] module_info Pointer to module structure used by TRAP.
- * \param[in] ifc_spec Pointer to interface structure used by TRAP.
- * \return EXIT_SUCCESS on success, otherwise EXIT_FAILURE.
- */
-int repeater_init(trap_module_info_t *module_info, trap_ifc_spec_t *ifc_spec);
 
 /*!
  * \brief Traffic repeater function

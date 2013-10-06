@@ -40,26 +40,14 @@
  *
  */
 
+#include <netdb.h>
+
 #include "traffic_repeater.h"
 
-int verbose = 0;
-
-void signal_handler(int signal)
-{
-   if ((signal == SIGTERM) || (signal == SIGINT)) {
-      if (verbose)
-         printf("Signal termination or interrupt received.\n");
-      stop = 1;
-      trap_terminate();
-   }
-}
-
+TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 void module_init(trap_module_info_t *module, int ifc_in, int ifc_out)
 {
-   char buffer[BUFFER_TMP];
-   
-   memset(buffer, 0, BUFFER_TMP);
    module->name = "Traffic repeater";  
    module->description = "This module receive data from input interface and resend it to the output interface "
                          "based on given arguments in -i option";
@@ -67,116 +55,60 @@ void module_init(trap_module_info_t *module, int ifc_in, int ifc_out)
    module->num_ifc_out = ifc_out;
 }
 
-int repeater_init(trap_module_info_t *module_info, trap_ifc_spec_t *ifc_spec) 
-{ 
-   printf("Initializing traffic repeater...\n");
-   
-   if (trap_init(module_info, *ifc_spec) != TRAP_E_OK) {
-      fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
-      trap_finalize();
-      return EXIT_FAILURE;
-   }
-   trap_free_ifc_spec(*ifc_spec);
-   
-   traffic_repeater();
-   trap_finalize();
-   return EXIT_SUCCESS;
-}
-
 void traffic_repeater(void)
 {
-   int ret, timeout;
+   int ret;
    uint16_t data_size;
-   uint64_t cnt_r, cnt_s, cnt_t;
-   time_t start, end;
-   double diff;
+   uint64_t cnt_r, cnt_s, cnt_t, diff;
    const void *data;
-
+   struct timespec start, end;
+   
    data_size = 0;
    cnt_r = cnt_s = cnt_t = 0;
    data = NULL;
-   signal(SIGTERM, signal_handler);
-   signal(SIGINT, signal_handler);
-
-   timeout = TRAP_WAIT;
-   time(&start);
+   TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
+   if (verb) {
+      printf("Initializing traffic repeater...\n");
+   }
+   clock_gettime(CLOCK_MONOTONIC, &start);
    
    while (stop == 0) {
-      ret = trap_get_data(TRAP_MASK_ALL, &data, &data_size, timeout);
+      ret = trap_get_data(1, &data, &data_size, TIMEOUT);
       if (ret == TRAP_E_OK) {
          cnt_r++;
          if (data_size == 1) {
-            if (verbose)
+            if (verb) {
                printf("Final record received, terminating repeater...\n");
+            }
             stop = 1;
          }          
-         ret = trap_send_data(0, data, data_size, timeout);
+         ret = trap_send_data(0, data, data_size, TIMEOUT);
          if (ret == TRAP_E_OK) {
             cnt_s++;
             continue;
-         } else if (ret == TRAP_E_TERMINATED) {
-            fprintf(stderr, "ERROR in sending, TRAP terminated.\n");
-            break;
-         } else if (ret == TRAP_E_TIMEOUT) {
-             fprintf(stderr, "ERROR in sending, TRAP timeout.\n"); 
-             cnt_t++;
-             continue;
-         } else {
-            fprintf(stderr, "ERROR %s\n", trap_last_error_msg);
-            break;
-	     }
-      } else if (ret == TRAP_E_TERMINATED) {
-          fprintf(stderr, "ERROR in receiving, TRAP terminated.\n");
-          break;
-      } else if (ret == TRAP_E_IO_ERROR) {
-          fprintf(stderr, "ERROR in receiving, IO error in TRAP.\n");
-          break;
-      } else if (ret == TRAP_E_TIMEOUT) {
-          fprintf(stderr, "ERROR in receiving, TRAP timeout.\n"); 
-          cnt_t++;
-          continue;
-      } else {
-         fprintf(stderr, "ERROR %s\n", trap_last_error_msg);
-         break;
-      }    
+	     } 
+         TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, cnt_r++; continue, break);
+      }
+      TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, cnt_r++; continue, break);
    }
    
-   time(&end);
-   diff = difftime(end, start);
-   printf("RECV: %lu\nSENT: %lu\nTOUT: %lu\nTIME: %.3fs\n", cnt_r, cnt_s, cnt_t, diff);
+   clock_gettime(CLOCK_MONOTONIC, &end);
+   diff = (end.tv_sec * NANOSECOND + end.tv_nsec) - (start.tv_sec * NANOSECOND + start.tv_nsec);
+   printf("Flows received:  %16lu\n", cnt_r > 0 ? cnt_r - 1 : cnt_r);
+   printf("Flows sent:      %16lu\n", cnt_s > 0 ? cnt_s - 1 : cnt_s);
+   printf("Timeouts:        %16lu\n", cnt_t);
+   printf("Time elapsed:    %12lu.%03lus\n", diff / NANOSECOND, (diff % NANOSECOND) / 1000000);
 }
 
 int main(int argc, char **argv)
 {
-   int ret;
-   char usage[BUFFER_TMP];
-   trap_ifc_spec_t ifc_spec;
    trap_module_info_t module_info;
    
    module_init(&module_info, IFC_DEF, IFC_DEF);
-   snprintf(usage, BUFFER_TMP, "Usage: %s [-h] [-v] [-vv] [-vvv] -i IFC_SPEC\n", argv[0]);
+   TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
+   verb = (trap_get_verbose_level() >= 0);
+   traffic_repeater();
+   TRAP_DEFAULT_FINALIZATION();
    
-   ret = trap_parse_params(&argc, argv, &ifc_spec);
-   verbose = (trap_get_verbose_level() >= 0);
-   if (ret != TRAP_E_OK) {
-      if (ret == TRAP_E_HELP) {
-         trap_print_help(&module_info);
-         return EXIT_SUCCESS;
-      }
-      fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
-      trap_finalize();
-      fprintf(stderr, "%s", usage);
-      return EXIT_FAILURE;
-   }
-   
-   if (argc != 1) {
-      trap_finalize();
-      fprintf(stderr, "%s", usage);
-      return EXIT_FAILURE;
-   }
-   
-   if (repeater_init(&module_info, &ifc_spec) == EXIT_SUCCESS)
-      return EXIT_SUCCESS;
-   else
-      return EXIT_FAILURE;
+   return EXIT_SUCCESS;
 }
