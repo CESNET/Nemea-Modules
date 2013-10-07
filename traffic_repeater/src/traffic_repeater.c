@@ -40,9 +40,10 @@
  *
  */
 
-#include <netdb.h>
-
 #include "traffic_repeater.h"
+
+static char stop = 0; /*!< Global variable used by signal handler to end the traffic repeater. */
+static int verb = 0; /*< Global variable used to print verbose messages. */
 
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
@@ -87,9 +88,9 @@ void traffic_repeater(void)
             cnt_s++;
             continue;
 	     } 
-         TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, cnt_r++; continue, break);
+         TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, cnt_t++; continue, break);
       }
-      TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, cnt_r++; continue, break);
+      TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, cnt_t++; continue, break);
    }
    
    clock_gettime(CLOCK_MONOTONIC, &end);
