@@ -63,7 +63,7 @@ int main(int argc, char **argv)
    
    // ***** Create UniRec template *****
    
-   char *unirec_specifier = "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS";
+   char *unirec_specifier = "<COLLECTOR_FLOW>";
    char opt;
    while ((opt = getopt(argc, argv, "u:p:")) != -1) {
       switch (opt) {
