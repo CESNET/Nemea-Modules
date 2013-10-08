@@ -50,6 +50,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <netdb.h>
 #include <getopt.h>
 #include <commlbr.h>
 #include <libtrap/trap.h>
@@ -63,9 +64,6 @@
 #define TIMEOUT TRAP_WAIT /*< Default timeout handling, blocking or non-blocking calls. */ 
 #define NANOSECOND 1000000000 /*< Number of nanoseconds in a second. */
 /*! \} */
-
-static char stop = 0; /*!< Global variable used by signal handler to end the traffic repeater. */
-static int verb = 0; /*< Global variable used to print verbose messages. */
 
 /*!
  * \brief Module initialization.
