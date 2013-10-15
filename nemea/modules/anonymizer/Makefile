@@ -1,6 +1,6 @@
 CC=gcc
 CXX=g++
-CFLAGS=-O2 -std=c99
+CFLAGS=-O2 -std=c99 -g
 CXXFLAGS=-O2
 LDFLAGS=
 LDLIBS=../../unirec/unirec.o -ltrap
@@ -22,7 +22,7 @@ panonymizer.o: panonymizer.c panonymizer.h
 	$(CC) ${CFLAGS} -c panonymizer.c -o panonymizer.o
 
 rijndael.o: rijndael.c  rijndael.h
-	$(CC)  ${CFLAGS} -c rijndael.c -o rijndael.o
+	$(CC) ${CFLAGS} -c rijndael.c -o rijndael.o
 
 doxygen:
 	doxygen anonymizer.c

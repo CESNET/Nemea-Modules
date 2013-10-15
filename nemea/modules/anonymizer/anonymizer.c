@@ -4,6 +4,44 @@
  * \author Erik Sabik <xsabik02@stud.fit.vutbr.cz>
  * \date 2013
  */
+/*
+ * Copyright (C) 2013 CESNET
+ *
+ * LICENSE TERMS
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is'', and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
+
+
 
 #include <signal.h>
 #include <stdio.h>
@@ -11,16 +49,19 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <string.h>
+#include <ctype.h>
 
 #include <libtrap/trap.h>
 #include "../../unirec/unirec.h"
-#include "../../common/common.h"
 #include "panonymizer.h"
 
 
 
 #define IP_V4_OFFSET 8          // Unirec format offset for IPv4
 #define IP_V6_SIZE 16           // 128b or 16B is size of IP address version 6
+#define SECRET_KEY_FILE "secret_key.txt"   // File with secret key
+#define SECRET_KEY_MAX_SIZE 67             // Max length of secret key
+
 
 /* ****************************** Modify here ****************************** */
 // Struct with information about module
@@ -30,6 +71,8 @@ trap_module_info_t module_info = {
    "Module for anonymizing incoming flow records.\n"
    "Parameters:\n"
    "   -u TMPLT    Specify UniRec template expected on the input interface.\n"
+   "   -k KEY      Specify secret key. Must be 32 characters long string or\n"
+   "               32B sized hex string starting with 0x\n"
    "Interfaces:\n"
    "   Inputs: 1\n"
    "   Outputs: 1\n",
@@ -50,27 +93,49 @@ void signal_handler(int signal)
 
 
 
-/**
- *
- *
- *
+/** \brief Initialize anonymizer
+ * Initialize anonymizer with key included in file.
+ * \param[in] init_key Pointer to 32B free memory.
+ * \return 1 if succes, 0 if not success.
  */
-void init_key_from_file(uint8_t *init_key)
+int init_from_file(uint8_t *init_key)
 {
-   char *secret_key = "Tajny kluc......................";
+   char secret_key[SECRET_KEY_MAX_SIZE];
+   int key_end;
+   FILE *fp;
 
-   ParseCryptoPAnKey(secret_key, init_key);
-   PAnonymizer_Init(init_key);
+   // Open file with secret key
+   if ((fp = fopen(SECRET_KEY_FILE, "rb")) == NULL) {
+      fprintf(stderr, "Error: Could not open file with secret key.\n");
+   }
+
+   // Reads secret key
+   fgets(secret_key, SECRET_KEY_MAX_SIZE, fp);
+   fclose(fp);
+
+   // Remove trailing whitespaces from secret key
+   key_end = strlen(secret_key) - 1;
+   while (isspace(secret_key[key_end])) {
+      secret_key[key_end] = 0;
+      key_end--;
+   }
+
+   // Parse secret key and initialize anonymizer
+   if (ParseCryptoPAnKey(secret_key, init_key)) {
+      PAnonymizer_Init(init_key);
+      return 1;
+   }
+
+   return 0;
 }
 
 
 
-
-
-/**
- *
- *
- *
+/** \brief Anonymize IP
+ * Anonymize source and destination IP in Unirec using Crypto-PAn libraries
+ * \param[in] tmplt Pointer to Unirec template.
+ * \param[in-out] data Pointer to Unirec flow record data.
+ * \return void.
 */
 void ip_anonymize(ur_template_t *tmplt, const void *data)
 {
@@ -110,12 +175,17 @@ void ip_anonymize(ur_template_t *tmplt, const void *data)
 int main(int argc, char **argv)
 {
    int ret;
-   char ip1_buff[100] = {0};  
-   char ip2_buff[100] = {0};
+   uint8_t init_key[32] = {0};
+   char *secret_key = NULL;
 
 
-   uint8_t init_key[16] = {0};
-   init_key_from_file(init_key);
+   // ***** ONLY FOR DEBUGING ***** //
+   #ifdef DEBUG
+      char ip1_buff[100] = {0};
+      char ip2_buff[100] = {0};
+   #endif
+   // ***************************** //
+
 
 
    // ***** TRAP initialization *****   
@@ -127,12 +197,15 @@ int main(int argc, char **argv)
 
 
    // ***** Create UniRec template *****   
-   char *unirec_specifier = "<BASIC_FLOW>";
+   char *unirec_specifier = "<COLLECTOR_FLOW>";
    char opt;
-   while ((opt = getopt(argc, argv, "u:")) != -1) {
+   while ((opt = getopt(argc, argv, "u:k:")) != -1) {
       switch (opt) {
          case 'u':
             unirec_specifier = optarg;
+            break;
+         case 'k':
+            secret_key = optarg;
             break;
          default:
             fprintf(stderr, "Invalid arguments.\n");
@@ -146,6 +219,23 @@ int main(int argc, char **argv)
       trap_finalize();
       return 4;
    }
+
+
+   // Initialize panonymizer
+   if (secret_key == NULL) {
+      if (!init_from_file(init_key)) {
+         trap_finalize();
+         return 7;
+      }
+   } else {
+      if (!ParseCryptoPAnKey(secret_key, init_key)) {
+         trap_finalize();
+         return 7;
+      }
+      PAnonymizer_Init(init_key);
+   }
+
+  
    
    
    // ***** Main processing loop *****
@@ -169,29 +259,36 @@ int main(int argc, char **argv)
       }
       
      
-      /* DEBUG PRINT FOR TESTING
-      ip_to_str(ur_get_ptr(tmplt, data, UR_SRC_IP), ip1_buff);
-      ip_to_str(ur_get_ptr(tmplt, data, UR_DST_IP), ip2_buff);
-      printf("ORIG: %15s   ->   %15s\n", ip1_buff, ip2_buff);     
-      
-      ip_anonymize(tmplt, data);
-      ip_to_str(ur_get_ptr(tmplt, data, UR_SRC_IP), ip1_buff);
-      ip_to_str(ur_get_ptr(tmplt, data, UR_DST_IP), ip2_buff);
-      printf("ANON: %15s   ->   %15s\n\n", ip1_buff, ip2_buff);*/
+   
+      // ***** ONLY FOR DEBUGING ***** //
+      #ifdef DEBUG
+         ip_to_str(ur_get_ptr(tmplt, data, UR_SRC_IP), ip1_buff);
+         ip_to_str(ur_get_ptr(tmplt, data, UR_DST_IP), ip2_buff);
+         printf("ORIG: %15s   ->   %15s\n", ip1_buff, ip2_buff);           
+         ip_anonymize(tmplt, data);
+         ip_to_str(ur_get_ptr(tmplt, data, UR_SRC_IP), ip1_buff);
+         ip_to_str(ur_get_ptr(tmplt, data, UR_DST_IP), ip2_buff);
+         printf("ANON: %15s   ->   %15s\n\n", ip1_buff, ip2_buff);
+      #endif
+      // ***************************** //
 
-
-      ip_anonymize(tmplt, data);
+      #ifndef DEBUG
+         ip_anonymize(tmplt, data);
+      #endif
 
       // Send anonymized data
-      trap_send_data(0, data, ur_rec_size(tmplt, data), TRAP_WAIT); 
+      trap_send_data(0, data, ur_rec_size(tmplt, data), TRAP_NO_WAIT); 
 
 
    }
    
-
+  // ***** ONLY FOR DEBUGING ***** //
+  #ifdef DEBUG
      char dummy[1] = {0};
      trap_send_data(0, dummy, 1, TRAP_WAIT); 
-   
+  #endif   
+  // ***************************** //
+
    // ***** Do all necessary cleanup before exiting *****
    TRAP_DEFAULT_FINALIZATION();
    ur_free_template(tmplt);
