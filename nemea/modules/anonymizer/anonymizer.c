@@ -57,7 +57,6 @@
 
 
 
-#define IP_V4_OFFSET 8          // Unirec format offset for IPv4
 #define IP_V6_SIZE 16           // 128b or 16B is size of IP address version 6
 #define SECRET_KEY_FILE "secret_key.txt"   // File with secret key
 #define SECRET_KEY_MAX_SIZE 67             // Max length of secret key
@@ -71,11 +70,12 @@ trap_module_info_t module_info = {
    "Module for anonymizing incoming flow records.\n"
    "Parameters:\n"
    "   -u TMPLT    Specify UniRec template expected on the input interface.\n"
-   "   -k KEY      Specify secret key. Must be 32 characters long string or\n"
-   "               32B sized hex string starting with 0x\n"
+   "   -k KEY      Specify secret key*.\n"
+   "   -f FILE     Specify file containing secret key*.\n" 
    "Interfaces:\n"
    "   Inputs: 1\n"
-   "   Outputs: 1\n",
+   "   Outputs: 1\n"
+   "*Secret key must be 32 characters long string or 32B sized hex string starting with 0x\n",
    1, // Number of input interfaces
    1, // Number of output interfaces
 };
@@ -95,18 +95,20 @@ void signal_handler(int signal)
 
 /** \brief Initialize anonymizer
  * Initialize anonymizer with key included in file.
+ * \param[in] secret_file Name of the file containing secret key.
  * \param[in] init_key Pointer to 32B free memory.
  * \return 1 if succes, 0 if not success.
  */
-int init_from_file(uint8_t *init_key)
+int init_from_file(char *secret_file, uint8_t *init_key)
 {
    char secret_key[SECRET_KEY_MAX_SIZE];
    int key_end;
    FILE *fp;
 
    // Open file with secret key
-   if ((fp = fopen(SECRET_KEY_FILE, "rb")) == NULL) {
+   if ((fp = fopen(secret_file, "rb")) == NULL) {
       fprintf(stderr, "Error: Could not open file with secret key.\n");
+      return 0;
    }
 
    // Reads secret key
@@ -146,12 +148,12 @@ void ip_anonymize(ur_template_t *tmplt, const void *data)
 
    if (ip_is4(ur_get_ptr(tmplt, data, UR_SRC_IP))) {
       // Anonymize SRC IP version 4
-      ip_v4_ptr = (uint32_t *)(((uint8_t *)ur_get_ptr(tmplt, data, UR_SRC_IP)) + IP_V4_OFFSET);
+      ip_v4_ptr =  (uint32_t *) ip_get_v4_as_bytes(ur_get_ptr(tmplt, data, UR_SRC_IP));
       ip_v4_anon = anonymize(ntohl(*ip_v4_ptr));
       *ip_v4_ptr = htonl(ip_v4_anon);
 
       // Anonymize DST IP version 4
-      ip_v4_ptr = (uint32_t *)(((uint8_t *)ur_get_ptr(tmplt, data, UR_DST_IP)) + IP_V4_OFFSET);
+      ip_v4_ptr = (uint32_t *) ip_get_v4_as_bytes(ur_get_ptr(tmplt, data, UR_DST_IP));
       ip_v4_anon = anonymize(ntohl(*ip_v4_ptr));
       *ip_v4_ptr = htonl(ip_v4_anon);
    } else {
@@ -177,7 +179,7 @@ int main(int argc, char **argv)
    int ret;
    uint8_t init_key[32] = {0};
    char *secret_key = NULL;
-
+   char *secret_file = NULL;
 
    // ***** ONLY FOR DEBUGING ***** //
    #ifdef DEBUG
@@ -199,13 +201,16 @@ int main(int argc, char **argv)
    // ***** Create UniRec template *****   
    char *unirec_specifier = "<COLLECTOR_FLOW>";
    char opt;
-   while ((opt = getopt(argc, argv, "u:k:")) != -1) {
+   while ((opt = getopt(argc, argv, "u:k:f:")) != -1) {
       switch (opt) {
          case 'u':
             unirec_specifier = optarg;
             break;
          case 'k':
             secret_key = optarg;
+            break;
+         case 'f':
+            secret_file = optarg;
             break;
          default:
             fprintf(stderr, "Invalid arguments.\n");
@@ -221,9 +226,14 @@ int main(int argc, char **argv)
    }
 
 
-   // Initialize panonymizer
+   // Check if secret key was specified and initialize panonymizer
    if (secret_key == NULL) {
-      if (!init_from_file(init_key)) {
+      if (secret_file == NULL) {
+         fprintf(stderr, "Error: Secret key was not specified.\n");
+         trap_finalize();
+         return 8;
+      }
+      if (!init_from_file(secret_file, init_key)) {
          trap_finalize();
          return 7;
       }
