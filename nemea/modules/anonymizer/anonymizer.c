@@ -178,7 +178,7 @@ int main(int argc, char **argv)
 {
    int ret;
    uint8_t init_key[32] = {0};
-   char *secret_key = NULL;
+   char *secret_key = "01234567890123450123456789012345";
    char *secret_file = NULL;
 
    // ***** ONLY FOR DEBUGING ***** //
@@ -227,17 +227,13 @@ int main(int argc, char **argv)
 
 
    // Check if secret key was specified and initialize panonymizer
-   if (secret_key == NULL) {
-      if (secret_file == NULL) {
-         fprintf(stderr, "Error: Secret key was not specified.\n");
-         trap_finalize();
-         return 8;
-      }
+   if (secret_file != NULL) {
       if (!init_from_file(secret_file, init_key)) {
          trap_finalize();
          return 7;
       }
-   } else {
+   } 
+   else {
       if (!ParseCryptoPAnKey(secret_key, init_key)) {
          trap_finalize();
          return 7;
