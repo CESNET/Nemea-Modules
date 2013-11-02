@@ -22,7 +22,8 @@ trap_module_info_t module_info = {
    (char *) "Nfdump-reader module", // Module name
    // Module description
    (char *) "This module module reads a given nfdump file and outputs flow records in \n"
-   "UniRec format.\n"
+   "UniRec format. If more files are specified, all flows from the first file\n"
+   "are read, then all flows from second file and so on.\n"
    "Interfaces:\n"
    "   Inputs: 0\n"
    "   Outputs: 1 (flow records)\n",
@@ -92,27 +93,16 @@ int main(int argc, char **argv)
    }
    
    if (optind >= argc) {
-      fprintf(stderr, "Wrong number of parameters.\nUsage: %s -i trap-ifc-specifier [-n] [-c NUM] nfdump-file\n", argv[0]);
+      fprintf(stderr, "Wrong number of parameters.\nUsage: %s -i trap-ifc-specifier [-n] [-c NUM] nfdump-file [nfdump-file...]\n", argv[0]);
       return 2;
    }
 
-   // Open nfdump file
-   if (verbose) {
-      printf("Opening file %s ...\n", argv[optind]);
-   }
-   ret = nf_open(&file, argv[optind]);
-   if (ret != 0) {
-      fprintf(stderr, "Error when trying to open file \"%s\"\n", argv[optind]);
-      return 3;
-   }
-   
    // Initialize TRAP library (create and init all interfaces)
    if (verbose) {
       printf("Initializing TRAP library ...\n");
    }
    ret = trap_init(&module_info, ifc_spec);
    if (ret != TRAP_E_OK) {
-      nf_close(&file);
       fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
       return 4;
    }
@@ -121,7 +111,7 @@ int main(int argc, char **argv)
    signal(SIGTERM, signal_handler);
    signal(SIGINT, signal_handler);
 
-   // Read a record from file, convert to UniRec and send to output ifc
+   
    if (verbose) {
       printf("Sending records ...\n");
    }
@@ -130,66 +120,88 @@ int main(int argc, char **argv)
    void *rec2 = ur_create(tmplt, 0);
    
    srand(time(NULL));
-   while (!stop && (max_records == 0 || counter < max_records)) {
-      master_record_t rec;
-
-      ret = nf_next_record(&file, &rec);
+   
+   
+   // For all input files...
+   do {
+      // Open nfdump file
+      if (verbose) {
+         printf("Reading file %s\n", argv[optind]);
+      }
+      ret = nf_open(&file, argv[optind]);
       if (ret != 0) {
-         if (ret == 1) { // no more records
-            break;
-         }
-         fprintf(stderr, "Error during reading file.\n");
-         nf_close(&file);
+         fprintf(stderr, "Error when trying to open file \"%s\"\n", argv[optind]);
          trap_finalize();
+         ur_free(rec2);
          return 3;
       }
-
-      // Copy data from master_record_t to UniRec record
-      if (rec.flags & 0x01) { // IPv6
-         uint64_t tmp_ip_v6_addr;
-         // Swap IPv6 halves
-         tmp_ip_v6_addr = rec.ip_union._v6.srcaddr[0];
-         rec.ip_union._v6.srcaddr[0] = rec.ip_union._v6.srcaddr[1];
-         rec.ip_union._v6.srcaddr[1] = tmp_ip_v6_addr;
-         tmp_ip_v6_addr = rec.ip_union._v6.dstaddr[0];
-         rec.ip_union._v6.dstaddr[0] = rec.ip_union._v6.dstaddr[1];
-         rec.ip_union._v6.dstaddr[1] = tmp_ip_v6_addr;
-
-         ur_set(tmplt, rec2, UR_SRC_IP, ip_from_16_bytes_le((char *)rec.ip_union._v6.srcaddr));
-         ur_set(tmplt, rec2, UR_DST_IP, ip_from_16_bytes_le((char *)rec.ip_union._v6.dstaddr));
-      }
-      else { // IPv4  
-         ur_set(tmplt, rec2, UR_SRC_IP, ip_from_4_bytes_le((char *)&rec.ip_union._v4.srcaddr));
-         ur_set(tmplt, rec2, UR_DST_IP, ip_from_4_bytes_le((char *)&rec.ip_union._v4.dstaddr));
-
-      }
-      ur_set(tmplt, rec2, UR_SRC_PORT, rec.srcport);
-      ur_set(tmplt, rec2, UR_DST_PORT, rec.dstport);
-      ur_set(tmplt, rec2, UR_PROTOCOL, rec.prot);
-      ur_set(tmplt, rec2, UR_TCP_FLAGS, rec.tcp_flags);
-      ur_set(tmplt, rec2, UR_PACKETS, rec.dPkts);
-      ur_set(tmplt, rec2, UR_BYTES, rec.dOctets);
-      uint64_t first = ur_time_from_sec_msec(rec.first, rec.msec_first);
-      uint64_t last  = ur_time_from_sec_msec(rec.last, rec.msec_last);
-      ur_set(tmplt, rec2, UR_TIME_FIRST, first);
-      ur_set(tmplt, rec2, UR_TIME_LAST, last);               
-
-      // Send data to output interface
-      trap_send_data(0, rec2, ur_rec_static_size(tmplt), COMMONTIMEOUT);
-      counter++;
-      //usleep(100);
       
-      if (verbose && counter % 1000 == 1) {
-         printf(".");
-         fflush(stdout);
-      }
-   }
-
-   if (verbose) {
-      printf("done\n");
-   }
+      // For all records in the file
+      while (!stop && (max_records == 0 || counter < max_records)) {
+         master_record_t rec;
+         
+         // Read a record from the file
+         ret = nf_next_record(&file, &rec);
+         if (ret != 0) {
+            if (ret == 1) { // no more records
+               break;
+            }
+            fprintf(stderr, "Error during reading file.\n");
+            nf_close(&file);
+            trap_finalize();
+            ur_free(rec2);
+            return 3;
+         }
    
-   nf_close(&file);
+         // Copy data from master_record_t to UniRec record
+         if (rec.flags & 0x01) { // IPv6
+            uint64_t tmp_ip_v6_addr;
+            // Swap IPv6 halves
+            tmp_ip_v6_addr = rec.ip_union._v6.srcaddr[0];
+            rec.ip_union._v6.srcaddr[0] = rec.ip_union._v6.srcaddr[1];
+            rec.ip_union._v6.srcaddr[1] = tmp_ip_v6_addr;
+            tmp_ip_v6_addr = rec.ip_union._v6.dstaddr[0];
+            rec.ip_union._v6.dstaddr[0] = rec.ip_union._v6.dstaddr[1];
+            rec.ip_union._v6.dstaddr[1] = tmp_ip_v6_addr;
+   
+            ur_set(tmplt, rec2, UR_SRC_IP, ip_from_16_bytes_le((char *)rec.ip_union._v6.srcaddr));
+            ur_set(tmplt, rec2, UR_DST_IP, ip_from_16_bytes_le((char *)rec.ip_union._v6.dstaddr));
+         }
+         else { // IPv4  
+            ur_set(tmplt, rec2, UR_SRC_IP, ip_from_4_bytes_le((char *)&rec.ip_union._v4.srcaddr));
+            ur_set(tmplt, rec2, UR_DST_IP, ip_from_4_bytes_le((char *)&rec.ip_union._v4.dstaddr));
+   
+         }
+         ur_set(tmplt, rec2, UR_SRC_PORT, rec.srcport);
+         ur_set(tmplt, rec2, UR_DST_PORT, rec.dstport);
+         ur_set(tmplt, rec2, UR_PROTOCOL, rec.prot);
+         ur_set(tmplt, rec2, UR_TCP_FLAGS, rec.tcp_flags);
+         ur_set(tmplt, rec2, UR_PACKETS, rec.dPkts);
+         ur_set(tmplt, rec2, UR_BYTES, rec.dOctets);
+         uint64_t first = ur_time_from_sec_msec(rec.first, rec.msec_first);
+         uint64_t last  = ur_time_from_sec_msec(rec.last, rec.msec_last);
+         ur_set(tmplt, rec2, UR_TIME_FIRST, first);
+         ur_set(tmplt, rec2, UR_TIME_LAST, last);               
+   
+         // Send data to output interface
+         trap_send_data(0, rec2, ur_rec_static_size(tmplt), COMMONTIMEOUT);
+         counter++;
+         //usleep(100);
+         
+         if (verbose && counter % 1000 == 1) {
+            printf(".");
+            fflush(stdout);
+         }
+      } // for all records in a file
+   
+      if (verbose) {
+         printf("done\n");
+      }
+      
+      nf_close(&file);
+   
+   } while (!stop && ++optind < argc); // For all input files
+   
    
    printf("%lu flow records sent\n", counter);
    
