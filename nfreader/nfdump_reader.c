@@ -21,12 +21,20 @@
 trap_module_info_t module_info = {
    (char *) "Nfdump-reader module", // Module name
    // Module description
-   (char *) "This module module reads a given nfdump file and outputs flow records in \n"
+   (char *) "This module reads a given nfdump file and outputs flow records in \n"
    "UniRec format. If more files are specified, all flows from the first file\n"
    "are read, then all flows from second file and so on.\n"
+   "\n"
    "Interfaces:\n"
    "   Inputs: 0\n"
-   "   Outputs: 1 (flow records)\n",
+   "   Outputs: 1 (<COLLECTOR_FLOW>) [FIXME: Not all fields are filled]\n"
+   "\n"
+   "Usage:\n"
+   "   ./nfdump_reader -i IFC_SPEC [-c N] [-n] FILE [FILE...]"
+   "\n"
+   "   FILE   A file in nfdump format.\n"
+   "   -c N   Read only the first N flow records.\n"
+   "   -n     Don't send \"EOF message\" at the end.\n",
    0, // Number of input interfaces
    1, // Number of output interfaces
 };
