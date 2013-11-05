@@ -33,10 +33,11 @@ trap_module_info_t module_info = {
    (char *) "Nfdump-reader module", // Module name
    // Module description
    (char *) "This module module reads a given nfdump file and outputs flow records in \n"
-   "UniRec format (special version for throughput testing).\n"
+   "UniRec format (special version for throughput testing - it reads all records into\n"
+   "memory before sending them to TRAP interface).\n"
    "Interfaces:\n"
    "   Inputs: 0\n"
-   "   Outputs: 1 (flow records)\n",
+   "   Outputs: 1 (<BASIC_FLOW>)\n",
    0, // Number of input interfaces
    1, // Number of output interfaces
 };
