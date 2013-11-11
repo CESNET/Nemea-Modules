@@ -1,6 +1,6 @@
 /* NADEX framework - nfreader library header file
    Author: Vaclav Bartos (ibartosv@fit.vutbr.cz), 2012
-   
+
    This library is derived from original source codes of nfdump written by
    Peter Haag. See copyright notices and other notes in nfreader.c file.
 */
@@ -14,6 +14,9 @@
 extern "C" {
 #endif
 
+#define MINIMAL_SENDING_RATE 	100
+#define MINIMAL_BURST_RATE 	10
+#define MAX_SLEEP_TIME 			100 // in miliseconds
 ///////////////////////////////////////////////////////////////////////////////
 // Sturcture definitions
 
@@ -81,8 +84,8 @@ typedef struct master_record_s {
     uint32_t    srcas;          // index 5  0xffff'ffff'0000'0000
     uint32_t    dstas;          // index 5  0x0000'0000'ffff'ffff
 
-    // IP address block 
-    union {                     
+    // IP address block
+    union {
         struct _ipv4_s {
             uint32_t    fill1[2];   // <empty>      index 6 0xffff'ffff'ffff'ffff
             uint32_t    srcaddr;    // srcaddr      index 7 0xffff'ffff'0000'0000
@@ -90,7 +93,7 @@ typedef struct master_record_s {
             uint32_t    fill3[2];   // <empty>      index 8 0xffff'ffff'ffff'ffff
             uint32_t    dstaddr;    // dstaddr      index 9 0xffff'ffff'0000'0000
             uint32_t    fill4;      // <empty>      index 9 0xffff'ffff'0000'0000
-        } _v4;  
+        } _v4;
         struct _ipv6_s {
             uint64_t    srcaddr[2]; // srcaddr[0-1] index 6 0xffff'ffff'ffff'ffff
                                     // srcaddr[2-3] index 7 0xffff'ffff'ffff'ffff
@@ -152,23 +155,23 @@ typedef struct master_record_s {
     uint8_t     engine_type;    // type index 31 0x0000'ff00'0000'0000
     uint8_t     engine_id;      // ID   index 31 0x0000'00ff'0000'0000
 
-    // last entry in master record 
+    // last entry in master record
     void/*extension_map_t*/ *map_ref;
 } master_record_t;
 
 /* flags in master_record are defined as:
  * bit  0:  0: IPv4              1: IPv6
  * bit  1:  0: 32bit dPkts       1: 64bit dPkts
- * bit  2:  0: 32bit dOctets     1: 64bit dOctets 
+ * bit  2:  0: 32bit dOctets     1: 64bit dOctets
  * bit  3:  0: IPv4 next hop     1: IPv6 next hop
  * bit  4:  0: IPv4 BGP next hop 1: BGP IPv6 next hop
  * bit  5:  0:                   1:
  * bit  6:  0:                   1:
  * bit  7:  0:                   1:
- * bit  8:  0: unsampled         1: sampled flow - sampling applied 
+ * bit  8:  0: unsampled         1: sampled flow - sampling applied
 */
 
-/* structure containing basic statistics read from file header */ 
+/* structure containing basic statistics read from file header */
 typedef struct stat_record_s {
 	// overall stat
 	uint64_t	numflows;
@@ -196,7 +199,7 @@ typedef struct stat_record_s {
 	uint16_t	msec_last;
 	// other
 	uint32_t	sequence_failure;
-} stat_record_t; 
+} stat_record_t;
 
 
 // Data needed to store for each opened file (simulating class attributes).
@@ -214,7 +217,7 @@ typedef struct {
 ///////////////////////////////////////////////////////////////////////////////
 // Function prototypes
 
-/* Open given nfdump file and prepare to read flows. If filename is NULL, read 
+/* Open given nfdump file and prepare to read flows. If filename is NULL, read
    from stdin.
    Data needed to store context of opened file will be stored to 'file'.
 */
@@ -222,7 +225,7 @@ int nf_open(nf_file_t *file, char *filename);
 
 /* Read next flow record in opened file and save it into master_record.
    If master_record is NULL, just skip the record.
-   If there are no more records, E_NO_MORE_RECORDS is returned (and 
+   If there are no more records, E_NO_MORE_RECORDS is returned (and
    master_record is not changed).
 */
 int nf_next_record(nf_file_t *file, master_record_t *master_record);
