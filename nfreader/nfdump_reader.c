@@ -289,14 +289,14 @@ int main(int argc, char **argv)
 
 						if (actual_timestamps){
 							time(&act_time);
-							first = ur_time_from_sec_msec(act_time, rec.msec_first);
-							last = ur_time_from_sec_msec(act_time + (rec.last - rec.first), rec.msec_last);
+							first = ur_time_from_sec_msec(act_time - (rec.last - rec.first), rec.msec_first);
+							last = ur_time_from_sec_msec(act_time , rec.msec_last);
 						}else{
 							first = ur_time_from_sec_msec(rec.first, rec.msec_first);
 							last = ur_time_from_sec_msec(rec.last, rec.msec_last);
 						}
 						ur_set(tmplt, rec2, UR_TIME_FIRST, first);
-							ur_set(tmplt, rec2, UR_TIME_LAST, last);
+						ur_set(tmplt, rec2, UR_TIME_LAST, last);
 
 						// Send data to output interface
 						trap_send_data(0, rec2, ur_rec_static_size(tmplt), COMMONTIMEOUT);
@@ -323,7 +323,7 @@ int main(int argc, char **argv)
 
 					++load_index;
 					time(&sec);
-					if (difftime(next_sec, sec) < 0){
+					if (difftime(next_sec, sec) <= 0){
 						time_diff_flag = 0;
 					}
 				}

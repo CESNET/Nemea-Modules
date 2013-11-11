@@ -171,7 +171,7 @@ int main(int argc, char **argv)
 				act_time = first;
 				next_time = act_time + time_interval;
 			}
-			if (first > next_time){
+			if (first >= next_time){
 				printf("Time interval %lu - %lu: %llu messages.\n", act_time, next_time, msg_counter - act_msg_counter);
 				act_time = first;
 				next_time = act_time + time_interval;
@@ -189,7 +189,7 @@ int main(int argc, char **argv)
    if (time_interval){
 		printf("Time interval %lu - %lu: %llu messages.\n", act_time, next_time, msg_counter - act_msg_counter);
    }
-   printf("TOTAL RECEIVED MESSAGES: %llu\n", msg_counter);
+   fprintf(stderr, "TOTAL RECEIVED MESSAGES: %llu\n", msg_counter);
 
    // Do all necessary cleanup before exiting
    TRAP_DEFAULT_FINALIZATION();
