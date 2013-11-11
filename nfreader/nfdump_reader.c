@@ -112,7 +112,7 @@ int main(int argc, char **argv)
 
    // Parse remaining parameters
    char opt;
-   while ((opt = getopt(argc, argv, "c:nr:R:T")) != -1) {
+   while ((opt = getopt(argc, argv, "c:nr:RT")) != -1) {
       switch (opt) {
          case 'c':
             max_records = atoi(optarg);
@@ -378,6 +378,8 @@ int main(int argc, char **argv)
       nf_close(&file);
 
    } while (!stop && ++optind < argc); // For all input files
+
+   printf("%lu flow records sent\n", counter);
 
    // Send data with zero length to signalize end
    char dummy[1] = {0};
