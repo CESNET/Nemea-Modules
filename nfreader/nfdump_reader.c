@@ -271,18 +271,18 @@ int main(int argc, char **argv)
 						if (rt_resending){
 							if (init_flag){
 								init_flag = 0;
-								act_timestamp = rec.first;
+								act_timestamp = rec.last;
 								time(&next_sec);
 							}
 
-							if (rec.first > act_timestamp){
-								timestamp_diff = rec.first - act_timestamp;
+							if (rec.last > act_timestamp){
+								timestamp_diff = rec.last - act_timestamp;
 							}else{
 								timestamp_diff = 0;
 							}
-							if (timestamp_diff > 0){
+							if (timestamp_diff >= 1){
 								usleep(timestamp_diff * 1000 * 1000); //to convert seconds into microseconds;
-								act_timestamp = rec.first;
+								act_timestamp = rec.last;
 							}
 						}
 
