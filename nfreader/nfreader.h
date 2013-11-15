@@ -14,6 +14,9 @@
 extern "C" {
 #endif
 
+#define DEFAULT_DIR_BIT_FIELD 0
+#define DEFAULT_LINK_MASK "1"
+
 #define MINIMAL_SENDING_RATE 	100
 #define MINIMAL_BURST_RATE 	10
 #define MAX_SLEEP_TIME 			100 // in miliseconds
