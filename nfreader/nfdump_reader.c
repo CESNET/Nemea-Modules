@@ -37,11 +37,14 @@ trap_module_info_t module_info = {
    "\n"
    "   FILE   A file in nfdump format.\n"
    "   -c N   Read only the first N flow records.\n"
+	"   -n     Don't send \"EOF message\" at the end.\n"
+   "   -T     Sent data from files with timestamps based on actual time.\n"
+   "   -d m   Use mask m for DIR_BIT_FIELD. m is 8-bit hexadecimal number.\n"
+   "          e.g. m should be \"1\", \"c2\", \"AB\",...\n"
+   "   -l m   Use link mask m for LINK_BIT_FIELD.\n"
    "   -r N   Rate limiting. Limiting sending flow rate to N records/sec.\n"
    "   -R     Real time re-sending. Resending records from given files in real\n"
    "          time, respecting original timestamps (seconds).\n"
-   "   -n     Don't send \"EOF message\" at the end.\n"
-   "   -T     Sent data from files with timestamps based on actual time.\n"
    "",
    0, // Number of input interfaces
    1, // Number of output interfaces
@@ -69,6 +72,9 @@ int main(int argc, char **argv)
    unsigned long max_records = 0;
    int send_eof = 1;
    int verbose = 0;
+   ur_links_t *links;
+   uint8_t set_dir_bit_field = 0;
+   char *link_mask = DEFAULT_LINK_MASK;// 8*sizeof(char) = 64 bits of uint64_t
    //------------ Actual timestamps --------------------------------------------
 	int actual_timestamps = 0;
    time_t act_time;
@@ -112,7 +118,7 @@ int main(int argc, char **argv)
 
    // Parse remaining parameters
    char opt;
-   while ((opt = getopt(argc, argv, "c:nr:RT")) != -1) {
+   while ((opt = getopt(argc, argv, "c:nl:Dr:RT")) != -1) {
       switch (opt) {
          case 'c':
             max_records = atoi(optarg);
@@ -123,6 +129,12 @@ int main(int argc, char **argv)
             break;
          case 'n':
             send_eof = 0;
+            break;
+			case 'D':
+            set_dir_bit_field = 1;
+            break;
+			case 'l':
+            link_mask = optarg;
             break;
 			case 'r':
             sending_rate = atoi(optarg);
@@ -150,8 +162,15 @@ int main(int argc, char **argv)
       return 2;
    }
 
-	if (sending_rate && rt_resending){
+	if (sending_rate && rt_resending) {
 		fprintf(stderr, "Wrong parameters, use only one of -r / -R.\n");
+		return 2;
+	}
+
+	links = ur_create_links(link_mask);
+	if (links == NULL){
+		fprintf(stderr, "Invalid link mask.\n");
+		return 2;
 	}
 
    // Initialize TRAP library (create and init all interfaces)
@@ -261,12 +280,23 @@ int main(int argc, char **argv)
 							ur_set(tmplt, rec2, UR_DST_IP, ip_from_4_bytes_le((char *)&rec.ip_union._v4.dstaddr));
 
 						}
+//						printf("%i \n", (void *)&rec.input - (void *)&rec);
 						ur_set(tmplt, rec2, UR_SRC_PORT, rec.srcport);
 						ur_set(tmplt, rec2, UR_DST_PORT, rec.dstport);
 						ur_set(tmplt, rec2, UR_PROTOCOL, rec.prot);
 						ur_set(tmplt, rec2, UR_TCP_FLAGS, rec.tcp_flags);
 						ur_set(tmplt, rec2, UR_PACKETS, rec.dPkts);
 						ur_set(tmplt, rec2, UR_BYTES, rec.dOctets);
+						ur_set(tmplt, rec2, UR_LINK_BIT_FIELD, ur_get_link_mask(links));
+						if (set_dir_bit_field){
+                     if (rec.input > 0){
+                        ur_set(tmplt, rec2, UR_DIR_BIT_FIELD, (1 << rec.input));
+                     } else {
+                        ur_set(tmplt, rec2, UR_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
+                     }
+						} else {
+                     ur_set(tmplt, rec2, UR_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
+                  }
 
 						if (rt_resending){
 							if (init_flag){
