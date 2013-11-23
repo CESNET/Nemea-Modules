@@ -73,7 +73,7 @@ int main(int argc, char **argv)
    int send_eof = 1;
    int verbose = 0;
    ur_links_t *links;
-   uint8_t uinified_dir_bit_f = DEFAULT_DIR_BIT_FIELD;
+   uint8_t set_dir_bit_field = 0;
    char *link_mask = DEFAULT_LINK_MASK;// 8*sizeof(char) = 64 bits of uint64_t
    //------------ Actual timestamps --------------------------------------------
 	int actual_timestamps = 0;
@@ -118,7 +118,7 @@ int main(int argc, char **argv)
 
    // Parse remaining parameters
    char opt;
-   while ((opt = getopt(argc, argv, "c:nl:d:r:RT")) != -1) {
+   while ((opt = getopt(argc, argv, "c:nl:Dr:RT")) != -1) {
       switch (opt) {
          case 'c':
             max_records = atoi(optarg);
@@ -130,11 +130,8 @@ int main(int argc, char **argv)
          case 'n':
             send_eof = 0;
             break;
-			case 'd':
-            if (sscanf(optarg, "%2x", &uinified_dir_bit_f) < 1){
-            	fprintf(stderr, "Invalid direction bit field mask.\n");
-					return 2;
-            }
+			case 'D':
+            set_dir_bit_field = 1;
             break;
 			case 'l':
             link_mask = optarg;
@@ -283,6 +280,7 @@ int main(int argc, char **argv)
 							ur_set(tmplt, rec2, UR_DST_IP, ip_from_4_bytes_le((char *)&rec.ip_union._v4.dstaddr));
 
 						}
+//						printf("%i \n", (void *)&rec.input - (void *)&rec);
 						ur_set(tmplt, rec2, UR_SRC_PORT, rec.srcport);
 						ur_set(tmplt, rec2, UR_DST_PORT, rec.dstport);
 						ur_set(tmplt, rec2, UR_PROTOCOL, rec.prot);
@@ -290,7 +288,15 @@ int main(int argc, char **argv)
 						ur_set(tmplt, rec2, UR_PACKETS, rec.dPkts);
 						ur_set(tmplt, rec2, UR_BYTES, rec.dOctets);
 						ur_set(tmplt, rec2, UR_LINK_BIT_FIELD, ur_get_link_mask(links));
-						ur_set(tmplt, rec2, UR_DIR_BIT_FIELD, uinified_dir_bit_f);
+						if (set_dir_bit_field){
+                     if (rec.input > 0){
+                        ur_set(tmplt, rec2, UR_DIR_BIT_FIELD, (1 << rec.input));
+                     } else {
+                        ur_set(tmplt, rec2, UR_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
+                     }
+						} else {
+                     ur_set(tmplt, rec2, UR_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
+                  }
 
 						if (rt_resending){
 							if (init_flag){
