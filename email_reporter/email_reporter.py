@@ -34,7 +34,7 @@ Parameters:
                   SMTP server to connect to and a teplate of the message.
                   Format of this file is given below.
    -d, --dry-run  Dry-run mode - nothing is sent, messages are printed to stdout
-                  instead.\n"
+                  instead.
    --skip-smtp-test  By default, the module tries to connect to specified SMTP 
                      server on startup to check that the connection (and login
                      credentials, if specified) works. You can skip the test 
@@ -111,11 +111,8 @@ config_file = args[0]
 trap.init(module_info, ifc_spec)
 trap.registerDefaultSignalHandler()
 
-# Create class for incoming UniRec records
-UniRecType = unirec.CreateTemplate("UR_Flow", "<COLLECTOR_FLOW>")
-
 # Dafaults
-unirec = None
+unirecfmt = None
 server = None
 port = 25
 starttls = False
@@ -138,7 +135,7 @@ for i,line in enumerate(config.splitlines()):
    val = val.strip()
 
    if var == "unirec":
-      unirec = val
+      unirecfmt = val
    elif var == "server":
       server = val
    elif var == "port":
@@ -152,12 +149,16 @@ for i,line in enumerate(config.splitlines()):
       print >> sys.stderr, 'Error in config file (line %i): Unknown variable "%s".' % (i,var)
       exit(1)
 
-if unirec is None:
+if unirecfmt is None:
    print >> sys.stderr, 'Error in config file: UniRec template must be set ("unirec=..." not found).'
    exit(1)
 if server is None:
    print >> sys.stderr, 'Error in config file: SMTP server must be set ("server=..." not found).'
    exit(1)
+
+# Create class for incoming UniRec records
+UniRecType = unirec.CreateTemplate("UniRecType", unirecfmt)
+
 
 # ********** Parse email template **********
 sender = None
@@ -189,7 +190,7 @@ headers.add_header("Date", "$_DATETIME_") # $_DATETIME_ will be replaced by curr
 
 if trap.getVerboseLevel() >= 0:
    print "Information parsed from config:"
-   print "  UniRec template:", repr(unirec)
+   print "  UniRec template:", repr(unirecfmt)
    print "  SMTP server address:", repr(server)
    print "  SMTP server port:", repr(port)
    print "  Use STARTTLS:", repr(starttls)
@@ -212,6 +213,11 @@ for f in fields:
    msg_template = msg_template.replace("$"+f, "%("+f+")s")
 
 
+if trap.getVerboseLevel() >= 0:
+   print fields
+   print "Message template:"
+   print msg_template
+   print "--------------------"
 
 # ********** Test connection to the server **********
 if not opt.skip_smtp_test and not opt.dry_run:
