@@ -82,11 +82,41 @@ An example of config file:
    0  # Number of output interfaces
 )
 
+# A message to send when a limit on number of messages per hour is reached
+EMERGENCY_STOP_SUBJECT = "[Nemea] EMERGENCY STOP"
+EMERGENCY_STOP_MESSAGE = """\
+Nemea EmailReporter has sent more than a defined maximal number of messages 
+during the last hour. Further messages will be supressed in order to not flood
+your inbox.
+
+This is not a normal situation. Something probably went wrong and some module 
+in the Nemea system started to send messages much more often than expected.
+Please contact Nemea administrators to solve this problem.
+"""
+
+def is_over_msg_per_hour_limit():
+   """Check whether we would reach a limit by sending another message now."""
+   global message_send_times
+   if max_msg_per_hour <= 0:
+      return False # Limit is disabled
+   
+   now = time.time()
+   # Remove messages older than one hour from message_send_times
+   message_send_times = [t for t in message_send_times if t > now-3600]
+   # Check number of messages sent during last hour
+   if len(message_send_times) >= max_msg_per_hour:
+      return True
+   # Add current time to message_send_times
+   message_send_times.append(now)
+   return False
+
+
 
 # ********** Parse parameters **********
 parser = OptionParser()
 parser.add_option("-d", "--dry-run", action="store_true")
 parser.add_option("--skip-smtp-test", action="store_true")
+parser.add_option("--limit", metavar="N", type=int, default=20)
 
 # Extract TRAP parameters
 try:
@@ -106,6 +136,10 @@ if len(args) != 1:
    exit(1) 
 
 config_file = args[0]
+
+max_msg_per_hour = opt.limit # Maximal number of messages sent per hour
+message_send_times = [] # Times when messages were sent during last hour
+supress_messages = False # Whether to supress all messages (set to True when limit is reached)
 
 # ********** Initialize module **********
 trap.init(module_info, ifc_spec)
