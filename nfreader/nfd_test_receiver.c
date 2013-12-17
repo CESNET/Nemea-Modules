@@ -78,6 +78,7 @@ int main(int argc, char **argv)
    trap_ifc_spec_t ifc_spec;
    int time_interval = 0;
    int init_flag = 1;
+   uint32_t fields = 0;
    uint32_t differences = 0;
    uint32_t act_time;
    uint32_t next_time;
@@ -99,7 +100,7 @@ int main(int argc, char **argv)
 
    // Parse remaining parameters
    char opt;
-   while ((opt = getopt(argc, argv, "t:D")) != -1) {
+   while ((opt = getopt(argc, argv, "t:DF")) != -1) {
       switch (opt) {
       	case 'D':
 				differences = 1;
@@ -110,6 +111,8 @@ int main(int argc, char **argv)
                fprintf(stderr, "Invalid time interval (-t).\n");
                return 2;
             }
+			case 'F':
+            fields = 1;
             break;
          default:
             fprintf(stderr, "Invalid arguments.\n");
@@ -120,6 +123,11 @@ int main(int argc, char **argv)
    if (optind > argc) {
       fprintf(stderr, "Wrong number of parameters.\nUsage: %s -i trap-ifc-specifier [-t N]\n", argv[0]);
       return 2;
+   }
+
+   if (differences && fields){
+		fprintf(stderr, "Wrong parameters, use only one of \"-F\" or \"-D\"\n.");
+		return 2;
    }
 
    // Initialize TRAP library (create and init all interfaces)
@@ -171,7 +179,7 @@ int main(int argc, char **argv)
 				act_time = first;
 				next_time = act_time + time_interval;
 			}
-			if (first > next_time){
+			if (first >= next_time){
 				printf("Time interval %lu - %lu: %llu messages.\n", act_time, next_time, msg_counter - act_msg_counter);
 				act_time = first;
 				next_time = act_time + time_interval;
@@ -179,6 +187,8 @@ int main(int argc, char **argv)
 			}
       }else if (differences){
 			printf("%llu. %lu\n", msg_counter, last - first);
+		}else if (fields){
+			printf("%llu. L:%lu D:%i\n", msg_counter, ur_get(in_tmplt, in_rec, UR_LINK_BIT_FIELD), ur_get(in_tmplt, in_rec, UR_DIR_BIT_FIELD));
 		}else{
 			printf("%llu. %lu | %lu\n", msg_counter, first, last);
       }
@@ -189,7 +199,7 @@ int main(int argc, char **argv)
    if (time_interval){
 		printf("Time interval %lu - %lu: %llu messages.\n", act_time, next_time, msg_counter - act_msg_counter);
    }
-   printf("TOTAL RECEIVED MESSAGES: %llu\n", msg_counter);
+   fprintf(stderr, "TOTAL RECEIVED MESSAGES: %llu\n", msg_counter);
 
    // Do all necessary cleanup before exiting
    TRAP_DEFAULT_FINALIZATION();
