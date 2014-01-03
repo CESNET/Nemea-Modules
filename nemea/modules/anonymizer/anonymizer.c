@@ -52,7 +52,7 @@
 #include <ctype.h>
 
 #include <libtrap/trap.h>
-#include "../../unirec/unirec.h"
+#include <unirec/unirec.h>
 #include "panonymizer.h"
 
 

@@ -1,0 +1,9 @@
+bin_PROGRAMS=anonymizer
+anonymizer_SOURCES=anonymizer.c \
+		   panonymizer.c \
+		   panonymizer.h \
+		   rijndael.c \
+		   rijndael.h
+anonymizer_LDADD=-ltrap -lunirec
+pkgdocdir=${docdir}/anonymizer
+pkgdoc_DATA=README
