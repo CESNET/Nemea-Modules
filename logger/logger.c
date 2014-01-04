@@ -74,9 +74,11 @@ trap_module_info_t module_info = {
    "   -w FILE      Write output to FILE instead of stdout (rewrite the file).\n"
    "   -a FILE      Write output to FILE instead of stdout (append to the end).\n"
    "   -o OUT_FMT   Set of fields included in the output (UniRec specifier).\n"
+   "                Union of all input formats is used by default."
    "   -t           Write names of fields on the first line.\n"
+   "   -T           Add the time when the record was received as the first field.\n"
    "   -n           Add the number of interface the record was received on as the\n"
-   "                first field.\n",
+   "                first field (or second when -n is specified).\n",
    -1, // Number of input interfaces (-1 means variable)
    0, // Number of output interfaces
 };
@@ -88,6 +90,7 @@ static int n_inputs; // Number of input interfaces
 static ur_template_t **templates; // UniRec templates of input interfaces (array of length n_inputs)
 static ur_template_t *out_template; // UniRec template with union of fields of all inputs
 int print_ifc_num = 0;
+int print_time = 0;
 
 static FILE *file; // Output file
 
@@ -136,6 +139,12 @@ void capture_thread(int index)
       // Print contents of received UniRec to output
       #pragma omp critical
       {
+         if (print_time) {
+            char str[32];
+            time_t ts = time(NULL);
+            strftime(str, 31, "%FT%T", gmtime(&ts));
+            fprintf(file, "%s,", str);
+         }
          if (print_ifc_num) {
             fprintf(file,"%i,", index);
          }
@@ -273,7 +282,7 @@ int main(int argc, char **argv)
    
    // Parse remaining parameters and get configuration
    char opt;
-   while ((opt = getopt(argc, argv, "w:a:o:tn")) != -1) {
+   while ((opt = getopt(argc, argv, "w:a:o:tnT")) != -1) {
       switch (opt) {
          case 'a':
             append = 1;
@@ -293,6 +302,9 @@ int main(int argc, char **argv)
             break;
          case 'n':
             print_ifc_num = 1;
+            break;
+         case 'T':
+            print_time = 1;
             break;
          default:
             fprintf(stderr, "Error: Invalid arguments.\n");
@@ -406,8 +418,11 @@ int main(int argc, char **argv)
    
    // Print a header - names of output UniRec fields
    if (print_title) {
+      if (print_time) {
+         fprintf(file, "time,");
+      }
       if (print_ifc_num) {
-         fprintf(file, "IFC,");
+         fprintf(file, "ifc,");
       }
       int comma = 0;
       ur_field_id_t id = UR_INVALID_FIELD;
