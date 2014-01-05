@@ -48,7 +48,7 @@
 
 #include <libtrap/trap.h>
 #include "nfreader.h"
-#include "../../unirec/unirec.h"
+#include <unirec/unirec.h>
 
 // Struct with information about module
 trap_module_info_t module_info = {

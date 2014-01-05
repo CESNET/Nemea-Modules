@@ -46,7 +46,7 @@
 #include <getopt.h>
 #include <time.h>
 #include <libtrap/trap.h>
-#include "../../unirec/unirec.h"
+#include <unirec/unirec.h>
 #include <omp.h>
 
 // Struct with information about module

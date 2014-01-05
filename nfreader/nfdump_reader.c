@@ -17,7 +17,7 @@
 
 #include <libtrap/trap.h>
 #include "nfreader.h"
-#include "../../unirec/unirec.h"
+#include <unirec/unirec.h>
 
 
 // Struct with information about module

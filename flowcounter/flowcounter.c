@@ -13,7 +13,7 @@
 #include <time.h>
 
 #include <libtrap/trap.h>
-#include "../../unirec/unirec.h"
+#include <unirec/unirec.h>
 
 /* ****************************** Modify here ****************************** */
 // Struct with information about module
