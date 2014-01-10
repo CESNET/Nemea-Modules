@@ -5,6 +5,7 @@ import os.path
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "python"))
 import trap
 import unirec
+from unirec import Timestamp
 import readline
 
 module_info = trap.CreateModuleInfo(
@@ -60,15 +61,21 @@ def edit_record():
             break # Continue with next field
          
          field_type = record._field_types[name]
-         try:
-            if hasattr(field_type, "fromString"):
-               val = field_type.fromString(valstr)
-            else:
-               val = field_type(valstr)
-         except Exception, e:
-            print "Unable to convert %r to %s:" % (valstr, field_type.__name__),
-            print e
-            continue # Try it again
+         
+         # Try special cases first
+         if field_type is Timestamp and valstr == "now":
+            val = Timestamp.now()
+         else:
+            # All other cases
+            try:
+               if hasattr(field_type, "fromString"):
+                  val = field_type.fromString(valstr)
+               else:
+                  val = field_type(valstr)
+            except Exception, e:
+               print "Unable to convert %r to %s:" % (valstr, field_type.__name__),
+               print e
+               continue # Try it again
          setattr(record, name, val)
          break # Continue with next field
    print
