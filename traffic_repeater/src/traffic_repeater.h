@@ -52,7 +52,6 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <getopt.h>
-#include <commlbr.h>
 #include <libtrap/trap.h>
 
 /*!
