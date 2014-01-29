@@ -66,7 +66,7 @@ trap_module_info_t module_info = {
    "   Outputs: 0\n"
    "\n"
    "Usage:\n"
-   "   ./logger -i IFC_SPEC [-w|-a FILE] UNIREC_FMT [UNIREC_FMT ...] [-o OUT_FMT] [-t] [-n]\n"
+   "   ./logger -i IFC_SPEC [-w|-a FILE] UNIREC_FMT [UNIREC_FMT ...] [-o OUT_FMT] [-t] [-n] [-c N]\n"
    "\n"
    "Module specific parameters:\n"
    "   UNIREC_FMT   The i-th parameter of this type specifies format of UniRec\n"
@@ -74,11 +74,12 @@ trap_module_info_t module_info = {
    "   -w FILE      Write output to FILE instead of stdout (rewrite the file).\n"
    "   -a FILE      Write output to FILE instead of stdout (append to the end).\n"
    "   -o OUT_FMT   Set of fields included in the output (UniRec specifier).\n"
-   "                Union of all input formats is used by default."
+   "                Union of all input formats is used by default.\n"
    "   -t           Write names of fields on the first line.\n"
    "   -T           Add the time when the record was received as the first field.\n"
    "   -n           Add the number of interface the record was received on as the\n"
-   "                first field (or second when -n is specified).\n",
+   "                first field (or second when -n is specified).\n"
+   "   -c N         Quit after N records are received.\n",
    -1, // Number of input interfaces (-1 means variable)
    0, // Number of output interfaces
 };
@@ -91,6 +92,10 @@ static ur_template_t **templates; // UniRec templates of input interfaces (array
 static ur_template_t *out_template; // UniRec template with union of fields of all inputs
 int print_ifc_num = 0;
 int print_time = 0;
+
+unsigned int num_records = 0; // Number of records received (total of all inputs)
+unsigned int max_num_records = 0; // Exit after this number of records is received
+
 
 static FILE *file; // Output file
 
@@ -244,8 +249,14 @@ void capture_thread(int index)
          } // loop over fields
          fprintf(file,"\n");
          fflush(file);
-      }
-   }
+         
+         // Check whether maximum number of records has been reached
+         num_records++;
+         if (max_num_records && num_records >= max_num_records) {
+            break;
+         }
+      } // end critical section
+   } // end while(!stop)
    
    if (verbose >= 1) {
       printf("Thread %i exitting.\n", index);
@@ -282,7 +293,7 @@ int main(int argc, char **argv)
    
    // Parse remaining parameters and get configuration
    char opt;
-   while ((opt = getopt(argc, argv, "w:a:o:tnT")) != -1) {
+   while ((opt = getopt(argc, argv, "w:a:o:c:tnT")) != -1) {
       switch (opt) {
          case 'a':
             append = 1;
@@ -305,6 +316,13 @@ int main(int argc, char **argv)
             break;
          case 'T':
             print_time = 1;
+            break;
+         case 'c':
+            max_num_records = atoi(optarg);
+            if (max_num_records == 0) {
+               fprintf(stderr, "Error: Parameter of -c option must be integer > 0.\n");
+               return 1;
+            }
             break;
          default:
             fprintf(stderr, "Error: Invalid arguments.\n");
