@@ -1,8 +1,8 @@
-LDADD=./nfreader.so ../../unirec/unirec.o
+LDADD=nfreader.so -lunirec
 bin_PROGRAMS=nfdump_reader nfdump_reader_test
-nfdump_reader_SOURCES=nfdump_reader.c
+nfdump_reader_SOURCES=nfdump_reader.c nfreader.h
 
-nfdump_reader_test_SOURCES=nfdump_reader_test.cpp
+nfdump_reader_test_SOURCES=nfdump_reader_test.cpp nfreader.h
 #dist purpose:
-EXTRA_DATA=nfreader.so nfreader.h
+EXTRA_DIST=nfreader.so
 
