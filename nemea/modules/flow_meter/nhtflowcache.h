@@ -1,7 +1,7 @@
 #ifndef NHTFLOWCACHE_H
 #define NHTFLOWCACHE_H
 
-#include "pcap2unirec.h"
+#include "flow_meter.h"
 #include "flowcache.h"
 #include "flowifc.h"
 #include <string>

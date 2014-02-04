@@ -1,6 +1,6 @@
-bin_PROGRAMS=pcap2unirec
-pcap2unirec_SOURCES=pcap2unirec.cpp \
-		    pcap2unirec.h \
+bin_PROGRAMS=flow_meter
+flow_meter_SOURCES=flow_meter.cpp \
+		    flow_meter.h \
 		    packet.h \
 		    packetreceiver.h \
 		    pcapreader.h \
@@ -18,6 +18,6 @@ pcap2unirec_SOURCES=pcap2unirec.cpp \
 		    flowcacheplugin.h
 
 
-pcap2unirec_LDADD=-ltrap -lunirec
-pkgdocdir=${docdir}/pcap2unirec
+flow_meter_LDADD=-ltrap -lunirec
+pkgdocdir=${docdir}/flow_meter
 pkgdoc_DATA=README

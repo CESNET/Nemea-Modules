@@ -5,7 +5,7 @@
 #include <fstream>
 #include <map>
 
-#include "pcap2unirec.h"
+#include "flow_meter.h"
 #include "flowifc.h"
 
 class FlowWriter : public FlowExporter
