@@ -1,1 +1,11 @@
-READ ME
+Flow_meter README
+
+Goal: Creates flows from input PCAP file and exports them to output interface.
+
+Method: Stores packets from input PCAP file in flow cache to create flows. After
+        whole PCAP file is processed, flows from flow cache are exported to output
+        interface.
+
+Input: PCAP file
+
+Output interface: Unirec containing <COLLECTOR_FLOW>.

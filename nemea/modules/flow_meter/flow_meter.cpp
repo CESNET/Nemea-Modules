@@ -28,40 +28,26 @@ inline bool error(const string &e)
    return EXIT_FAILURE;
 }
 
-void print_help()
-{
-   cout
-      << "Flow Generator" << endl
-      << "=================" << endl
-      << "USAGE:  ./flowgen ARGUMENTS " << endl
-      << "=====" << endl
-      << "  -a NUMBER         Active timeout. (DEFAULT: 30.0)" << endl
-      << "  -H                Prints help." << endl
-      << "  -i NUMBER         Inactive timeout. (DEFAULT: 5.0)" << endl
-      << "  -p NUMBER         Collect payload of each flow." << endl
-      << "  -r FILENAME       Pcap file to read." << endl
-      << "                    NUMBER specifies a limit to collect first NUMBER of bytes." << endl
-      << "                    By default do not collect payload." << endl
-      << "  -s NUMBER         Size of flow cache. (DEFAULT: 8192)" << endl
-      << "  -S NUMBER         Print statistics." << endl
-      << "                    NUMBER specifies interval between prints(DEFAULT: 1.0)" << endl
-      << "  -m NUMBER         Sampling probability. NUMBER in 100 (DEFAULT: 100)" << endl
-//      << "  -m STRING         Sampling probability ex: 1..100 is 1 in 100." << endl
-//      << "  -t NUMBER         Sampling type. (NOT IMPLEMENTED YET)" << endl
-      << "  -v STRING         Replacement vector. 1+32 NUMBERS." << endl
-      << endl;
-   exit(EXIT_SUCCESS);
-}
-
-
 trap_module_info_t module_info = {
-   "PCAP2Unirec module", // Module name
+   "Flow meter module", // Module name
    // Module description
    "Exports PCAP file via TRAP interface.\n"
    "Parameters:\n"
-   "   -H          Show flowgen help options\n"
+   "  -a NUMBER         Active timeout. (DEFAULT: 30.0)\n"
+   "  -i NUMBER         Inactive timeout. (DEFAULT: 5.0)\n"
+   "  -p NUMBER         Collect payload of each flow.\n"
+   "  -r FILENAME       Pcap file to read.\n"
+   "                    NUMBER specifies a limit to collect first NUMBER of bytes.\n"
+   "                    By default do not collect payload.\n"
+   "  -s NUMBER         Size of flow cache. (DEFAULT: 8192)\n"
+   "  -S NUMBER         Print statistics.\n"
+   "                    NUMBER specifies interval between prints(DEFAULT: 1.0)\n"
+   "  -m NUMBER         Sampling probability. NUMBER in 100 (DEFAULT: 100)\n"
+// "  -m STRING         Sampling probability ex: 1..100 is 1 in 100. (NOT IMPLEMENTED)\n"
+// "  -t NUMBER         Sampling type. (NOT IMPLEMENTED)\n"
+   "  -v STRING         Replacement vector. 1+32 NUMBERS.\n"
    "Interfaces:\n"
-   "   Input:  0 (PCAP file. See -H help)"
+   "   Input:  0 (PCAP file)"
    "   Output: 1 (COLLECTOR_FLOW)",
    0, // Number of input interfaces
    1, // Number of output interfaces
@@ -90,12 +76,10 @@ int main(int argc, char *argv[])
 
 
    int opt;
-   while ((opt = getopt(argc, argv, "a:Hi:p:r:s:S:m:v:Vw:")) != -1) {
+   while ((opt = getopt(argc, argv, "a:i:p:r:s:S:m:v:Vw:")) != -1) {
       switch (opt) {
       case 'a':
          options.activetimeout = atof(optarg); break;
-      case 'H':
-         print_help(); break;
       case 'i':
          options.inactivetimeout = atof(optarg); break;
       case 'p':
