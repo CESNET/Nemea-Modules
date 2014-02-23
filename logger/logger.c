@@ -250,12 +250,15 @@ void capture_thread(int index)
          fprintf(file,"\n");
          fflush(file);
          
-         // Check whether maximum number of records has been reached
          num_records++;
-         if (max_num_records && num_records >= max_num_records) {
-            break;
-         }
       } // end critical section
+      
+      // Check whether maximum number of records has been reached
+      if (max_num_records && num_records >= max_num_records) {
+         stop = 1;
+         trap_terminate();
+         break;
+      }
    } // end while(!stop)
    
    if (verbose >= 1) {
