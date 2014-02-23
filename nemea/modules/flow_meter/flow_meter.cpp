@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 
 #include <stdlib.h>
 #include <time.h>
@@ -31,17 +32,16 @@ inline bool error(const string &e)
 trap_module_info_t module_info = {
    "Flow meter module", // Module name
    // Module description
-   "Exports PCAP file via TRAP interface.\n"
+   "Convert packets from PCAP file into flow records.\n"
    "Parameters:\n"
-   "  -a NUMBER         Active timeout. (DEFAULT: 30.0)\n"
-   "  -i NUMBER         Inactive timeout. (DEFAULT: 5.0)\n"
-   "  -p NUMBER         Collect payload of each flow.\n"
    "  -r FILENAME       Pcap file to read.\n"
+   "  -t NUM:NUM        Active and inactive timeout in seconds. (DEFAULT: 300.0:30.0)\n"
+   "  -p NUMBER         Collect payload of each flow.\n"
    "                    NUMBER specifies a limit to collect first NUMBER of bytes.\n"
    "                    By default do not collect payload.\n"
-   "  -s NUMBER         Size of flow cache. (DEFAULT: 8192)\n"
-   "  -S NUMBER         Print statistics.\n"
-   "                    NUMBER specifies interval between prints(DEFAULT: 1.0)\n"
+   "  -s NUMBER         Size of flow cache in number of flow records. Each flow \n"
+   "                    record has 232 bytes. (DEFAULT: 65536)\n"
+   "  -S NUMBER         Print statistics. NUMBER specifies interval between prints.\n"
    "  -m NUMBER         Sampling probability. NUMBER in 100 (DEFAULT: 100)\n"
 // "  -m STRING         Sampling probability ex: 1..100 is 1 in 100. (NOT IMPLEMENTED)\n"
 // "  -t NUMBER         Sampling type. (NOT IMPLEMENTED)\n"
@@ -76,12 +76,18 @@ int main(int argc, char *argv[])
 
 
    int opt;
-   while ((opt = getopt(argc, argv, "a:i:p:r:s:S:m:v:Vw:")) != -1) {
+   char* cptr;
+   while ((opt = getopt(argc, argv, "t:p:r:s:S:m:v:Vw:")) != -1) {
       switch (opt) {
-      case 'a':
-         options.activetimeout = atof(optarg); break;
-      case 'i':
-         options.inactivetimeout = atof(optarg); break;
+      case 't':
+         cptr = strchr(optarg, ':');
+         if (cptr == NULL) {
+            return error("Invalid argument for option -t");
+         }
+         *cptr = '\0';
+         options.activetimeout = atof(optarg);
+         options.inactivetimeout = atof(cptr+1);
+         break;
       case 'p':
          options.payloadlimit = atoi(optarg); break;
       case 'r':

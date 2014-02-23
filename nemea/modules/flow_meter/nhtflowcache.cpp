@@ -220,6 +220,14 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       plugins_post_update(flowarray[flowindex]->flowrecord, pkt);
    }
 
+   if (currtimestamp < lasttimestamp) {
+      static bool warning_printed = false;
+      if (!warning_printed) {
+         cerr << "Warning: Timestamps of packets are not in ascending order." << endl;
+         warning_printed = true;
+      }
+   }
+   
    if (currtimestamp - lasttimestamp > 5.0) {
       exportexpired(false); // false -- export only expired flows
       lasttimestamp = currtimestamp;
