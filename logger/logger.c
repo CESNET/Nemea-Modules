@@ -104,10 +104,9 @@ TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 void capture_thread(int index)
 {
    int ret;
-   uint32_t ifc_mask = (0x1 << index);
    
    if (verbose >= 1) {
-      printf("Thread %i started (using ifc_mask 0x%08x).\n", index, ifc_mask);
+      printf("Thread %i started.\n", index);
    }
    
    // Read data from input and log them to a file
@@ -116,12 +115,12 @@ void capture_thread(int index)
       uint16_t rec_size;
       
       if (verbose >= 2) {
-         printf("Thread %i: calling trap_get_data()\n", index);
+         printf("Thread %i: calling trap_recv()\n", index);
       }
       
       // Receive data from index-th input interface, wait until data are available
-      ret = trap_get_data(ifc_mask, &rec, &rec_size, TRAP_WAIT);
-      TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
+      ret = trap_recv(index, &rec, &rec_size);
+      TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
       
       if (verbose >= 2) {
          printf("Thread %i: received %hu bytes of data\n", index, rec_size);

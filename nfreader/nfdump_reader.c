@@ -50,9 +50,6 @@ trap_module_info_t module_info = {
    1, // Number of output interfaces
 };
 
-#define COMMONTIMEOUT TRAP_WAIT
-//#define COMMONTIMEOUT TRAP_HALFWAIT
-
 static int stop = 0;
 
 void signal_handler(int signal)
@@ -329,7 +326,7 @@ int main(int argc, char **argv)
 						ur_set(tmplt, rec2, UR_TIME_LAST, last);
 
 						// Send data to output interface
-						trap_send_data(0, rec2, ur_rec_static_size(tmplt), COMMONTIMEOUT);
+						trap_send(0, rec2, ur_rec_static_size(tmplt));
 						counter++;
 						//usleep(100);
 
@@ -417,7 +414,7 @@ int main(int argc, char **argv)
       if (verbose) {
          printf("Sending EOF message (zero-length record)\n");
       }
-      trap_send_data(0, dummy, 1, COMMONTIMEOUT); // FIXME: zero-length messages doesn't work, send message of length 1
+      trap_send(0, dummy, 1); // FIXME: zero-length messages doesn't work, send message of length 1
    }
 
    // Do all necessary cleanup before exiting

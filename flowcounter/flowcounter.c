@@ -90,11 +90,11 @@ int main(int argc, char **argv)
    // ***** Main processing loop *****
    
    while (!stop) {
-      // Receive data from any interface, wait until data are available
+      // Receive data from input interface (block until data are available)
       const void *data;
       uint16_t data_size;
-      ret = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
-      TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
+      ret = trap_recv(0, &data, &data_size);
+      TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
       
       // Check size of received data
       if (data_size < ur_rec_static_size(tmplt)) {
