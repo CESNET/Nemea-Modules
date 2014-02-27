@@ -244,7 +244,8 @@ int main(int argc, char **argv)
 			while (!stop && (max_records == 0 || counter < max_records) && time_diff_flag && !ret) {
 				if (rec_to_send > 0) {
 					burst_counter = 0;
-					while (!stop && (burst_counter < burst_size)) {
+					while (!stop && (burst_counter < burst_size) &&
+                                               (max_records == 0 || counter < max_records) ) {
 						// Read a record from the file
 						ret = nf_next_record(&file, &rec);
 						if (ret != 0) {
