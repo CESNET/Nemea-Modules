@@ -1,0 +1,30 @@
+Traffic merger (2nd version)
+
+This module merges traffic from multiple input interfaces to one output
+interface. There are two supported versions:
+   - normal (default) - resending incoming data as they come.
+   - timestamp aware - incoming data are sended with respect to timestamp.
+     order.
+
+Interfaces:
+   Inputs: variable
+   Outputs: 1
+
+Usage:
+   ./merger -i IFC_SPEC -n CNT [-u IN_FMT] [-o OUT_FMT] [-T] [-F] [-s SIZE] [-t MS]
+
+Module specific parameters:
+   UNIREC_FMT   The i-th parameter of this type specifies format of UniRec
+                expected on the i-th input interface.
+   -F         (timestamp aware version) Sorts timestamps based on TIME_FIRST
+              field, instead of TIME_LAST (default).
+   -n CNT     Sets count of input links. Must correspond to parameter -i (trap).
+   -o OUT_FMT Set of fields included in the output (UniRec specifier).
+              (default <COLLECTOR_FLOW>).
+   -u IN_FMT  UniRec specifier of input data (same to all links).
+              (default <COLLECTOR_FLOW>).
+   -s SIZE    (timestamp aware version) Set size of buffer for incoming records.
+   -t MS      (timestamp aware version) Set initial timeout for incoming
+              interfaces (in miliseconds). Timeout is set to 0, if no data
+              received in initial timeout.
+   -T         Set mode to timestamp aware.
