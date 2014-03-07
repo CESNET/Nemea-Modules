@@ -1,5 +1,5 @@
 /**
- * \file traffic_merger_v2.c
+ * \file merger.c
  * \brief Merge traffic incoming on mutiple interfaces.
  * \author Pavel Krobot <xkrobo01@cesnet.cz>
  * \date 2014
@@ -101,7 +101,7 @@ trap_module_info_t module_info = {
 static int stop = 0;
 
 int verbose;
-static int n_inputs; // Number of input interfaces
+static int n_inputs=0; // Number of input interfaces
 static int active_inputs; // Number of active input interfaces
 static int initial_timeout = DEFAULT_TIMEOUT; // Initial timeout for incoming interfaces (in miliseconds)
 static int timestamp_selector = TS_LAST; // Tells to sort timestamps based on TIME_FIRST or TIME_LAST field
@@ -374,6 +374,11 @@ int main(int argc, char **argv)
       }
    }
 
+	if (n_inputs == 0){
+		fprintf(stderr, "Error: Missing number of input links (parameter -n CNT).\n");
+		return 1;
+	}
+
    if (verbose >= 0) {
       printf("Number of inputs: %i\n", n_inputs);
    }
@@ -473,4 +478,4 @@ exit:
 
    return ret;
 }
-
+// END OF merger.c
