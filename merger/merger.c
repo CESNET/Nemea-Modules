@@ -1,5 +1,5 @@
 /**
- * \file traffic_merger_v2.c
+ * \file merger.c
  * \brief Merge traffic incoming on mutiple interfaces.
  * \author Pavel Krobot <xkrobo01@cesnet.cz>
  * \date 2014
@@ -101,7 +101,7 @@ trap_module_info_t module_info = {
 static int stop = 0;
 
 int verbose;
-static int n_inputs; // Number of input interfaces
+static int n_inputs=0; // Number of input interfaces
 static int active_inputs; // Number of active input interfaces
 static int initial_timeout = DEFAULT_TIMEOUT; // Initial timeout for incoming interfaces (in miliseconds)
 static int timestamp_selector = TS_LAST; // Tells to sort timestamps based on TIME_FIRST or TIME_LAST field
@@ -221,7 +221,7 @@ void ta_capture_thread(int index)
 
 				if (rcv_read_flag >= n_inputs){
 					if (send_index == index){
-						ret = trap_send_data(0, rec, rec_size, TRAP_WAIT);
+						ret = trap_send_data(0, rec, rec_size, TRAP_NO_WAIT);
 						if (ret != TRAP_E_OK) {
 							if (ret == TRAP_E_TERMINATED) {
 								stop = 1; // Module was terminated while waiting for new data (e.g. by Ctrl-C)
@@ -296,7 +296,7 @@ void capture_thread(int index)
 
       #pragma omp critical
       {
-			ret = trap_send_data(0, rec, rec_size, TRAP_WAIT);
+			ret = trap_send_data(0, rec, rec_size, TRAP_NO_WAIT);
 //			TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, 0, break);
 			if (ret != TRAP_E_OK) {
 				if (ret == TRAP_E_TERMINATED) {
@@ -374,6 +374,11 @@ int main(int argc, char **argv)
       }
    }
 
+	if (n_inputs == 0){
+		fprintf(stderr, "Error: Missing number of input links (parameter -n CNT).\n");
+		return 1;
+	}
+
    if (verbose >= 0) {
       printf("Number of inputs: %i\n", n_inputs);
    }
@@ -427,6 +432,8 @@ int main(int argc, char **argv)
    // Register signal handler.
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
+   trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
+
 	if (mode == MODE_TIME_AWARE){
 		rcv_flag_field = (int *) malloc(n_inputs * sizeof(int));
 		memset(rcv_flag_field, 0, n_inputs * sizeof(int));
@@ -473,4 +480,4 @@ exit:
 
    return ret;
 }
-
+// END OF merger.c
