@@ -221,7 +221,7 @@ void ta_capture_thread(int index)
 
 				if (rcv_read_flag >= n_inputs){
 					if (send_index == index){
-						ret = trap_send_data(0, rec, rec_size, TRAP_WAIT);
+						ret = trap_send_data(0, rec, rec_size, TRAP_NO_WAIT);
 						if (ret != TRAP_E_OK) {
 							if (ret == TRAP_E_TERMINATED) {
 								stop = 1; // Module was terminated while waiting for new data (e.g. by Ctrl-C)
@@ -296,7 +296,7 @@ void capture_thread(int index)
 
       #pragma omp critical
       {
-			ret = trap_send_data(0, rec, rec_size, TRAP_WAIT);
+			ret = trap_send_data(0, rec, rec_size, TRAP_NO_WAIT);
 //			TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, 0, break);
 			if (ret != TRAP_E_OK) {
 				if (ret == TRAP_E_TERMINATED) {
@@ -431,6 +431,8 @@ int main(int argc, char **argv)
 
    // Register signal handler.
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
+
+   trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
 
 	if (mode == MODE_TIME_AWARE){
 		rcv_flag_field = (int *) malloc(n_inputs * sizeof(int));
