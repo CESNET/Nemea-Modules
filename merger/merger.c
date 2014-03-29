@@ -45,22 +45,22 @@
 #include <signal.h>
 #include <getopt.h>
 #include <time.h>
+#include <omp.h>
+
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
-#include <omp.h>
+#include <buffer.h>
+
 
 #define TS_LAST 	0
 #define TS_FIRST	1
 #define DEFAULT_TIMEOUT			10
 #define DEFAULT_BUFFER_SIZE	20
 
-#define INPUT_NOCHANGE 	0
-#define INPUT_ADD			1
-#define INPUT_REMOVE		-1
-#define INPUT_INACTIVE	-2
-
 #define MODE_TIME_IGNORE	0
 #define MODE_TIME_AWARE		1
+
+
 
 // Struct with information about module
 trap_module_info_t module_info = {
@@ -99,233 +99,82 @@ trap_module_info_t module_info = {
 };
 
 static int stop = 0;
-
-int verbose;
-static int n_inputs=0; // Number of input interfaces
-static int active_inputs; // Number of active input interfaces
-static int initial_timeout = DEFAULT_TIMEOUT; // Initial timeout for incoming interfaces (in miliseconds)
-static int timestamp_selector = TS_LAST; // Tells to sort timestamps based on TIME_FIRST or TIME_LAST field
-static int *rcv_flag_field; // Flag field for input interfaces
-static int rcv_read_flag = 0; // Receive counter for active input interfaces
-static int send_index = -1; // Index of interface with privilege to send
-static ur_time_t actual_timestamp = 0; // Actual minimal timestamp
-static int ready_to_send = 0;
-static ur_template_t *in_template; // UniRec template of input interface(s)
-static ur_template_t *out_template; // UniRec template of output interface
-static int buffer_size = DEFAULT_BUFFER_SIZE; // Size of buffer for input records
-static void **rec_buffs; // Buffer for input records
-
-unsigned int num_records = 0; // Number of records received (total of all inputs)
+static int verbose;
 
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
+
+static int timestamp_selector = TS_LAST; // Tells to sort timestamps based on TIME_FIRST or TIME_LAST field
+
+static ur_template_t *in_template; // UniRec template of input interface(s)
+static ur_template_t *out_template; // UniRec template of output interface
+
+static int n_threads=0; // Number of threads: one for every input inreface + one sender
+static int initial_timeout = DEFAULT_TIMEOUT; // Initial timeout for incoming interfaces (in miliseconds)
+static int buffer_size = 30 * sizeof(int);
+static buff_t buffer;
+
+static int *rcv_flag_field; // Flag field for input interfaces
+
+
+
 void ta_capture_thread(int index)
 {
-   int ret;
-   int read_next = 1;
-   int input_state = INPUT_NOCHANGE;
-   int timeout = initial_timeout;
+	srand (time(NULL));
 
-	ur_time_t rec_time;
+	int ret;
+	int *result;
 
-   if (verbose >= 1) {
-      printf("Thread %i started.\n", index);
-   }
+   if (index == 0) {//sending thread
+		printf("Thread %i started as SENDER >>.\n", index);
 
-//   trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, timeout);
-   trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
+		get_min_rec(&buffer, result);
+   } else {// reading threads
+		printf("Thread %i started as << READER.\n", index);
+		int *rec;
+		int rec_size = sizeof(int) * (index + 1);
 
-   // Read data from input and log them to a file
-   while (!stop) {
-		const void *rec;
-		uint16_t rec_size;
-
-		if (read_next){
-			if (verbose >= 2) {
-				printf("Thread %i: calling trap_recv()\n", index);
+		for (int i = 0; i < 10; ++i){
+			rec = (int *)malloc(rec_size);
+			if (rec == NULL){
+				fprintf(stderr,"MALLOC ERROR - TODO\n");
+				return;
+				///!!!TODO ----------------------------------------------------------------- ERROR
 			}
-			// Receive data from index-th input interface, wait until data are available
-//			ret = trap_get_data(ifc_mask, &rec, &rec_size, TRAP_WAIT);
-			ret = trap_recv(index, &rec, &rec_size);
-//			printf("Rec...\n");
-			if (ret != TRAP_E_OK) {
-				if (ret == TRAP_E_TIMEOUT) {//input probably (temporary) offline
-					printf("Thread %i: no data received (timeout %u).\n", index, timeout);
-					timeout = 0;
-					trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
-					input_state = INPUT_REMOVE;
-				} else if (ret == TRAP_E_TERMINATED) {
-					break; // Module was terminated while waiting for new data (e.g. by Ctrl-C)
-				} else {
-					// Some error has occured
-					fprintf(stderr, "Error: trap_get_data() returned %i (%s)\n", ret, trap_last_error_msg);
-					break;
-				}
-			} else {
-				if (input_state == INPUT_REMOVE){//input is online again
-					timeout = initial_timeout;
-//					trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, timeout);
-					trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
-					input_state = INPUT_ADD;
-				}
+			rec[0] = index * 100 + i;
+			for (int j = 1; j < (index + 1); ++j){
+				rec[j] = rand() % 10 + 1;
+			}
 
-				if (verbose >= 2) {
-					printf("Thread %i: received %hu bytes of data\n", index, rec_size);
-				}
+			#pragma omp critical
+				ret = add_rec(&buffer, rec, rec_size);
 
-				// Check size of received data
-				if (rec_size < ur_rec_static_size(in_template)) {
-					if (rec_size <= 1) {
-						if (verbose >= 0) {
-							printf("Interface %i received ending record, the interface will be closed.\n", index, rec_size);
-							input_state = INPUT_REMOVE;
-						}
-						stop = 1;
-					} else {
-						fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
-								  ur_rec_static_size(in_template), rec_size);
-						break;
-					}
-				}
-
-				if (timestamp_selector == TS_FIRST){
-					rec_time = ur_get(in_template, rec, UR_TIME_FIRST);
-				} else {
-					rec_time = ur_get(in_template, rec, UR_TIME_LAST);
-				}
-//				printf("%lu\n", rec_time);
-				read_next = 0;
+			if (ret != EOK){
+				printf("Thread %i exiting (%i records added).\n", index, i);
+				break;
 			}
 		}
-
-      #pragma omp critical
-      {
-      	if (input_state == INPUT_ADD){
-				++n_inputs;
-				printf("adding input: %i\n", n_inputs);
-				input_state = INPUT_NOCHANGE;
-      	} else if (input_state == INPUT_REMOVE){
-				--n_inputs;
-				printf("removing input: %i\n", n_inputs);
-				input_state = INPUT_INACTIVE;
-      	}
-      	if (input_state == INPUT_NOCHANGE){
-				if (!rcv_flag_field[index]){
-					if (actual_timestamp == 0 || actual_timestamp > rec_time){
-						actual_timestamp = rec_time;
-						send_index = index;
-					}
-					++rcv_read_flag;
-					rcv_flag_field[index] = 1;
-				}
-
-				if (rcv_read_flag >= n_inputs){
-					if (send_index == index){
-						ret = trap_send_data(0, rec, rec_size, TRAP_NO_WAIT);
-						if (ret != TRAP_E_OK) {
-							if (ret == TRAP_E_TERMINATED) {
-								stop = 1; // Module was terminated while waiting for new data (e.g. by Ctrl-C)
-							} else {
-								// Some error has occured
-								fprintf(stderr, "Error: trap_send_data() returned %i (%s)\n", ret, trap_last_error_msg);
-								stop = 1;
-							}
-	//						TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, 0; continue, break);
-						}
-						rcv_read_flag = 0;
-						memset(rcv_flag_field, 0, n_inputs * sizeof(int));
-						actual_timestamp = 0;
-						send_index = -1;
-						read_next = 1;
-					}
-				}
-			}
-		} // end critical section
-   } // end while(!stop)
-
-   if (verbose >= 1) {
-      printf("Thread %i exitting.\n", index);
+//		free(rec);
    }
 }
 
 void capture_thread(int index)
 {
-	int private_stop = 0;
-   int ret;
-   int timeout = initial_timeout;
-
-   if (verbose >= 1) {
-      printf("Thread %i started.\n", index);
-   }
-
-//   trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, timeout);
-   trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
-
-   // Read data from input and log them to a file
-   while (!stop && !private_stop) {
-		const void *rec;
-		uint16_t rec_size;
-
-		if (verbose >= 2) {
-			printf("Thread %i: calling trap_recv()\n", index);
-		}
-		// Receive data from index-th input interface, wait until data are available
-		ret = trap_recv(index, &rec, &rec_size);
-		TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
-
-		if (verbose >= 2) {
-			printf("Thread %i: received %hu bytes of data\n", index, rec_size);
-		}
-
-		// Check size of received data
-		if (rec_size < ur_rec_static_size(in_template)) {
-			if (rec_size <= 1) {
-				if (verbose >= 0) {
-					printf("Interface %i received ending record, the interface will be closed.\n", index, rec_size);
-				}
-				private_stop = 1;
-				if (--active_inputs > 0){// Only last thread send terminating message.
-					break;
-				}
-			} else {
-				fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
-						  ur_rec_static_size(in_template), rec_size);
-				break;
-			}
-		}
-
-      #pragma omp critical
-      {
-			ret = trap_send_data(0, rec, rec_size, TRAP_NO_WAIT);
-//			TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, 0, break);
-			if (ret != TRAP_E_OK) {
-				if (ret == TRAP_E_TERMINATED) {
-					private_stop = 1; // Module was terminated while waiting for new data (e.g. by Ctrl-C)
-				} else {
-					// Some error has occured
-					fprintf(stderr, "Error: trap_send_data() returned %i (%s)\n", ret, trap_last_error_msg);
-					private_stop = 1;
-				}
-			}
-		} // end critical section
-   } // end while(!stop && !private_stop)
-
-   if (verbose >= 1) {
-      printf("Thread %i exitting.\n", index);
-   }
 }
 
 
 int main(int argc, char **argv)
 {
    int ret;
-   int mode=MODE_TIME_IGNORE;
+
    char *in_template_str = "<COLLECTOR_FLOW>";
    char *out_template_str = "<COLLECTOR_FLOW>";
 
-   // ***** Process parameters *****
+   int mode = MODE_TIME_IGNORE;
+   int n_inputs = 0;
 
-   // Let TRAP library parse command-line arguments and extract its parameters
+   // ***** Process parameters *****
+	// Let TRAP library parse command-line arguments and extract its parameters
    trap_ifc_spec_t ifc_spec;
    ret = trap_parse_params(&argc, argv, &ifc_spec);
    if (ret != TRAP_E_OK) {
@@ -345,23 +194,21 @@ int main(int argc, char **argv)
 
    // Parse remaining parameters and get configuration
    char opt;
-   while ((opt = getopt(argc, argv, "Fn:o:u:s:t:T")) != -1) {
+   while ((opt = getopt(argc, argv, "b:Fn:9u:t:T")) != -1) {
       switch (opt) {
+         case 'b':
+				buffer_size = atoi(optarg);
+				break;
          case 'F':
             timestamp_selector = TS_FIRST;
             break;
 			case 'n':
             n_inputs = atoi(optarg);
             break;
-         case 'o':
-            out_template_str = optarg;
-            break;
 			case 'u':
+				out_template_str = optarg
             in_template_str = optarg;
             break;
-			case 's':
-				buffer_size = atoi(optarg);
-				break;
 			case 't':
             initial_timeout = atoi(optarg);
             break;
@@ -376,40 +223,30 @@ int main(int argc, char **argv)
 
 	if (n_inputs == 0){
 		fprintf(stderr, "Error: Missing number of input links (parameter -n CNT).\n");
-		return 1;
-	}
+		ret = -1;
+		goto exit;
+	} else if (n_inputs > 32) {
+      fprintf(stderr, "Error: More than 32 interfaces is not allowed by TRAP library.\n");
+      ret = -1;
+		goto exit;
+   }
 
    if (verbose >= 0) {
       printf("Number of inputs: %i\n", n_inputs);
-   }
-   if (n_inputs > 32) {
-      fprintf(stderr, "Error: More than 32 interfaces is not allowed by TRAP library.\n");
-      return 4;
-   }
 
-	active_inputs = n_inputs;
-
-   if (verbose >= 0) {
       printf("Creating UniRec templates ...\n");
    }
 
-   // Create input UniRec template
+   // Create input and output UniRec template
 	in_template = ur_create_template(in_template_str);
-	if (in_template == NULL) {
-		fprintf(stderr, "Error: Invalid template: %s\n", in_template_str);
-		ret = -1;
-		goto exit;
-	}
-   // Create output UniRec template
 	out_template = ur_create_template(out_template_str);
-	if (out_template == NULL) {
-		fprintf(stderr, "Error: Invalid template: %s\n", out_template_str);
-		ret = -1;
+	if (in_template == NULL || out_template == NULL) {
+		fprintf(stderr, "Error: Invalid template: %s\n", in_template_str);
+		ret = -2;
 		goto exit;
 	}
 
    // ***** TRAP initialization *****
-
    // Set number of input interfaces
    module_info.num_ifc_in = n_inputs;
 
@@ -422,7 +259,7 @@ int main(int argc, char **argv)
    if (ret != TRAP_E_OK) {
       fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
       trap_free_ifc_spec(ifc_spec);
-      ret = 2;
+      ret = -3;
       goto exit;
    }
 
@@ -434,42 +271,48 @@ int main(int argc, char **argv)
 
    trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
 
-	if (mode == MODE_TIME_AWARE){
-		rcv_flag_field = (int *) malloc(n_inputs * sizeof(int));
-		memset(rcv_flag_field, 0, n_inputs * sizeof(int));
-	}
-
    if (verbose >= 0) {
       printf("Initialization done.\n");
    }
 
-	if (mode == MODE_TIME_AWARE){ ///** TMP - TODO
-		printf("Mode not implemented yet.\n");
-		goto exit;
+
+	if (mode == MODE_TIME_AWARE){
+		n_threads = n_inputs + 1;
+
+		rcv_flag_field = (int *) malloc(n_inputs * sizeof(int));
+
+		buff_init(&buffer, buffer_size);
+	} else {
+		n_threads = n_inputs;
 	}
 
-   // ***** Start a thread for each interface *****
-   #pragma omp parallel num_threads(n_inputs)
+	 // ***** Start a thread for each interface *****
+   #pragma omp parallel num_threads(n_threads)
    {
-//   	if (mode == MODE_TIME_AWARE)
-//			ta_capture_thread(omp_get_thread_num());
-//		else
+   	if (mode == MODE_TIME_AWARE)
+			ta_capture_thread(omp_get_thread_num());
+		else
 			capture_thread(omp_get_thread_num());
+   }
+
+	buff_item_t *it = buffer.first;
+   for (int i = 0; i < buffer.item_count; ++i){
+//   	int *rec = it->data;
+//		printf("%i. %i: %i\n", i, rec[0], rec[1]);
+		printf("%i. ", i);
+		send_item(it);
+		printf("\n");
+		it = it->next_item;
    }
 
    ret = 0;
 
    // ***** Cleanup *****
-
-exit:
    if (verbose >= 0) {
       printf("Exitting ...\n");
    }
 
    trap_terminate(); // This have to be called before trap_finalize(), otherwise it may crash (don't know if feature or bug in TRAP)
-
-   // Do all necessary cleanup before exiting
-   TRAP_DEFAULT_FINALIZATION();
 
    ur_free_template(in_template);
    ur_free_template(out_template);
@@ -477,6 +320,10 @@ exit:
 	if (mode == MODE_TIME_AWARE){
 		free(rcv_flag_field);
 	}
+
+exit:
+   // Do all necessary cleanup before exiting
+   TRAP_DEFAULT_FINALIZATION();
 
    return ret;
 }
