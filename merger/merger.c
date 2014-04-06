@@ -45,10 +45,15 @@
 #include <signal.h>
 #include <getopt.h>
 #include <time.h>
+<<<<<<< HEAD
+=======
+#include <unistd.h>
+>>>>>>> develop
 #include <omp.h>
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
+<<<<<<< HEAD
 #include <buffer.h>
 
 
@@ -56,6 +61,14 @@
 #define TS_FIRST	1
 #define DEFAULT_TIMEOUT			10
 #define DEFAULT_BUFFER_SIZE	20
+=======
+
+#define TS_LAST 	0
+#define TS_FIRST	1
+#define DEFAULT_TIMEOUT		1000000
+//#define DEFAULT_TIMEOUT		TRAP_WAIT
+#define TIME_DIFF_SLEEP		5
+>>>>>>> develop
 
 #define MODE_TIME_IGNORE	0
 #define MODE_TIME_AWARE		1
@@ -77,29 +90,25 @@ trap_module_info_t module_info = {
    "   Outputs: 1\n"
    "\n"
    "Usage:\n"
-   "   ./merger -i IFC_SPEC -n CNT [-u IN_FMT] [-o OUT_FMT] [-T] [-F] [-s SIZE] [-t MS]\n"
+   "   ./merger -i IFC_SPEC -n CNT [-u FMT] [-T] [-F] [-t MS]\n"
    "\n"
    "Module specific parameters:\n"
-   "   UNIREC_FMT   The i-th parameter of this type specifies format of UniRec\n"
-   "                expected on the i-th input interface.\n"
    "   -F         (timestamp aware version) Sorts timestamps based on TIME_FIRST\n"
    "              field, instead of TIME_LAST (default).\n"
    "   -n CNT     Sets count of input links. Must correspond to parameter -i (trap).\n"
-   "   -o OUT_FMT Set of fields included in the output (UniRec specifier).\n"
+   "   -u FMT     UniRec specifier of input/output data (same to all links).\n"
    "              (default <COLLECTOR_FLOW>).\n"
-   "   -u IN_FMT  UniRec specifier of input data (same to all links).\n"
-   "              (default <COLLECTOR_FLOW>).\n"
-   "   -s SIZE    (timestamp aware version) Set size of buffer for incoming records.\n"
    "   -t MS      (timestamp aware version) Set initial timeout for incoming\n"
-   "              interfaces (in miliseconds). Timeout is set to 0, if no data\n"
-   "              received in initial timeout.\n"
-   "   -T         Set mode to timestamp aware.\n",
+   "              interfaces (in microseconds). Timeout is set to 0, if no data\n"
+   "              received in initial timeout (default 1s).\n"
+   "   -T         Set mode to timestamp aware (not by default).\n",
    -1, // Number of input interfaces (-1 means variable)
    1, // Number of output interfaces
 };
 
 static int stop = 0;
 static int verbose;
+<<<<<<< HEAD
 
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
@@ -113,9 +122,40 @@ static int n_threads=0; // Number of threads: one for every input inreface + one
 static int initial_timeout = DEFAULT_TIMEOUT; // Initial timeout for incoming interfaces (in miliseconds)
 static int buffer_size = 30 * sizeof(int);
 static buff_t buffer;
+=======
+
+//TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
+void signal_handler(int signal)
+{
+	if (signal == SIGTERM || signal == SIGINT) {
+		stop = 1;
+	}
+}
+
+static int timestamp_selector = TS_LAST; // Tells to sort timestamps based on TIME_FIRST or TIME_LAST field
+static ur_time_t actual_min_timestamp = 0; // Actual minimal timestamp
+static ur_time_t prev_min_timestamp = 0;
+
+static ur_template_t *in_template; // UniRec template of input interface(s)
+static ur_template_t *out_template; // UniRec template of output interface
+
+static int active_interfaces;
+static int initial_timeout = DEFAULT_TIMEOUT; // Initial timeout for incoming interfaces (in miliseconds)
+
+void ta_capture_thread(int index)
+{
+	int private_stop = 0;
+   int ret;
+
+	int outage_flag = 0;
+   int read_next = 1;
+   int timeout = initial_timeout;
+   ur_time_t rec_time;
+>>>>>>> develop
 
 static int *rcv_flag_field; // Flag field for input interfaces
 
+<<<<<<< HEAD
 
 
 void ta_capture_thread(int index)
@@ -144,10 +184,123 @@ void ta_capture_thread(int index)
 			rec[0] = index * 100 + i;
 			for (int j = 1; j < (index + 1); ++j){
 				rec[j] = rand() % 10 + 1;
+=======
+   trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, timeout);
+
+   // Read data from input and log them to a file
+   while (!stop && !private_stop) {
+		const void *rec;
+		uint16_t rec_size;
+
+		if (read_next){
+			rec_time = 0;
+
+			if (verbose >= 2) {
+				printf("Thread %i: calling trap_recv()\n", index);
+			}
+			// Receive data from index-th input interface, wait until data are available
+			ret = trap_recv(index, &rec, &rec_size);
+
+			if (ret != TRAP_E_OK) {
+				if (ret == TRAP_E_TIMEOUT) {//input probably (temporary) offline
+					printf("Thread %i: no data received (timeout %u).\n", index, timeout);
+				} else if (ret == TRAP_E_TERMINATED) {// Module was terminated while waiting for new data (e.g. by Ctrl-C)
+					private_stop = 1;
+				} else {
+					// Some error has occured
+					fprintf(stderr, "Error: trap_get_data() returned %i (%s)\n", ret, trap_last_error_msg);
+				}
+				if(!outage_flag){
+					outage_flag = 1;
+					trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
+					#pragma omp atomic
+					--active_interfaces;
+				}
+			} else {
+				if (verbose >= 2) {
+					printf("Thread %i: received %hu bytes of data\n", index, rec_size);
+				}
+				// Check size of received data
+				if (rec_size < ur_rec_static_size(in_template)) {
+					if (rec_size <= 1) {
+						if (verbose >= 0) {
+							printf("Interface %i received ending record, the interface will be closed.\n", index, rec_size);
+						}
+						read_next = 0;
+					} else {
+						fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
+								  ur_rec_static_size(in_template), rec_size);
+					}
+					if(!outage_flag){
+						outage_flag = 1;
+						trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
+						#pragma omp atomic
+						--active_interfaces;
+					}
+				} else {
+					if (outage_flag) {
+						outage_flag = 0;
+						trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, timeout);
+						#pragma omp atomic
+						++active_interfaces;
+					}
+					if (timestamp_selector == TS_FIRST){
+						rec_time = ur_get(in_template, rec, UR_TIME_FIRST);
+					} else {
+						rec_time = ur_get(in_template, rec, UR_TIME_LAST);
+					}
+					read_next = 0;
+				}
+>>>>>>> develop
 			}
 
+<<<<<<< HEAD
 			#pragma omp critical
 				ret = add_rec(&buffer, rec, rec_size);
+=======
+		#pragma omp barrier
+
+		if (!outage_flag){
+			#pragma omp critical (minimum)
+			{
+				if (actual_min_timestamp == 0 || actual_min_timestamp > rec_time){
+					actual_min_timestamp = rec_time;
+				} else {
+		//			sleep(rec_time - actual_min_timestamp);
+				}
+			}
+
+			#pragma omp barrier
+
+			if (actual_min_timestamp == rec_time){
+				#pragma omp critical (sending)
+				{
+					ret = trap_send(0, rec, rec_size);
+
+					if (ret != TRAP_E_OK) {
+						if (ret == TRAP_E_TERMINATED) {
+							private_stop = 1; // Module was terminated while waiting for new data (e.g. by Ctrl-C)
+							#pragma omp atomic
+							--active_interfaces;
+						} else {
+							// Some error has occured
+							fprintf(stderr, "Error: trap_send_data() returned %i (%s)\n", ret, trap_last_error_msg);
+							fprintf(stderr, "   Message skipped...\n");
+							read_next = 1;
+						}
+					} else {
+						read_next = 1;
+						actual_min_timestamp = 0;
+					}
+				}
+			}
+		}
+
+		if (!active_interfaces){
+			private_stop = 1;
+		}
+   } // end while(!stop && !private_stop)
+>>>>>>> develop
 
 			if (ret != EOK){
 				printf("Thread %i exiting (%i records added).\n", index, i);
@@ -160,8 +313,73 @@ void ta_capture_thread(int index)
 
 void capture_thread(int index)
 {
-}
+<<<<<<< HEAD
+=======
+	int private_stop = 0;
+   int ret;
+//   int timeout = initial_timeout;
 
+   if (verbose >= 1) {
+      printf("Thread %i started.\n", index);
+   }
+
+//   trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, timeout);
+   trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
+
+   // Read data from input and log them to a file
+   while (!stop && !private_stop) {
+		const void *rec;
+		uint16_t rec_size;
+
+		if (verbose >= 2) {
+			printf("Thread %i: calling trap_recv()\n", index);
+		}
+		// Receive data from index-th input interface, wait until data are available
+		ret = trap_recv(index, &rec, &rec_size);
+		TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
+
+		if (verbose >= 2) {
+			printf("Thread %i: received %hu bytes of data\n", index, rec_size);
+		}
+
+		// Check size of received data
+		if (rec_size < ur_rec_static_size(in_template)) {
+			if (rec_size <= 1) {
+				if (verbose >= 0) {
+					printf("Interface %i received ending record, the interface will be closed.\n", index, rec_size);
+				}
+				private_stop = 1;
+				if (--active_interfaces > 0){// Only last thread send terminating message.
+					break;
+				}
+			} else {
+				fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
+						  ur_rec_static_size(in_template), rec_size);
+				break;
+			}
+		}
+
+      #pragma omp critical
+      {
+			ret = trap_send_data(0, rec, rec_size, TRAP_NO_WAIT);
+//			ret = trap_send_data(0, rec, rec_size, TRAP_WAIT);
+			if (ret != TRAP_E_OK) {
+				if (ret == TRAP_E_TERMINATED) {
+					private_stop = 1; // Module was terminated while waiting for new data (e.g. by Ctrl-C)
+				} else {
+					// Some error has occured
+					fprintf(stderr, "Error: trap_send_data() returned %i (%s)\n", ret, trap_last_error_msg);
+					private_stop = 1;
+				}
+			}
+		} // end critical section
+   } // end while(!stop && !private_stop)
+
+   if (verbose >= 1) {
+      printf("Thread %i exitting.\n", index);
+   }
+>>>>>>> develop
+}
 
 int main(int argc, char **argv)
 {
@@ -194,7 +412,11 @@ int main(int argc, char **argv)
 
    // Parse remaining parameters and get configuration
    char opt;
+<<<<<<< HEAD
    while ((opt = getopt(argc, argv, "b:Fn:9u:t:T")) != -1) {
+=======
+   while ((opt = getopt(argc, argv, "Fn:u:t:T")) != -1) {
+>>>>>>> develop
       switch (opt) {
          case 'b':
 				buffer_size = atoi(optarg);
@@ -206,7 +428,11 @@ int main(int argc, char **argv)
             n_inputs = atoi(optarg);
             break;
 			case 'u':
+<<<<<<< HEAD
 				out_template_str = optarg
+=======
+				out_template_str = optarg;
+>>>>>>> develop
             in_template_str = optarg;
             break;
 			case 't':
@@ -269,12 +495,16 @@ int main(int argc, char **argv)
    // Register signal handler.
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
+<<<<<<< HEAD
    trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
 
+=======
+>>>>>>> develop
    if (verbose >= 0) {
       printf("Initialization done.\n");
    }
 
+<<<<<<< HEAD
 
 	if (mode == MODE_TIME_AWARE){
 		n_threads = n_inputs + 1;
@@ -288,6 +518,12 @@ int main(int argc, char **argv)
 
 	 // ***** Start a thread for each interface *****
    #pragma omp parallel num_threads(n_threads)
+=======
+	active_interfaces = n_inputs;
+
+	 // ***** Start a thread for each interface *****
+   #pragma omp parallel num_threads(n_inputs)
+>>>>>>> develop
    {
    	if (mode == MODE_TIME_AWARE)
 			ta_capture_thread(omp_get_thread_num());
@@ -312,14 +548,17 @@ int main(int argc, char **argv)
       printf("Exitting ...\n");
    }
 
+<<<<<<< HEAD
    trap_terminate(); // This have to be called before trap_finalize(), otherwise it may crash (don't know if feature or bug in TRAP)
 
+=======
+>>>>>>> develop
    ur_free_template(in_template);
    ur_free_template(out_template);
 
-	if (mode == MODE_TIME_AWARE){
-		free(rcv_flag_field);
-	}
+exit:
+   // Do all necessary cleanup before exiting
+   TRAP_DEFAULT_FINALIZATION();
 
 exit:
    // Do all necessary cleanup before exiting
