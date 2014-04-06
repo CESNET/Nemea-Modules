@@ -45,30 +45,17 @@
 #include <signal.h>
 #include <getopt.h>
 #include <time.h>
-<<<<<<< HEAD
-=======
 #include <unistd.h>
->>>>>>> develop
 #include <omp.h>
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
-<<<<<<< HEAD
-#include <buffer.h>
-
-
-#define TS_LAST 	0
-#define TS_FIRST	1
-#define DEFAULT_TIMEOUT			10
-#define DEFAULT_BUFFER_SIZE	20
-=======
 
 #define TS_LAST 	0
 #define TS_FIRST	1
 #define DEFAULT_TIMEOUT		1000000
 //#define DEFAULT_TIMEOUT		TRAP_WAIT
 #define TIME_DIFF_SLEEP		5
->>>>>>> develop
 
 #define MODE_TIME_IGNORE	0
 #define MODE_TIME_AWARE		1
@@ -108,21 +95,6 @@ trap_module_info_t module_info = {
 
 static int stop = 0;
 static int verbose;
-<<<<<<< HEAD
-
-TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
-
-
-static int timestamp_selector = TS_LAST; // Tells to sort timestamps based on TIME_FIRST or TIME_LAST field
-
-static ur_template_t *in_template; // UniRec template of input interface(s)
-static ur_template_t *out_template; // UniRec template of output interface
-
-static int n_threads=0; // Number of threads: one for every input inreface + one sender
-static int initial_timeout = DEFAULT_TIMEOUT; // Initial timeout for incoming interfaces (in miliseconds)
-static int buffer_size = 30 * sizeof(int);
-static buff_t buffer;
-=======
 
 //TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 void signal_handler(int signal)
@@ -151,40 +123,11 @@ void ta_capture_thread(int index)
    int read_next = 1;
    int timeout = initial_timeout;
    ur_time_t rec_time;
->>>>>>> develop
 
-static int *rcv_flag_field; // Flag field for input interfaces
+   if (verbose >= 1) {
+      printf("Thread %i started.\n", index);
+   }
 
-<<<<<<< HEAD
-
-
-void ta_capture_thread(int index)
-{
-	srand (time(NULL));
-
-	int ret;
-	int *result;
-
-   if (index == 0) {//sending thread
-		printf("Thread %i started as SENDER >>.\n", index);
-
-		get_min_rec(&buffer, result);
-   } else {// reading threads
-		printf("Thread %i started as << READER.\n", index);
-		int *rec;
-		int rec_size = sizeof(int) * (index + 1);
-
-		for (int i = 0; i < 10; ++i){
-			rec = (int *)malloc(rec_size);
-			if (rec == NULL){
-				fprintf(stderr,"MALLOC ERROR - TODO\n");
-				return;
-				///!!!TODO ----------------------------------------------------------------- ERROR
-			}
-			rec[0] = index * 100 + i;
-			for (int j = 1; j < (index + 1); ++j){
-				rec[j] = rand() % 10 + 1;
-=======
    trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, timeout);
 
    // Read data from input and log them to a file
@@ -251,13 +194,9 @@ void ta_capture_thread(int index)
 					}
 					read_next = 0;
 				}
->>>>>>> develop
 			}
+		}
 
-<<<<<<< HEAD
-			#pragma omp critical
-				ret = add_rec(&buffer, rec, rec_size);
-=======
 		#pragma omp barrier
 
 		if (!outage_flag){
@@ -300,21 +239,14 @@ void ta_capture_thread(int index)
 			private_stop = 1;
 		}
    } // end while(!stop && !private_stop)
->>>>>>> develop
 
-			if (ret != EOK){
-				printf("Thread %i exiting (%i records added).\n", index, i);
-				break;
-			}
-		}
-//		free(rec);
+   if (verbose >= 1) {
+      printf("Thread %i exitting.\n", index);
    }
 }
 
 void capture_thread(int index)
 {
-<<<<<<< HEAD
-=======
 	int private_stop = 0;
    int ret;
 //   int timeout = initial_timeout;
@@ -378,7 +310,6 @@ void capture_thread(int index)
    if (verbose >= 1) {
       printf("Thread %i exitting.\n", index);
    }
->>>>>>> develop
 }
 
 int main(int argc, char **argv)
@@ -412,15 +343,8 @@ int main(int argc, char **argv)
 
    // Parse remaining parameters and get configuration
    char opt;
-<<<<<<< HEAD
-   while ((opt = getopt(argc, argv, "b:Fn:9u:t:T")) != -1) {
-=======
    while ((opt = getopt(argc, argv, "Fn:u:t:T")) != -1) {
->>>>>>> develop
       switch (opt) {
-         case 'b':
-				buffer_size = atoi(optarg);
-				break;
          case 'F':
             timestamp_selector = TS_FIRST;
             break;
@@ -428,11 +352,7 @@ int main(int argc, char **argv)
             n_inputs = atoi(optarg);
             break;
 			case 'u':
-<<<<<<< HEAD
-				out_template_str = optarg
-=======
 				out_template_str = optarg;
->>>>>>> develop
             in_template_str = optarg;
             break;
 			case 't':
@@ -495,50 +415,19 @@ int main(int argc, char **argv)
    // Register signal handler.
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
-<<<<<<< HEAD
-   trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
-
-=======
->>>>>>> develop
    if (verbose >= 0) {
       printf("Initialization done.\n");
    }
 
-<<<<<<< HEAD
-
-	if (mode == MODE_TIME_AWARE){
-		n_threads = n_inputs + 1;
-
-		rcv_flag_field = (int *) malloc(n_inputs * sizeof(int));
-
-		buff_init(&buffer, buffer_size);
-	} else {
-		n_threads = n_inputs;
-	}
-
-	 // ***** Start a thread for each interface *****
-   #pragma omp parallel num_threads(n_threads)
-=======
 	active_interfaces = n_inputs;
 
 	 // ***** Start a thread for each interface *****
    #pragma omp parallel num_threads(n_inputs)
->>>>>>> develop
    {
    	if (mode == MODE_TIME_AWARE)
 			ta_capture_thread(omp_get_thread_num());
 		else
 			capture_thread(omp_get_thread_num());
-   }
-
-	buff_item_t *it = buffer.first;
-   for (int i = 0; i < buffer.item_count; ++i){
-//   	int *rec = it->data;
-//		printf("%i. %i: %i\n", i, rec[0], rec[1]);
-		printf("%i. ", i);
-		send_item(it);
-		printf("\n");
-		it = it->next_item;
    }
 
    ret = 0;
@@ -548,17 +437,8 @@ int main(int argc, char **argv)
       printf("Exitting ...\n");
    }
 
-<<<<<<< HEAD
-   trap_terminate(); // This have to be called before trap_finalize(), otherwise it may crash (don't know if feature or bug in TRAP)
-
-=======
->>>>>>> develop
    ur_free_template(in_template);
    ur_free_template(out_template);
-
-exit:
-   // Do all necessary cleanup before exiting
-   TRAP_DEFAULT_FINALIZATION();
 
 exit:
    // Do all necessary cleanup before exiting
