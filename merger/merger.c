@@ -218,9 +218,11 @@ void ta_capture_thread(int index)
 		//			sleep(rec_time - actual_min_timestamp);
 				}
 			}
+		}
 
-			#pragma omp barrier
+		#pragma omp barrier
 
+		if (!outage_flag){
 			if (actual_min_timestamp == rec_time){
 				#pragma omp critical (sending)
 				{
