@@ -53,7 +53,9 @@
 
 #define TS_LAST 	0
 #define TS_FIRST	1
-#define DEFAULT_TIMEOUT		1000000
+
+#define INACTIVE_USLEEP_TIME	100000
+#define DEFAULT_TIMEOUT			1000000
 //#define DEFAULT_TIMEOUT		TRAP_WAIT
 #define TIME_DIFF_SLEEP		5
 
@@ -151,8 +153,6 @@ void ta_capture_thread(int index)
 					if (verbose >= 0) {
 						printf("Thread %i: no data received (timeout %u).\n", index, timeout);
 					}
-//					printf("%i |", index);
-//					fflush(stdout);
 				} else if (ret == TRAP_E_TERMINATED) {// Module was terminated while waiting for new data (e.g. by Ctrl-C)
 					private_stop = 1;
 				} else {
@@ -249,9 +249,11 @@ void ta_capture_thread(int index)
 			}
 		}
 
-//		if (!active_interfaces){
+		if (!active_interfaces){
+			trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, timeout);
+			usleep(INACTIVE_USLEEP_TIME);
 //			private_stop = 1;
-//		}
+		}
    } // end while(!stop && !private_stop)
 
    if (verbose >= 1) {
