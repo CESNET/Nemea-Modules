@@ -251,7 +251,7 @@ void ta_capture_thread(int index)
 
 		if (!active_interfaces){
 			trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, timeout);
-			usleep(INACTIVE_USLEEP_TIME);
+//			usleep(INACTIVE_USLEEP_TIME);
 //			private_stop = 1;
 		}
    } // end while(!stop && !private_stop)
