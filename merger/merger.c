@@ -86,7 +86,7 @@ trap_module_info_t module_info = {
    "   -u FMT     UniRec specifier of input/output data (same to all links).\n"
    "              (default <COLLECTOR_FLOW>).\n"
    "   -t MS      (timestamp aware version) Set initial timeout for incoming\n"
-   "              interfaces (in microseconds). Timeout is set to 0, if no data\n"
+   "              interfaces (in seconds). Timeout is set to 0, if no data\n"
    "              received in initial timeout (default 1s).\n"
    "   -T         Set mode to timestamp aware (not by default).\n",
    -1, // Number of input interfaces (-1 means variable)
@@ -132,6 +132,8 @@ void ta_capture_thread(int index)
 
    // Read data from input and log them to a file
    while (!stop && !private_stop) {
+   	if (stop) private_stop = stop;
+
 		const void *rec;
 		uint16_t rec_size;
 
@@ -146,12 +148,18 @@ void ta_capture_thread(int index)
 
 			if (ret != TRAP_E_OK) {
 				if (ret == TRAP_E_TIMEOUT) {//input probably (temporary) offline
-					printf("Thread %i: no data received (timeout %u).\n", index, timeout);
+					if (verbose >= 0) {
+						printf("Thread %i: no data received (timeout %u).\n", index, timeout);
+					}
+//					printf("%i |", index);
+//					fflush(stdout);
 				} else if (ret == TRAP_E_TERMINATED) {// Module was terminated while waiting for new data (e.g. by Ctrl-C)
 					private_stop = 1;
 				} else {
 					// Some error has occured
-					fprintf(stderr, "Error: trap_get_data() returned %i (%s)\n", ret, trap_last_error_msg);
+					if (verbose >= 0) {
+						fprintf(stderr, "Error: trap_get_data() returned %i (%s)\n", ret, trap_last_error_msg);
+					}
 				}
 				if(!outage_flag){
 					outage_flag = 1;
@@ -169,10 +177,12 @@ void ta_capture_thread(int index)
 						if (verbose >= 0) {
 							printf("Interface %i received ending record, the interface will be closed.\n", index, rec_size);
 						}
-						read_next = 0;
+//						read_next = 0;
 					} else {
-						fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
+						if (verbose >= 0) {
+							fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
 								  ur_rec_static_size(in_template), rec_size);
+						}
 					}
 					if(!outage_flag){
 						outage_flag = 1;
@@ -223,8 +233,10 @@ void ta_capture_thread(int index)
 							--active_interfaces;
 						} else {
 							// Some error has occured
-							fprintf(stderr, "Error: trap_send_data() returned %i (%s)\n", ret, trap_last_error_msg);
-							fprintf(stderr, "   Message skipped...\n");
+							if (verbose >= 0) {
+								fprintf(stderr, "Error: trap_send_data() returned %i (%s)\n", ret, trap_last_error_msg);
+								fprintf(stderr, "   Message skipped...\n");
+							}
 							read_next = 1;
 						}
 					} else {
@@ -235,13 +247,13 @@ void ta_capture_thread(int index)
 			}
 		}
 
-		if (!active_interfaces){
-			private_stop = 1;
-		}
+//		if (!active_interfaces){
+//			private_stop = 1;
+//		}
    } // end while(!stop && !private_stop)
 
    if (verbose >= 1) {
-      printf("Thread %i exitting.\n", index);
+		printf("Thread %i exitting.\n", index);
    }
 }
 
@@ -307,9 +319,9 @@ void capture_thread(int index)
 		} // end critical section
    } // end while(!stop && !private_stop)
 
-   if (verbose >= 1) {
+//   if (verbose >= 1) {
       printf("Thread %i exitting.\n", index);
-   }
+//   }
 }
 
 int main(int argc, char **argv)
@@ -356,7 +368,7 @@ int main(int argc, char **argv)
             in_template_str = optarg;
             break;
 			case 't':
-            initial_timeout = atoi(optarg);
+            initial_timeout = atoi(optarg) * 1000000; // microseconds to seconds
             break;
 			case 'T':
 				mode=MODE_TIME_AWARE;
