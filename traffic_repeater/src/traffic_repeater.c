@@ -47,13 +47,13 @@ static int verb = 0; /*< Global variable used to print verbose messages. */
 
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
-void module_init(trap_module_info_t *module, int ifc_in, int ifc_out)
+void module_init(trap_module_info_t *module)
 {
    module->name = "Traffic repeater";  
    module->description = "This module receive data from input interface and resend it to the output interface "
                          "based on given arguments in -i option";
-   module->num_ifc_in = ifc_in;
-   module->num_ifc_out = ifc_out;
+   module->num_ifc_in = IFC_IN_NUM;
+   module->num_ifc_out = IFC_OUT_NUM;
 }
 
 void traffic_repeater(void)
@@ -69,21 +69,21 @@ void traffic_repeater(void)
    data = NULL;
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
    if (verb) {
-      printf("Initializing traffic repeater...\n");
+      fprintf(stderr, "Info: Initializing traffic repeater...\n");
    }
    clock_gettime(CLOCK_MONOTONIC, &start);
    
    while (stop == 0) {
-      ret = trap_get_data(1, &data, &data_size, TIMEOUT);
+      ret = trap_recv(0, &data, &data_size);
       if (ret == TRAP_E_OK) {
          cnt_r++;
          if (data_size == 1) {
             if (verb) {
-               printf("Final record received, terminating repeater...\n");
+               fprintf(stderr, "Info: Final record received, terminating repeater...\n");
             }
             stop = 1;
          }          
-         ret = trap_send_data(0, data, data_size, TIMEOUT);
+         ret = trap_send(0, data, data_size);
          if (ret == TRAP_E_OK) {
             cnt_s++;
             continue;
@@ -94,18 +94,18 @@ void traffic_repeater(void)
    }
    
    clock_gettime(CLOCK_MONOTONIC, &end);
-   diff = (end.tv_sec * NANOSECOND + end.tv_nsec) - (start.tv_sec * NANOSECOND + start.tv_nsec);
-   printf("Flows received:  %16lu\n", cnt_r > 0 ? cnt_r - 1 : cnt_r);
-   printf("Flows sent:      %16lu\n", cnt_s > 0 ? cnt_s - 1 : cnt_s);
-   printf("Timeouts:        %16lu\n", cnt_t);
-   printf("Time elapsed:    %12lu.%03lus\n", diff / NANOSECOND, (diff % NANOSECOND) / 1000000);
+   diff = (end.tv_sec * NS + end.tv_nsec) - (start.tv_sec * NS + start.tv_nsec);
+   fprintf(stderr, "Info: Flows received:  %16lu\n", cnt_r > 0 ? cnt_r - 1 : cnt_r);
+   fprintf(stderr, "Info: Flows sent:      %16lu\n", cnt_s > 0 ? cnt_s - 1 : cnt_s);
+   fprintf(stderr, "Info: Timeouts:        %16lu\n", cnt_t);
+   fprintf(stderr, "Info: Time elapsed:    %12lu.%03lus\n", diff / NS, (diff % NS) / 1000000);
 }
 
 int main(int argc, char **argv)
 {
    trap_module_info_t module_info;
    
-   module_init(&module_info, IFC_DEF, IFC_DEF);
+   module_init(&module_info);
    TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
    verb = (trap_get_verbose_level() >= 0);
    traffic_repeater();

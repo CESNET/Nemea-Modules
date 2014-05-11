@@ -58,20 +58,18 @@
  * \name Default values
  *  Defines macros used by traffic repeater. 
  * \{ */
-#define IFC_DEF 1 /*< Default number of intefaces, do not change. */
-#define BUFFER_TMP 128 /*< Size of a temporary buffer. */
-#define TIMEOUT TRAP_WAIT /*< Default timeout handling, blocking or non-blocking calls. */ 
-#define NANOSECOND 1000000000 /*< Number of nanoseconds in a second. */
+#define IFC_IN_NUM 1 /*< Number of input interfaces expected by module. */
+#define IFC_OUT_NUM 1 /*< Number of output interfaces expected by module. */
+
+#define NS 1000000000 /*< Number of nanoseconds in a second. */
 /*! \} */
 
 /*!
  * \brief Module initialization.
  * Function to initialize the module structure by given values.
- * \param[out] module Pointer to a module structure to be initialized.
- * \param[in] ifc_in Number of client interfaces.
- * \param[in] ifc_out Number of server interfaces.
+ * \param[in,out] module Pointer to a module structure to be initialized.
  */
-void module_init(trap_module_info_t *module, int ifc_in, int ifc_out);
+void module_init(trap_module_info_t *module);
 
 /*!
  * \brief Traffic repeater function
