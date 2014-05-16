@@ -30,9 +30,9 @@ inline bool error(const string &e)
 }
 
 trap_module_info_t module_info = {
-   "Flow meter module", // Module name
+   (char *) "Flow meter module", // Module name
    // Module description
-   "Convert packets from PCAP file into flow records.\n"
+   (char *) "Convert packets from PCAP file into flow records.\n"
    "Parameters:\n"
    "  -r FILENAME       Pcap file to read.\n"
    "  -t NUM:NUM        Active and inactive timeout in seconds. (DEFAULT: 300.0:30.0)\n"
