@@ -78,7 +78,7 @@ trap_module_info_t module_info = {
    "   -t           Write names of fields on the first line.\n"
    "   -T           Add the time when the record was received as the first field.\n"
    "   -n           Add the number of interface the record was received on as the\n"
-   "                first field (or second when -n is specified).\n"
+   "                first field (or second when -T is specified).\n"
    "   -c N         Quit after N records are received.\n",
    -1, // Number of input interfaces (-1 means variable)
    0, // Number of output interfaces
