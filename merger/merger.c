@@ -62,7 +62,10 @@
 #define MODE_TIME_IGNORE	0
 #define MODE_TIME_AWARE		1
 
-
+//#define DEBUG
+//#ifdef DEBUG
+////	#include <iomanip>
+//#endif
 
 // Struct with information about module
 trap_module_info_t module_info = {
@@ -307,6 +310,34 @@ void capture_thread(int index)
 			}
 		}
 
+		if ((rec_size < ur_rec_static_size(in_template))) {
+			if (rec_size <= 1) { // end of data
+				break;
+			} else { // data corrupted
+				fprintf(stderr,"Error: Wrong data size. Expected: %i", ur_rec_static_size(in_template));
+				fprintf(stderr," Recieved: %i.\n", rec_size);
+//				ifstream fx("wrong-packets.log");
+//				if (fx.is_open()){
+//					unsigned char const* bytes = static_cast<unsigned char const*>(rec);
+//					for (int i = 0; i < rec_size; ++i){
+//						fx << std::hex << static_cast<unsigned int> (bytes[i]);
+//					}
+////				char buff [INET6_ADDRSTRLEN];
+////				ip_to_str(ur_get_ptr(in_template, rec, UR_SRC_IP), buff);
+////				cout << buff << ":" << ur_get(in_template, rec, UR_DST_PORT);
+////				ip_to_str(ur_get_ptr(in_template, rec, UR_DST_IP), buff);
+////				cout << " -> " << buff << ":" << ur_get(in_template, rec, UR_DST_PORT);
+////				cout << "; " << ur_get(in_template, rec, UR_PROTOCOL) << "; " << ur_get(in_template, rec, UR_BYTES) << ", " << ur_get(in_template, rec, UR_PACKETS);
+////				cout << ", " << ur_get(in_template, rec, UR_TIME_FIRST) << " - " << ur_get(in_template, rec, UR_TIME_LAST) << ", " << ur_get(in_template, rec, UR_TCP_FLAGS);
+////				cout << "; " << ur_get(in_template, rec, UR_LINK_BIT_FIELD) << ", " << ur_get(in_template, rec, UR_DIR_BIT_FIELD);
+////				cout << "; " << ur_get(in_template, rec, UR_IPV6_TUN_TYPE) << endl;
+//
+//				}
+//				fx.close();
+				continue;
+			}
+		}
+
       #pragma omp critical
       {
 			ret = trap_send_data(0, rec, rec_size, TRAP_NO_WAIT);
@@ -430,6 +461,9 @@ int main(int argc, char **argv)
 
    // Register signal handler.
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
+
+//	trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_BUFFERSWITCH, "0");
+
 
    if (verbose >= 0) {
       printf("Initialization done.\n");

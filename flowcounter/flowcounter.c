@@ -24,6 +24,7 @@ trap_module_info_t module_info = {
    "Parameters:\n"
    "   -u TMPLT    Specify UniRec template expected on the input interface.\n"
    "   -p N        Show progess - print a dot every N flows.\n"
+   "   -P CHAR     When showing progress, print CHAR instead of dot.\n"
    "Interfaces:\n"
    "   Inputs: 1 (flow records)\n"
    "   Outputs: 0\n",
@@ -35,6 +36,7 @@ trap_module_info_t module_info = {
 static int stop = 0;
 static int stats = 0;
 static int progress = 0;
+static char progress_char = 'P';
 
 void signal_handler(int signal)
 {
@@ -65,13 +67,16 @@ int main(int argc, char **argv)
    
    char *unirec_specifier = "<COLLECTOR_FLOW>";
    char opt;
-   while ((opt = getopt(argc, argv, "u:p:")) != -1) {
+   while ((opt = getopt(argc, argv, "u:p:P:")) != -1) {
       switch (opt) {
          case 'u':
             unirec_specifier = optarg;
             break;
          case 'p':
             progress = atoi(optarg);
+            break;
+         case 'P':
+            progress_char = optarg[0];
             break;
          default:
             fprintf(stderr, "Invalid arguments.\n");
@@ -109,7 +114,7 @@ int main(int argc, char **argv)
       }
       
       if (progress > 0 && cnt_flows % progress == 0) {
-         printf(".");
+         putchar(progress_char);
          fflush(stdout);
       }
       
