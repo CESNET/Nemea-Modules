@@ -1,4 +1,4 @@
-LDADD=./nfreader.so -lunirec -ltrap
+LDADD=${srcdir}/nfreader.so -lunirec -ltrap
 bin_PROGRAMS=nfdump_reader nfdump_reader_test
 nfdump_reader_SOURCES=nfdump_reader.c nfreader.h
 
