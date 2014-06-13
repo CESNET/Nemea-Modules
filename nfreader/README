@@ -1,0 +1,8 @@
+NfDump Reader
+*************
+
+The module reads nfdump files and sends flow records in UniRec format on its output TRAP interface.
+
+A filter in the same format as nfdump uses may be applied to filter flow records.
+
+!! "libnfdump" LIBRARY IS NEEDED TO COMPILE AND USE THIS MODULE !!

@@ -14,11 +14,10 @@
 #include <vector>
 #include <iostream>
 #include <iomanip>
-extern "C" {
-#include "nfreader.h"
-}
+
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
+#include <libnfdump.h>
 
 using namespace std;
 
@@ -55,7 +54,7 @@ void signal_handler(int signal)
 int main(int argc, char **argv)
 {
    int ret;
-   nf_file_t file;
+   nfdump_iter_t iter;
    trap_ifc_spec_t ifc_spec;
    
    // Create UniRec template
@@ -79,7 +78,7 @@ int main(int argc, char **argv)
       return 2;
    }
 
-   ret = nf_open(&file, argv[1]);
+   ret = nfdump_iter_start(&iter, argv[1], NULL);
    if (ret != 0) {
       fprintf(stderr, "Error when trying to open file \"%s\"\n", argv[1]);
       trap_finalize();
@@ -89,7 +88,7 @@ int main(int argc, char **argv)
    // Initialize TRAP library (create and init all interfaces)
    ret = trap_init(&module_info, ifc_spec);
    if (ret != TRAP_E_OK) {
-      nf_close(&file);
+      nfdump_iter_end(&iter);
       fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
       return 4;
    }
@@ -105,15 +104,15 @@ int main(int argc, char **argv)
 
    cout << "Loading data from file..." << endl;
    while (1) {
-      master_record_t rec;
+      master_record_t *rec;
 
-      ret = nf_next_record(&file, &rec);
+      ret = nfdump_iter_next(&iter, &rec);
       if (ret != 0) {
-         if (ret == 1) { // no more records
+         if (ret == NFDUMP_EOF) { // no more records
             break;
          }
-         fprintf(stderr, "Error during reading file.\n", argv[1]);
-         nf_close(&file);
+         fprintf(stderr, "Error during reading file (%i).\n", ret);
+         nfdump_iter_end(&iter);
          trap_finalize();
          return 3;
       }
@@ -125,32 +124,32 @@ int main(int argc, char **argv)
       ++cnt_rec;
 
       // Copy data from master_record_t to UniRec record
-      if (rec.flags & 0x01) { // IPv6
+      if (rec->flags & 0x01) { // IPv6
          uint64_t tmp_ip_v6_addr;
          // Swap IPv6 halves
-         tmp_ip_v6_addr = rec.ip_union._v6.srcaddr[0];
-         rec.ip_union._v6.srcaddr[0] = rec.ip_union._v6.srcaddr[1];
-         rec.ip_union._v6.srcaddr[1] = tmp_ip_v6_addr;
-         tmp_ip_v6_addr = rec.ip_union._v6.dstaddr[0];
-         rec.ip_union._v6.dstaddr[0] = rec.ip_union._v6.dstaddr[1];
-         rec.ip_union._v6.dstaddr[1] = tmp_ip_v6_addr;
+         tmp_ip_v6_addr = rec->ip_union._v6.srcaddr[0];
+         rec->ip_union._v6.srcaddr[0] = rec->ip_union._v6.srcaddr[1];
+         rec->ip_union._v6.srcaddr[1] = tmp_ip_v6_addr;
+         tmp_ip_v6_addr = rec->ip_union._v6.dstaddr[0];
+         rec->ip_union._v6.dstaddr[0] = rec->ip_union._v6.dstaddr[1];
+         rec->ip_union._v6.dstaddr[1] = tmp_ip_v6_addr;
 
-         ur_set(tmplt, rec2, UR_SRC_IP, ip_from_16_bytes_le((char *)rec.ip_union._v6.srcaddr));
-         ur_set(tmplt, rec2, UR_DST_IP, ip_from_16_bytes_le((char *)rec.ip_union._v6.dstaddr));
+         ur_set(tmplt, rec2, UR_SRC_IP, ip_from_16_bytes_le((char *)rec->ip_union._v6.srcaddr));
+         ur_set(tmplt, rec2, UR_DST_IP, ip_from_16_bytes_le((char *)rec->ip_union._v6.dstaddr));
       }
       else { // IPv4  
-         ur_set(tmplt, rec2, UR_SRC_IP, ip_from_4_bytes_le((char *)&rec.ip_union._v4.srcaddr));
-         ur_set(tmplt, rec2, UR_DST_IP, ip_from_4_bytes_le((char *)&rec.ip_union._v4.dstaddr));
+         ur_set(tmplt, rec2, UR_SRC_IP, ip_from_4_bytes_le((char *)&rec->ip_union._v4.srcaddr));
+         ur_set(tmplt, rec2, UR_DST_IP, ip_from_4_bytes_le((char *)&rec->ip_union._v4.dstaddr));
 
       }
-      ur_set(tmplt, rec2, UR_SRC_PORT, rec.srcport);
-      ur_set(tmplt, rec2, UR_DST_PORT, rec.dstport);
-      ur_set(tmplt, rec2, UR_PROTOCOL, rec.prot);
-      ur_set(tmplt, rec2, UR_TCP_FLAGS, rec.tcp_flags);
-      ur_set(tmplt, rec2, UR_PACKETS, rec.dPkts);
-      ur_set(tmplt, rec2, UR_BYTES, rec.dOctets);
-      uint64_t first = ur_time_from_sec_msec(rec.first, rec.msec_first);
-      uint64_t last  = ur_time_from_sec_msec(rec.last, rec.msec_last);
+      ur_set(tmplt, rec2, UR_SRC_PORT, rec->srcport);
+      ur_set(tmplt, rec2, UR_DST_PORT, rec->dstport);
+      ur_set(tmplt, rec2, UR_PROTOCOL, rec->prot);
+      ur_set(tmplt, rec2, UR_TCP_FLAGS, rec->tcp_flags);
+      ur_set(tmplt, rec2, UR_PACKETS, rec->dPkts);
+      ur_set(tmplt, rec2, UR_BYTES, rec->dOctets);
+      uint64_t first = ur_time_from_sec_msec(rec->first, rec->msec_first);
+      uint64_t last  = ur_time_from_sec_msec(rec->last, rec->msec_last);
       ur_set(tmplt, rec2, UR_TIME_FIRST, first);
       ur_set(tmplt, rec2, UR_TIME_LAST, last);
       
@@ -163,12 +162,12 @@ int main(int argc, char **argv)
           ur_set(tmplt, rec2, UR_LINK_BIT_FIELD, 0x04);
       }
       
-      ur_set(tmplt, rec2, UR_DIR_BIT_FIELD, rec.input);
+      ur_set(tmplt, rec2, UR_DIR_BIT_FIELD, rec->input);
       */
 
    }
 
-   nf_close(&file);
+   nfdump_iter_end(&iter);
 
    cout << "Sending (" << records.size() << ") records..." << endl;
 

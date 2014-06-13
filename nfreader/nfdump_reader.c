@@ -16,8 +16,17 @@
 #include <unistd.h>
 
 #include <libtrap/trap.h>
-#include "nfreader.h"
 #include <unirec/unirec.h>
+#include <libnfdump.h>
+
+// ***** Defaults and parameters *****
+#define DEFAULT_DIR_BIT_FIELD 0
+#define DEFAULT_LINK_MASK "1"
+
+#define MINIMAL_SENDING_RATE 	100
+#define MINIMAL_BURST_RATE 	10
+#define MAX_SLEEP_TIME 			100 // in miliseconds
+
 
 
 // Struct with information about module
@@ -33,9 +42,11 @@ trap_module_info_t module_info = {
    "   Outputs: 1 (<COLLECTOR_FLOW>) [FIXME: Not all fields are filled]\n"
    "\n"
    "Usage:\n"
-   "   ./nfdump_reader -i IFC_SPEC [-c N] [-n] FILE [FILE...]"
+   "   ./nfdump_reader -i IFC_SPEC [-f FILTER] [-c N] [-n] FILE [FILE...]"
    "\n"
    "   FILE   A file in nfdump format.\n"
+   "   -f FILTER  A nfdump-like filter expression. Only records matching the filter\n"
+   "              will be sent to the output."
    "   -c N   Read only the first N flow records.\n"
 	"   -n     Don't send \"EOF message\" at the end.\n"
    "   -T     Sent data from files with timestamps based on actual time.\n"
@@ -63,10 +74,10 @@ void signal_handler(int signal)
 int main(int argc, char **argv)
 {
    int ret;
-   nf_file_t file;
    trap_ifc_spec_t ifc_spec;
    unsigned long counter = 0;
    unsigned long max_records = 0;
+   char *filter = NULL;
    int send_eof = 1;
    int verbose = 0;
    ur_links_t *links;
@@ -115,8 +126,11 @@ int main(int argc, char **argv)
 
    // Parse remaining parameters
    char opt;
-   while ((opt = getopt(argc, argv, "c:nl:Dr:RT")) != -1) {
+   while ((opt = getopt(argc, argv, "f:c:nl:Dr:RT")) != -1) {
       switch (opt) {
+         case 'f':
+            filter = optarg;
+            break;
          case 'c':
             max_records = atoi(optarg);
             if (max_records == 0) {
@@ -155,7 +169,7 @@ int main(int argc, char **argv)
 
    if (optind >= argc) {
       fprintf(stderr, "Wrong number of parameters.\nUsage: %s -i trap-ifc-specifier \
-				[-n] [-c NUM] [-r NUM] nfdump-file [nfdump-file...]\n", argv[0]);
+				[-f FILTER] [-n] [-c NUM] [-r NUM] nfdump-file [nfdump-file...]\n", argv[0]);
       return 2;
    }
 
@@ -206,11 +220,13 @@ int main(int argc, char **argv)
 
    // For all input files...
    do {
+      nfdump_iter_t iter;
+      
       // Open nfdump file
       if (verbose) {
          printf("Reading file %s\n", argv[optind]);
       }
-      ret = nf_open(&file, argv[optind]);
+      ret = nfdump_iter_start(&iter, argv[optind], filter);
       if (ret != 0) {
          fprintf(stderr, "Error when trying to open file \"%s\"\n", argv[optind]);
          trap_finalize();
@@ -227,7 +243,7 @@ int main(int argc, char **argv)
 
       // For all records in the file
       while (!stop && (max_records == 0 || counter < max_records) && !ret) {
-			master_record_t rec;
+			master_record_t *rec;
 
 			time_diff_flag = 1;
 
@@ -247,48 +263,48 @@ int main(int argc, char **argv)
 					while (!stop && (burst_counter < burst_size) &&
                                                (max_records == 0 || counter < max_records) ) {
 						// Read a record from the file
-						ret = nf_next_record(&file, &rec);
+						ret = nfdump_iter_next(&iter, &rec);
 						if (ret != 0) {
-							if (ret == 1) { // no more records
+							if (ret == NFDUMP_EOF) { // no more records
 								break;
 							}
-							fprintf(stderr, "Error during reading file.\n");
-							nf_close(&file);
+							fprintf(stderr, "Error during reading file (%i).\n", ret);
+							nfdump_iter_end(&iter);
 							trap_finalize();
 							ur_free(rec2);
 							return 3;
 						}
 
 						// Copy data from master_record_t to UniRec record
-						if (rec.flags & 0x01) { // IPv6
+						if (rec->flags & 0x01) { // IPv6
 							uint64_t tmp_ip_v6_addr;
 							// Swap IPv6 halves
-							tmp_ip_v6_addr = rec.ip_union._v6.srcaddr[0];
-							rec.ip_union._v6.srcaddr[0] = rec.ip_union._v6.srcaddr[1];
-							rec.ip_union._v6.srcaddr[1] = tmp_ip_v6_addr;
-							tmp_ip_v6_addr = rec.ip_union._v6.dstaddr[0];
-							rec.ip_union._v6.dstaddr[0] = rec.ip_union._v6.dstaddr[1];
-							rec.ip_union._v6.dstaddr[1] = tmp_ip_v6_addr;
+							tmp_ip_v6_addr = rec->ip_union._v6.srcaddr[0];
+							rec->ip_union._v6.srcaddr[0] = rec->ip_union._v6.srcaddr[1];
+							rec->ip_union._v6.srcaddr[1] = tmp_ip_v6_addr;
+							tmp_ip_v6_addr = rec->ip_union._v6.dstaddr[0];
+							rec->ip_union._v6.dstaddr[0] = rec->ip_union._v6.dstaddr[1];
+							rec->ip_union._v6.dstaddr[1] = tmp_ip_v6_addr;
 
-							ur_set(tmplt, rec2, UR_SRC_IP, ip_from_16_bytes_le((char *)rec.ip_union._v6.srcaddr));
-							ur_set(tmplt, rec2, UR_DST_IP, ip_from_16_bytes_le((char *)rec.ip_union._v6.dstaddr));
+							ur_set(tmplt, rec2, UR_SRC_IP, ip_from_16_bytes_le((char *)rec->ip_union._v6.srcaddr));
+							ur_set(tmplt, rec2, UR_DST_IP, ip_from_16_bytes_le((char *)rec->ip_union._v6.dstaddr));
 						}
 						else { // IPv4
-							ur_set(tmplt, rec2, UR_SRC_IP, ip_from_4_bytes_le((char *)&rec.ip_union._v4.srcaddr));
-							ur_set(tmplt, rec2, UR_DST_IP, ip_from_4_bytes_le((char *)&rec.ip_union._v4.dstaddr));
+							ur_set(tmplt, rec2, UR_SRC_IP, ip_from_4_bytes_le((char *)&rec->ip_union._v4.srcaddr));
+							ur_set(tmplt, rec2, UR_DST_IP, ip_from_4_bytes_le((char *)&rec->ip_union._v4.dstaddr));
 
 						}
-//						printf("%i \n", (void *)&rec.input - (void *)&rec);
-						ur_set(tmplt, rec2, UR_SRC_PORT, rec.srcport);
-						ur_set(tmplt, rec2, UR_DST_PORT, rec.dstport);
-						ur_set(tmplt, rec2, UR_PROTOCOL, rec.prot);
-						ur_set(tmplt, rec2, UR_TCP_FLAGS, rec.tcp_flags);
-						ur_set(tmplt, rec2, UR_PACKETS, rec.dPkts);
-						ur_set(tmplt, rec2, UR_BYTES, rec.dOctets);
+//						printf("%i \n", (void *)&rec->input - (void *)&rec);
+						ur_set(tmplt, rec2, UR_SRC_PORT, rec->srcport);
+						ur_set(tmplt, rec2, UR_DST_PORT, rec->dstport);
+						ur_set(tmplt, rec2, UR_PROTOCOL, rec->prot);
+						ur_set(tmplt, rec2, UR_TCP_FLAGS, rec->tcp_flags);
+						ur_set(tmplt, rec2, UR_PACKETS, rec->dPkts);
+						ur_set(tmplt, rec2, UR_BYTES, rec->dOctets);
 						ur_set(tmplt, rec2, UR_LINK_BIT_FIELD, ur_get_link_mask(links));
 						if (set_dir_bit_field){
-                     if (rec.input > 0){
-                        ur_set(tmplt, rec2, UR_DIR_BIT_FIELD, (1 << rec.input));
+                     if (rec->input > 0){
+                        ur_set(tmplt, rec2, UR_DIR_BIT_FIELD, (1 << rec->input));
                      } else {
                         ur_set(tmplt, rec2, UR_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
                      }
@@ -299,29 +315,29 @@ int main(int argc, char **argv)
 						if (rt_resending){
 							if (init_flag){
 								init_flag = 0;
-								act_timestamp = rec.last;
+								act_timestamp = rec->last;
 								time(&next_sec);
 							}
 
-							if (rec.last > act_timestamp){
-								timestamp_diff = rec.last - act_timestamp;
+							if (rec->last > act_timestamp){
+								timestamp_diff = rec->last - act_timestamp;
 							}else{
 								timestamp_diff = 0;
 							}
 							if (timestamp_diff >= 1){
 								usleep(timestamp_diff * 1000 * 1000); //to convert seconds into microseconds;
-								act_timestamp = rec.last;
+								act_timestamp = rec->last;
 							}
 						}
 
 
 						if (actual_timestamps){
 							time(&act_time);
-							first = ur_time_from_sec_msec(act_time - (rec.last - rec.first), rec.msec_first);
-							last = ur_time_from_sec_msec(act_time , rec.msec_last);
+							first = ur_time_from_sec_msec(act_time - (rec->last - rec->first), rec->msec_first);
+							last = ur_time_from_sec_msec(act_time , rec->msec_last);
 						}else{
-							first = ur_time_from_sec_msec(rec.first, rec.msec_first);
-							last = ur_time_from_sec_msec(rec.last, rec.msec_last);
+							first = ur_time_from_sec_msec(rec->first, rec->msec_first);
+							last = ur_time_from_sec_msec(rec->last, rec->msec_last);
 						}
 						ur_set(tmplt, rec2, UR_TIME_FIRST, first);
 						ur_set(tmplt, rec2, UR_TIME_LAST, last);
@@ -403,7 +419,7 @@ int main(int argc, char **argv)
          printf("done\n");
       }
 
-      nf_close(&file);
+      nfdump_iter_end(&iter);
 
    } while (!stop && ++optind < argc); // For all input files
 
