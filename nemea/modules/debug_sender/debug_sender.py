@@ -5,8 +5,9 @@ import os.path
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "python"))
 import trap
 import unirec
-from unirec import Timestamp
+from unirec import Timestamp, IPAddr
 import readline
+from re import match
 
 module_info = trap.CreateModuleInfo(
    name = "DebugSender",
@@ -46,27 +47,24 @@ Available commands:
 """
 
 def print_record():
-   global record
+   global record, record_metadata
    for name,value in record:
-      print "%s = %s" % (name, value if not isinstance(value, str) else '"'+value+'"')
+      print "%s = %s%s" % (name, value if not isinstance(value, str) else '"'+value+'"', " {"+record_metadata[name]+"}" if name in record_metadata else "")
 
 
 def edit_record():
-   global record
+   global record, record_metadata
    for name in record.fields():
       val = getattr(record, name)
       while True:
-         valstr = raw_input("%s [%s]: " % (name, val if not isinstance(val, str) else '"'+val+'"'))
+         valstr = raw_input("%s [%s]%s: " % (name, val if not isinstance(val, str) else '"'+val+'"', " {"+record_metadata[name]+"}" if name in record_metadata else ""))
          if valstr == "":
             break # Continue with next field
          
          field_type = record._field_types[name]
          
-         # Try special cases first
-         if field_type is Timestamp and valstr == "now":
-            val = Timestamp.now()
-         else:
-            # All other cases
+         # Try special cases first, then all other cases
+	 if not edit_time_rules(name, valstr):
             try:
                if hasattr(field_type, "fromString"):
                   val = field_type.fromString(valstr)
@@ -76,7 +74,7 @@ def edit_record():
                print "Unable to convert %r to %s:" % (valstr, field_type.__name__),
                print e
                continue # Try it again
-         setattr(record, name, val)
+	    setattr(record, name, val)
          break # Continue with next field
    print
 
@@ -90,6 +88,7 @@ def send_record(count=1):
    sys.stdout.flush()
    try:
       for _ in range(count):
+	 send_time_rules()
          trap.sendData(0, record.serialize(), trap.WAIT)
       print "done"
    except trap.ETerminated:
@@ -129,6 +128,59 @@ def trap_terminated():
          print "Unknown command. Enter 'r' or 'x'."
 
 
+def edit_time_rules(name, valstr):
+   global record, record_metadata
+   is_special = False
+   val = getattr(record, name)
+
+   # Validity check
+   if not match(r"!?([+-]\d+)?$", valstr) and not (isinstance(val, Timestamp) and match(r"!?(now)?([+-]\d+)?$", valstr)):
+      return is_special # Is not special or is invalid
+
+   # Gather send-time rules, don't apply
+   if valstr.startswith('!'):
+      is_special = True
+      if valstr == '!': # Delete
+         if name in record_metadata:
+	    del record_metadata[name]
+      else: # Add or update
+	 record_metadata[name] = valstr
+      return is_special # Is special
+
+   # Apply edit-time rules
+   if isinstance(val, Timestamp) and valstr.startswith("now"):
+      val = Timestamp.now()
+      valstr = valstr[len("now"):]
+      is_special = True
+   if valstr.startswith(('+', '-')):
+      try:
+	 val += int(valstr)
+	 is_special = True
+      except Exception, e:
+	 print e
+   setattr(record, name, val)
+
+   return is_special # False also in case of parsing error
+
+def send_time_rules():
+   global record, record_metadata
+
+   for name in record_metadata:
+      val = getattr(record, name)
+      valstr = record_metadata[name][1:] # Remove exclamation mark
+
+      # Apply send-time rules
+      if isinstance(val, Timestamp) and valstr.startswith("now"):
+	 val = Timestamp.now()
+	 valstr = valstr[len("now"):]
+      if valstr.startswith(('+', '-')):
+	 try:
+	    val += int(valstr)
+	 except Exception, e:
+	    print e
+
+      setattr(record, name, val)
+
 # --------------------------------------------------------------------
 
 # Parse TRAP params
@@ -142,6 +194,7 @@ if len(sys.argv) != 2:
 # Create UniRec template
 URTmplt = unirec.CreateTemplate("URTmplt", sys.argv[1])
 record = URTmplt()
+record_metadata = dict()
 
 # TODO zaridit, aby si UniRec pamatoval poradi polozek tak, jak je mu predano
 #  razeni podle velikosti a abecedy by mela byt jen interni zalezitost
