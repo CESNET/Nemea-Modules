@@ -36,7 +36,7 @@ trap_module_info_t module_info = {
 static int stop = 0;
 static int stats = 0;
 static int progress = 0;
-static char progress_char = 'P';
+static char progress_char = '.';
 
 void signal_handler(int signal)
 {
