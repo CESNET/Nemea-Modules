@@ -14,7 +14,7 @@ Table of Contents
 =====================
 This module merges traffic from multiple input interfaces to one output stream
 (on one interface). There are two supported versions:
-   - normal (default) - resending incoming data as they come.
+   - normal (default) - re-sending incoming data as they come.
    - timestamp aware - incoming data are sent with respect to timestamp.
      order. Sorting is very simple, sends record with the latest timestamp. If
      record with more late timestamp is received, it is resent immediately.
@@ -43,7 +43,14 @@ Default UniRec template is "<COLLECTOR_FLOW>".
 	        
 5. How to use
 =============
+./merger -i "ttttu;localhost,8801;localhost,8802;localhost,8803;localhost,8804;
+DNS_out" -n 4 -u "DST_IP,SRC_IP,BYTES,DNS_RR_TTL,DNS_ANSWERS,DNS_CLASS,DNS_ID,
+DNS_PSIZE,DNS_QTYPE,DNS_RLENGTH,DST_PORT,SRC_PORT,DNS_DO,DNS_RCODE,PROTOCOL,
+DNS_NAME,DNS_RDATA"
 
+This command will start merger with 4 inputs (on localhost, TCP ports 8801 - 4),
+output stream on Unix socket "DNS_out", with UniRec template given by listed
+fields.
    
 ************************* End of Merger README *********************************
 ********************************************************************************
