@@ -1,30 +1,49 @@
-Traffic merger (2nd version)
+********************************************************************************
+*************************** Merger module **************************************
+********************************************************************************
 
-This module merges traffic from multiple input interfaces to one output
-interface. There are two supported versions:
+Table of Contents
+=================
+
+    1. Module description
+    2. Interfaces
+    3. Parameters
+    5. How to use
+
+1. Module description
+=====================
+This module merges traffic from multiple input interfaces to one output stream
+(on one interface). There are two supported versions:
    - normal (default) - resending incoming data as they come.
-   - timestamp aware - incoming data are sended with respect to timestamp.
-     order.
+   - timestamp aware - incoming data are sent with respect to timestamp.
+     order. Sorting is very simple, sends record with the latest timestamp. If
+     record with more late timestamp is received, it is resent immediately.
+There are one thread for every input interface.
 
-Interfaces:
-   Inputs: variable
-   Outputs: 1
+2. Interfaces
+=============
+Input: variable, one UniRec record in format (passed as parameter)
+Output: 1, same UniRec format as input.
 
-Usage:
-   ./merger -i IFC_SPEC -n CNT [-u IN_FMT] [-o OUT_FMT] [-T] [-F] [-s SIZE] [-t MS]
+Default UniRec template is "<COLLECTOR_FLOW>".
 
-Module specific parameters:
-   UNIREC_FMT   The i-th parameter of this type specifies format of UniRec
-                expected on the i-th input interface.
-   -F         (timestamp aware version) Sorts timestamps based on TIME_FIRST
-              field, instead of TIME_LAST (default).
-   -n CNT     Sets count of input links. Must correspond to parameter -i (trap).
-   -o OUT_FMT Set of fields included in the output (UniRec specifier).
-              (default <COLLECTOR_FLOW>).
-   -u IN_FMT  UniRec specifier of input data (same to all links).
-              (default <COLLECTOR_FLOW>).
-   -s SIZE    (timestamp aware version) Set size of buffer for incoming records.
-   -t MS      (timestamp aware version) Set initial timeout for incoming
-              interfaces (in miliseconds). Timeout is set to 0, if no data
-              received in initial timeout.
-   -T         Set mode to timestamp aware.
+3. Parameters
+=============
+   -n CNT  Sets count of input links. Must correspond to parameter -i (trap).
+	-T      Set mode to timestamp aware (not set by default).
+	-u FMT  UniRec specifier of input/output data (same to all links, default is
+	        <COLLECTOR_FLOW>).
+
+	Timestamp aware version only:
+
+	-F      Sorts timestamps based on TIME_FIRST field, instead of TIME_LAST
+	        (default).
+   -t MS   Set initial timeout for incoming interfaces (in seconds). Timeout is
+	        set to 0, if no data received in initial timeout (default 1s).
+	        
+5. How to use
+=============
+
+   
+************************* End of Merger README *********************************
+********************************************************************************
