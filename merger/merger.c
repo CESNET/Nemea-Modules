@@ -106,6 +106,7 @@ void signal_handler(int signal)
 {
 	if (signal == SIGTERM || signal == SIGINT) {
 		stop = 1;
+		trap_terminate();
 	}
 }
 
