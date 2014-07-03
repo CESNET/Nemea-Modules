@@ -55,7 +55,7 @@ trap_module_info_t module_info = {
    // Module description
    "This module logs all incoming UniRec records to standard output or into a\n" 
    "specified file. Each record is written as one line containing values of its\n"
-   "fields in human-readable format separated by commas (CSV format).\n"
+   "fields in human-readable format separated by chosen delimiters (CSV format).\n"
    "Number of input intefaces and their UniRec formats are given on command line\n"
    "(if you specify N UniRec formats, N input interfaces will be created).\n"
    "Output contains union of all fields of all input formats by default, but it may\n"
@@ -66,7 +66,7 @@ trap_module_info_t module_info = {
    "   Outputs: 0\n"
    "\n"
    "Usage:\n"
-   "   ./logger -i IFC_SPEC [-w|-a FILE] UNIREC_FMT [UNIREC_FMT ...] [-o OUT_FMT] [-t] [-n] [-c N]\n"
+   "   ./logger -i IFC_SPEC [-w|-a FILE] UNIREC_FMT [UNIREC_FMT ...] [-o OUT_FMT] [-t] [-n] [-c N] [-d X]\n"
    "\n"
    "Module specific parameters:\n"
    "   UNIREC_FMT   The i-th parameter of this type specifies format of UniRec\n"
@@ -79,7 +79,8 @@ trap_module_info_t module_info = {
    "   -T           Add the time when the record was received as the first field.\n"
    "   -n           Add the number of interface the record was received on as the\n"
    "                first field (or second when -T is specified).\n"
-   "   -c N         Quit after N records are received.\n",
+   "   -c N         Quit after N records are received.\n"
+   "   -d X         Optionally modifies delimiter to inserted value X (implicitely ','). \n",
    -1, // Number of input interfaces (-1 means variable)
    0, // Number of output interfaces
 };
@@ -101,7 +102,7 @@ static FILE *file; // Output file
 
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
-void capture_thread(int index)
+void capture_thread(int index, char *delimiter)
 {
    int ret;
    
@@ -153,13 +154,13 @@ void capture_thread(int index)
             fprintf(file,"%i,", index);
          }
          // Iterate over all output fields
-         int comma = 0;
+         int indent = 0;
          ur_field_id_t id = UR_INVALID_FIELD;
          while((id = ur_iter_fields(out_template, id)) != UR_INVALID_FIELD) {
-            if (comma) {
-               fprintf(file,",");
+            if (indent) {
+               fprintf(file,"%s", delimiter);
             }
-            comma = 1;
+            indent = 1;
             if (ur_is_present(templates[index], id)) {
                // Get pointer to the field (valid for static fields only)
                void *ptr = ur_get_ptr_by_id(templates[index], rec, id);
@@ -273,6 +274,7 @@ int main(int argc, char **argv)
    char *out_filename = NULL;
    int append = 0;
    int print_title = 0;
+   char *delimiter = ",";
    
    // ***** Process parameters *****
    
@@ -295,7 +297,7 @@ int main(int argc, char **argv)
    
    // Parse remaining parameters and get configuration
    char opt;
-   while ((opt = getopt(argc, argv, "w:a:o:c:tnT")) != -1) {
+   while ((opt = getopt(argc, argv, "w:a:o:c:d:tnT")) != -1) {
       switch (opt) {
          case 'a':
             append = 1;
@@ -323,6 +325,13 @@ int main(int argc, char **argv)
             max_num_records = atoi(optarg);
             if (max_num_records == 0) {
                fprintf(stderr, "Error: Parameter of -c option must be integer > 0.\n");
+               return 1;
+            }
+            break;
+         case 'd':
+            delimiter = optarg;
+            if (strlen(delimiter) != 1) {
+               fprintf(stderr, "Error: Parameter of -d option must contain 1 character.\n");
                return 1;
             }
             break;
@@ -444,14 +453,14 @@ int main(int argc, char **argv)
       if (print_ifc_num) {
          fprintf(file, "ifc,");
       }
-      int comma = 0;
+      int indent = 0;
       ur_field_id_t id = UR_INVALID_FIELD;
       while((id = ur_iter_fields(out_template, id)) != UR_INVALID_FIELD) {
-         if (comma) {
-            fprintf(file, ",");
+         if (indent) {
+            fprintf(file, "%s", delimiter);
          }
          fprintf(file, "%s", ur_get_name_by_id(id));
-         comma = 1;
+         indent = 1;
       }
       fprintf(file, "\n");
       fflush(file);
@@ -461,7 +470,7 @@ int main(int argc, char **argv)
 
    #pragma omp parallel num_threads(n_inputs)
    {
-      capture_thread(omp_get_thread_num());
+      capture_thread(omp_get_thread_num(), delimiter);
    }
    
    ret = 0;
