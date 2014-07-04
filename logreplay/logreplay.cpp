@@ -255,17 +255,18 @@ int main(int argc, char **argv)
          stringstream sl(line);
          for (vector<ur_field_id_t>::iterator it = field_ids.begin(); it != field_ids.end(); ++it) {
             // check if current field is dynamic
+            char cur_field_delim;
             if (ur_is_dynamic(*it) != 0) {
                // dynamic fields delimeter
                // (dynamic fields could contain ',' so it can't be delimeter for them)
-               field_delim = '"';
-               getline(sl, column, field_delim); // trim first '"' 
+               cur_field_delim = '"';
+               getline(sl, column, cur_field_delim); // trim first '"' 
             } else {
                // static fields delimeter
-               field_delim = ',';
+               cur_field_delim = field_delim;
             }
 
-            getline(sl, column, field_delim);
+            getline(sl, column, cur_field_delim);
             store_value(utmpl, data, *it, column);
          }
          trap_ctx_send(ctx, 0, data, ur_rec_size(utmpl, data));
