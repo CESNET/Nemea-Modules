@@ -455,7 +455,7 @@ int main(int argc, char **argv)
       }
       int indent = 0;
       ur_field_id_t id = UR_INVALID_FIELD;
-      while((id = ur_iter_fields(out_template, id)) != UR_INVALID_FIELD) {
+      while((id = ur_iter_fields_tmplt(out_template, id)) != UR_INVALID_FIELD) {
          if (indent) {
             fprintf(file, "%s", delimiter);
          }
