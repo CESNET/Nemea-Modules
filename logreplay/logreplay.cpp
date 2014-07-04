@@ -51,7 +51,7 @@
 #include <getopt.h>
 #include <time.h>
 #include <libtrap/trap.h>
-#include "../../unirec/unirec.h"
+#include <unirec/unirec.h>
 
 
 #define DYN_FIELD_MAX_SIZE 512 // Maximum size of dynamic field, longer fields will be cutted to this size
