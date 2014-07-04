@@ -51,7 +51,10 @@
 #include <getopt.h>
 #include <time.h>
 #include <libtrap/trap.h>
-#include <unirec/unirec.h>
+#include "../../unirec/unirec.h"
+
+
+#define DYN_FIELD_MAX_SIZE 512 // Maximum size of dynamic field, longer fields will be cutted to this size
 
 ur_field_id_t ur_get_id_by_name(const char *name);
 
@@ -103,6 +106,10 @@ using namespace std;
 
 void store_value(ur_template_t *t, void *data, int f_id, string &column)
 {
+   // Check size of dynamic field and if longer than maximum size then cut it
+   if (column.length() > DYN_FIELD_MAX_SIZE) {
+      column[DYN_FIELD_MAX_SIZE] = 0;
+   }
    ur_set_from_string(t, data, f_id, column.c_str());
 }
 
@@ -199,7 +206,16 @@ int main(int argc, char **argv)
          goto exit;
       }
 
-      data = ur_create(utmpl, 0);
+     // calculate maximum needed memory for dynamic fields
+     int memory_needed = 0;
+     ur_field_id_t field_id = UR_INVALID_FIELD;
+     while ((field_id = ur_iter_fields(utmpl, field_id)) != UR_INVALID_FIELD) {
+        if (ur_is_dynamic(field_id) != 0) {
+           memory_needed += DYN_FIELD_MAX_SIZE;
+        }
+     }
+
+      data = ur_create(utmpl, memory_needed);
       if (data == NULL) {
          goto exit;
       }
@@ -224,8 +240,10 @@ int main(int argc, char **argv)
       stringstream ss(line);
       vector<ur_field_id_t> field_ids;
       string column;
-      while (getline(ss, column, field_delim)) {
-         field_ids.push_back(urgetidbyname(column.c_str()));
+      // get field ids from template
+      ur_field_id_t tmpl_f_id = UR_INVALID_FIELD;
+      while ((tmpl_f_id = ur_iter_fields_tmplt(utmpl, tmpl_f_id)) != UR_INVALID_FIELD) {
+         field_ids.push_back(tmpl_f_id);
       }
 
       /* main loop */
@@ -236,10 +254,21 @@ int main(int argc, char **argv)
          }
          stringstream sl(line);
          for (vector<ur_field_id_t>::iterator it = field_ids.begin(); it != field_ids.end(); ++it) {
+            // check if current field is dynamic
+            if (ur_is_dynamic(*it) != 0) {
+               // dynamic fields delimeter
+               // (dynamic fields could contain ',' so it can't be delimeter for them)
+               field_delim = '"';
+               getline(sl, column, field_delim); // trim first '"' 
+            } else {
+               // static fields delimeter
+               field_delim = ',';
+            }
+
             getline(sl, column, field_delim);
             store_value(utmpl, data, *it, column);
          }
-         trap_ctx_send(ctx, 0, data, ur_rec_static_size(utmpl));
+         trap_ctx_send(ctx, 0, data, ur_rec_size(utmpl, data));
       }
    }
 
