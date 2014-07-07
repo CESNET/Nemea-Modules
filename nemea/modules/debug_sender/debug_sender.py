@@ -88,7 +88,7 @@ def send_record(count=1):
    sys.stdout.flush()
    try:
       for _ in range(count):
-	 send_time_rules()
+	 send_time_rules() # Edit record according to send-time rules
          trap.sendData(0, record.serialize(), trap.WAIT)
       print "done"
    except trap.ETerminated:
@@ -130,56 +130,73 @@ def trap_terminated():
 
 def edit_time_rules(name, valstr):
    global record, record_metadata
-   is_special = False
-   val = getattr(record, name)
+   wrapper = {'is_special': False, 'val': getattr(record, name)}
 
    # Validity check
-   if not match(r"!?([+-]\d+)?$", valstr) and not (isinstance(val, Timestamp) and match(r"!?(now)?([+-]\d+)?$", valstr)):
-      return is_special # Is not special or is invalid
+   if not match(r"!?([+-].+)?$", valstr) and not (isinstance(wrapper['val'], Timestamp) and match(r"!?(now)?([+-].+)?$", valstr)):
+      return wrapper['is_special'] # Is not special or is invalid
 
    # Gather send-time rules, don't apply
    if valstr.startswith('!'):
-      is_special = True
+      wrapper['is_special'] = True
       if valstr == '!': # Delete
          if name in record_metadata:
 	    del record_metadata[name]
       else: # Add or update
 	 record_metadata[name] = valstr
-      return is_special # Is special
+      return wrapper['is_special'] # True
 
    # Apply edit-time rules
-   if isinstance(val, Timestamp) and valstr.startswith("now"):
-      val = Timestamp.now()
-      valstr = valstr[len("now"):]
-      is_special = True
-   if valstr.startswith(('+', '-')):
-      try:
-	 val += int(valstr)
-	 is_special = True
-      except Exception, e:
-	 print e
-   setattr(record, name, val)
+   try:
+      apply_rules(wrapper, valstr)
+   except Exception, e:
+      print e
+      return wrapper['is_special'] # Should be false
 
-   return is_special # False also in case of parsing error
+   setattr(record, name, wrapper['val']) # Save attribute to record
+   return wrapper['is_special'] # False also in case of parsing error
 
 def send_time_rules():
    global record, record_metadata
 
    for name in record_metadata:
-      val = getattr(record, name)
-      valstr = record_metadata[name][1:] # Remove exclamation mark
+      wrapper = {'is_special': False, 'val': getattr(record, name)}
+      valstr = record_metadata[name][1:] # Croup out "!"
+      apply_rules(wrapper, valstr) # Apply send-time rules
+      setattr(record, name, wrapper['val'])
 
-      # Apply send-time rules
-      if isinstance(val, Timestamp) and valstr.startswith("now"):
+def apply_rules(wrapper, valstr):
+   val = wrapper['val']
+   is_special = wrapper['is_special']
+
+   if isinstance(val, Timestamp): # Timestamp is treated specially
+      if valstr.startswith("now"):
 	 val = Timestamp.now()
-	 valstr = valstr[len("now"):]
+	 valstr = valstr[len("now"):] # Crop out "now"
+	 is_special = True
+      
       if valstr.startswith(('+', '-')):
-	 try:
-	    val += int(valstr)
-	 except Exception, e:
-	    print e
+	 val += int(valstr)
+	 is_special = True
+   elif valstr.startswith('+'):
+      valstr = valstr[len('+'):] # Crop out "+"
+      try: # First try by converting inserted string to attribute type
+	 val += type(val)(valstr)
+	 is_special = True
+      except: # Second try by converting inserted string to integer
+	 val += int(valstr)
+	 is_special = True
+   elif valstr.startswith('-'):
+      valstr = valstr[len('-'):] # Crop out "-"
+      try: # First try by converting inserted string to attribute type
+	 val -= type(val)(valstr)
+	 is_special = True
+      except: # Second try by converting inserted string to integer
+	 val -= int(valstr)
+	 is_special = True
 
-      setattr(record, name, val)
+   wrapper['val'] = val
+   wrapper['is_special'] = is_special
 
 # --------------------------------------------------------------------
 
@@ -194,7 +211,7 @@ if len(sys.argv) != 2:
 # Create UniRec template
 URTmplt = unirec.CreateTemplate("URTmplt", sys.argv[1])
 record = URTmplt()
-record_metadata = dict()
+record_metadata = dict() # To save send-time rules
 
 # TODO zaridit, aby si UniRec pamatoval poradi polozek tak, jak je mu predano
 #  razeni podle velikosti a abecedy by mela byt jen interni zalezitost

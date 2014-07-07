@@ -1,6 +1,7 @@
 DebugSender
 
 Author: Vaclav Bartos <ibartosv@fit.vutbr.cz>
+Modified: Jan Wrona <xwrona00@stud.fit.vutbr.cz>
 
 Goal: Provide a way to manually send UniRec records.
 
@@ -31,3 +32,22 @@ When editing the record, you will be asked for values of all fields. If you leav
 
 If you press Ctrl-C, any pending send is interrupted and TRAP interface is terminated, but the module doesn't exit. If you want, you can reinitialize TRAP and continue.
 
+Special edit values:
+  In addition to regular values you can specify few special values. They can be
+  divided into edit-time and send-time. Edit-time rules are executed only once,
+  rigth after you insert them. Send-time rules are stored and executed every 
+  time before record is sent. For instance "> s 5" causes send-time rule to be 
+  executed five times.
+
+  Special symbols are "!", "now", "+" and "-" and have to be specified in following order:
+    1. !     save/update rule as send-time (with no following rule, current rule is removed)
+    2. now   applicable only to timestamps
+    3. +/-   add/subtract X to/from value
+
+  Examples:
+    +10, -5, +1.1.1.1 /* edit-time addition, substraction */
+    now, now-5, now+10 /* edit-time timestamp manipulation */
+
+    !+10, !+5, !-1.1.1.1 /* send-time addition, substraction */
+    !now, !now-3, !now+8 /* send-time timestamp manipulation */
+    ! /* send-time rule removal */
