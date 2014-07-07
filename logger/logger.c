@@ -158,8 +158,9 @@ void capture_thread(int index, char *delimiter)
          }
          // Iterate over all output fields
          int indent = 0;
-         ur_field_id_t id = UR_INVALID_FIELD;
-         while((id = ur_iter_fields_tmplt(out_template, id)) != UR_INVALID_FIELD) {
+         ur_field_id_t id;
+         ur_iter_t iter = UR_ITER_BEGIN;
+         while((id = ur_iter_fields_tmplt(out_template, &iter)) != UR_INVALID_FIELD) {
             if (indent) {
                fprintf(file,"%s", delimiter);
             }
@@ -457,8 +458,9 @@ int main(int argc, char **argv)
          fprintf(file, "ifc,");
       }
       int indent = 0;
-      ur_field_id_t id = UR_INVALID_FIELD;
-      while((id = ur_iter_fields_tmplt(out_template, id)) != UR_INVALID_FIELD) {
+      ur_field_id_t id;
+      ur_iter_t iter = UR_ITER_BEGIN;
+      while((id = ur_iter_fields_tmplt(out_template, &iter)) != UR_INVALID_FIELD) {
          if (indent) {
             fprintf(file, "%s", delimiter);
          }
