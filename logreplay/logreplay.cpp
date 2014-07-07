@@ -2,6 +2,7 @@
  * \file loggerreplay.c
  * \brief Replay CSV file from logger (need -t that generates header).
  * \author Tomas Cejka <cejkat@cesnet.cz>
+ * \author Sabik Erik <xsabik02@stud.fit.vutbr.cz>
  * \date 2014
  */
 /*
@@ -206,14 +207,14 @@ int main(int argc, char **argv)
          goto exit;
       }
 
-     // calculate maximum needed memory for dynamic fields
-     int memory_needed = 0;
-     ur_field_id_t field_id = UR_INVALID_FIELD;
-     while ((field_id = ur_iter_fields(utmpl, field_id)) != UR_INVALID_FIELD) {
-        if (ur_is_dynamic(field_id) != 0) {
-           memory_needed += DYN_FIELD_MAX_SIZE;
-        }
-     }
+      // calculate maximum needed memory for dynamic fields
+      int memory_needed = 0;
+      ur_field_id_t field_id = UR_INVALID_FIELD;
+      while ((field_id = ur_iter_fields(utmpl, field_id)) != UR_INVALID_FIELD) {
+         if (ur_is_dynamic(field_id) != 0) {
+            memory_needed += DYN_FIELD_MAX_SIZE;
+         }
+      }
 
       data = ur_create(utmpl, memory_needed);
       if (data == NULL) {
@@ -260,7 +261,7 @@ int main(int argc, char **argv)
                // dynamic fields delimeter
                // (dynamic fields could contain ',' so it can't be delimeter for them)
                cur_field_delim = '"';
-               getline(sl, column, cur_field_delim); // trim first '"' 
+               getline(sl, column, cur_field_delim); // trim first '"'
             } else {
                // static fields delimeter
                cur_field_delim = field_delim;
@@ -282,7 +283,7 @@ exit:
    if (verbose >= 0) {
       printf("Exitting ...\n");
    }
-   
+
    trap_ctx_send_flush(ctx, 0);
    trap_ctx_finalize(&ctx);
 
