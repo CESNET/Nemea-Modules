@@ -241,8 +241,9 @@ int main(int argc, char **argv)
       vector<ur_field_id_t> field_ids;
       string column;
       // get field ids from template
-      ur_field_id_t tmpl_f_id = UR_INVALID_FIELD;
-      while ((tmpl_f_id = ur_iter_fields_tmplt(utmpl, tmpl_f_id)) != UR_INVALID_FIELD) {
+      ur_field_id_t tmpl_f_id;
+      ur_iter_t iter = UR_ITER_BEGIN;
+      while ((tmpl_f_id = ur_iter_fields_tmplt(utmpl, &iter)) != UR_INVALID_FIELD) {
          field_ids.push_back(tmpl_f_id);
       }
 
