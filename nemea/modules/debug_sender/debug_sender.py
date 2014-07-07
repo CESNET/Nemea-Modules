@@ -74,7 +74,8 @@ def edit_record():
                print "Unable to convert %r to %s:" % (valstr, field_type.__name__),
                print e
                continue # Try it again
-	    setattr(record, name, val)
+            setattr(record, name, val)
+		  
          break # Continue with next field
    print
 
