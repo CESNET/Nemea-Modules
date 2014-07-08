@@ -53,9 +53,9 @@
 #include <time.h>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
+#include <map>
 
-
-#define DYN_FIELD_MAX_SIZE 512 // Maximum size of dynamic field, longer fields will be cutted to this size
+#define DYN_FIELD_MAX_SIZE 1024 // Maximum size of dynamic field, longer fields will be cutted to this size
 
 ur_field_id_t ur_get_id_by_name(const char *name);
 
@@ -140,10 +140,12 @@ int main(int argc, char **argv)
    char *in = NULL, *in_filename = NULL;
    char record_delim = '\n';
    char field_delim = ',';
+   char dyn_field_quote = '"'; // dynamic fields are enquoted
    ifstream f_in;
    string line;
    ur_template_t *utmpl = NULL;
    void *data = NULL;
+   map<int,string> dynamic_field_map;
    // ***** Process parameters *****
 
    // Let TRAP library parse command-line arguments and extract its parameters
@@ -241,12 +243,11 @@ int main(int argc, char **argv)
       stringstream ss(line);
       vector<ur_field_id_t> field_ids;
       string column;
-      // get field ids from template
-      ur_field_id_t tmpl_f_id;
-      ur_iter_t iter = UR_ITER_BEGIN;
-      while ((tmpl_f_id = ur_iter_fields_tmplt(utmpl, &iter)) != UR_INVALID_FIELD) {
-         field_ids.push_back(tmpl_f_id);
+    
+      while (getline(ss, column, field_delim)) {
+         field_ids.push_back(urgetidbyname(column.c_str()));
       }
+
 
       /* main loop */
       while (f_in.good()) {
@@ -257,21 +258,29 @@ int main(int argc, char **argv)
          stringstream sl(line);
          for (vector<ur_field_id_t>::iterator it = field_ids.begin(); it != field_ids.end(); ++it) {
             // check if current field is dynamic
-            char cur_field_delim;
             if (ur_is_dynamic(*it) != 0) {
-               // dynamic fields delimeter
-               // (dynamic fields could contain ',' so it can't be delimeter for them)
-               cur_field_delim = '"';
-               getline(sl, column, cur_field_delim); // trim first '"'
+               // dynamic field, just store it in a map for later use
+               getline(sl, column, dyn_field_quote);  // trim starting dynamic field quote
+               getline(sl, column, dyn_field_quote);  // get dynamic field
+               dynamic_field_map[*it] = column;       
+               getline(sl, column, field_delim);      // trim field delimeter
             } else {
-               // static fields delimeter
-               cur_field_delim = field_delim;
+               // store static field in unirec structure
+               getline(sl, column, field_delim);
+               store_value(utmpl, data, *it, column);
             }
-
-            getline(sl, column, cur_field_delim);
-            store_value(utmpl, data, *it, column);
+         }
+         // store dynamic fields in correct order to unirec structure
+         ur_field_id_t tmpl_f_id;
+         ur_iter_t iter = UR_ITER_BEGIN;
+         while ((tmpl_f_id = ur_iter_fields_tmplt(utmpl, &iter)) != UR_INVALID_FIELD) {
+            if (ur_is_dynamic(tmpl_f_id) != 0) {
+               store_value(utmpl, data, tmpl_f_id, dynamic_field_map[tmpl_f_id]);
+            }
          }
          trap_ctx_send(ctx, 0, data, ur_rec_size(utmpl, data));
+         trap_ctx_send_flush(ctx, 0);
+
       }
    }
 
