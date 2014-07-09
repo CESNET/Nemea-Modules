@@ -174,15 +174,6 @@ void capture_thread(int index, char *delimiter)
                   time_t ts = *(uint32_t*)ptr;
                   strftime(str, 31, "%FT%T", gmtime(&ts));
                   fprintf(file, "%s", str);
-               } else if (ur_is_dynamic(id)) {
-                  // Dynamic field - write as a string
-                  int size = ur_get_dyn_size(templates[index], rec, id);
-                  char *data = ur_get_dyn(templates[index], rec, id);
-                  fprintf(file, "\"");
-                  while (size--) {
-                     fprintf(file, "%c", *(data++));
-                  }
-                  fprintf(file, "\"");
                } else {
                   // Static field - check what type is it and use appropriate format
                   switch (ur_get_type_by_id(id)) {
@@ -235,6 +226,24 @@ void capture_thread(int index, char *delimiter)
                         char str[32];
                         strftime(str, 31, "%FT%T", gmtime(&sec));
                         fprintf(file, "%s.%03i", str, msec);
+                     }
+                     break;
+                  case UR_TYPE_STRING:
+                     {
+                        // Printable string - print it as it is
+                        int size = ur_get_dyn_size(templates[index], rec, id);
+                        char *data = ur_get_dyn(templates[index], rec, id);
+                        fprintf(file, "%*s", size, data);
+                     }
+                     break;
+                  case UR_TYPE_BYTES:
+                     {
+                        // Generic string of bytes - print each byte as two hex digits
+                        int size = ur_get_dyn_size(templates[index], rec, id);
+                        unsigned char *data = ur_get_dyn(templates[index], rec, id);
+                        while (size--) {
+                           fprintf(file, "%02x", *data++);
+                        }
                      }
                      break;
                   default:
