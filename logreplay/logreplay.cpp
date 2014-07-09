@@ -105,6 +105,43 @@ TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
 using namespace std;
 
+string get_next_field(stringstream &line)
+{
+   string column;
+   uint32_t quotes = 0;
+   uint32_t in_quotes = 0;
+   char prev = 0;
+   bool fin = false;
+   int ch; 
+  
+   // skip first quote (only in dynamic fields)
+   if (line.peek() == '"') {
+      ++quotes;
+      line.get(); // remove quote from input
+   }
+
+   while (!fin && ((ch = line.get()) != EOF)) {
+       switch(ch) {
+          case '"': ++quotes;
+                    ++in_quotes;
+                    break;
+          case ',': // if it was static field (no quotes were present)
+                    // or if it was dynamic field (even count of quotes)
+                    if (quotes == 0 || (prev == '"' && (quotes & 1) == 0)) {
+                       fin = true;
+                    }
+                    break;
+       }
+       // skip last comma and deduplicate double quotes (store only one)
+       if ((ch != '"' || ((in_quotes & 1) == 0)) && !fin) {
+          column += ch;
+       }
+       prev = ch;
+   }
+   return column;
+}
+
+
 void store_value(ur_template_t *t, void *data, int f_id, string &column)
 {
    // Check size of dynamic field and if longer than maximum size then cut it
@@ -257,16 +294,13 @@ int main(int argc, char **argv)
          }
          stringstream sl(line);
          for (vector<ur_field_id_t>::iterator it = field_ids.begin(); it != field_ids.end(); ++it) {
+            column = get_next_field(sl);
             // check if current field is dynamic
             if (ur_is_dynamic(*it) != 0) {
                // dynamic field, just store it in a map for later use
-               getline(sl, column, dyn_field_quote);  // trim starting dynamic field quote
-               getline(sl, column, dyn_field_quote);  // get dynamic field
-               dynamic_field_map[*it] = column;       
-               getline(sl, column, field_delim);      // trim field delimeter
+               dynamic_field_map[*it] = column;
             } else {
                // store static field in unirec structure
-               getline(sl, column, field_delim);
                store_value(utmpl, data, *it, column);
             }
          }
