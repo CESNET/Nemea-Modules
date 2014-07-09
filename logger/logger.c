@@ -233,7 +233,7 @@ void capture_thread(int index, char *delimiter)
                         // Printable string - print it as it is
                         int size = ur_get_dyn_size(templates[index], rec, id);
                         char *data = ur_get_dyn(templates[index], rec, id);
-                        fprintf(file, "%*s", size, data);
+                        fwrite(data, 1, size, file);
                      }
                      break;
                   case UR_TYPE_BYTES:
