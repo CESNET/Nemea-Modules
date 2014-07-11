@@ -238,6 +238,7 @@ void capture_thread(int index, char *delimiter)
                            switch (*data) {
                               case '\n': // Skip new line character 
                                          data++;
+                                         fprintf(file, " ");
                                          break;
                               case '"':  // Double quotes in string
                                          fprintf(file, "\"");
