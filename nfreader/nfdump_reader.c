@@ -2,7 +2,7 @@
  * \file nfdump_reader.h
  * \brief Nfdump reader module reads a given nfdump file and outputs flow
  *  records in UniRec format.
- * \author Vaclav Bartos <ibartosv@fit.vutbr.cz>
+ * \author Vaclav Bartos <ibartosv@fit.vutbr.cz>, Pavel Krobot <xkrobo01@cesnet.cz>
  * \date 2013
  */
 #define _BSD_SOURCE
@@ -14,6 +14,7 @@
 #include <getopt.h>
 
 #include <unistd.h>
+#include <sys/time.h> //gettimeofday for real-time resending
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
@@ -26,6 +27,10 @@
 #define MINIMAL_SENDING_RATE 	100
 #define MINIMAL_BURST_RATE 	10
 #define MAX_SLEEP_TIME 			100 // in miliseconds
+
+#define DEFAULT_MIN_POOL      10
+#define DEFAULT_INIT_TS_CNT   1000
+#define DEFAULT_SAMPLE_RATE   100
 
 
 
@@ -55,7 +60,9 @@ trap_module_info_t module_info = {
    "   -l m   Use link mask m for LINK_BIT_FIELD.\n"
    "   -r N   Rate limiting. Limiting sending flow rate to N records/sec.\n"
    "   -R     Real time re-sending. Resending records from given files in real\n"
-   "          time, respecting original timestamps (seconds).\n"
+   "          time, respecting original timestamps (seconds). Since this mode\n"
+   "          is timestamp order dependent, real time re-sending is done only at\n"
+   "          approximate time.\n"
    "",
    0, // Number of input interfaces
    1, // Number of output interfaces
@@ -89,6 +96,15 @@ int main(int argc, char **argv)
    uint64_t first;
 	uint64_t last;
 	//------------ Rate limiting & Real time re-sending -------------------------
+   uint16_t init_ts_count = DEFAULT_INIT_TS_CNT, min_pool = DEFAULT_MIN_POOL, min_cnt = 0, sample_rate = DEFAULT_SAMPLE_RATE;
+   uint32_t act_min, act_ts;
+   uint32_t mins [min_pool];
+   struct timeval start, end;
+   uint32_t init_timestamp, ts_diff_cnt = 0;
+   long ts_diff_sum = 0;
+   float ts_diff_total;
+   float ts_diff_threshold = 3.5;//threshold of timestamp change during 1s (empirical value)
+
 	long rec_to_send;
 	unsigned long sending_rate = 0;
 	unsigned long rt_resending = 0;
@@ -96,15 +112,14 @@ int main(int argc, char **argv)
 	unsigned long minimal_burst;
 	unsigned long burst_counter;
 	unsigned int sleeper;
-	unsigned int init_flag;
 	uint64_t load_index;
 	uint64_t cmp_index;
 	time_t sec;
 	time_t next_sec;
 	int time_diff_flag;
 	int sleep_available;
-	uint32_t timestamp_diff;
-	uint32_t act_timestamp;
+
+
 
    // Create UniRec template
    //ur_template_t *tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS");
@@ -221,7 +236,7 @@ int main(int argc, char **argv)
    // For all input files...
    do {
       nfdump_iter_t iter;
-      
+
       // Open nfdump file
       if (verbose) {
          printf("Reading file %s\n", argv[optind]);
@@ -237,8 +252,6 @@ int main(int argc, char **argv)
 			time(&sec);
 			time(&next_sec);
 			rec_to_send = 0;
-      }else if (rt_resending){
-			init_flag = 1;
       }
 
       // For all records in the file
@@ -313,21 +326,81 @@ int main(int argc, char **argv)
                   }
 
 						if (rt_resending){
-							if (init_flag){
-								init_flag = 0;
-								act_timestamp = rec->last;
-								time(&next_sec);
-							}
+                     // Get minimal timestamp >>
+							if (counter < init_ts_count){
+                        if (min_cnt < min_pool){
+                           mins[min_cnt] = rec->last;
+                           if (++min_cnt == min_pool){
+                              for (int i = 0; i < (min_cnt - 1); ++i){
+                                 for (int j = 0; j < (min_cnt - i - 1); ++j){
+                                    if (mins[j] > mins[j+1]){
+                                       uint32_t tmp = mins[j+1];
+                                       mins[j+1] = mins[j];
+                                       mins[j] = tmp;
+                                    }
+                                 }
+                              }
+                              act_min = mins[0];
+                           }
+                        } else {
+                           if (rec->last <= act_min){
+                              for (int i = (min_pool - 1); i > 0; --i){
+                                 mins[i] = mins[i - 1];
+                              }
+                              mins[0] = rec->last;
+                              act_min = rec->last;
+                           }
+                        }
+							} else if (counter == init_ts_count){
+                        uint64_t tmp_sum = 0;
+                        for (int i = 0; i < min_pool; ++i){
+                           tmp_sum += mins[i];
+                        }
+                        init_timestamp = tmp_sum / min_pool;
+                        if (!(counter % sample_rate)){
+                           --sample_rate;
+                        }
+                        gettimeofday(&start, NULL);
+                     // << <<
+                     } else {
+                        long ts_diff = (long) rec->last - (long) init_timestamp;
+                        if (ts_diff > 400 || ts_diff < -400){//different file...
+                           init_timestamp = rec->last;
+                        }
 
-							if (rec->last > act_timestamp){
-								timestamp_diff = rec->last - act_timestamp;
-							}else{
-								timestamp_diff = 0;
-							}
-							if (timestamp_diff >= 1){
-								usleep(timestamp_diff * 1000 * 1000); //to convert seconds into microseconds;
-								act_timestamp = rec->last;
-							}
+                        ts_diff_sum += ts_diff;
+                        ts_diff_cnt++;
+
+                        if (!(counter % sample_rate)){
+                           if (ts_diff_cnt){ //it should be ...
+                              ts_diff_total = ((float) ts_diff_sum / (float) ts_diff_cnt);
+                           }
+
+                           if (ts_diff_total > ts_diff_threshold){
+                              gettimeofday(&end, NULL);
+                              long rt_diff = ((end.tv_sec * 1000000 + end.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec));
+                              if (rt_diff < 1000000){
+                                 usleep(900000 - rt_diff);
+                              }
+                              ts_diff_sum = 0;
+                              ts_diff_cnt = 0;
+                              init_timestamp++;
+                              float inc_index = (ts_diff_total - ts_diff_threshold)  / ts_diff_threshold;
+                              if (inc_index > 5){
+                                 inc_index = 5;
+                              } else if (inc_index < 0.2){
+                                 inc_index = 0.2;
+                              }
+                              sample_rate /= inc_index;
+                              if (sample_rate < 100){
+                                 sample_rate = 100;
+                              }else if (sample_rate > 10000){
+                                 sample_rate = 10000;
+                              }
+                              gettimeofday(&start, NULL);
+                           }
+                        }
+                     }
 						}
 
 
