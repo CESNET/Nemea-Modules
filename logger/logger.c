@@ -233,7 +233,20 @@ void capture_thread(int index, char *delimiter)
                         // Printable string - print it as it is
                         int size = ur_get_dyn_size(templates[index], rec, id);
                         char *data = ur_get_dyn(templates[index], rec, id);
-                        fwrite(data, 1, size, file);
+                        fprintf(file, "\"");
+                        while (size--) {
+                           switch (*data) {
+                              case '\n': // Skip new line character 
+                                         data++;
+                                         fprintf(file, " ");
+                                         break;
+                              case '"':  // Double quotes in string
+                                         fprintf(file, "\"");
+                              default:   // Print character
+                                         fprintf(file, "%c", *data++);
+                           }
+                        }
+                        fprintf(file, "\"");
                      }
                      break;
                   case UR_TYPE_BYTES:
