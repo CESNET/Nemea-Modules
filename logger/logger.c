@@ -51,6 +51,7 @@
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 #include <omp.h>
+#include <ctype.h>
 
 // Struct with information about module
 trap_module_info_t module_info = {
@@ -236,15 +237,18 @@ void capture_thread(int index, char *delimiter)
                         fprintf(file, "\"");
                         while (size--) {
                            switch (*data) {
-                              case '\n': // Skip new line character 
-                                         data++;
+                              case '\n': // Replace newline with space
                                          fprintf(file, " ");
                                          break;
-                              case '"':  // Double quotes in string
-                                         fprintf(file, "\"");
-                              default:   // Print character
-                                         fprintf(file, "%c", *data++);
+                              case '"' : // Double quotes in string
+                                         fprintf(file, "\"\"");
+                                         break;
+                              default  : // Check if character is printable
+                                         if (isprint(*data)) {
+                                            fprintf(file, "%c", *data);
+                                         }
                            }
+                           data++;
                         }
                         fprintf(file, "\"");
                      }
