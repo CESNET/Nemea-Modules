@@ -158,14 +158,14 @@ void capture_thread(int index, char *delimiter)
             fprintf(file,"%i,", index);
          }
          // Iterate over all output fields
-         int indent = 0;
+         int delim = 0;
          ur_field_id_t id;
          ur_iter_t iter = UR_ITER_BEGIN;
          while((id = ur_iter_fields_tmplt(out_template, &iter)) != UR_INVALID_FIELD) {
-            if (indent) {
+            if (delim != 0) {
                fprintf(file,"%s", delimiter);
             }
-            indent = 1;
+            delim = 1;
             if (ur_is_present(templates[index], id)) {
                // Get pointer to the field (valid for static fields only)
                void *ptr = ur_get_ptr_by_id(templates[index], rec, id);
@@ -483,15 +483,15 @@ int main(int argc, char **argv)
       if (print_ifc_num) {
          fprintf(file, "ifc,");
       }
-      int indent = 0;
+      int delim = 0;
       ur_field_id_t id;
       ur_iter_t iter = UR_ITER_BEGIN;
       while((id = ur_iter_fields_tmplt(out_template, &iter)) != UR_INVALID_FIELD) {
-         if (indent) {
+         if (delim) {
             fprintf(file, "%s", delimiter);
          }
          fprintf(file, "%s", ur_get_name_by_id(id));
-         indent = 1;
+         delim = 1;
       }
       fprintf(file, "\n");
       fflush(file);
