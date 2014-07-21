@@ -97,13 +97,6 @@ static int stop = 0;
 static int verbose;
 
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
-/*void signal_handler(int signal)
-{
-   if (signal == SIGTERM || signal == SIGINT) {
-      stop = 1;
-      trap_terminate();
-   }
-}*/
 
 static int timestamp_selector = TS_LAST; // Tells to sort timestamps based on TIME_FIRST or TIME_LAST field
 static ur_time_t actual_min_timestamp = 0; // Actual minimal timestamp
