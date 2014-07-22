@@ -52,6 +52,7 @@
 #include <ctype.h>
 
 #include <libtrap/trap.h>
+#include <super_fast_hash.h>
 #include <unirec/unirec.h>
 #include "panonymizer.h"
 

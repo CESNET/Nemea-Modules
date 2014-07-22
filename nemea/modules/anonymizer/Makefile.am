@@ -4,6 +4,6 @@ anonymizer_SOURCES=anonymizer.c \
 		   panonymizer.h \
 		   rijndael.c \
 		   rijndael.h
-anonymizer_LDADD=-ltrap -lunirec
+anonymizer_LDADD=-ltrap -lunirec -lnemea-common
 pkgdocdir=${docdir}/anonymizer
 pkgdoc_DATA=README

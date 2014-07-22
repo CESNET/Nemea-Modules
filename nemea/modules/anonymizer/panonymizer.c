@@ -84,6 +84,8 @@
 #include <string.h>
 #include <ctype.h>
 
+#include <super_fast_hash.h>
+
 //#ifdef HAVE_STDINT_H
 #include <stdint.h>
 //#endif
@@ -146,6 +148,8 @@ uint32_t anonymize(const uint32_t orig_addr) {
     uint8_t rin_output[16];
     uint8_t rin_input[16];
 
+    uint32_t sfh_output;
+
     uint32_t result = 0;
     uint32_t first4bytes_pad, first4bytes_input;
     int pos;
@@ -168,17 +172,21 @@ uint32_t anonymize(const uint32_t orig_addr) {
 	else {
 	  first4bytes_input = ((orig_addr >> (32-pos)) << (32-pos)) | ((first4bytes_pad<<pos) >> pos);
 	}
-	rin_input[0] = (uint8_t) (first4bytes_input >> 24);
-	rin_input[1] = (uint8_t) ((first4bytes_input << 8) >> 24);
-	rin_input[2] = (uint8_t) ((first4bytes_input << 16) >> 24);
-	rin_input[3] = (uint8_t) ((first4bytes_input << 24) >> 24);
+	//rin_input[0] = (uint8_t) (first4bytes_input >> 24);
+	//rin_input[1] = (uint8_t) ((first4bytes_input << 8) >> 24);
+	//rin_input[2] = (uint8_t) ((first4bytes_input << 16) >> 24);
+	//rin_input[3] = (uint8_t) ((first4bytes_input << 24) >> 24);
 
 	//Encryption: The Rijndael cipher is used as pseudorandom function. During each 
 	//round, only the first bit of rin_output is used.
-	Rijndael_blockEncrypt(rin_input, 128, rin_output);	
+	//Rijndael_blockEncrypt(rin_input, 128, rin_output);	
+
+        // Instead of Rijndael_blockEncrypt use SuperFastHash (because it is faster)
+        sfh_output = SuperFastHash((char*)&first4bytes_input, 4);
 
 	//Combination: the bits are combined into a pseudorandom one-time-pad
-	result |=  (rin_output[0] >> 7) << (31-pos);
+	//result |=  (rin_output[0] >> 7) << (31-pos);
+	result |= (sfh_output & 0x1) << (31-pos);
     }
     //XOR the orginal address with the pseudorandom one-time-pad
     return result ^ orig_addr;
