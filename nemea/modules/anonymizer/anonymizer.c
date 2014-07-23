@@ -1,5 +1,5 @@
 /**
- * \file anonymizer.h
+ * \file anonymizer.c
  * \brief Module for anonymizing incoming flow records. 
  * \author Erik Sabik <xsabik02@stud.fit.vutbr.cz>
  * \date 2013
@@ -42,18 +42,7 @@
  */
 
 
-
-#include <signal.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <getopt.h>
-#include <string.h>
-#include <ctype.h>
-
-#include <libtrap/trap.h>
-#include <super_fast_hash.h>
-#include <unirec/unirec.h>
+#include "anonymizer.h"
 #include "panonymizer.h"
 
 
@@ -92,6 +81,48 @@ void signal_handler(int signal)
    }
 }
 
+/**
+ * \brief Hash used as PRNG
+ *        This function is from MurmurHash3.
+ *        https://code.google.com/p/smhasher/wiki/MurmurHash3
+ * \param key      Pointer to data from which will be computed hash.
+ * \param key_size Size of data.
+ * \return 32bit hash value.
+ */
+inline uint32_t hash_div8(const char *key, int32_t key_size)
+{
+    uint32_t c1 = 5333;
+    uint32_t c2 = 7177;
+    uint32_t r1 = 19;
+    uint32_t m1 = 11117;
+    uint32_t n1 = 14011;
+    uint64_t h = 42;
+    uint64_t * k_ptr = (uint64_t *) key;
+    uint64_t k;
+    uint32_t rep = key_size / 8;
+    uint32_t i;
+
+    for (i = 0; i < rep; i++)
+    {
+        k = *(k_ptr + i);
+        k *= c1;
+        k = ROTL64(k, r1);
+        k *= c2;
+
+        h ^= k;
+
+        h = ROTL64(h, r1);
+        h = h * m1 + n1;
+    }
+
+    h ^= h >> 33;
+    h *= 0xff51afd7ed558ccd;
+    h ^= h >> 33;
+    h *= 0xc4ceb9fe1a85ec53;
+    h ^= h >> 33;
+
+    return (uint32_t) h;
+}
 
 
 /** \brief Initialize anonymizer
@@ -299,7 +330,7 @@ int main(int argc, char **argv)
    // ***** Do all necessary cleanup before exiting *****
    TRAP_DEFAULT_FINALIZATION();
    ur_free_template(tmplt);
-   
+
    return 0;
 }
 

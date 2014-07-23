@@ -1,5 +1,6 @@
 bin_PROGRAMS=anonymizer
 anonymizer_SOURCES=anonymizer.c \
+                   anonymizer.h \
 		   panonymizer.c \
 		   panonymizer.h \
 		   rijndael.c \
