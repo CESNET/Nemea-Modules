@@ -179,22 +179,27 @@ uint32_t anonymize(const uint32_t orig_addr) {
 	rin_input[3] = (uint8_t) ((first4bytes_input << 24) >> 24);
         
 
-	//Encryption: The Rijndael cipher is used as pseudorandom function. During each 
-	//round, only the first bit of rin_output is used.
-	//Rijndael_blockEncrypt(rin_input, 128, rin_output);	
+        switch (ANONYMIZATION_ALGORITHM) {
+	   case RIJNDAEL_BC: //The Rijndael cipher is used as pseudorandom function. During each 
+	                     //round, only the first bit of rin_output is used.
+	                     Rijndael_blockEncrypt(rin_input, 128, rin_output);
+	                     
+                             //Combination: the bits are combined into a pseudorandom one-time-pad
+	                     result |=  (rin_output[0] >> 7) << (31-pos);
+                             break;
+           case MURMUR_HASH3: // Use MurmurHash3 as PRNG
+                              h_output = hash_div8((char*)&rin_input, 16);
+                              
+                              // Compute parity of output down to nibble
+                              h_output ^= h_output >> 16;
+                              h_output ^= h_output >> 8;
+                              h_output ^= h_output >> 4;
+                              h_output &= 0xf;
 
-        // Instead of Rijndael_blockEncrypt use MurmurHash3
-        h_output = hash_div8((char*)&rin_input, 16);
-
-        // Compute parity of output down to nibble
-        h_output ^= h_output >> 16;
-        h_output ^= h_output >> 8;
-        h_output ^= h_output >> 4;
-        h_output &= 0xf;
-
-	//Combination: the bits are combined into a pseudorandom one-time-pad
-	//result |=  (rin_output[0] >> 7) << (31-pos);
-	result |= ((0x6996 >> h_output) & 0x1) << (31-pos); // 0x6996 is mini lookup table for parity
+                              // Combine bits into a pseudorandom one-time-pad
+                              result |= ((0x6996 >> h_output) & 0x1) << (31-pos); // 0x6996 is mini lookup table for parity
+                              break;
+        }
     }  
     //XOR the orginal address with the pseudorandom one-time-pad
     return result ^ orig_addr;

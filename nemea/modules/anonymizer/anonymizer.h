@@ -59,8 +59,15 @@
 #define _ANONYMIZER_H
 
 
-#define ROTL64(num,amount) (((num) << (amount & 63)) | ((num) >> (64 - (amount & 63))))
+enum anonymization_algorithms_enum {
+   MURMUR_HASH3,
+   RIJNDAEL_BC
+};
 
+uint8_t ANONYMIZATION_ALGORITHM; // Determine which anonymization algorithm to use
+
+
+#define ROTL64(num,amount) (((num) << (amount & 63)) | ((num) >> (64 - (amount & 63))))
 
 uint32_t hash_div8(const char *key, int32_t key_size);
 
