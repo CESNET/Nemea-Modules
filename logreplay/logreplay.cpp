@@ -79,6 +79,7 @@ trap_module_info_t module_info = {
    "   -f FILE      Read FILE.\n"
    "                first field (or second when -n is specified).\n"
    "   -c N         Quit after N records are received.\n"
+   "   -n           Don't send \"EOF message\" at the end.\n"
 //   "   -s C         Field separator (default ',').\n"
 //   "   -r C         Record separator (default '\\n').\n"
    ,
@@ -173,6 +174,7 @@ string replace_string(string subject, const string &search, const string &replac
 int main(int argc, char **argv)
 {
    int ret;
+   int send_eof = 1;
    int time_flag = 0;
    char *out_template_str = NULL;
    char *in = NULL, *in_filename = NULL;
@@ -205,7 +207,7 @@ int main(int argc, char **argv)
 
    // Parse remaining parameters and get configuration
    char opt;
-   while ((opt = getopt(argc, argv, "f:c:" /* r:s: */)) != -1) {
+   while ((opt = getopt(argc, argv, "f:c:n" /* r:s: */)) != -1) {
       switch (opt) {
          case 'f':
             in_filename = optarg;
@@ -216,6 +218,9 @@ int main(int argc, char **argv)
                fprintf(stderr, "Error: Parameter of -c option must be integer > 0.\n");
                return 1;
             }
+            break;
+         case 'n':
+            send_eof = 0;
             break;
          //case 's':
          //   field_delim = (optarg[0] != '\\' ? optarg[0] : (optarg[1] == 't'?'\t':'\n'));
@@ -337,6 +342,11 @@ exit:
    }
    if (verbose >= 0) {
       printf("Exitting ...\n");
+   }
+
+   if (send_eof) {
+      char dummy[1] = {0};
+      trap_ctx_send(ctx, 0, dummy, 1);
    }
 
    trap_ctx_send_flush(ctx, 0);
