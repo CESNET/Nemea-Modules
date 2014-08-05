@@ -24,9 +24,9 @@
 #define DEFAULT_DIR_BIT_FIELD 0
 #define DEFAULT_LINK_MASK "1"
 
-#define MINIMAL_SENDING_RATE 	100
-#define MINIMAL_BURST_RATE 	10
-#define MAX_SLEEP_TIME 			100 // in miliseconds
+#define MINIMAL_SENDING_RATE  100
+#define MINIMAL_BURST_RATE    10
+#define MAX_SLEEP_TIME        100 // in miliseconds
 
 #define DEFAULT_MIN_POOL      10
 #define DEFAULT_INIT_TS_CNT   1000
@@ -53,7 +53,7 @@ trap_module_info_t module_info = {
    "   -f FILTER  A nfdump-like filter expression. Only records matching the filter\n"
    "              will be sent to the output."
    "   -c N   Read only the first N flow records.\n"
-	"   -n     Don't send \"EOF message\" at the end.\n"
+   "   -n     Don't send \"EOF message\" at the end.\n"
    "   -T     Sent data from files with timestamps based on actual time.\n"
    "   -d m   Use mask m for DIR_BIT_FIELD. m is 8-bit hexadecimal number.\n"
    "          e.g. m should be \"1\", \"c2\", \"AB\",...\n"
@@ -91,11 +91,11 @@ int main(int argc, char **argv)
    uint8_t set_dir_bit_field = 0;
    char *link_mask = DEFAULT_LINK_MASK;// 8*sizeof(char) = 64 bits of uint64_t
    //------------ Actual timestamps --------------------------------------------
-	int actual_timestamps = 0;
+   int actual_timestamps = 0;
    time_t act_time;
    uint64_t first;
-	uint64_t last;
-	//------------ Rate limiting & Real time re-sending -------------------------
+   uint64_t last;
+   //------------ Rate limiting & Real time re-sending -------------------------
    uint16_t init_ts_count = DEFAULT_INIT_TS_CNT, min_pool = DEFAULT_MIN_POOL, min_cnt = 0, sample_rate = DEFAULT_SAMPLE_RATE;
    uint32_t act_min, act_ts;
    uint32_t mins [min_pool];
@@ -105,19 +105,19 @@ int main(int argc, char **argv)
    float ts_diff_total;
    float ts_diff_threshold = 3.5;//threshold of timestamp change during 1s (empirical value)
 
-	long rec_to_send;
-	unsigned long sending_rate = 0;
-	unsigned long rt_resending = 0;
-	unsigned long burst_size;
-	unsigned long minimal_burst;
-	unsigned long burst_counter;
-	unsigned int sleeper;
-	uint64_t load_index;
-	uint64_t cmp_index;
-	time_t sec;
-	time_t next_sec;
-	int time_diff_flag;
-	int sleep_available;
+   long rec_to_send;
+   unsigned long sending_rate = 0;
+   unsigned long rt_resending = 0;
+   unsigned long burst_size;
+   unsigned long minimal_burst;
+   unsigned long burst_counter;
+   unsigned int sleeper;
+   uint64_t load_index;
+   uint64_t cmp_index;
+   time_t sec;
+   time_t next_sec;
+   int time_diff_flag;
+   int sleep_available;
 
 
 
@@ -156,13 +156,13 @@ int main(int argc, char **argv)
          case 'n':
             send_eof = 0;
             break;
-			case 'D':
+         case 'D':
             set_dir_bit_field = 1;
             break;
-			case 'l':
+         case 'l':
             link_mask = optarg;
             break;
-			case 'r':
+         case 'r':
             sending_rate = atoi(optarg);
             if (sending_rate < MINIMAL_SENDING_RATE) {
                fprintf(stderr, "Invalid sending rate (%i rec/s is minimum).\n", MINIMAL_SENDING_RATE);
@@ -170,10 +170,10 @@ int main(int argc, char **argv)
             }
             minimal_burst = sending_rate / MINIMAL_BURST_RATE;
             break;
-			case 'R':
+         case 'R':
             rt_resending = 1;
             break;
-			case 'T':
+         case 'T':
             actual_timestamps = 1;
             break;
          default:
@@ -184,20 +184,20 @@ int main(int argc, char **argv)
 
    if (optind >= argc) {
       fprintf(stderr, "Wrong number of parameters.\nUsage: %s -i trap-ifc-specifier \
-				[-f FILTER] [-n] [-c NUM] [-r NUM] nfdump-file [nfdump-file...]\n", argv[0]);
+            [-f FILTER] [-n] [-c NUM] [-r NUM] nfdump-file [nfdump-file...]\n", argv[0]);
       return 2;
    }
 
-	if (sending_rate && rt_resending) {
-		fprintf(stderr, "Wrong parameters, use only one of -r / -R.\n");
-		return 2;
-	}
+   if (sending_rate && rt_resending) {
+      fprintf(stderr, "Wrong parameters, use only one of -r / -R.\n");
+      return 2;
+   }
 
-	links = ur_create_links(link_mask);
-	if (links == NULL){
-		fprintf(stderr, "Invalid link mask.\n");
-		return 2;
-	}
+   links = ur_create_links(link_mask);
+   if (links == NULL){
+      fprintf(stderr, "Invalid link mask.\n");
+      return 2;
+   }
 
    // Initialize TRAP library (create and init all interfaces)
    if (verbose) {
@@ -213,9 +213,9 @@ int main(int argc, char **argv)
    signal(SIGTERM, signal_handler);
    signal(SIGINT, signal_handler);
 
-	if (trap_ifcctl(TRAPIFC_OUTPUT, 0,TRAPCTL_BUFFERSWITCH, "0") != TRAP_E_OK){
-		fprintf(stderr, "Error while turning off buffering.\n");
-	}
+   if (trap_ifcctl(TRAPIFC_OUTPUT, 0,TRAPCTL_BUFFERSWITCH, "0") != TRAP_E_OK){
+      fprintf(stderr, "Error while turning off buffering.\n");
+   }
 
    if (verbose) {
       printf("Sending records ...\n");
@@ -226,12 +226,12 @@ int main(int argc, char **argv)
 
    srand(time(NULL));
 
-	if (sending_rate){
-		burst_size = sending_rate;
-		sleeper = 0;
-	}else if (rt_resending){
-		sleep_available = 1;
-	}
+   if (sending_rate){
+      burst_size = sending_rate;
+      sleeper = 0;
+   }else if (rt_resending){
+      sleep_available = 1;
+   }
 
    // For all input files...
    do {
@@ -249,85 +249,85 @@ int main(int argc, char **argv)
          return 3;
       }
       if(sending_rate){
-			time(&sec);
-			time(&next_sec);
-			rec_to_send = 0;
+         time(&sec);
+         time(&next_sec);
+         rec_to_send = 0;
       }
 
       // For all records in the file
       while (!stop && (max_records == 0 || counter < max_records) && !ret) {
-			master_record_t *rec;
+         master_record_t *rec;
 
-			time_diff_flag = 1;
+         time_diff_flag = 1;
 
-			if (sending_rate) {
-				load_index = 0;
-				time(&next_sec);
-				++next_sec;
-				rec_to_send += sending_rate;
-			}else{
-				rec_to_send = 1;
-				burst_size = 1;
-			}
+         if (sending_rate) {
+            load_index = 0;
+            time(&next_sec);
+            ++next_sec;
+            rec_to_send += sending_rate;
+         }else{
+            rec_to_send = 1;
+            burst_size = 1;
+         }
 
-			while (!stop && (max_records == 0 || counter < max_records) && time_diff_flag && !ret) {
-				if (rec_to_send > 0) {
-					burst_counter = 0;
-					while (!stop && (burst_counter < burst_size) &&
+         while (!stop && (max_records == 0 || counter < max_records) && time_diff_flag && !ret) {
+            if (rec_to_send > 0) {
+               burst_counter = 0;
+               while (!stop && (burst_counter < burst_size) &&
                                                (max_records == 0 || counter < max_records) ) {
-						// Read a record from the file
-						ret = nfdump_iter_next(&iter, &rec);
-						if (ret != 0) {
-							if (ret == NFDUMP_EOF) { // no more records
-								break;
-							}
-							fprintf(stderr, "Error during reading file (%i).\n", ret);
-							nfdump_iter_end(&iter);
-							trap_finalize();
-							ur_free(rec2);
-							return 3;
-						}
+                  // Read a record from the file
+                  ret = nfdump_iter_next(&iter, &rec);
+                  if (ret != 0) {
+                     if (ret == NFDUMP_EOF) { // no more records
+                        break;
+                     }
+                     fprintf(stderr, "Error during reading file (%i).\n", ret);
+                     nfdump_iter_end(&iter);
+                     trap_finalize();
+                     ur_free(rec2);
+                     return 3;
+                  }
 
-						// Copy data from master_record_t to UniRec record
-						if (rec->flags & 0x01) { // IPv6
-							uint64_t tmp_ip_v6_addr;
-							// Swap IPv6 halves
-							tmp_ip_v6_addr = rec->ip_union._v6.srcaddr[0];
-							rec->ip_union._v6.srcaddr[0] = rec->ip_union._v6.srcaddr[1];
-							rec->ip_union._v6.srcaddr[1] = tmp_ip_v6_addr;
-							tmp_ip_v6_addr = rec->ip_union._v6.dstaddr[0];
-							rec->ip_union._v6.dstaddr[0] = rec->ip_union._v6.dstaddr[1];
-							rec->ip_union._v6.dstaddr[1] = tmp_ip_v6_addr;
+                  // Copy data from master_record_t to UniRec record
+                  if (rec->flags & 0x01) { // IPv6
+                     uint64_t tmp_ip_v6_addr;
+                     // Swap IPv6 halves
+                     tmp_ip_v6_addr = rec->ip_union._v6.srcaddr[0];
+                     rec->ip_union._v6.srcaddr[0] = rec->ip_union._v6.srcaddr[1];
+                     rec->ip_union._v6.srcaddr[1] = tmp_ip_v6_addr;
+                     tmp_ip_v6_addr = rec->ip_union._v6.dstaddr[0];
+                     rec->ip_union._v6.dstaddr[0] = rec->ip_union._v6.dstaddr[1];
+                     rec->ip_union._v6.dstaddr[1] = tmp_ip_v6_addr;
 
-							ur_set(tmplt, rec2, UR_SRC_IP, ip_from_16_bytes_le((char *)rec->ip_union._v6.srcaddr));
-							ur_set(tmplt, rec2, UR_DST_IP, ip_from_16_bytes_le((char *)rec->ip_union._v6.dstaddr));
-						}
-						else { // IPv4
-							ur_set(tmplt, rec2, UR_SRC_IP, ip_from_4_bytes_le((char *)&rec->ip_union._v4.srcaddr));
-							ur_set(tmplt, rec2, UR_DST_IP, ip_from_4_bytes_le((char *)&rec->ip_union._v4.dstaddr));
+                     ur_set(tmplt, rec2, UR_SRC_IP, ip_from_16_bytes_le((char *)rec->ip_union._v6.srcaddr));
+                     ur_set(tmplt, rec2, UR_DST_IP, ip_from_16_bytes_le((char *)rec->ip_union._v6.dstaddr));
+                  }
+                  else { // IPv4
+                     ur_set(tmplt, rec2, UR_SRC_IP, ip_from_4_bytes_le((char *)&rec->ip_union._v4.srcaddr));
+                     ur_set(tmplt, rec2, UR_DST_IP, ip_from_4_bytes_le((char *)&rec->ip_union._v4.dstaddr));
 
-						}
-//						printf("%i \n", (void *)&rec->input - (void *)&rec);
-						ur_set(tmplt, rec2, UR_SRC_PORT, rec->srcport);
-						ur_set(tmplt, rec2, UR_DST_PORT, rec->dstport);
-						ur_set(tmplt, rec2, UR_PROTOCOL, rec->prot);
-						ur_set(tmplt, rec2, UR_TCP_FLAGS, rec->tcp_flags);
-						ur_set(tmplt, rec2, UR_PACKETS, rec->dPkts);
-						ur_set(tmplt, rec2, UR_BYTES, rec->dOctets);
-						ur_set(tmplt, rec2, UR_LINK_BIT_FIELD, ur_get_link_mask(links));
-						if (set_dir_bit_field){
+                  }
+//                printf("%i \n", (void *)&rec->input - (void *)&rec);
+                  ur_set(tmplt, rec2, UR_SRC_PORT, rec->srcport);
+                  ur_set(tmplt, rec2, UR_DST_PORT, rec->dstport);
+                  ur_set(tmplt, rec2, UR_PROTOCOL, rec->prot);
+                  ur_set(tmplt, rec2, UR_TCP_FLAGS, rec->tcp_flags);
+                  ur_set(tmplt, rec2, UR_PACKETS, rec->dPkts);
+                  ur_set(tmplt, rec2, UR_BYTES, rec->dOctets);
+                  ur_set(tmplt, rec2, UR_LINK_BIT_FIELD, ur_get_link_mask(links));
+                  if (set_dir_bit_field){
                      if (rec->input > 0){
                         ur_set(tmplt, rec2, UR_DIR_BIT_FIELD, (1 << rec->input));
                      } else {
                         ur_set(tmplt, rec2, UR_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
                      }
-						} else {
+                  } else {
                      ur_set(tmplt, rec2, UR_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
                   }
 
-						if (rt_resending){
+                  if (rt_resending){
                      // Get minimal timestamp >>
-							if (counter < init_ts_count){
+                     if (counter < init_ts_count){
                         if (min_cnt < min_pool){
                            mins[min_cnt] = rec->last;
                            if (++min_cnt == min_pool){
@@ -351,7 +351,7 @@ int main(int argc, char **argv)
                               act_min = rec->last;
                            }
                         }
-							} else if (counter == init_ts_count){
+                     } else if (counter == init_ts_count){
                         uint64_t tmp_sum = 0;
                         for (int i = 0; i < min_pool; ++i){
                            tmp_sum += mins[i];
@@ -401,91 +401,91 @@ int main(int argc, char **argv)
                            }
                         }
                      }
-						}
+                  }
 
 
-						if (actual_timestamps){
-							time(&act_time);
-							first = ur_time_from_sec_msec(act_time - (rec->last - rec->first), rec->msec_first);
-							last = ur_time_from_sec_msec(act_time , rec->msec_last);
-						}else{
-							first = ur_time_from_sec_msec(rec->first, rec->msec_first);
-							last = ur_time_from_sec_msec(rec->last, rec->msec_last);
-						}
-						ur_set(tmplt, rec2, UR_TIME_FIRST, first);
-						ur_set(tmplt, rec2, UR_TIME_LAST, last);
+                  if (actual_timestamps){
+                     time(&act_time);
+                     first = ur_time_from_sec_msec(act_time - (rec->last - rec->first), rec->msec_first);
+                     last = ur_time_from_sec_msec(act_time , rec->msec_last);
+                  }else{
+                     first = ur_time_from_sec_msec(rec->first, rec->msec_first);
+                     last = ur_time_from_sec_msec(rec->last, rec->msec_last);
+                  }
+                  ur_set(tmplt, rec2, UR_TIME_FIRST, first);
+                  ur_set(tmplt, rec2, UR_TIME_LAST, last);
 
-						// Send data to output interface
-						trap_send(0, rec2, ur_rec_static_size(tmplt));
-						counter++;
-						//usleep(100);
+                  // Send data to output interface
+                  trap_send(0, rec2, ur_rec_static_size(tmplt));
+                  counter++;
+                  //usleep(100);
 
-						if (verbose && counter % 1000 == 1) {
-							printf(".");
-							fflush(stdout);
-						}
+                  if (verbose && counter % 1000 == 1) {
+                     printf(".");
+                     fflush(stdout);
+                  }
 
-						if (sending_rate){
-							++burst_counter;
-						}
-					}
+                  if (sending_rate){
+                     ++burst_counter;
+                  }
+               }
 
-					if (sending_rate){
-						rec_to_send -= burst_size;
-					}
-				}
+               if (sending_rate){
+                  rec_to_send -= burst_size;
+               }
+            }
 
-				if (sending_rate){
-					usleep(sleeper * 1000);
+            if (sending_rate){
+               usleep(sleeper * 1000);
 
-					++load_index;
-					time(&sec);
-					if (difftime(next_sec, sec) <= 0){
-						time_diff_flag = 0;
-					}
-				}
-			}// for one second
+               ++load_index;
+               time(&sec);
+               if (difftime(next_sec, sec) <= 0){
+                  time_diff_flag = 0;
+               }
+            }
+         }// for one second
 
-			if (sending_rate){
-				if (difftime(sec, next_sec) > 1) {
-					burst_size = sending_rate * 2;
-					sleeper = 0;
-					fprintf(stderr, "Time miss! %f seconds, sending burst of 2x rate.\n", difftime(sec, next_sec));
-					time(&sec);
-					time(&next_sec);
-				}else{
-					cmp_index = 10;
-					while (load_index > cmp_index) {
-						cmp_index *= 10;
-					}
+         if (sending_rate){
+            if (difftime(sec, next_sec) > 1) {
+               burst_size = sending_rate * 2;
+               sleeper = 0;
+               fprintf(stderr, "Time miss! %f seconds, sending burst of 2x rate.\n", difftime(sec, next_sec));
+               time(&sec);
+               time(&next_sec);
+            }else{
+               cmp_index = 10;
+               while (load_index > cmp_index) {
+                  cmp_index *= 10;
+               }
 
-					if (load_index < 10){// sending was too slow...
-						burst_size *= 4;
-						sleeper = 0;
-					}else if (cmp_index == 10){// rate was met closely
-						burst_size *= 1.5;
-						sleeper /= 2;
-					}else if (cmp_index == 100){// rate was met - OK
-						burst_size /= 1.5;
-						sleeper += 5;
-					}else{// rate was met, but sending was too fast
-						if (burst_size == minimal_burst){
-							sleeper = cmp_index / 1000;
-						}else{
-							burst_size = sending_rate / cmp_index;
-						}
-					}
-					//corrections ...
-					if (burst_size < minimal_burst){
-						burst_size = minimal_burst;
-					}else if (burst_size > sending_rate){
-						burst_size = sending_rate;
-					}
-					if (sleeper > MAX_SLEEP_TIME){
-						sleeper = MAX_SLEEP_TIME;
-					}
-				}
-			}//if SENDING RATE MODE
+               if (load_index < 10){// sending was too slow...
+                  burst_size *= 4;
+                  sleeper = 0;
+               }else if (cmp_index == 10){// rate was met closely
+                  burst_size *= 1.5;
+                  sleeper /= 2;
+               }else if (cmp_index == 100){// rate was met - OK
+                  burst_size /= 1.5;
+                  sleeper += 5;
+               }else{// rate was met, but sending was too fast
+                  if (burst_size == minimal_burst){
+                     sleeper = cmp_index / 1000;
+                  }else{
+                     burst_size = sending_rate / cmp_index;
+                  }
+               }
+               //corrections ...
+               if (burst_size < minimal_burst){
+                  burst_size = minimal_burst;
+               }else if (burst_size > sending_rate){
+                  burst_size = sending_rate;
+               }
+               if (sleeper > MAX_SLEEP_TIME){
+                  sleeper = MAX_SLEEP_TIME;
+               }
+            }
+         }//if SENDING RATE MODE
       } // for all records in a file
 
       if (verbose) {
@@ -513,4 +513,3 @@ int main(int argc, char **argv)
 
    return 0;
 }
-
