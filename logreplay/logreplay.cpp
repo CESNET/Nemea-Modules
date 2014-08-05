@@ -79,6 +79,7 @@ trap_module_info_t module_info = {
    "   -f FILE      Read FILE.\n"
    "                first field (or second when -n is specified).\n"
    "   -c N         Quit after N records are received.\n"
+   "   -n           Don't send \"EOF message\" at the end.\n"
 //   "   -s C         Field separator (default ',').\n"
 //   "   -r C         Record separator (default '\\n').\n"
    ,
@@ -173,6 +174,8 @@ string replace_string(string subject, const string &search, const string &replac
 int main(int argc, char **argv)
 {
    int ret;
+   int send_eof = 1;
+   int time_flag = 0;
    char *out_template_str = NULL;
    char *in = NULL, *in_filename = NULL;
    char record_delim = '\n';
@@ -204,7 +207,7 @@ int main(int argc, char **argv)
 
    // Parse remaining parameters and get configuration
    char opt;
-   while ((opt = getopt(argc, argv, "f:c:" /* r:s: */)) != -1) {
+   while ((opt = getopt(argc, argv, "f:c:n" /* r:s: */)) != -1) {
       switch (opt) {
          case 'f':
             in_filename = optarg;
@@ -215,6 +218,9 @@ int main(int argc, char **argv)
                fprintf(stderr, "Error: Parameter of -c option must be integer > 0.\n");
                return 1;
             }
+            break;
+         case 'n':
+            send_eof = 0;
             break;
          //case 's':
          //   field_delim = (optarg[0] != '\\' ? optarg[0] : (optarg[1] == 't'?'\t':'\n'));
@@ -241,6 +247,10 @@ int main(int argc, char **argv)
 
    if (f_in.good()) {
       getline(f_in, line, record_delim);
+      if (line.compare(0, 5, "time,") == 0) {
+         time_flag = 1;
+         line.erase(0,5);
+      }
       utmpl = ur_create_template(line.c_str());
       if (utmpl == NULL) {
          goto exit;
@@ -293,8 +303,14 @@ int main(int argc, char **argv)
             break;
          }
          stringstream sl(line);
+         int skipped_time = 0;
          for (vector<ur_field_id_t>::iterator it = field_ids.begin(); it != field_ids.end(); ++it) {
             column = get_next_field(sl);
+            // Skip timestamp added by logger
+            if (!skipped_time && time_flag) {
+               column = get_next_field(sl);
+               skipped_time = 1;
+            }
             // check if current field is dynamic
             if (ur_is_dynamic(*it) != 0) {
                // dynamic field, just store it in a map for later use
@@ -326,6 +342,11 @@ exit:
    }
    if (verbose >= 0) {
       printf("Exitting ...\n");
+   }
+
+   if (send_eof) {
+      char dummy[1] = {0};
+      trap_ctx_send(ctx, 0, dummy, 1);
    }
 
    trap_ctx_send_flush(ctx, 0);
