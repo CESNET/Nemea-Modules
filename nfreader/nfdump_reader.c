@@ -49,9 +49,9 @@ trap_module_info_t module_info = {
    "   -c N   Read only the first N flow records.\n"
    "   -n     Don't send \"EOF message\" at the end.\n"
    "   -T     Replace original timestamps by record actual sending time.\n"
-   "   -d m   Use mask m for DIR_BIT_FIELD. m is 8-bit hexadecimal number.\n"
+   "   -D     Fill DIR_BIT_FIELD according to record direction.\n"
+   "   -l m   Use link mask m for LINK_BIT_FIELD. m is 8-bit hexadecimal number.\n"
    "          e.g. m should be \"1\", \"c2\", \"AB\",...\n"
-   "   -l m   Use link mask m for LINK_BIT_FIELD.\n"
    "   -r N   Rate limiting. Limiting sending flow rate to N records/sec.\n"
    "   -R     Real time re-sending. Resending records from given files in real\n"
    "          time, respecting original timestamps (seconds). Since this mode\n"
@@ -111,14 +111,15 @@ int main(int argc, char **argv)
    uint8_t set_dir_bit_field = 0;
    char *link_mask = DEFAULT_LINK_MASK;// 8*sizeof(char) = 64 bits of uint64_t
    ur_links_t *links;
-
+   //------------ Actual timestamps --------------------------------------------
    int actual_timestamps = 0;
-
+   //------------ Rate limiting ------------------------------------------------
    unsigned long sending_rate = 0;
    struct timeval sr_start;
-
+   //------------ Real-time sendning -------------------------------------------
    uint8_t rt_sending = 0;
    rt_state_t rt_sending_state;
+   //---------------------------------------------------------------------------
 
    // Create UniRec template
    ur_template_t *tmplt = ur_create_template("<COLLECTOR_FLOW>");
@@ -180,8 +181,8 @@ int main(int argc, char **argv)
 
    if (optind >= argc) {
       fprintf(stderr, "Wrong number of parameters.\nUsage: %s -i trap-ifc-specifier \
-            [-f FILTER] [-n] [-c NUM] [-r NUM] nfdump-file [nfdump-file...]\n", argv[0]);
-      return 2; /// TODO - check if params match to actual state of module -------------------------------------------------------------##################################################
+            [-f FILTER] [-n] [-c NUM] [-r NUM] [-R] [-T] [-l MASK] [-D] nfdump-file [nfdump-file...]\n", argv[0]);
+      return 2;
    }
 
    links = ur_create_links(link_mask);
@@ -344,6 +345,7 @@ exit:
    trap_finalize();
    ur_free(rec_out);
    ur_free_template(tmplt);
+   ur_free_links(links);
 
    return module_state;
 }
