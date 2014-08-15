@@ -212,6 +212,7 @@ uint32_t anonymize(const uint32_t orig_addr) {
 void anonymize_v6(const uint64_t orig_addr[2], uint64_t *anon_addr) {
     uint8_t rin_output[16], *orig_bytes, *result;
     uint8_t rin_input[16];
+    uint32_t h_output;
 
     int pos, i, bit_num, left_byte;
 
@@ -234,13 +235,28 @@ void anonymize_v6(const uint64_t orig_addr[2], uint64_t *anon_addr) {
 			rin_input[i] = m_pad[i];
 		}
 
-		//Encryption: The Rijndael cipher is used as pseudorandom function. During each 
-		//round, only the first bit of rin_output is used.
-		Rijndael_blockEncrypt(rin_input, 128, rin_output);	
 
-		//Combination: the bits are combined into a pseudorandom one-time-pad
-		result[left_byte] |= (rin_output[0] >> 7) << bit_num;
+        switch (ANONYMIZATION_ALGORITHM) {
+	    case RIJNDAEL_BC: //The Rijndael cipher is used as pseudorandom function. During each 
+	                      //round, only the first bit of rin_output is used.
+	                      Rijndael_blockEncrypt(rin_input, 128, rin_output);
+	                     
+                              //Combination: the bits are combined into a pseudorandom one-time-pad
+		              result[left_byte] |= (rin_output[0] >> 7) << bit_num;
+                              break;
+            case MURMUR_HASH3: // Use MurmurHash3 as PRNG
+                               h_output = hash_div8((char*)&rin_input, 16);
+                               
+                               // Compute parity of output down to nibble
+                               h_output ^= h_output >> 16;
+                               h_output ^= h_output >> 8;
+                               h_output ^= h_output >> 4;
+                               h_output &= 0xf;
 
+                               // Combine bits into a pseudorandom one-time-pad
+                               result[left_byte] |= ((0x6996 >> h_output) & 0x1) << bit_num; // 0x6996 is mini lookup table for parity
+                               break;
+         }
     }
     //XOR the orginal address with the pseudorandom one-time-pad
 	anon_addr[0] ^= orig_addr[0];

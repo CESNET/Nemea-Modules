@@ -62,7 +62,7 @@ trap_module_info_t module_info = {
    "   -u TMPLT    Specify UniRec template expected on the input interface.\n"
    "   -k KEY      Specify secret key*.\n"
    "   -f FILE     Specify file containing secret key*.\n" 
-   "   -o          Use original anonymization algorithm."
+   "   -M          Use MurmurHash3 instead of Rijndael cipher."
    "Interfaces:\n"
    "   Inputs: 1\n"
    "   Outputs: 1\n"
@@ -214,7 +214,7 @@ int main(int argc, char **argv)
    char *secret_key = "01234567890123450123456789012345";
    char *secret_file = NULL;
 
-   ANONYMIZATION_ALGORITHM = MURMUR_HASH3;
+   ANONYMIZATION_ALGORITHM = RIJNDAEL_BC; // Default algorithm
 
    // ***** ONLY FOR DEBUGING ***** //
    #ifdef DEBUG
@@ -236,7 +236,7 @@ int main(int argc, char **argv)
    // ***** Create UniRec template *****   
    char *unirec_specifier = "<COLLECTOR_FLOW>";
    char opt;
-   while ((opt = getopt(argc, argv, "u:k:f:o")) != -1) {
+   while ((opt = getopt(argc, argv, "u:k:f:M")) != -1) {
       switch (opt) {
          case 'u':
             unirec_specifier = optarg;
@@ -247,8 +247,8 @@ int main(int argc, char **argv)
          case 'f':
             secret_file = optarg;
             break;
-         case 'o':
-            ANONYMIZATION_ALGORITHM = RIJNDAEL_BC;
+         case 'M':
+            ANONYMIZATION_ALGORITHM = MURMUR_HASH3;
             break;
          default:
             fprintf(stderr, "Invalid arguments.\n");
@@ -325,7 +325,7 @@ int main(int argc, char **argv)
 
 
    }
-   
+  
   // ***** ONLY FOR DEBUGING ***** //
   #ifdef DEBUG
      char dummy[1] = {0};

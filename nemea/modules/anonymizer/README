@@ -4,13 +4,15 @@ Goal: Anonymize IP addresses in Unirec flows.
 
 Method: IPs in Unirec (source and destination) are anonymized and then sent to output interface.
         CryptoPAn library, which were taken from NfDumps source codes, is used.
+        As default pseudorandom generator is used Rijndael cipher (which comes with CryptoPAn library),
+        but if faster algorithm is needed, MurmurHash3 can be used instead (parameter -M).
         Anonymization is prefix-preserving and a anonymization key is required.
 
 Input interface: Unirec containing at least:
                  - Source address     (SRC_IP)
                  - Destination addres (DST_IP)
 
-Output interface: Unirec containing same items as input Unirec.
+Output interface: Unirec containing same items as input Unirec, but with anonymized IP addresses.
 
 Algorithm: CryptoPAn tools (http://www.cc.gatech.edu/computing/Telecomm/projects/cryptopan/).
 
@@ -19,7 +21,7 @@ Anonymization key: 32 characters long string or 32B sized hex string starting wi
                    - As parameter on command line.
                    - Written in a file which name must be specified on command line.
 
-
 Parameters: -k KEY     Specify anonymization key.
             -f FILE    Specify file containg anonymization key.
             -u TMPLT   Specify Unirec template expected on the input interface.
+            -M         Use MurmurHash3 instead of Rijndael cipher.
