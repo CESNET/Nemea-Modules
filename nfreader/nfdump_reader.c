@@ -19,6 +19,7 @@
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 #include <libnfdump.h>
+#include <nemea-common.h>
 
 #include <real_time_sending.h>
 
@@ -52,6 +53,7 @@ trap_module_info_t module_info = {
    "   -D     Fill DIR_BIT_FIELD according to record direction.\n"
    "   -l m   Use link mask m for LINK_BIT_FIELD. m is 8-bit hexadecimal number.\n"
    "          e.g. m should be \"1\", \"c2\", \"AB\",...\n"
+   "   -p N   Show progress - print a dot every N flows.\n"
    "   -r N   Rate limiting. Limiting sending flow rate to N records/sec.\n"
    "   -R     Real time re-sending. Resending records from given files in real\n"
    "          time, respecting original timestamps (seconds). Since this mode\n"
@@ -111,6 +113,7 @@ int main(int argc, char **argv)
    uint8_t set_dir_bit_field = 0;
    char *link_mask = DEFAULT_LINK_MASK;// 8*sizeof(char) = 64 bits of uint64_t
    ur_links_t *links;
+   PROGRESS_DECL;
    //------------ Actual timestamps --------------------------------------------
    int actual_timestamps = 0;
    //------------ Rate limiting ------------------------------------------------
@@ -139,7 +142,7 @@ int main(int argc, char **argv)
 
    // Parse remaining parameters
    char opt;
-   while ((opt = getopt(argc, argv, "f:c:nl:Dr:RT")) != -1) {
+   while ((opt = getopt(argc, argv, "f:c:nl:Dp:r:RT")) != -1) {
       switch (opt) {
          case 'f':
             filter = optarg;
@@ -160,6 +163,9 @@ int main(int argc, char **argv)
          case 'l':
             link_mask = optarg;
             break;
+         case 'p':
+            PROGRESS_INIT(atoi(optarg), return 2);
+			   break;
          case 'r':
             sending_rate = atoi(optarg);
             if (sending_rate < MINIMAL_SENDING_RATE) {
@@ -315,10 +321,7 @@ int main(int argc, char **argv)
             }
          }
 
-         if (verbose && record_counter % 1000 == 1) {
-            printf(".");
-            fflush(stdout);
-         }
+         PROGRESS_PRINT;
 
       }// for all records in a file
       if (verbose) {
@@ -327,6 +330,7 @@ int main(int argc, char **argv)
       nfdump_iter_end(&iter);
    } while (!stop && ++optind < argc); // For all input files
 
+   PROGRESS_NEWLINE;
    printf("%lu flow records sent\n", record_counter);
 
    // Send data with zero length to signalize end
