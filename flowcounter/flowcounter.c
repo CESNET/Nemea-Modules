@@ -13,6 +13,7 @@
 #include <time.h>
 #include <errno.h>
 #include <unistd.h>
+#include <nemea-common.h>
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
@@ -33,27 +34,24 @@ trap_module_info_t module_info = {
 	"Example module for counting number of incoming flow records.\n"
 		 "Parameters:\n"
 		 "   -u TMPLT    Specify UniRec template expected on the input interface.\n"
-		 "   -p N        Show progess - print a dot every N flows.\n"
+		 "   -p N        Show progress - print a dot every N flows.\n"
 		 "   -P CHAR     When showing progress, print CHAR instead of dot.\n"
-		 "   -o SEC      Send <VOLUME> record filled with current counters every SEC second(s).\n"
+		 "   -o SEC      Send @VOLUME record filled with current counters every SEC second(s).\n"
 		 "Interfaces:\n"
-		 "   Inputs: 1 (flow records)\n"
-		 "   Outputs: 0/1 (affected by -o parameter)\n",
+		 "   Inputs: 1 (flow records)\n" "   Outputs: 0/1 (affected by -o parameter)\n",
 	1,									  // Number of input interfaces
 	0,									  // Number of output interfaces
 };
 
 /* ************************************************************************* */
 
-int stop = 0;
-int stats = 0;
-int progress = 0;
-char progress_char = '.';
-unsigned long cnt_flows = 0, cnt_packets = 0, cnt_bytes = 0;
+static int stop = 0;
+static int stats = 0;
+static unsigned long cnt_flows = 0, cnt_packets = 0, cnt_bytes = 0;
 
-unsigned long send_interval;  /* data sending interval */
-ur_template_t *out_tmplt;     /* output template */
-void *out_rec;                /* output record */
+static unsigned long send_interval;	/* data sending interval */
+ur_template_t *out_tmplt;		  /* output template */
+void *out_rec;						  /* output record */
 
 void signal_handler(int signal)
 {
@@ -77,8 +75,8 @@ void send_handler(int signal)
 	ur_set(out_tmplt, out_rec, UR_PACKETS, cnt_packets);
 	ur_set(out_tmplt, out_rec, UR_BYTES, cnt_bytes);
 	ret = trap_send(0, out_rec, ur_rec_static_size(out_tmplt));
-	TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, void, HANDLE_ERROR("trap_send: error %i", ret));
-	alarm(send_interval); // TODO takovyto timer pomoci alarm se bude zpozdovat, interval bude vzdy o malicko vetsi nez nastaveny
+	TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, exit(EXIT_FAILURE), exit(EXIT_FAILURE));
+	alarm(send_interval);
 }
 
 void get_o_param(int argc, char **argv)
@@ -128,6 +126,8 @@ void get_o_param(int argc, char **argv)
 int main(int argc, char **argv)
 {
 	int ret;
+	
+	PROGRESS_DECL
 
 	get_o_param(argc, argv);	  /* output have to be known before TRAP init */
 
@@ -148,10 +148,10 @@ int main(int argc, char **argv)
 			unirec_specifier = optarg;
 			break;
 		case 'p':
-			progress = atoi(optarg);
+			PROGRESS_INIT(atoi(optarg), return 1);
 			break;
 		case 'P':
-			progress_char = optarg[0];
+			trap_progress_char = optarg[0];
 			break;
 		case 'o':
 			/* proccessed earlier */
@@ -184,7 +184,6 @@ int main(int argc, char **argv)
 			TRAP_DEFAULT_FINALIZATION();
 			return 4;
 		}
-		// TODO vypnout buffer?
 		ret = trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
 		if (ret != TRAP_E_OK) {
 			ur_free_template(out_tmplt);
@@ -216,10 +215,8 @@ int main(int argc, char **argv)
 			}
 		}
 
-		if (progress > 0 && cnt_flows % progress == 0) {
-			putchar(progress_char);
-			fflush(stdout);
-		}
+      PROGRESS_PRINT;
+
 		// Update counters
 		cnt_flows += 1;
 		cnt_packets += ur_get(tmplt, data, UR_PACKETS);
@@ -234,15 +231,9 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (send_interval) {  /* in case of -o option */
-		alarm(0); // Cancel timer
-	}
-
 	// ***** Print results *****
 
-	if (progress > 0) {
-		printf("\n");
-	}
+	PROGRESS_NEWLINE;
 	printf("Flows:   %20lu\n", cnt_flows);
 	printf("Packets: %20lu\n", cnt_packets);
 	printf("Bytes:   %20lu\n", cnt_bytes);
@@ -252,9 +243,10 @@ int main(int argc, char **argv)
 	// Do all necessary cleanup before exiting
 	TRAP_DEFAULT_FINALIZATION();
 
-	if (send_interval) {	  /* in case of -o option */
+	if (send_interval) {			  /* in case of -o option */
 		ur_free_template(out_tmplt);
 		ur_free(out_rec);
+		alarm(0);
 	}
 
 	ur_free_template(tmplt);
