@@ -13,6 +13,7 @@
 #include <time.h>
 #include <errno.h>
 #include <unistd.h>
+#include <nemea-common.h>
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
@@ -33,7 +34,7 @@ trap_module_info_t module_info = {
 	"Example module for counting number of incoming flow records.\n"
 		 "Parameters:\n"
 		 "   -u TMPLT    Specify UniRec template expected on the input interface.\n"
-		 "   -p N        Show progess - print a dot every N flows.\n"
+		 "   -p N        Show progress - print a dot every N flows.\n"
 		 "   -P CHAR     When showing progress, print CHAR instead of dot.\n"
 		 "   -o SEC      Send @VOLUME record filled with current counters every SEC second(s).\n"
 		 "Interfaces:\n"
@@ -46,8 +47,6 @@ trap_module_info_t module_info = {
 
 static int stop = 0;
 static int stats = 0;
-static int progress = 0;
-static char progress_char = '.';
 static unsigned long cnt_flows = 0, cnt_packets = 0, cnt_bytes = 0;
 
 static unsigned long send_interval;	/* data sending interval */
@@ -127,6 +126,8 @@ void get_o_param(int argc, char **argv)
 int main(int argc, char **argv)
 {
 	int ret;
+	
+	PROGRESS_DECL
 
 	get_o_param(argc, argv);	  /* output have to be known before TRAP init */
 
@@ -147,10 +148,10 @@ int main(int argc, char **argv)
 			unirec_specifier = optarg;
 			break;
 		case 'p':
-			progress = atoi(optarg);
+			PROGRESS_INIT(atoi(optarg), return 1);
 			break;
 		case 'P':
-			progress_char = optarg[0];
+			trap_progress_char = optarg[0];
 			break;
 		case 'o':
 			/* proccessed earlier */
@@ -214,10 +215,8 @@ int main(int argc, char **argv)
 			}
 		}
 
-		if (progress > 0 && cnt_flows % progress == 0) {
-			putchar(progress_char);
-			fflush(stdout);
-		}
+      PROGRESS_PRINT;
+
 		// Update counters
 		cnt_flows += 1;
 		cnt_packets += ur_get(tmplt, data, UR_PACKETS);
@@ -234,9 +233,7 @@ int main(int argc, char **argv)
 
 	// ***** Print results *****
 
-	if (progress > 0) {
-		printf("\n");
-	}
+	PROGRESS_NEWLINE;
 	printf("Flows:   %20lu\n", cnt_flows);
 	printf("Packets: %20lu\n", cnt_packets);
 	printf("Bytes:   %20lu\n", cnt_bytes);
