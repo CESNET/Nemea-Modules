@@ -51,7 +51,7 @@
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 
-#include "./bison/parser.tab.h"
+#include "parser.tab.h"
 
 #define SPEC_COND_DELIM    ':'
 #define DYN_FIELD_MAX_SIZE 1024 // Maximum size of dynamic field, longer fields will be cutted to this size
