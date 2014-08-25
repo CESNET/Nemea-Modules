@@ -74,13 +74,7 @@ trap_module_info_t module_info = {
 
 static int stop = 0;
 
-void signal_handler(int signal)
-{
-   if (signal == SIGTERM || signal == SIGINT) {
-      stop = 1;
-      trap_terminate();
-   }
-}
+TRAP_DEFAULT_SIGNAL_HANDLER();
 
 /**
  * \brief Hash used as PRNG
@@ -227,9 +221,10 @@ int main(int argc, char **argv)
 
    // ***** TRAP initialization *****   
    TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
-   signal(SIGTERM, signal_handler);
-   signal(SIGINT, signal_handler);
-   signal(SIGUSR1, signal_handler);
+   
+   TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
+
+   //signal(SIGUSR1, signal_handler); //signal not used in previous commit
    
 
 
