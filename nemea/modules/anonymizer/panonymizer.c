@@ -263,3 +263,73 @@ void anonymize_v6(const uint64_t orig_addr[2], uint64_t *anon_addr) {
 	anon_addr[1] ^= orig_addr[1];
 
 }
+
+
+//DeAnonymization funtion
+uint32_t deanonymize(const uint32_t anon_addr) {
+    uint8_t rin_output[16];
+    uint8_t rin_input[16];
+
+    uint32_t h_output;
+
+    uint32_t orig_addr = 0;
+    uint32_t result = 0;
+    uint32_t first4bytes_pad, first4bytes_input;
+    int pos;
+
+    memcpy(rin_input, m_pad, 16);
+    first4bytes_pad = (((uint32_t) m_pad[0]) << 24) + (((uint32_t) m_pad[1]) << 16) +
+	(((uint32_t) m_pad[2]) << 8) + (uint32_t) m_pad[3]; 
+
+    // For each prefixes with length from 0 to 31, generate a bit using the Rijndael cipher,
+    // which is used as a pseudorandom function here. The bits generated in every rounds
+    // are combineed into a pseudorandom one-time-pad.
+    for (pos = 0; pos <= 31 ; pos++) { 
+	//Padding: The most significant pos bits are taken from orig_addr. The other 128-pos 
+        //bits are taken from m_pad. The variables first4bytes_pad and first4bytes_input are used
+	//to handle the annoying byte order problem.
+	if (pos==0) {
+	  first4bytes_input =  first4bytes_pad; 
+	}
+	else {
+	  first4bytes_input = ((orig_addr >> (32-pos)) << (32-pos)) | ((first4bytes_pad<<pos) >> pos);
+	}
+        
+	rin_input[0] = (uint8_t) (first4bytes_input >> 24);
+	rin_input[1] = (uint8_t) ((first4bytes_input << 8) >> 24);
+	rin_input[2] = (uint8_t) ((first4bytes_input << 16) >> 24);
+	rin_input[3] = (uint8_t) ((first4bytes_input << 24) >> 24);
+        
+
+        switch (ANONYMIZATION_ALGORITHM) {
+	   case RIJNDAEL_BC: //The Rijndael cipher is used as pseudorandom function. During each 
+	                     //round, only the first bit of rin_output is used.
+	                     Rijndael_blockEncrypt(rin_input, 128, rin_output);
+	                     
+                             //Combination: the bits are combined into a pseudorandom one-time-pad
+	                     result |=  (rin_output[0] >> 7) << (31-pos);
+                             break;
+           case MURMUR_HASH3: // Use MurmurHash3 as PRNG
+                              h_output = hash_div8((char*)&rin_input, 16);
+                              
+                              // Compute parity of output down to nibble
+                              h_output ^= h_output >> 16;
+                              h_output ^= h_output >> 8;
+                              h_output ^= h_output >> 4;
+                              h_output &= 0xf;
+
+                              // Combine bits into a pseudorandom one-time-pad
+                              result |= ((0x6996 >> h_output) & 0x1) << (31-pos); // 0x6996 is mini lookup table for parity
+                              break;
+        }
+
+        // Check if we HIT/MISS bit value
+        if (((anon_addr << pos) >> 31) != (((result ^ orig_addr) << pos) >> 31)) {
+           // MISS, we need to invert bit value
+           orig_addr ^= 1U << (31 - pos);
+        }
+    }
+    // Return deanonymized address
+    return orig_addr;
+}
+

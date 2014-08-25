@@ -63,6 +63,7 @@ trap_module_info_t module_info = {
    "   -k KEY      Specify secret key*.\n"
    "   -f FILE     Specify file containing secret key*.\n" 
    "   -M          Use MurmurHash3 instead of Rijndael cipher."
+   "   -d          Switch to de-anonymization mode.\n"
    "Interfaces:\n"
    "   Inputs: 1\n"
    "   Outputs: 1\n"
@@ -162,40 +163,47 @@ int init_from_file(char *secret_file, uint8_t *init_key)
 
 /** \brief Anonymize IP
  * Anonymize source and destination IP in Unirec using Crypto-PAn libraries
- * \param[in] tmplt Pointer to Unirec template.
- * \param[in-out] data Pointer to Unirec flow record data.
+ * \param[in]     tmplt Pointer to Unirec template.
+ * \param[in-out] data  Pointer to Unirec flow record data.
+ * \param[in]     mode  Anonymizer mode (ANONYMIZATION or DEANONYMIZATION).
  * \return void.
 */
-void ip_anonymize(ur_template_t *tmplt, const void *data)
+void ip_anonymize(ur_template_t *tmplt, const void *data, uint8_t mode)
 {
-   uint32_t  ip_v4_anon;
-   uint32_t *ip_v4_ptr;
-   uint64_t  ip_v6_anon[2];
-   uint64_t *ip_v6_ptr;
+   uint32_t  ip_v4_src_anon, ip_v4_dst_anon;
+   uint32_t *ip_v4_src_ptr, *ip_v4_dst_ptr;
+   uint64_t  ip_v6_src_anon[2], ip_v6_dst_anon[2];
+   uint64_t *ip_v6_src_ptr, *ip_v6_dst_ptr;
 
    if (ip_is4(ur_get_ptr(tmplt, data, UR_SRC_IP))) {
-      // Anonymize SRC IP version 4
-      ip_v4_ptr =  (uint32_t *) ip_get_v4_as_bytes(ur_get_ptr(tmplt, data, UR_SRC_IP));
-      ip_v4_anon = anonymize(ntohl(*ip_v4_ptr));
-      *ip_v4_ptr = htonl(ip_v4_anon);
-
-      // Anonymize DST IP version 4
-      ip_v4_ptr = (uint32_t *) ip_get_v4_as_bytes(ur_get_ptr(tmplt, data, UR_DST_IP));
-      ip_v4_anon = anonymize(ntohl(*ip_v4_ptr));
-      *ip_v4_ptr = htonl(ip_v4_anon);
+      // Anonymize IP version 4
+      ip_v4_src_ptr =  (uint32_t *) ip_get_v4_as_bytes(ur_get_ptr(tmplt, data, UR_SRC_IP));
+      ip_v4_dst_ptr =  (uint32_t *) ip_get_v4_as_bytes(ur_get_ptr(tmplt, data, UR_DST_IP));
+      if (mode == ANONYMIZATION) {
+         ip_v4_src_anon = anonymize(ntohl(*ip_v4_src_ptr));
+         ip_v4_dst_anon = anonymize(ntohl(*ip_v4_dst_ptr));
+      } else {
+         ip_v4_src_anon = deanonymize(ntohl(*ip_v4_src_ptr));
+         ip_v4_dst_anon = deanonymize(ntohl(*ip_v4_dst_ptr));
+      }
+      *ip_v4_src_ptr = htonl(ip_v4_src_anon);
+      *ip_v4_dst_ptr = htonl(ip_v4_dst_anon);
    } else {
-      // Anonymize SRC IP version 6
-      ip_v6_ptr = (uint64_t *) ur_get_ptr(tmplt, data, UR_SRC_IP);
-      anonymize_v6(ip_v6_ptr, ip_v6_anon);
-      memcpy(ip_v6_ptr, ip_v6_anon, IP_V6_SIZE);
-
-      // Anonymize DST IP version 6
-      ip_v6_ptr = (uint64_t *) ur_get_ptr(tmplt, data, UR_DST_IP);
-      anonymize_v6(ip_v6_ptr, ip_v6_anon);
-      memcpy(ip_v6_ptr, ip_v6_anon, IP_V6_SIZE);
+      // Anonymize IP version 6
+      ip_v6_src_ptr = (uint64_t *) ur_get_ptr(tmplt, data, UR_SRC_IP);
+      ip_v6_dst_ptr = (uint64_t *) ur_get_ptr(tmplt, data, UR_DST_IP);
+      if (mode == ANONYMIZATION) {
+         anonymize_v6(ip_v6_src_ptr, ip_v6_src_anon);
+         anonymize_v6(ip_v6_dst_ptr, ip_v6_dst_anon);
+      } else {
+         // Deanonymization of IPv6 is not supported, just copy it to output
+         //deanonymize_v6(ip_v6_src_ptr, ip_v6_src_anon);
+         //deanonymize_v6(ip_v6_dst_ptr, ip_v6_dst_anon);
+         return;
+      }
+      memcpy(ip_v6_src_ptr, ip_v6_src_anon, IP_V6_SIZE);
+      memcpy(ip_v6_dst_ptr, ip_v6_dst_anon, IP_V6_SIZE);
    }
-
-
 }
 
 
@@ -208,7 +216,9 @@ int main(int argc, char **argv)
    char *secret_key = "01234567890123450123456789012345";
    char *secret_file = NULL;
 
+   uint8_t mode = ANONYMIZATION;          // Default mode
    ANONYMIZATION_ALGORITHM = RIJNDAEL_BC; // Default algorithm
+
 
    // ***** ONLY FOR DEBUGING ***** //
    #ifdef DEBUG
@@ -231,7 +241,7 @@ int main(int argc, char **argv)
    // ***** Create UniRec template *****   
    char *unirec_specifier = "<COLLECTOR_FLOW>";
    char opt;
-   while ((opt = getopt(argc, argv, "u:k:f:M")) != -1) {
+   while ((opt = getopt(argc, argv, "u:k:f:Md")) != -1) {
       switch (opt) {
          case 'u':
             unirec_specifier = optarg;
@@ -244,6 +254,9 @@ int main(int argc, char **argv)
             break;
          case 'M':
             ANONYMIZATION_ALGORITHM = MURMUR_HASH3;
+            break;
+         case 'd':
+            mode = DEANONYMIZATION;
             break;
          default:
             fprintf(stderr, "Invalid arguments.\n");
@@ -274,9 +287,7 @@ int main(int argc, char **argv)
       PAnonymizer_Init(init_key);
    }
 
-  
-   
-   
+
    // ***** Main processing loop *****
    while (!stop) {
       // Receive data from any interface, wait until data are available
@@ -296,37 +307,35 @@ int main(int argc, char **argv)
             break;
          }
       }
-      
-     
-   
+
+
       // ***** ONLY FOR DEBUGING ***** //
       #ifdef DEBUG
+         char ip1_buff[64], ip2_buff[64];
          ip_to_str(ur_get_ptr(tmplt, data, UR_SRC_IP), ip1_buff);
          ip_to_str(ur_get_ptr(tmplt, data, UR_DST_IP), ip2_buff);
-         printf("ORIG: %15s   ->   %15s\n", ip1_buff, ip2_buff);           
-         ip_anonymize(tmplt, data);
+         fprintf(stderr, "ORIG: %15s   ->   %15s\n", ip1_buff, ip2_buff);           
+         ip_anonymize(tmplt, data, mode);
          ip_to_str(ur_get_ptr(tmplt, data, UR_SRC_IP), ip1_buff);
          ip_to_str(ur_get_ptr(tmplt, data, UR_DST_IP), ip2_buff);
-         printf("ANON: %15s   ->   %15s\n\n", ip1_buff, ip2_buff);
+         fprintf(stderr, "ANON: %15s   ->   %15s\n\n", ip1_buff, ip2_buff);
       #endif
       // ***************************** //
-
       #ifndef DEBUG
-         ip_anonymize(tmplt, data);
+         ip_anonymize(tmplt, data, mode);
       #endif
 
       // Send anonymized data
-      trap_send_data(0, data, ur_rec_size(tmplt, data), TRAP_NO_WAIT); 
-
+      trap_send_data(0, data, ur_rec_size(tmplt, data), TRAP_NO_WAIT);
 
    }
-  
-  // ***** ONLY FOR DEBUGING ***** //
-  #ifdef DEBUG
-     char dummy[1] = {0};
-     trap_send_data(0, dummy, 1, TRAP_WAIT); 
-  #endif   
-  // ***************************** //
+   
+   // ***** ONLY FOR DEBUGING ***** //
+   #ifdef DEBUG
+      char dummy[1] = {0};
+      trap_send_data(0, dummy, 1, TRAP_WAIT); 
+   #endif   
+   // ***************************** //
 
    // ***** Do all necessary cleanup before exiting *****
    TRAP_DEFAULT_FINALIZATION();

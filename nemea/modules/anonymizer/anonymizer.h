@@ -67,6 +67,11 @@ enum anonymization_algorithms_enum {
    RIJNDAEL_BC
 };
 
+enum anonymization_modes {
+   ANONYMIZATION,
+   DEANONYMIZATION
+};
+
 uint8_t ANONYMIZATION_ALGORITHM; // Determine which anonymization algorithm to use
 
 

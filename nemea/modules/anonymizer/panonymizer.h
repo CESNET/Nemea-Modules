@@ -88,7 +88,8 @@ void PAnonymizer_Init(uint8_t * key);
 
 int ParseCryptoPAnKey ( char *s, char *key );
 
-uint32_t anonymize( const uint32_t orig_addr);   
+uint32_t anonymize( const uint32_t orig_addr);
+uint32_t deanonymize( const uint32_t orig_addr);
 
 void anonymize_v6(const uint64_t orig_addr[2], uint64_t *anon_addr);
 
