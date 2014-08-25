@@ -74,7 +74,7 @@ trap_module_info_t module_info = {
 
 static int stop = 0;
 
-TRAP_DEFAULT_SIGNAL_HANDLER();
+TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
 /**
  * \brief Hash used as PRNG
