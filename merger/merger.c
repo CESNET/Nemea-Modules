@@ -40,6 +40,12 @@
  * if advised of the possibility of such damage.
  *
  */
+
+// Information if sigaction is available for nemea signal macro registration
+#ifdef HAVE_CONFIG_H
+#include <config.h> 
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
