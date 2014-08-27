@@ -92,5 +92,6 @@ uint32_t anonymize( const uint32_t orig_addr);
 uint32_t deanonymize( const uint32_t orig_addr);
 
 void anonymize_v6(const uint64_t orig_addr[2], uint64_t *anon_addr);
+void deanonymize_v6(const uint64_t orig_addr[2], uint64_t *anon_addr);
 
 #endif //_PANONYMIZER_H_ 

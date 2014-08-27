@@ -172,7 +172,7 @@ void ip_anonymize(ur_template_t *tmplt, const void *data, uint8_t mode)
 {
    uint32_t  ip_v4_src_anon, ip_v4_dst_anon;
    uint32_t *ip_v4_src_ptr, *ip_v4_dst_ptr;
-   uint64_t  ip_v6_src_anon[2], ip_v6_dst_anon[2];
+   uint64_t  ip_v6_src_anon[2] = {0}, ip_v6_dst_anon[2] = {0};
    uint64_t *ip_v6_src_ptr, *ip_v6_dst_ptr;
 
    if (ip_is4(ur_get_ptr(tmplt, data, UR_SRC_IP))) {
@@ -196,10 +196,9 @@ void ip_anonymize(ur_template_t *tmplt, const void *data, uint8_t mode)
          anonymize_v6(ip_v6_src_ptr, ip_v6_src_anon);
          anonymize_v6(ip_v6_dst_ptr, ip_v6_dst_anon);
       } else {
-         // Deanonymization of IPv6 is not supported, just copy it to output
-         //deanonymize_v6(ip_v6_src_ptr, ip_v6_src_anon);
-         //deanonymize_v6(ip_v6_dst_ptr, ip_v6_dst_anon);
-         return;
+         // Deanonymization of IPv6
+         deanonymize_v6(ip_v6_src_ptr, ip_v6_src_anon);
+         deanonymize_v6(ip_v6_dst_ptr, ip_v6_dst_anon);
       }
       memcpy(ip_v6_src_ptr, ip_v6_src_anon, IP_V6_SIZE);
       memcpy(ip_v6_dst_ptr, ip_v6_dst_anon, IP_V6_SIZE);
