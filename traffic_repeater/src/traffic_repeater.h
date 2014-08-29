@@ -44,6 +44,11 @@
 #ifndef _TRAFFIC_REPEATER_H_
 #define _TRAFFIC_REPEATER_H_
 
+// Information if sigaction is available for nemea signal macro registration
+#ifdef HAVE_CONFIG_H
+#include <config.h> 
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>

@@ -5,6 +5,11 @@
  * \date 2013
  */
 
+// Information if sigaction is available for nemea signal macro registration
+#ifdef HAVE_CONFIG_H
+#include <config.h> 
+#endif
+
 #include <signal.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -53,12 +58,16 @@ static unsigned long send_interval;	/* data sending interval */
 ur_template_t *out_tmplt;		  /* output template */
 void *out_rec;						  /* output record */
 
+
+// Function to handle SIGTERM and SIGINT signals (used to stop the module)
+TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
+
 void signal_handler(int signal)
 {
-	if (signal == SIGTERM || signal == SIGINT) {
+	/*if (signal == SIGTERM || signal == SIGINT) {
 		stop = 1;
 		trap_terminate();
-	} else if (signal == SIGUSR1) {
+	} else*/ if (signal == SIGUSR1) {
 		stats = 1;
 	}
 }
@@ -134,8 +143,10 @@ int main(int argc, char **argv)
 	// ***** TRAP initialization *****
 	TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
 
-	signal(SIGTERM, signal_handler);
-	signal(SIGINT, signal_handler);
+	// Register signal handler.
+	TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
+	//signal(SIGTERM, signal_handler);
+	//signal(SIGINT, signal_handler);
 	signal(SIGUSR1, signal_handler);
 	signal(SIGALRM, send_handler);
 
