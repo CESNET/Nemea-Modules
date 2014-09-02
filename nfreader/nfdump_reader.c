@@ -71,6 +71,9 @@ trap_module_info_t module_info = {
 
 static int stop = 0;
 
+// Declares progress_printer variables.
+PROGRESS_DECL
+
 enum module_states{
    STATE_OK = 0,
    STATE_ERR = 3
@@ -118,7 +121,9 @@ int main(int argc, char **argv)
    uint8_t set_dir_bit_field = 0;
    char *link_mask = DEFAULT_LINK_MASK;// 8*sizeof(char) = 64 bits of uint64_t
    ur_links_t *links;
-   PROGRESS_DECL;
+
+   //-------------Declares progress structure, initializes limit.---------------
+   PROGRESS_DEF;
    //------------ Actual timestamps --------------------------------------------
    int actual_timestamps = 0;
    //------------ Rate limiting ------------------------------------------------
@@ -169,7 +174,7 @@ int main(int argc, char **argv)
             link_mask = optarg;
             break;
          case 'p':
-            PROGRESS_INIT(atoi(optarg), return 2);
+            PROGRESS_INIT(atoi(optarg), ., return 2);
 			   break;
          case 'r':
             sending_rate = atoi(optarg);
@@ -325,7 +330,8 @@ int main(int argc, char **argv)
                gettimeofday(&sr_start, NULL);
             }
          }
-
+         
+         // Printing progress
          PROGRESS_PRINT;
 
       }// for all records in a file

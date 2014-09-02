@@ -62,6 +62,9 @@ void *out_rec;						  /* output record */
 // Function to handle SIGTERM and SIGINT signals (used to stop the module)
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
+// Declares progress structure prototype
+PROGRESS_DECL
+
 void signal_handler(int signal)
 {
 	/*if (signal == SIGTERM || signal == SIGINT) {
@@ -135,8 +138,9 @@ void get_o_param(int argc, char **argv)
 int main(int argc, char **argv)
 {
 	int ret;
-	
-	PROGRESS_DECL
+
+   // Declares progress structure, initializes limit.
+   PROGRESS_DEF;
 
 	get_o_param(argc, argv);	  /* output have to be known before TRAP init */
 
@@ -159,10 +163,10 @@ int main(int argc, char **argv)
 			unirec_specifier = optarg;
 			break;
 		case 'p':
-			PROGRESS_INIT(atoi(optarg), return 1);
+			PROGRESS_INIT(atoi(optarg), ., return 1);
 			break;
 		case 'P':
-			trap_progress_char = optarg[0];
+			trap_progress.print_char = optarg[0];
 			break;
 		case 'o':
 			/* proccessed earlier */
@@ -225,7 +229,8 @@ int main(int argc, char **argv)
 				break;
 			}
 		}
-
+		
+      // Printing progress
       PROGRESS_PRINT;
 
 		// Update counters
