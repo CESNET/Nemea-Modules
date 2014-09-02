@@ -1,13 +1,13 @@
 /**
  * \file flow_counter.h
- * \brief Example module for counting number of incoming flow records. 
+ * \brief Example module for counting number of incoming flow records.
  * \author Vaclav Bartos <ibartosv@fit.vutbr.cz>
  * \date 2013
  */
 
 // Information if sigaction is available for nemea signal macro registration
 #ifdef HAVE_CONFIG_H
-#include <config.h> 
+#include <config.h>
 #endif
 
 #include <signal.h>
@@ -139,8 +139,8 @@ int main(int argc, char **argv)
 {
 	int ret;
 
-   // Declares progress structure, initializes limit.
-   PROGRESS_DEF;
+	// Declares progress structure, initializes limit.
+	PROGRESS_DEF;
 
 	get_o_param(argc, argv);	  /* output have to be known before TRAP init */
 
@@ -229,7 +229,7 @@ int main(int argc, char **argv)
 				break;
 			}
 		}
-		
+
       // Printing progress
       PROGRESS_PRINT;
 

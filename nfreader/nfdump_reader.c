@@ -9,7 +9,7 @@
 
 // Information if sigaction is available for nemea signal macro registration
 #ifdef HAVE_CONFIG_H
-#include <config.h> 
+#include <config.h>
 #endif
 
 #include <signal.h>
@@ -330,7 +330,7 @@ int main(int argc, char **argv)
                gettimeofday(&sr_start, NULL);
             }
          }
-         
+
          // Printing progress
          PROGRESS_PRINT;
 
