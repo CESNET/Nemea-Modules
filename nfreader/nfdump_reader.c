@@ -72,7 +72,7 @@ trap_module_info_t module_info = {
 static int stop = 0;
 
 // Declares progress_printer variables.
-PROGRESS_DECL
+NMCM_PROGRESS_DECL
 
 enum module_states{
    STATE_OK = 0,
@@ -122,8 +122,8 @@ int main(int argc, char **argv)
    char *link_mask = DEFAULT_LINK_MASK;// 8*sizeof(char) = 64 bits of uint64_t
    ur_links_t *links;
 
-   //-------------Declares progress structure, initializes limit.---------------
-   PROGRESS_DEF;
+   // Declare progress struct, pointer to this struct, initialize progress limit
+   NMCM_PROGRESS_DEF;
    //------------ Actual timestamps --------------------------------------------
    int actual_timestamps = 0;
    //------------ Rate limiting ------------------------------------------------
@@ -174,7 +174,7 @@ int main(int argc, char **argv)
             link_mask = optarg;
             break;
          case 'p':
-            PROGRESS_INIT(atoi(optarg), ., return 2);
+            NMCM_PROGRESS_INIT(atoi(optarg), return 2);
 			   break;
          case 'r':
             sending_rate = atoi(optarg);
@@ -332,7 +332,7 @@ int main(int argc, char **argv)
          }
 
          // Printing progress
-         PROGRESS_PRINT;
+         NMCM_PROGRESS_PRINT;
 
       }// for all records in a file
       if (verbose) {
@@ -341,7 +341,7 @@ int main(int argc, char **argv)
       nfdump_iter_end(&iter);
    } while (!stop && ++optind < argc); // For all input files
 
-   PROGRESS_NEWLINE;
+   NMCM_PROGRESS_NEWLINE;
    printf("%lu flow records sent\n", record_counter);
 
    // Send data with zero length to signalize end

@@ -63,7 +63,7 @@ void *out_rec;						  /* output record */
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
 // Declares progress structure prototype
-PROGRESS_DECL
+NMCM_PROGRESS_DECL
 
 void signal_handler(int signal)
 {
@@ -139,8 +139,8 @@ int main(int argc, char **argv)
 {
 	int ret;
 
-	// Declares progress structure, initializes limit.
-	PROGRESS_DEF;
+	// Declare progress structure, pointer to this struct, initialize progress limit
+	NMCM_PROGRESS_DEF;
 
 	get_o_param(argc, argv);	  /* output have to be known before TRAP init */
 
@@ -163,10 +163,10 @@ int main(int argc, char **argv)
 			unirec_specifier = optarg;
 			break;
 		case 'p':
-			PROGRESS_INIT(atoi(optarg), ., return 1);
+			NMCM_PROGRESS_INIT(atoi(optarg), return 1);
 			break;
 		case 'P':
-			trap_progress.print_char = optarg[0];
+			nmcm_progress_ptr->print_char = optarg[0];
 			break;
 		case 'o':
 			/* proccessed earlier */
@@ -231,7 +231,7 @@ int main(int argc, char **argv)
 		}
 
       // Printing progress
-      PROGRESS_PRINT;
+      NMCM_PROGRESS_PRINT;
 
 		// Update counters
 		cnt_flows += 1;
@@ -249,7 +249,7 @@ int main(int argc, char **argv)
 
 	// ***** Print results *****
 
-	PROGRESS_NEWLINE;
+	NMCM_PROGRESS_NEWLINE;
 	printf("Flows:   %20lu\n", cnt_flows);
 	printf("Packets: %20lu\n", cnt_packets);
 	printf("Bytes:   %20lu\n", cnt_bytes);
