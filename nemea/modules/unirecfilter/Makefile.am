@@ -4,6 +4,7 @@ BISON = bison
 bin_PROGRAMS=unirecfilter
 unirecfilter_SOURCES=unirecfilter.c \
                      parser.tab.c \
+                     parser.tab.h \
                      lex.yy.c \
                      ./bison/functions.c
 BUILT_SOURCES=parser.tab.c parser.tab.h lex.yy.c
