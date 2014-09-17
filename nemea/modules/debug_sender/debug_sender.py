@@ -90,7 +90,7 @@ def send_record(count=1):
    try:
       for _ in range(count):
 	 send_time_rules() # Edit record according to send-time rules
-         trap.sendData(0, record.serialize(), trap.WAIT)
+         trap.send(0, record.serialize())
       print "done"
    except trap.ETerminated:
       print
