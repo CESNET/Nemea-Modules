@@ -276,7 +276,7 @@ if not opt.skip_smtp_test and not opt.dry_run:
 while not trap.stop:
    # *** Read data from input interface ***
    try:
-      data = trap.getData(0x1, trap.WAIT)
+      data = trap.recv(0)
    except trap.ETerminated:
       break
 
