@@ -66,16 +66,20 @@ trap_module_info_t module_info = {
    "This NEMEA module selects records according to parameters in filter and sends\n"
    "only fields specified in output template.\n"
    "Unirecfilter expects unirec format of messages on input. Output format is\n"
-   "specified with -F flag or in FILE (-f flag), input format specified\n"
-   "with -I flag. FLTR contains expressions (<=, ==, &&, ...).\n"
+   "specified with -O flag, input format specified with -I flag.\n"
+   "Filter is specified with -F flag and contains expressions (<=, ==, &&, ...).\n"
+   "You can also specify output format and filter in a FILE. Format of the file is\n"
+   "TMPLT:FLTR or only :FLTR or TMPLT: on the first line.\n"
+   "When is -O flag missing, template from input is used on output."
    "\n"
    "Usage:\n"
-   "   ./unirecfilter -i IFC_SPEC -I TMPLT -F TMPLT:FLTR\n"
-   "   ./unirecfilter -i IFC_SPEC -I TMPLT -f FILE\n"
+   "   ./unirecfilter -i IFC_SPEC -I TMPLT [-O TMPLT] [-F FLTR]\n"
+   "   ./unirecfilter -i IFC_SPEC -I TMPLT [-f FILE]\n"
    "\n"
    "Parameters:\n"
    "   -I TMPLT       Specify UniRec template expected on the input interface.\n"
-   "   -F TMPLT:FLTR  Specify UniRec template expected on the output interface and filter.\n"
+   "   -O TMPLT       Specify UniRec template expected on the output interface.\n"
+   "   -F FLTR        Specify filter.\n"
    "   -f FILE        Read template and filter from FILE.\n"
    "   -c N           Quit after N records are received.\n"
    "\n"
@@ -119,23 +123,32 @@ char *getOutputSpec(const char *str)
 
 /**
  * \brief Get Abstract syntax tree from filter
- * \param[in] str    is in following format: "<unirec spec>[:<filter>]"
- * \return pointer to abstract syntax tree; NULL if filter not found
+ * \param[in] str    is in following format: "<filter>" or "<template>:<filter>"
+ * \return pointer to abstract syntax tree
  */
 struct ast *getTree(const char *str)
 {
+   if (str == NULL || str[0] == '\0') {
+      printf("No Filter.\n");
+      return NULL;
+   }
    char *p = NULL;
    p = strchr(str, SPEC_COND_DELIM);
-   if (p == NULL) {
-      /* not found */
-      return NULL;
-   } else {
+   /* ':' not found */
+   if (p == NULL) { //Format: "FLRT"
+      yy_scan_string (str);
+   /* ':' found */
+   } else { //Format: "TMPLT:FLTR" or ":FLTR" or "TMPLT:"
+      if (*(p+1) == '\0') {
+        printf("No Filter.\n");
+        return NULL;
+      }
       yy_scan_string (p+1);
-      struct ast * tmp = (struct ast *) yyparse(); //this returns pointer to the tree
-      yy_delete_buffer (get_buf());
-      printf("Filter: "); printAST(tmp); printf("\n");
-      return tmp;
    }
+   struct ast * tmp = (struct ast *) yyparse(); //this returns pointer to the tree
+   yy_delete_buffer (get_buf());
+   printf("Filter: "); printAST(tmp); printf("\n");
+   return tmp;
 }
 
 int main(int argc, char **argv)
@@ -143,6 +156,7 @@ int main(int argc, char **argv)
    char *unirec_output_specifier = NULL;
    char *unirec_output = NULL;
    char *unirec_input_specifier = NULL;
+   char *filter = NULL;
    char *file = NULL;
    ur_template_t *in_tmplt;
    ur_template_t *out_tmplt;
@@ -159,13 +173,16 @@ int main(int argc, char **argv)
    TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
    
    // Parse command-line options
-   while ((opt = getopt(argc, argv, "I:F:f:c:")) != -1) {
+   while ((opt = getopt(argc, argv, "I:O:F:f:c:")) != -1) {
       switch (opt) {
       case 'I':
          unirec_input_specifier = optarg;
          break;
-      case 'F':
-         unirec_output = optarg;
+      case 'O':
+         unirec_output_specifier = optarg;
+         break;
+      case 'F': //Filter
+         filter = optarg;
          break;
       case 'f':
          file = optarg;
@@ -188,7 +205,7 @@ int main(int argc, char **argv)
          return 4;
       }
    }
-   
+  
    // Input format specifier is missing
    if (unirec_input_specifier == NULL) {
       fprintf(stderr, "Error: Invalid arguments - no input specifier.\n");
@@ -200,18 +217,22 @@ int main(int argc, char **argv)
       in_tmplt = ur_create_template(unirec_input_specifier);
    }
 
-   // Output format specifier and filter is missing or two are set (-F and -f)
-   if ((unirec_output == NULL) && (file == NULL)) {
-      fprintf(stderr, "Error: Invalid arguments - no filter.\n");
+   // Output format specifier and file are both set (-O and -f)
+   if ((unirec_output_specifier != NULL) && (file != NULL)) {
+      fprintf(stderr, "Error: Invalid arguments - two output specifiers.\n");
       // Do all necessary cleanup before exiting
       TRAP_DEFAULT_FINALIZATION();
       return 6;
-   } else if ((unirec_output != NULL) && (file != NULL)) {
+   }
+   // Filter and file are both set (-F and -f)
+   else if ((filter != NULL) && (file != NULL)) {
       fprintf(stderr, "Error: Invalid arguments - two filters.\n");
       // Do all necessary cleanup before exiting
       TRAP_DEFAULT_FINALIZATION();
       return 6;
-   } else if (file != NULL) {
+   }
+   // Output format specifier and filter are in a file
+   if (file != NULL) {
       FILE *f = fopen(file, "rt");
       // File cannot be opened / not found
       if (!f) {
@@ -223,27 +244,36 @@ int main(int argc, char **argv)
       from = 1;
       unirec_output = (char *) calloc (1000,sizeof(char));
       if (!fgets(unirec_output, 1000, f)) {
-      fprintf(stderr, "Error: File %s could not be read.\n", file);
-      // Do all necessary cleanup before exiting
-      TRAP_DEFAULT_FINALIZATION();
+         fprintf(stderr, "Error: File %s could not be read.\n", file);
+         // Do all necessary cleanup before exiting
+         TRAP_DEFAULT_FINALIZATION();
       }
       // no newline on the end of string
       unirec_output[strlen(unirec_output)-1] = 0;
       fclose(f);
+
+      // Get output format specifier
+      if (!(unirec_output_specifier = getOutputSpec(unirec_output))) {
+         fprintf(stderr, "Error: Not enough space.\n");
+         // Do all necessary cleanup before exiting
+         TRAP_DEFAULT_FINALIZATION();
+         return 8;
+      }
    }
 
-   // Get output format specifier
-   if (!(unirec_output_specifier = getOutputSpec(unirec_output))) {
-      fprintf(stderr, "Error: Not enough space.\n");
-      // Do all necessary cleanup before exiting
-      TRAP_DEFAULT_FINALIZATION();
-      return 8;
+   // Get Abstract syntax tree from filter
+   if (from == 1) { // From File
+      tree = getTree(unirec_output);
+   } else { // From CMD
+      tree = getTree(filter);
    }
 
-   tree = getTree(unirec_output);
-  
    // Create UniRec output template and record
-   out_tmplt = ur_create_template(unirec_output_specifier);
+   if (unirec_output_specifier && unirec_output_specifier[0] != '\0') { // Not NULL or Empty
+      out_tmplt = ur_create_template(unirec_output_specifier);
+   } else { //output template == input template
+      out_tmplt = ur_create_template(unirec_input_specifier);
+   }
    // calculate maximum needed memory for dynamic fields
    while ((field_id = ur_iter_fields(out_tmplt, field_id)) != UR_INVALID_FIELD) {
       if (ur_is_dynamic(field_id)) {
