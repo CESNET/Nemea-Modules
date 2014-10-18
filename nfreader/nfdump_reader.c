@@ -9,7 +9,7 @@
 
 // Information if sigaction is available for nemea signal macro registration
 #ifdef HAVE_CONFIG_H
-#include <config.h> 
+#include <config.h>
 #endif
 
 #include <signal.h>
@@ -71,6 +71,9 @@ trap_module_info_t module_info = {
 
 static int stop = 0;
 
+// Declares progress_printer variables.
+NMCM_PROGRESS_DECL
+
 enum module_states{
    STATE_OK = 0,
    STATE_ERR = 3
@@ -118,7 +121,9 @@ int main(int argc, char **argv)
    uint8_t set_dir_bit_field = 0;
    char *link_mask = DEFAULT_LINK_MASK;// 8*sizeof(char) = 64 bits of uint64_t
    ur_links_t *links;
-   PROGRESS_DECL;
+
+   // Declare progress struct, pointer to this struct, initialize progress limit
+   NMCM_PROGRESS_DEF;
    //------------ Actual timestamps --------------------------------------------
    int actual_timestamps = 0;
    //------------ Rate limiting ------------------------------------------------
@@ -169,7 +174,7 @@ int main(int argc, char **argv)
             link_mask = optarg;
             break;
          case 'p':
-            PROGRESS_INIT(atoi(optarg), return 2);
+            NMCM_PROGRESS_INIT(atoi(optarg), return 2);
 			   break;
          case 'r':
             sending_rate = atoi(optarg);
@@ -218,9 +223,10 @@ int main(int argc, char **argv)
    }
    trap_free_ifc_spec(ifc_spec); // We don't need ifc_spec anymore
 
-   if (trap_ifcctl(TRAPIFC_OUTPUT, 0,TRAPCTL_BUFFERSWITCH, "0") != TRAP_E_OK){
-      fprintf(stderr, "Error while turning off buffering.\n");
-   }
+//   if (trap_ifcctl(TRAPIFC_OUTPUT, 0,TRAPCTL_BUFFERSWITCH, 1) != TRAP_E_OK){
+//   if (trap_ifcctl(TRAPIFC_OUTPUT, 0,TRAPCTL_BUFFERSWITCH, 0) != TRAP_E_OK){
+//      fprintf(stderr, "Error while turning off buffering.\n");
+//   }
 
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
@@ -326,7 +332,8 @@ int main(int argc, char **argv)
             }
          }
 
-         PROGRESS_PRINT;
+         // Printing progress
+         NMCM_PROGRESS_PRINT;
 
       }// for all records in a file
       if (verbose) {
@@ -335,7 +342,7 @@ int main(int argc, char **argv)
       nfdump_iter_end(&iter);
    } while (!stop && ++optind < argc); // For all input files
 
-   PROGRESS_NEWLINE;
+   NMCM_PROGRESS_NEWLINE;
    printf("%lu flow records sent\n", record_counter);
 
    // Send data with zero length to signalize end

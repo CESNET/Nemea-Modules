@@ -90,10 +90,33 @@ trap_module_info_t module_info = {
    "   -n           Add the number of interface the record was received on as the\n"
    "                first field (or second when -T is specified).\n"
    "   -c N         Quit after N records are received.\n"
-   "   -d X         Optionally modifies delimiter to inserted value X (implicitely ','). \n",
+   "   -d X         Optionally modifies delimiter to inserted value X (implicitely ',').\n"
+   "                Delimiter has to be one character, except for printable\n"
+   "                escape sequences.",
    -1, // Number of input interfaces (-1 means variable)
    0, // Number of output interfaces
 };
+
+/* If delimiter is escape sequence, assigns its value from input to delimiter var. */
+#define ESCAPE_SEQ(arg,err_cmd) do { \
+           switch(arg) {\
+              case 'f': delimiter = '\f';\
+                        break;\
+              case 'n': delimiter = '\n';\
+                        break;\
+              case 'r': delimiter = '\r';\
+                        break;\
+              case 't': delimiter = '\t';\
+                        break;\
+              case 'v': delimiter = '\v';\
+                        break;\
+              default:\
+                 fprintf(stderr, "Error: Parameter of -d option is not a printable"\
+                                 " escape sequence [\\f \\n \\r \\t \\v].\n");\
+                 err_cmd;\
+           }\
+        } while (0)
+
 
 static int stop = 0;
 
@@ -112,7 +135,7 @@ static FILE *file; // Output file
 
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
-void capture_thread(int index, char *delimiter)
+void capture_thread(int index, char delimiter)
 {
    int ret;
 
@@ -141,7 +164,7 @@ void capture_thread(int index, char *delimiter)
       if (rec_size < ur_rec_static_size(templates[index])) {
          if (rec_size <= 1) {
             if (verbose >= 0) {
-               printf("Interface %i received ending record, the interface will be closed.\n", index, rec_size);
+               printf("Interface %i received ending record, the interface will be closed.\n", index);
             }
             break; // End of data (used for testing purposes)
          } else {
@@ -169,7 +192,7 @@ void capture_thread(int index, char *delimiter)
          ur_iter_t iter = UR_ITER_BEGIN;
          while((id = ur_iter_fields_tmplt(out_template, &iter)) != UR_INVALID_FIELD) {
             if (delim != 0) {
-               fprintf(file,"%s", delimiter);
+               fprintf(file,"%c", delimiter);
             }
             delim = 1;
             if (ur_is_present(templates[index], id)) {
@@ -310,7 +333,7 @@ int main(int argc, char **argv)
    char *out_filename = NULL;
    int append = 0;
    int print_title = 0;
-   char *delimiter = ",";
+   char delimiter = ',';
 
    // ***** Process parameters *****
 
@@ -365,12 +388,16 @@ int main(int argc, char **argv)
          }
          break;
       case 'd':
-         delimiter = optarg;
-         if (strlen(delimiter) != 1) {
-            fprintf(stderr, "Error: Parameter of -d option must contain 1 character.\n");
-            return 1;
+         if ((strlen(optarg) == 1) && (sscanf(optarg, "%c", &delimiter) == 1)) {
+            break;
+         } else if ((strlen(optarg) == 2) && (optarg[0] == '\\')) {
+            ESCAPE_SEQ(optarg[1], return 1);
+            break;
          }
-         break;
+         
+         fprintf(stderr, "Error: Parameter of -d option must contain 1 character"
+                            " or escape sequence.\n");
+         return 1;
       default:
          fprintf(stderr, "Error: Invalid arguments.\n");
          return 1;
@@ -494,7 +521,7 @@ int main(int argc, char **argv)
       ur_iter_t iter = UR_ITER_BEGIN;
       while((id = ur_iter_fields_tmplt(out_template, &iter)) != UR_INVALID_FIELD) {
          if (delim) {
-            fprintf(file, "%s", delimiter);
+            fprintf(file, "%c", delimiter);
          }
          fprintf(file, "%s", ur_get_name_by_id(id));
          delim = 1;
