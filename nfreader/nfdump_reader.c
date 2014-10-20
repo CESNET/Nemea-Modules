@@ -223,9 +223,10 @@ int main(int argc, char **argv)
    }
    trap_free_ifc_spec(ifc_spec); // We don't need ifc_spec anymore
 
-   if (trap_ifcctl(TRAPIFC_OUTPUT, 0,TRAPCTL_BUFFERSWITCH, "0") != TRAP_E_OK){
-      fprintf(stderr, "Error while turning off buffering.\n");
-   }
+//   if (trap_ifcctl(TRAPIFC_OUTPUT, 0,TRAPCTL_BUFFERSWITCH, 1) != TRAP_E_OK){
+//   if (trap_ifcctl(TRAPIFC_OUTPUT, 0,TRAPCTL_BUFFERSWITCH, 0) != TRAP_E_OK){
+//      fprintf(stderr, "Error while turning off buffering.\n");
+//   }
 
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
