@@ -3,9 +3,10 @@
  * \brief Example module for simple traffic forwarding from server to client.
  * \author Jan Neuzil <neuzija1@fit.cvut.cz>
  * \date 2013
+ * \date 2014
  */
 /*
- * Copyright (C) 2013 CESNET
+ * Copyright (C) 2013,2014 CESNET
  *
  * LICENSE TERMS
  *
