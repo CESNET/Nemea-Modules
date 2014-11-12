@@ -64,7 +64,7 @@ def edit_record():
          field_type = record._field_types[name]
          
          # Try special cases first, then all other cases
-	 if not edit_time_rules(name, valstr):
+         if not edit_time_rules(name, valstr):
             try:
                if hasattr(field_type, "fromString"):
                   val = field_type.fromString(valstr)
@@ -75,7 +75,7 @@ def edit_record():
                print e
                continue # Try it again
             setattr(record, name, val)
-		  
+         
          break # Continue with next field
    print
 
@@ -89,7 +89,7 @@ def send_record(count=1):
    sys.stdout.flush()
    try:
       for _ in range(count):
-	 send_time_rules() # Edit record according to send-time rules
+         send_time_rules() # Edit record according to send-time rules
          trap.send(0, record.serialize())
       print "done"
    except trap.ETerminated:
@@ -142,9 +142,9 @@ def edit_time_rules(name, valstr):
       wrapper['is_special'] = True
       if valstr == '!': # Delete
          if name in record_metadata:
-	    del record_metadata[name]
+            del record_metadata[name]
       else: # Add or update
-	 record_metadata[name] = valstr
+         record_metadata[name] = valstr
       return wrapper['is_special'] # True
 
    # Apply edit-time rules
@@ -172,29 +172,29 @@ def apply_rules(wrapper, valstr):
 
    if isinstance(val, Timestamp): # Timestamp is treated specially
       if valstr.startswith("now"):
-	 val = Timestamp.now()
-	 valstr = valstr[len("now"):] # Crop out "now"
-	 is_special = True
+         val = Timestamp.now()
+         valstr = valstr[len("now"):] # Crop out "now"
+         is_special = True
       
       if valstr.startswith(('+', '-')):
-	 val += int(valstr)
-	 is_special = True
+         val += int(valstr)
+         is_special = True
    elif valstr.startswith('+'):
       valstr = valstr[len('+'):] # Crop out "+"
       try: # First try by converting inserted string to attribute type
-	 val += type(val)(valstr)
-	 is_special = True
+         val += type(val)(valstr)
+         is_special = True
       except: # Second try by converting inserted string to integer
-	 val += int(valstr)
-	 is_special = True
+         val += int(valstr)
+         is_special = True
    elif valstr.startswith('-'):
       valstr = valstr[len('-'):] # Crop out "-"
       try: # First try by converting inserted string to attribute type
-	 val -= type(val)(valstr)
-	 is_special = True
+         val -= type(val)(valstr)
+         is_special = True
       except: # Second try by converting inserted string to integer
-	 val -= int(valstr)
-	 is_special = True
+         val -= int(valstr)
+         is_special = True
 
    wrapper['val'] = val
    wrapper['is_special'] = is_special
