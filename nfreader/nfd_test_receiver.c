@@ -3,9 +3,10 @@
  * \brief Test receiver for nfdump reader.
  * \author Pavel Krobot <Pavel.Krobot@cesnet.cz>
  * \date 2013
+ * \date 2014
  */
 /*
- * Copyright (C) 2013 CESNET
+ * Copyright (C) 2013,2014 CESNET
  *
  * LICENSE TERMS
  *
