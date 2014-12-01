@@ -34,7 +34,7 @@ struct protocol {
 struct ip {
     int type; /* I for Ip */
     char *column;
-    int cmp; /* 0 - ==, 1 - != */
+    int cmp; /* as in struct expression */
     ip_addr_t ipAddr;
     ur_field_id_t id;
 };
@@ -104,13 +104,24 @@ struct ast *newIP(char *column, char *cmp, char *ipAddr)
     newast->column = column;
     if (strcmp(cmp, "==")==0 || strcmp(cmp, "=")==0)
         newast->cmp = 0;
-    else
+    else if (strcmp(cmp, "!=")==0 || strcmp(cmp, "<>")==0)
         newast->cmp = 1;
+    else if (strcmp(cmp, "<")==0)
+        newast->cmp = 2;
+    else if (strcmp(cmp, "<=")==0 || strcmp(cmp, "=<")==0)
+        newast->cmp = 3;
+    else if (strcmp(cmp, ">")==0)
+        newast->cmp = 4;
+    else
+        newast->cmp = 5;
     free(cmp);
-    ip_from_str(ipAddr, &(newast->ipAddr));
+    if (!ip_from_str(ipAddr, &(newast->ipAddr)))
+        printf("Warning: %s is not a valid IP address.\n", ipAddr);
     newast->id = ur_get_id_by_name(column);
     if (newast->id == UR_INVALID_FIELD)
         printf("Warning: %s is not a valid UniRec field.\n", column);
+    if (ur_get_type_by_id(newast->id) != UR_TYPE_IP)
+        printf("Warning: Type of %s is not IP address.\n", column);
     return (struct ast *) newast;
 }
 
@@ -183,8 +194,16 @@ void printAST(struct ast *ast)
             ((struct ip*) ast)->column);
        if (((struct ip*) ast)->cmp == 0)
            printf("==");
-       else
-           printf("!="); 
+       else if (((struct ip*) ast)->cmp == 1)
+           printf("!=");
+       else if (((struct ip*) ast)->cmp == 2)
+           printf("<");
+       else if (((struct ip*) ast)->cmp == 3)
+           printf("<=");
+       else if (((struct ip*) ast)->cmp == 4)
+           printf(">");
+       else if (((struct ip*) ast)->cmp == 5)
+           printf(">=");
        printf("%s",
             str);
 
@@ -287,17 +306,24 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
 
         return 0;
     case 'I': {  //IP address
-       if (((struct ip*) ast)->id == UR_INVALID_FIELD)
+        if (((struct ip*) ast)->id == UR_INVALID_FIELD)
             return 0;
-        if (ip_cmp(&(((struct ip*) ast)->ipAddr), (ip_addr_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct ip*) ast)->id))) == 0) { //Same addresses
-            if ( ((struct ip*) ast)->cmp==0 )
+        int cmp_res = ip_cmp((ip_addr_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct ip*) ast)->id)), &(((struct ip*) ast)->ipAddr));
+        int cmp = ((struct ip*) ast)->cmp;
+        if (cmp_res == 0) { // Same addresses
+            if (cmp == 0 || cmp == 3 || cmp == 5) // ==, <=, >=
                 return 1;
             else return 0;
-        } else { //Different addresses
-            if ( ((struct ip*) ast)->cmp==1 )
+        } else if (cmp_res < 0) { // Address in record is lower than the given one
+            if (cmp == 1 || cmp == 2 || cmp == 3) // !=, <, <=
+                return 1;
+            else return 0;
+        } else { // Address in record is higher than the given one
+            if (cmp == 1 || cmp == 4 || cmp == 5) // !=, >, >=
                 return 1;
             else return 0;
         }
+        
     }
     case 'S': { //String
         size_t size = ur_get_dyn_size(in_tmplt, in_rec, ((struct str*) ast)->id);
