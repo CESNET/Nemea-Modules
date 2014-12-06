@@ -6,6 +6,9 @@
 /* get numbers of protocols and services */
 #include <netdb.h>
 
+/* regexp */
+#include <sys/types.h>
+#include <regex.h>
 
 struct ast *newAST(struct ast *l, struct ast *r, int operator)
 {
@@ -33,8 +36,12 @@ struct ast *newExpression(char *column, char *cmp, int number)
         newast->cmp = 3;
     else if (strcmp(cmp, ">")==0)
         newast->cmp = 4;
-    else
+    else if (strcmp(cmp, "=~")==0)
+        newast->cmp = 6;
+    else {
+        // >=
         newast->cmp = 5;
+    }
     free(cmp);
 
     newast->id = ur_get_id_by_name(column);
@@ -82,19 +89,36 @@ struct ast *newIP(char *column, char *cmp, char *ipAddr)
 
 struct ast *newString(char *column, char *cmp, char *s)
 {
-    struct str *newast = malloc(sizeof(struct str));
-    newast->type = 'S';
-    newast->column = column;
-    if (strcmp(cmp, "==")==0 || strcmp(cmp, "=")==0)
-        newast->cmp = 0;
-    else
-        newast->cmp = 1;
-    free(cmp);
-    newast->s = s;
-    newast->id = ur_get_id_by_name(column);
-    if (newast->id == UR_INVALID_FIELD)
-        printf("Warning: %s is not a valid UniRec field.\n", column);
-    return (struct ast *) newast;
+   int retval;
+   char errb[1024];
+   errb[1023] = 0;
+   struct str *newast = malloc(sizeof(struct str));
+   newast->type = 'S';
+   newast->column = column;
+
+   if (strcmp(cmp, "=~")==0) {
+      newast->cmp = 6;
+   } else if (strcmp(cmp, "==")==0 || strcmp(cmp, "=")==0) {
+      newast->cmp = 0;
+   } else {
+      newast->cmp = 1;
+   }
+   free(cmp);
+   if (newast->cmp == 6) {
+      newast->s = strdup(s);
+      if ((retval = regcomp(&newast->re, s, REG_EXTENDED)) != 0) {
+         regerror(retval, &newast->re, errb, 1023);
+         printf("Regexp error: %s\n", errb);
+         regfree(&newast->re);
+      }
+      free(s);
+   } else {
+      newast->s = s;
+   }
+   newast->id = ur_get_id_by_name(column);
+   if (newast->id == UR_INVALID_FIELD)
+      printf("Warning: %s is not a valid UniRec field.\n", column);
+   return (struct ast *) newast;
 }
 
 struct ast *newBrack(struct ast *b)
@@ -138,6 +162,8 @@ void printAST(struct ast *ast)
          printf(" > ");
       else if (((struct ip*) ast)->cmp == 5)
          printf(" >= ");
+      else if (((struct ip*) ast)->cmp == 6)
+         printf(" =~ ");
       printf("%i", ((struct expression*) ast)->number);
       break;
    case 'P':
@@ -170,6 +196,8 @@ void printAST(struct ast *ast)
       printf("%s", ((struct str*) ast)->column);
       if (((struct str*) ast)->cmp == 0)
          printf(" == ");
+      else if (((struct ip*) ast)->cmp == 6)
+         printf(" =~ ");
       else
          printf(" != ");
       printf("\"%s\"", ((struct str*) ast)->s);
@@ -206,6 +234,8 @@ void freeAST(struct ast *ast)
     case 'S':
         free(((struct str*) ast)->column);
         free(((struct str*) ast)->s);
+        ((struct str*) ast)->s = NULL;
+        regfree(&((struct str*) ast)->re);
     break;
     case 'B':
         freeAST(((struct brack*) ast)->b);
@@ -287,14 +317,24 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
             return 0;
         ret = calloc(size+1, sizeof(char));
         strncpy(ret, (char *)(ur_get_dyn(in_tmplt, in_rec, ((struct str*) ast)->id)), size);
-        if (strcmp(((struct str*) ast)->s, ret) == 0) { //Same strings
-            if ( ((struct str*) ast)->cmp==0 )
-                return 1;
-            else return 0;
-        } else { //Different strings
-            if ( ((struct str*) ast)->cmp==1 )
-                return 1;
-            else return 0;
+        if (((struct str*) ast)->cmp == 6) {
+           if (regexec(&((struct str*) ast)->re, ret, 0, NULL, 0) == REG_NOMATCH) {
+              // string does not match regular expression
+              return 0;
+           } else {
+              // match
+              return 1;
+           }
+        } else {
+           if (strcmp(((struct str*) ast)->s, ret) == 0) { //Same strings
+              if ( ((struct str*) ast)->cmp==0 )
+                 return 1;
+              else return 0;
+           } else { //Different strings
+              if ( ((struct str*) ast)->cmp==1 )
+                 return 1;
+              else return 0;
+           }
         }
     }
     case 'B':

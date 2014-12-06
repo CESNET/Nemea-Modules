@@ -23,7 +23,7 @@ HEX [0-9a-fA-F]{0,4}
 %%
 
 ">"|"<"|"=<"|"<="|">="|"=>"                              { yylval.string = copyString(yytext, yyleng); return CMP; }
-"="|"=="|"!="|"<>"                                       { yylval.string = copyString(yytext, yyleng); return EQ; }
+"="|"=="|"!="|"<>"|"=~"                                  { yylval.string = copyString(yytext, yyleng); return EQ; }
 "||"|"Or"|"or"|"OR"                                      { yylval.number = 1; return OPERATOR;}
 "&&"|"And"|"and"|"AND"                                   { yylval.number = 2; return OPERATOR;}
 -?[0-9]+                                                 { yylval.number = atoi(yytext); return NUMBER; }
