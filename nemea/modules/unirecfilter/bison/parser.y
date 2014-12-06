@@ -13,9 +13,9 @@
     int evalAST(struct ast *ast);
     void changeProtocol(struct ast **ast);
 
-    void yyerror(char *errmsg)
+    void yyerror(const char *errmsg)
     {
-        fprintf(stderr, "%s\n", errmsg);    
+        fprintf(stderr, "Parsing error: %s\n", errmsg);
     }
 %}
 
