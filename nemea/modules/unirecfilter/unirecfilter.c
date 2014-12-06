@@ -2,10 +2,11 @@
  * \file unirecfilter.c
  * \brief NEMEA module selecting records and sending specified fields.
  * \author Klara Drhova <drhovkla@fit.cvut.cz>
+ * \author Tomas Cejka <cejkat@cesnet.cz>
  * \date 2014
  */
 /*
- * Copyright (C) 2013 CESNET
+ * Copyright (C) 2013,2014 CESNET
  *
  * LICENSE TERMS
  *
@@ -52,12 +53,7 @@
 #include <unirec/unirec.h>
 
 #include "parser.tab.h"
-
-#define SPEC_COND_DELIM    ':'
-#define DYN_FIELD_MAX_SIZE 1024 // Maximum size of dynamic field, longer fields will be cutted to this size
-
-#define SET_NULL(field_id, tmpl, data) \
-memset(ur_get_ptr_by_id(tmpl, data, field_id), 0, ur_get_size_by_id(field_id));
+#include "unirecfilter.h"
 
 // Struct with information about module
 trap_module_info_t module_info = {
@@ -121,36 +117,6 @@ char *getOutputSpec(const char *str)
    }
 }
 
-/**
- * \brief Get Abstract syntax tree from filter
- * \param[in] str    is in following format: "<filter>" or "<template>:<filter>"
- * \return pointer to abstract syntax tree
- */
-struct ast *getTree(const char *str)
-{
-   if (str == NULL || str[0] == '\0') {
-      printf("No Filter.\n");
-      return NULL;
-   }
-   char *p = NULL;
-   p = strchr(str, SPEC_COND_DELIM);
-   /* ':' not found */
-   if (p == NULL) { //Format: "FLRT"
-      yy_scan_string (str);
-   /* ':' found */
-   } else { //Format: "TMPLT:FLTR" or ":FLTR" or "TMPLT:"
-      if (*(p+1) == '\0') {
-        printf("No Filter.\n");
-        return NULL;
-      }
-      yy_scan_string (p+1);
-   }
-   struct ast * tmp = (struct ast *) yyparse(); //this returns pointer to the tree
-   yy_delete_buffer (get_buf());
-   printf("Filter: "); printAST(tmp); printf("\n");
-   return tmp;
-}
-
 int main(int argc, char **argv)
 {
    char *unirec_output_specifier = NULL;
@@ -164,14 +130,14 @@ int main(int argc, char **argv)
    char opt;
    int ret;
    int from = 0; // 0 - template and filter from CMD, 1 - from file
-   int memory_needed = 0;  
+   int memory_needed = 0;
    ur_field_id_t field_id = UR_INVALID_FIELD;
    struct ast * tree = NULL;
-   
+
    // ***** TRAP initialization *****
    // Let TRAP library parse command-line arguments and extract its parameters
    TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
-   
+
    // Parse command-line options
    while ((opt = getopt(argc, argv, "I:O:F:f:c:")) != -1) {
       switch (opt) {
@@ -195,7 +161,7 @@ int main(int argc, char **argv)
             TRAP_DEFAULT_FINALIZATION();
             return 3;
          }
-         max_num_records = nb;     
+         max_num_records = nb;
          break;
       }
       default:
@@ -205,7 +171,7 @@ int main(int argc, char **argv)
          return 4;
       }
    }
-  
+
    // Input format specifier is missing
    if (unirec_input_specifier == NULL) {
       fprintf(stderr, "Error: Invalid arguments - no input specifier.\n");
@@ -260,7 +226,6 @@ int main(int argc, char **argv)
          return 8;
       }
    }
-
    // Get Abstract syntax tree from filter
    if (from == 1) { // From File
       tree = getTree(unirec_output);
@@ -342,14 +307,14 @@ int main(int argc, char **argv)
               }
            }
         }
-      
+
         // Send record to interface 0
         ret = trap_send(0, out_rec, ur_rec_size(out_tmplt, out_rec));
         trap_send_flush(0);
         // Handle possible errors
         TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, 0, break);
      }
-      
+
       // Quit if maximum number of records has been reached
       num_records++;
       if (max_num_records && max_num_records == num_records) {

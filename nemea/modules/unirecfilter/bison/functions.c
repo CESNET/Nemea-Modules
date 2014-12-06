@@ -1,58 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <unirec/unirec.h>
-#include "../../unirec/ipaddr.h"
+#include "../unirecfilter.h"
 
-struct ast {
-    int type; /*A for AST*/
-    int operator; /* 0 - NONE, 1 - OR, 2 - AND */
-    struct ast *l;
-    struct ast *r;
-};
-
-struct expression {
-    int type; /* E for Expression */
-    char *column;
-    int cmp;
-/* 0 - ==,
-   1 - !=,
-   2 - < ,
-   3 - <=,
-   4 - > ,
-   5 - >= */
-    int number;
-    ur_field_id_t id;
-};
-
-struct protocol {
-    int type; /* P for Protocol */
-    char *data;
-    char *cmp;
-};
 /* get numbers of protocols and services */
 #include <netdb.h>
 
-struct ip {
-    int type; /* I for Ip */
-    char *column;
-    int cmp; /* as in struct expression */
-    ip_addr_t ipAddr;
-    ur_field_id_t id;
-};
-
-struct str {
-    int type; /* S for String */
-    char *column;
-    int cmp; /* 0 - ==, 1 - != */
-    char *s;
-    ur_field_id_t id;
-};
-
-struct brack {
-    int type; /* B for Bracket */
-    struct ast *b;
-};
 
 struct ast *newAST(struct ast *l, struct ast *r, int operator)
 {
@@ -154,79 +107,79 @@ struct ast *newBrack(struct ast *b)
 
 void printAST(struct ast *ast)
 {
-    switch (ast->type) {
-    case 'A':
-        printAST(ast->l);
+   if (ast == NULL) {
+      puts("No syntax tree for printing");
+      return;
+   }
+   switch (ast->type) {
+   case 'A':
+      printAST(ast->l);
 
-        if (ast->operator == 1)
-            printf(" || ");
-        else if (ast->operator == 2)
-            printf(" && ");
+      if (ast->operator == 1)
+         printf(" || ");
+      else if (ast->operator == 2)
+         printf(" && ");
 
-        if (ast->r)
-            printAST(ast->r);
-    break;
-    case 'E': 
-        printf("%s", 
-            ((struct expression*) ast)->column); 
-       if (((struct ip*) ast)->cmp == 0)
-           printf("==");
-       else if (((struct ip*) ast)->cmp == 1)
-           printf("!=");
-       else if (((struct ip*) ast)->cmp == 2)
-           printf("<");
-       else if (((struct ip*) ast)->cmp == 3)
-           printf("<=");
-       else if (((struct ip*) ast)->cmp == 4)
-           printf(">");
-       else if (((struct ip*) ast)->cmp == 5)
-           printf(">=");
-        printf("%i", 
-            ((struct expression*) ast)->number); 
-    break;
-    case 'P': 
-        printf("PROTOCOL%s%s",
+      if (ast->r)
+         printAST(ast->r);
+      break;
+   case 'E':
+      printf("%s",
+            ((struct expression*) ast)->column);
+      if (((struct ip*) ast)->cmp == 0)
+         printf(" == ");
+      else if (((struct ip*) ast)->cmp == 1)
+         printf(" != ");
+      else if (((struct ip*) ast)->cmp == 2)
+         printf(" < ");
+      else if (((struct ip*) ast)->cmp == 3)
+         printf(" <= ");
+      else if (((struct ip*) ast)->cmp == 4)
+         printf(" > ");
+      else if (((struct ip*) ast)->cmp == 5)
+         printf(" >= ");
+      printf("%i", ((struct expression*) ast)->number);
+      break;
+   case 'P':
+      printf("PROTOCOL %s %s",
             ((struct protocol*) ast)->cmp,
-            ((struct protocol*) ast)->data); 
-    break;
-    case 'I': { 
-       char str[46];
-       ip_to_str(&(((struct ip*) ast)->ipAddr), str);
-       printf("%s", 
+            ((struct protocol*) ast)->data);
+      break;
+   case 'I': {
+      char str[46];
+      ip_to_str(&(((struct ip*) ast)->ipAddr), str);
+      printf("%s",
             ((struct ip*) ast)->column);
-       if (((struct ip*) ast)->cmp == 0)
-           printf("==");
-       else if (((struct ip*) ast)->cmp == 1)
-           printf("!=");
-       else if (((struct ip*) ast)->cmp == 2)
-           printf("<");
-       else if (((struct ip*) ast)->cmp == 3)
-           printf("<=");
-       else if (((struct ip*) ast)->cmp == 4)
-           printf(">");
-       else if (((struct ip*) ast)->cmp == 5)
-           printf(">=");
-       printf("%s",
-            str);
+      if (((struct ip*) ast)->cmp == 0)
+         printf(" == ");
+      else if (((struct ip*) ast)->cmp == 1)
+         printf(" != ");
+      else if (((struct ip*) ast)->cmp == 2)
+         printf(" < ");
+      else if (((struct ip*) ast)->cmp == 3)
+         printf(" <= ");
+      else if (((struct ip*) ast)->cmp == 4)
+         printf(" > ");
+      else if (((struct ip*) ast)->cmp == 5)
+         printf(" >= ");
+      printf("%s", str);
 
-    break;
-    }
-    case 'S': 
-       printf("%s", 
-            ((struct str*) ast)->column);
-       if (((struct str*) ast)->cmp == 0)
-           printf("==");
-       else
-           printf("!="); 
-       printf("\"%s\"",
-            ((struct str*) ast)->s);
-    break;
-    case 'B': 
-        printf("( "); 
-        printAST(((struct brack*) ast)->b);
-        printf(" )"); 
-    break;
-    }
+      break;
+      }
+   case 'S':
+      printf("%s", ((struct str*) ast)->column);
+      if (((struct str*) ast)->cmp == 0)
+         printf(" == ");
+      else
+         printf(" != ");
+      printf("\"%s\"", ((struct str*) ast)->s);
+      break;
+   case 'B':
+      printf("( ");
+      printAST(((struct brack*) ast)->b);
+      printf(" )");
+      break;
+   }
 
 }
 
@@ -234,27 +187,27 @@ void freeAST(struct ast *ast)
 {
     if (!ast) return;
     switch (ast->type) {
-    case 'A': 
+    case 'A':
         freeAST(ast->l);
         if (ast->r)
             freeAST(ast->r);
     break;
-    case 'E': 
-        free(((struct expression*) ast)->column);  
+    case 'E':
+        free(((struct expression*) ast)->column);
     break;
-    case 'P': 
-        free(((struct protocol*) ast)->cmp); 
+    case 'P':
+        free(((struct protocol*) ast)->cmp);
         free(((struct protocol*) ast)->data);
     break;
-    case 'I': 
+    case 'I':
         free(((struct ip*) ast)->column);
         free(&(((struct ip*) ast)->ipAddr));
     break;
-    case 'S': 
+    case 'S':
         free(((struct str*) ast)->column);
         free(((struct str*) ast)->s);
     break;
-    case 'B': 
+    case 'B':
         freeAST(((struct brack*) ast)->b);
     break;
     }
@@ -325,7 +278,7 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
                 return 1;
             else return 0;
         }
-        
+
     }
     case 'S': { //String
         size_t size = ur_get_dyn_size(in_tmplt, in_rec, ((struct str*) ast)->id);
@@ -385,3 +338,36 @@ void changeProtocol(struct ast **ast)
         return;
     }
 }
+
+/**
+ * \brief Get Abstract syntax tree from filter
+ * \param[in] str    is in following format: "<filter>" or "<template>:<filter>"
+ * \return pointer to abstract syntax tree
+ */
+struct ast *getTree(const char *str)
+{
+   if (str == NULL || str[0] == '\0') {
+      printf("No Filter.\n");
+      return NULL;
+   }
+   char *p = NULL;
+   p = strchr(str, SPEC_COND_DELIM);
+   /* ':' not found */
+   if (p == NULL) { //Format: "FLRT"
+      yy_scan_string (str);
+   /* ':' found */
+   } else { //Format: "TMPLT:FLTR" or ":FLTR" or "TMPLT:"
+      if (*(p+1) == '\0') {
+        printf("No Filter.\n");
+        return NULL;
+      }
+      yy_scan_string (p+1);
+   }
+   struct ast * tmp = (struct ast *) yyparse(); //this returns pointer to the tree
+   yy_delete_buffer(get_buf());
+   printf("Filter: ");
+   printAST(tmp);
+   printf("\n");
+   return tmp;
+}
+
