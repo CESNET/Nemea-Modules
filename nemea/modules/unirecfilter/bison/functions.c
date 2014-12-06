@@ -30,6 +30,8 @@ struct protocol {
     char *data;
     char *cmp;
 };
+/* get numbers of protocols and services */
+#include <netdb.h>
 
 struct ip {
     int type; /* I for Ip */
@@ -359,12 +361,13 @@ void changeProtocol(struct ast **ast)
         return;
     case 'P': {
         int protocol;
-        if (!strcmp(((struct protocol*) (*ast))->data, "ICMP")) 
-            protocol = 1;
-        else if (!strcmp(((struct protocol*) (*ast))->data, "TCP")) 
-            protocol = 6;
-        else if (!strcmp(((struct protocol*) (*ast))->data, "UDP")) 
-            protocol = 17;
+        struct protoent *proto = NULL;
+        proto = getprotobyname(((struct protocol*) (*ast))->data);
+        if (proto != NULL) {
+           protocol = proto->p_proto;
+        } else {
+           fprintf(stderr, "Error: Protocol %s is not known, revisit /etc/protocols.\n", (((struct protocol *) (*ast))->data));
+        }
         char *cmp = ((struct protocol*) (*ast))->cmp;
         free (((struct protocol*) (*ast))->data);
         free (*ast);
