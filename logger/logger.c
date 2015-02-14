@@ -4,6 +4,7 @@
  * \author Vaclav Bartos <ibartosv@fit.vutbr.cz>
  * \author Erik Sabik <xsabik02@stud.fit.vutbr.cz>
  * \author Katerina Pilatova <xpilat05@stud.fit.vutbr.cz>
+ * \author Tomas Cejka <cejkat@cesnet.cz>
  * \date 2013
  * \date 2014
  */
@@ -89,7 +90,7 @@ trap_module_info_t module_info = {
    "   -T           Add the time when the record was received as the first field.\n"
    "   -n           Add the number of interface the record was received on as the\n"
    "                first field (or second when -T is specified).\n"
-   "   -c N         Quit after N records are received.\n"
+   "   -c N         Quit after N records are received, 0 can be useful in combination with -t to print UniRec.\n"
    "   -d X         Optionally modifies delimiter to inserted value X (implicitely ',').\n"
    "                Delimiter has to be one character, except for printable\n"
    "                escape sequences.",
@@ -129,6 +130,7 @@ int print_time = 0;
 
 unsigned int num_records = 0; // Number of records received (total of all inputs)
 unsigned int max_num_records = 0; // Exit after this number of records is received
+char enabled_max_num_records = 0; // Limit of message is set when non-zero
 
 
 static FILE *file; // Output file
@@ -382,10 +384,7 @@ int main(int argc, char **argv)
          break;
       case 'c':
          max_num_records = atoi(optarg);
-         if (max_num_records == 0) {
-            fprintf(stderr, "Error: Parameter of -c option must be integer > 0.\n");
-            return 1;
-         }
+         enabled_max_num_records = 1;
          break;
       case 'd':
          if ((strlen(optarg) == 1) && (sscanf(optarg, "%c", &delimiter) == 1)) {
@@ -528,6 +527,11 @@ int main(int argc, char **argv)
       }
       fprintf(file, "\n");
       fflush(file);
+   }
+
+   if ((enabled_max_num_records != 0) && (max_num_records == 0)) {
+      // stop after printed title
+      goto exit;
    }
 
    // ***** Start a thread for each interface *****
