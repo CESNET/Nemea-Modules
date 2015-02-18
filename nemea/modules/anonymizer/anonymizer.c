@@ -62,11 +62,11 @@ trap_module_info_t module_info = {
    "   -u TMPLT    Specify UniRec template expected on the input interface.\n"
    "   -k KEY      Specify secret key*.\n"
    "   -f FILE     Specify file containing secret key*.\n" 
-   "   -M          Use MurmurHash3 instead of Rijndael cipher."
+   "   -M          Use MurmurHash3 instead of Rijndael cipher.\n"
    "   -d          Switch to de-anonymization mode.\n"
    "Interfaces:\n"
-   "   Inputs: 1\n"
-   "   Outputs: 1\n"
+   "   Inputs: 1	(UniRec template --- set up as -u parameter)\n"
+   "   Outputs: 1	(UniRec template --- same UniRec format as input UniRec but with anonymized IP addresses)\n"
    "*Secret key must be 32 characters long string or 32B sized hex string starting with 0x\n",
    1, // Number of input interfaces
    1, // Number of output interfaces
