@@ -88,7 +88,7 @@ trap_module_info_t module_info = {
    "\n"
    "   FILE   A file in nfdump format.\n"
    "   -f FILTER  A nfdump-like filter expression. Only records matching the filter\n"
-   "              will be sent to the output."
+   "              will be sent to the output.\n"
    "   -c N   Read only the first N flow records.\n"
    "   -n     Don't send \"EOF message\" at the end.\n"
    "   -T     Replace original timestamps by record actual sending time.\n"
