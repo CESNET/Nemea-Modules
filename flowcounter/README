@@ -1,0 +1,12 @@
+Flowcounter README
+
+Goal: This module counts number of incoming flow records.
+
+Input Interface: UniRec format specified by template from -u parameter.
+Output Interface: none or @VOLUME record, affected by -o parameter.
+
+Parameters: -u TMPL 	Specify UniRec template expected on the input interface.
+	    -p N	Show progress bar - print a dot every N flows. 
+	    -P CHAR	When -p parameter is enabled, print CHAR instead of dot.
+	    -o SEC	Send @VOLUME record filled with current counters every
+			SEC second(s). Interval for SEC is (0;1000).
