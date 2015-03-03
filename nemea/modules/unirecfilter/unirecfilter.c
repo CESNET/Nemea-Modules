@@ -103,17 +103,17 @@ char *getOutputSpec(const char *str)
 {
    char *p = NULL;
    int l = strlen(str);
-   char *OutS = NULL;
+   char *outS = NULL;
    p = strchr(str, SPEC_COND_DELIM);
    if (p == NULL) {
       /* not found */
       return strdup(str);
    } else {
-      OutS = (char *) calloc(p - str + 1, 1);
-      if (OutS != NULL) {
-         strncpy(OutS, str, p - str);
+      outS = (char *) calloc(p - str + 1, sizeof(char));
+      if (outS != NULL) {
+         strncpy(outS, str, p - str);
       }
-      return OutS;
+      return outS;
    }
 }
 
@@ -178,9 +178,13 @@ int main(int argc, char **argv)
       // Do all necessary cleanup before exiting
       TRAP_DEFAULT_FINALIZATION();
       return 5;
-   } else {
-      // Create UniRec input template
-      in_tmplt = ur_create_template(unirec_input_specifier);
+   }
+   // Input format specifier is not valid
+   else if ((in_tmplt = ur_create_template(unirec_input_specifier)) == NULL) {
+      fprintf(stderr, "Error: Invalid arguments - input specifier is not valid.\n");
+      // Do all necessary cleanup before exiting
+      TRAP_DEFAULT_FINALIZATION();
+      return 5;
    }
 
    // Output format specifier and file are both set (-O and -f)
@@ -202,30 +206,35 @@ int main(int argc, char **argv)
       FILE *f = fopen(file, "rt");
       // File cannot be opened / not found
       if (!f) {
-         fprintf(stderr, "Error: File %s could be opened.\n", file);
+         fprintf(stderr, "Error: File %s could not be opened.\n", file);
          // Do all necessary cleanup before exiting
          TRAP_DEFAULT_FINALIZATION();
          return 7;
       }
       from = 1;
       unirec_output = (char *) calloc (1000,sizeof(char));
+
       if (!fgets(unirec_output, 1000, f)) {
          fprintf(stderr, "Error: File %s could not be read.\n", file);
          // Do all necessary cleanup before exiting
+         free(unirec_output);
+         fclose(f);
          TRAP_DEFAULT_FINALIZATION();
+         return 7;
       }
-      // no newline on the end of string
-      unirec_output[strlen(unirec_output)-1] = 0;
+
       fclose(f);
 
       // Get output format specifier
       if (!(unirec_output_specifier = getOutputSpec(unirec_output))) {
          fprintf(stderr, "Error: Not enough space.\n");
          // Do all necessary cleanup before exiting
+         free(unirec_output);
          TRAP_DEFAULT_FINALIZATION();
          return 8;
       }
    }
+
    // Get Abstract syntax tree from filter
    if (from == 1) { // From File
       tree = getTree(unirec_output);
