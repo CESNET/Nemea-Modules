@@ -356,13 +356,12 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
     }
     case 'S': { //String
         size_t size = ur_get_dyn_size(in_tmplt, in_rec, ((struct str*) ast)->id);
-        char *ret = NULL;
+        char * expr = (char *)(ur_get_dyn(in_tmplt, in_rec, ((struct str*) ast)->id));
+
         if (((struct str*) ast)->id == UR_INVALID_FIELD)
             return 0;
-        ret = calloc(size+1, sizeof(char));
-        strncpy(ret, (char *)(ur_get_dyn(in_tmplt, in_rec, ((struct str*) ast)->id)), size);
         if (((struct str*) ast)->cmp == 6) {
-           if (regexec(&((struct str*) ast)->re, ret, 0, NULL, 0) == REG_NOMATCH) {
+           if (regexec(&((struct str*) ast)->re, expr, 0, NULL, 0) == REG_NOMATCH) {
               // string does not match regular expression
               return 0;
            } else {
@@ -370,7 +369,7 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
               return 1;
            }
         } else {
-           if (strcmp(((struct str*) ast)->s, ret) == 0) { //Same strings
+           if (strcmp(((struct str*) ast)->s, expr) == 0) { //Same strings
               if ( ((struct str*) ast)->cmp==0 )
                  return 1;
               else return 0;

@@ -130,6 +130,7 @@ int main(int argc, char **argv)
    char opt;
    int ret;
    int from = 0; // 0 - template and filter from CMD, 1 - from file
+   int f_size;   // size of file with filter
    int memory_needed = 0;
    ur_field_id_t field_id = UR_INVALID_FIELD;
    struct ast * tree = NULL;
@@ -178,7 +179,7 @@ int main(int argc, char **argv)
       // Do all necessary cleanup before exiting
       TRAP_DEFAULT_FINALIZATION();
       return 5;
-   }
+   } 
    // Input format specifier is not valid
    else if ((in_tmplt = ur_create_template(unirec_input_specifier)) == NULL) {
       fprintf(stderr, "Error: Invalid arguments - input specifier is not valid.\n");
@@ -212,9 +213,14 @@ int main(int argc, char **argv)
          return 7;
       }
       from = 1;
-      unirec_output = (char *) calloc (1000,sizeof(char));
+      // Determine the file size for memory allocation
+      fseek(f, 0, SEEK_END); 
+      f_size = ftell(f);
+      fseek(f, 0, SEEK_SET);
 
-      if (!fgets(unirec_output, 1000, f)) {
+      unirec_output = (char *) malloc (f_size);
+
+      if (!fgets(unirec_output, f_size, f)) {
          fprintf(stderr, "Error: File %s could not be read.\n", file);
          // Do all necessary cleanup before exiting
          free(unirec_output);
