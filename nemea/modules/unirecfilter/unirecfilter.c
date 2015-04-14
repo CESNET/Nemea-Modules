@@ -216,13 +216,13 @@ int main(int argc, char **argv)
       }
       from = 1;
       // Determine the file size for memory allocation
-      fseek(f, 0, SEEK_END); 
+      fseek(f, 0, SEEK_END);
       f_size = ftell(f);
       fseek(f, 0, SEEK_SET);
 
-      unirec_output = (char *) malloc (f_size);
+      unirec_output = (char *) malloc (f_size * sizeof(char) + 1);
 
-      if (!fgets(unirec_output, f_size, f)) {
+      if (fread(unirec_output, sizeof(char), f_size, f) != f_size) {
          fprintf(stderr, "Error: File %s could not be read.\n", file);
          // Do all necessary cleanup before exiting
          free(unirec_output);
@@ -232,10 +232,11 @@ int main(int argc, char **argv)
       }
 
       fclose(f);
+      unirec_output[f_size] = '\0';
 
       // Get output format specifier
       if (!(unirec_output_specifier = getOutputSpec(unirec_output))) {
-         fprintf(stderr, "Error: Not enough space.\n");
+         fprintf(stderr, "Error: Not enough memory for output UniRec.\n");
          // Do all necessary cleanup before exiting
          free(unirec_output);
          TRAP_DEFAULT_FINALIZATION();
