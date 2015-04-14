@@ -361,7 +361,11 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
         if (((struct str*) ast)->id == UR_INVALID_FIELD)
             return 0;
         if (((struct str*) ast)->cmp == 6) {
-           if (regexec(&((struct str*) ast)->re, expr, 0, NULL, 0) == REG_NOMATCH) {
+
+           memcpy(str_buffer, expr, size);
+           str_buffer[size] = '\0';
+
+           if (regexec(&((struct str*) ast)->re, str_buffer, 0, NULL, 0) == REG_NOMATCH) {
               // string does not match regular expression
               return 0;
            } else {
@@ -369,14 +373,18 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
               return 1;
            }
         } else {
-           if (strcmp(((struct str*) ast)->s, expr) == 0) { //Same strings
-              if ( ((struct str*) ast)->cmp==0 )
+           if (strncmp(((struct str*) ast)->s, expr, size) == 0) { //Same strings
+              if ( ((struct str*) ast)->cmp==0 ) {
                  return 1;
-              else return 0;
+              } else {
+                 return 0;
+              }
            } else { //Different strings
-              if ( ((struct str*) ast)->cmp==1 )
+              if ( ((struct str*) ast)->cmp==1 ) {
                  return 1;
-              else return 0;
+              } else {
+                 return 0;
+              }
            }
         }
     }

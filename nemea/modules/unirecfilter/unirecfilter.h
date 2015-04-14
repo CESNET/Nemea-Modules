@@ -113,5 +113,7 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec);
 void freeAST(struct ast *tree);
 struct ast *getTree(const char *str);
 
+extern char * str_buffer;
+
 #endif
 

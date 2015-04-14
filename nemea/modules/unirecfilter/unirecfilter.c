@@ -91,6 +91,8 @@ static int stop = 0;
 unsigned int num_records = 0; // Number of records received (total of all inputs)
 unsigned int max_num_records = 0; // Exit after this number of records is received
 
+char *str_buffer = NULL;
+
 // Function to handle SIGTERM and SIGINT signals (used to stop the module)
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
@@ -179,7 +181,7 @@ int main(int argc, char **argv)
       // Do all necessary cleanup before exiting
       TRAP_DEFAULT_FINALIZATION();
       return 5;
-   } 
+   }
    // Input format specifier is not valid
    else if ((in_tmplt = ur_create_template(unirec_input_specifier)) == NULL) {
       fprintf(stderr, "Error: Invalid arguments - input specifier is not valid.\n");
@@ -262,16 +264,22 @@ int main(int argc, char **argv)
    }
    out_rec = ur_create(out_tmplt, memory_needed);
 
+   // allocate auxiliary buffer for evalAST()
+   str_buffer = (char *) malloc(65536 * sizeof(char)); // no string in unirec can be longer than 64kB
+
+   if (str_buffer == NULL) {
+      stop = 1;
+      fprintf(stderr, "Error: Not enough memory for string buffer.\n");
+   }
+
    /* main loop */
    // Copy data from input to output
    while (!stop) {
       const void *in_rec;
       uint16_t in_rec_size;
-
       // Receive data from any input interface, wait until data are available
       ret = trap_recv(0, &in_rec, &in_rec_size);
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
-
       // Check size of received data
       if (in_rec_size < ur_rec_static_size(in_tmplt)) {
          if (in_rec_size <= 1) {
@@ -337,6 +345,7 @@ int main(int argc, char **argv)
       }
 
    }
+   free(str_buffer);
 
    // ***** Cleanup *****
    TRAP_DEFAULT_FINALIZATION();
