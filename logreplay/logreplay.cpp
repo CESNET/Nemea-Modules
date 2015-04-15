@@ -44,7 +44,7 @@
 
 // Information if sigaction is available for nemea signal macro registration
 #ifdef HAVE_CONFIG_H
-#include <config.h> 
+#include <config.h>
 #endif
 
 #include <inttypes.h>
@@ -119,8 +119,8 @@ string get_next_field(stringstream &line)
    uint32_t in_quotes = 0;
    char prev = 0;
    bool fin = false;
-   int ch; 
-  
+   int ch;
+
    // skip first quote (only in dynamic fields)
    if (line.peek() == '"') {
       ++quotes;
@@ -296,7 +296,7 @@ int main(int argc, char **argv)
       stringstream ss(line);
       vector<ur_field_id_t> field_ids;
       string column;
-    
+
       while (getline(ss, column, field_delim)) {
          field_ids.push_back(urgetidbyname(column.c_str()));
       }
@@ -304,6 +304,10 @@ int main(int argc, char **argv)
 
       /* main loop */
       while (f_in.good()) {
+         if (num_records++ >= max_num_records) {
+            break;
+         }
+
          getline(f_in, line, record_delim);
          if (!f_in.good()) {
             break;
