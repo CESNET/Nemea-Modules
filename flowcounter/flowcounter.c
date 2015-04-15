@@ -83,6 +83,9 @@ trap_module_info_t module_info = {
 		 "   Inputs: 1 (flow records)\n" "   Outputs: 0/1 (affected by -o parameter)\n",
 	1,									  // Number of input interfaces
 	0,									  // Number of output interfaces
+	2,
+	"-h", "--help", "prints help", 0, NULL,
+	"-c", "--cell", "cell test", 0, NULL
 };
 
 /* ************************************************************************* */

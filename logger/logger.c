@@ -48,7 +48,7 @@
 
 // Information if sigaction is available for nemea signal macro registration
 #ifdef HAVE_CONFIG_H
-#include <config.h> 
+#include <config.h>
 #endif
 
 #include <stdio.h>
@@ -395,7 +395,7 @@ int main(int argc, char **argv)
             ESCAPE_SEQ(optarg[1], return 1);
             break;
          }
-         
+
          fprintf(stderr, "Error: Parameter of -d option must contain 1 character"
                             " or escape sequence.\n");
          return 1;
