@@ -1,4 +1,38 @@
 #!/usr/bin/python
+#
+# Copyright (C) 2013,2014 CESNET
+#
+# LICENSE TERMS
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with the
+#    distribution.
+# 3. Neither the name of the Company nor the names of its contributors
+#    may be used to endorse or promote products derived from this
+#    software without specific prior written permission.
+#
+# ALTERNATIVELY, provided that this notice is retained in full, this
+# product may be distributed under the terms of the GNU General Public
+# License (GPL) version 2 or later, in which case the provisions
+# of the GPL apply INSTEAD OF those given above.
+#
+# This software is provided ``as is'', and any express or implied
+# warranties, including, but not limited to, the implied warranties of
+# merchantability and fitness for a particular purpose are disclaimed.
+# In no event shall the company or contributors be liable for any
+# direct, indirect, incidental, special, exemplary, or consequential
+# damages (including, but not limited to, procurement of substitute
+# goods or services; loss of use, data, or profits; or business
+# interruption) however caused and on any theory of liability, whether
+# in contract, strict liability, or tort (including negligence or
+# otherwise) arising in any way out of the use of this software, even
+# if advised of the possibility of such damage.
 
 import sys
 import os.path
@@ -40,7 +74,7 @@ Available commands:
   'edit'  'e'  Edit values of all fields of the record.
   'send'  's'  Send the record to the output interface.
                To send multiple records, put an integer number after the
-               command, e.g. 's 5' to send 5 records. 
+               command, e.g. 's 5' to send 5 records.
   'help'  'h'  Print this help.
   'exit'  'x'  Exit the Debug Sender
   'quit'  'q'  Exit the Debug Sender
@@ -60,9 +94,9 @@ def edit_record():
          valstr = raw_input("%s [%s]%s: " % (name, val if not isinstance(val, str) else '"'+val+'"', " {"+record_metadata[name]+"}" if name in record_metadata else ""))
          if valstr == "":
             break # Continue with next field
-         
+
          field_type = record._field_types[name]
-         
+
          # Try special cases first, then all other cases
          if not edit_time_rules(name, valstr):
             try:
@@ -75,7 +109,7 @@ def edit_record():
                print e
                continue # Try it again
             setattr(record, name, val)
-         
+
          break # Continue with next field
    print
 
@@ -175,7 +209,7 @@ def apply_rules(wrapper, valstr):
          val = Timestamp.now()
          valstr = valstr[len("now"):] # Crop out "now"
          is_special = True
-      
+
       if valstr.startswith(('+', '-')):
          val += int(valstr)
          is_special = True
