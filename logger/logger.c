@@ -7,9 +7,10 @@
  * \author Tomas Cejka <cejkat@cesnet.cz>
  * \date 2013
  * \date 2014
+ * \date 2015 
  */
 /*
- * Copyright (C) 2013,2014 CESNET
+ * Copyright (C) 2013-2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -265,23 +266,24 @@ void capture_thread(int index, char delimiter)
                         // Printable string - print it as it is
                         int size = ur_get_dyn_size(templates[index], rec, id);
                         char *data = ur_get_dyn(templates[index], rec, id);
-                        fprintf(file, "\"");
+                        putc('"', file);
                         while (size--) {
                            switch (*data) {
                               case '\n': // Replace newline with space
-                                         fprintf(file, " ");
+                                         putc(' ', file);
                                          break;
                               case '"' : // Double quotes in string
-                                         fprintf(file, "\"\"");
+                                         putc('"', file);
+                                         putc('"', file);
                                          break;
                               default  : // Check if character is printable
                                          if (isprint(*data)) {
-                                            fprintf(file, "%c", *data);
+                                            putc(*data, file);
                                          }
                            }
                            data++;
                         }
-                        fprintf(file, "\"");
+                        putc('"', file);
                      }
                      break;
                   case UR_TYPE_BYTES:
