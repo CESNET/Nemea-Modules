@@ -1,6 +1,6 @@
 /**
  * \file anonymizer.h
- * \brief Module for anonymizing incoming flow records. 
+ * \brief Module for anonymizing incoming flow records.
  * \author Erik Sabik <xsabik02@stud.fit.vutbr.cz>
  * \date 2013
  */
@@ -43,19 +43,19 @@
 
 //information if sigaction is available for nemea signal macro registration
 #ifdef HAVE_CONFIG_H
-#include <config.h> 
+#include <config.h>
 #endif
- 
-#include <signal.h> 
-#include <stdio.h> 
-#include <stdint.h> 
-#include <stdlib.h> 
-#include <getopt.h> 
-#include <string.h> 
-#include <ctype.h> 
- 
-#include <libtrap/trap.h> 
-#include <unirec/unirec.h> 
+
+#include <signal.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <getopt.h>
+#include <string.h>
+#include <ctype.h>
+
+#include <libtrap/trap.h>
+#include <unirec/unirec.h>
 
 
 #ifndef _ANONYMIZER_H

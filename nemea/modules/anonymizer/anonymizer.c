@@ -1,6 +1,6 @@
 /**
  * \file anonymizer.c
- * \brief Module for anonymizing incoming flow records. 
+ * \brief Module for anonymizing incoming flow records.
  * \author Erik Sabik <xsabik02@stud.fit.vutbr.cz>
  * \date 2013
  */
@@ -61,7 +61,7 @@ trap_module_info_t module_info = {
    "Parameters:\n"
    "   -u TMPLT    Specify UniRec template expected on the input interface.\n"
    "   -k KEY      Specify secret key*.\n"
-   "   -f FILE     Specify file containing secret key*.\n" 
+   "   -f FILE     Specify file containing secret key*.\n"
    "   -M          Use MurmurHash3 instead of Rijndael cipher.\n"
    "   -d          Switch to de-anonymization mode.\n"
    "Interfaces:\n"
@@ -228,16 +228,16 @@ int main(int argc, char **argv)
 
 
 
-   // ***** TRAP initialization *****   
+   // ***** TRAP initialization *****
    TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
-   
+
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
    //signal(SIGUSR1, signal_handler); //signal not used in previous commit
-   
 
 
-   // ***** Create UniRec template *****   
+
+   // ***** Create UniRec template *****
    char *unirec_specifier = "<COLLECTOR_FLOW>";
    char opt;
    while ((opt = getopt(argc, argv, "u:k:f:Md")) != -1) {
@@ -262,7 +262,7 @@ int main(int argc, char **argv)
             return 3;
       }
    }
-   
+
    ur_template_t *tmplt = ur_create_template(unirec_specifier);
    if (tmplt == NULL) {
       fprintf(stderr, "Error: Invalid UniRec specifier.\n");
@@ -277,7 +277,7 @@ int main(int argc, char **argv)
          trap_finalize();
          return 7;
       }
-   } 
+   }
    else {
       if (!ParseCryptoPAnKey(secret_key, init_key)) {
          trap_finalize();
@@ -294,7 +294,7 @@ int main(int argc, char **argv)
       uint16_t data_size;
       ret = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
       TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
-      
+
       // Check size of received data
       if (data_size < ur_rec_static_size(tmplt)) {
          if (data_size <= 1) {
@@ -313,7 +313,7 @@ int main(int argc, char **argv)
          char ip1_buff[64], ip2_buff[64];
          ip_to_str(ur_get_ptr(tmplt, data, UR_SRC_IP), ip1_buff);
          ip_to_str(ur_get_ptr(tmplt, data, UR_DST_IP), ip2_buff);
-         fprintf(stderr, "ORIG: %15s   ->   %15s\n", ip1_buff, ip2_buff);           
+         fprintf(stderr, "ORIG: %15s   ->   %15s\n", ip1_buff, ip2_buff);
          ip_anonymize(tmplt, data, mode);
          ip_to_str(ur_get_ptr(tmplt, data, UR_SRC_IP), ip1_buff);
          ip_to_str(ur_get_ptr(tmplt, data, UR_DST_IP), ip2_buff);
@@ -328,12 +328,12 @@ int main(int argc, char **argv)
       trap_send_data(0, data, ur_rec_size(tmplt, data), TRAP_NO_WAIT);
 
    }
-   
+
    // ***** ONLY FOR DEBUGING ***** //
    #ifdef DEBUG
       char dummy[1] = {0};
-      trap_send_data(0, dummy, 1, TRAP_WAIT); 
-   #endif   
+      trap_send_data(0, dummy, 1, TRAP_WAIT);
+   #endif
    // ***************************** //
 
    // ***** Do all necessary cleanup before exiting *****
