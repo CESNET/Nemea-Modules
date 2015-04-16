@@ -1,12 +1,13 @@
 /**
- * \file loggerreplay.c
+ * \file logreplay.c
  * \brief Replay CSV file from logger (need -t that generates header).
  * \author Tomas Cejka <cejkat@cesnet.cz>
  * \author Sabik Erik <xsabik02@stud.fit.vutbr.cz>
  * \date 2014
+ * \date 2015 
  */
 /*
- * Copyright (C) 2014 CESNET
+ * Copyright (C) 2014,2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -56,18 +57,15 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <getopt.h>
-#include <time.h>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 #include <map>
 
 #define DYN_FIELD_MAX_SIZE 1024 // Maximum size of dynamic field, longer fields will be cutted to this size
 
-ur_field_id_t ur_get_id_by_name(const char *name);
-
 // Struct with information about module
 trap_module_info_t module_info = {
-   (char *) "Loggerreplay", // Module name
+   (char *) "LogReplay", // Module name
    // Module description
    (char *) "This module converts CSV from logger and sends it in UniRec.\n"
    "CSV is expected to have UniRec specifier in the first line (logger -t).\n"
@@ -77,13 +75,10 @@ trap_module_info_t module_info = {
    "   Outputs: 1\n"
    "\n"
    "Usage:\n"
-   "   ./logger -i IFC_SPEC -f FILE\n"
+   "   ./logreplay -i IFC_SPEC -f FILE\n"
    "\n"
    "Module specific parameters:\n"
-   "   UNIREC_FMT   The i-th parameter of this type specifies format of UniRec\n"
-   "                expected on the i-th input interface.\n"
    "   -f FILE      Read FILE.\n"
-   "                first field (or second when -n is specified).\n"
    "   -c N         Quit after N records are received.\n"
    "   -n           Don't send \"EOF message\" at the end.\n"
 //   "   -s C         Field separator (default ',').\n"
@@ -96,17 +91,6 @@ trap_module_info_t module_info = {
 static int stop = 0;
 
 int verbose;
-static int n_inputs; // Number of input interfaces
-static ur_template_t **templates; // UniRec templates of input interfaces (array of length n_inputs)
-static ur_template_t *out_template; // UniRec template with union of fields of all inputs
-int print_ifc_num = 0;
-int print_time = 0;
-
-unsigned int num_records = 0; // Number of records received (total of all inputs)
-unsigned int max_num_records = 0; // Exit after this number of records is received
-
-
-static FILE *file; // Output file
 
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
@@ -192,6 +176,9 @@ int main(int argc, char **argv)
    ur_template_t *utmpl = NULL;
    void *data = NULL;
    map<int,string> dynamic_field_map;
+   unsigned int num_records = 0; // Number of records received (total of all inputs)
+   unsigned int max_num_records = 0; // Exit after this number of records is received
+
    // ***** Process parameters *****
 
    // Let TRAP library parse command-line arguments and extract its parameters
@@ -242,12 +229,6 @@ int main(int argc, char **argv)
       }
    }
 
-   // Create UniRec templates
-   n_inputs = argc - optind;
-   if (verbose >= 0) {
-      printf("Number of inputs: %i\n", n_inputs);
-   }
-
    f_in.open(in_filename);
    trap_ctx_t *ctx = NULL;
 
@@ -290,8 +271,10 @@ int main(int argc, char **argv)
 
       // We don't need ifc_spec anymore, destroy it
       trap_free_ifc_spec(ifc_spec);
+      
+      // Set interface tineout to TRAP_WAIT (and disable buffering (why?))
       trap_ctx_ifcctl(ctx, TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
-      trap_ctx_ifcctl(ctx, TRAPIFC_OUTPUT, 0, TRAPCTL_BUFFERSWITCH, 0);
+      //trap_ctx_ifcctl(ctx, TRAPIFC_OUTPUT, 0, TRAPCTL_BUFFERSWITCH, 0);
 
       stringstream ss(line);
       vector<ur_field_id_t> field_ids;
@@ -339,7 +322,7 @@ int main(int argc, char **argv)
             }
          }
          trap_ctx_send(ctx, 0, data, ur_rec_size(utmpl, data));
-         trap_ctx_send_flush(ctx, 0);
+         //trap_ctx_send_flush(ctx, 0);
 
       }
    }
