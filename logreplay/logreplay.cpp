@@ -178,6 +178,7 @@ int main(int argc, char **argv)
    map<int,string> dynamic_field_map;
    unsigned int num_records = 0; // Number of records received (total of all inputs)
    unsigned int max_num_records = 0; // Exit after this number of records is received
+   char is_limited = 0;
    trap_ctx_t *ctx = NULL;
 
    // ***** Process parameters *****
@@ -210,6 +211,7 @@ int main(int argc, char **argv)
             break;
          case 'c':
             max_num_records = atoi(optarg);
+            is_limited = 1;
             if (max_num_records == 0) {
                fprintf(stderr, "Error: Parameter of -c option must be integer > 0.\n");
                return 1;
@@ -289,7 +291,7 @@ int main(int argc, char **argv)
 
       /* main loop */
       while (f_in.good()) {
-         if (num_records++ >= max_num_records) {
+         if ((is_limited == 1) && (num_records++ >= max_num_records)) {
             break;
          }
 
