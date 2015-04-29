@@ -48,6 +48,7 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <string.h>
+#include <ctype.h>
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
@@ -64,9 +65,11 @@ trap_module_info_t module_info = {
    "Unirecfilter expects unirec format of messages on input. Output format is\n"
    "specified with -O flag, input format specified with -I flag.\n"
    "Filter is specified with -F flag and contains expressions (<=, ==, &&, ...).\n"
-   "You can also specify output format and filter in a FILE. Format of the file is\n"
-   "TMPLT:FLTR or only :FLTR or TMPLT: on the first line.\n"
-   "When is -O flag missing, template from input is used on output."
+   "You can also specify output format and filter in a FILE, which allows sending \n"
+   "output to multiple interfaces.\n"
+   "Format of the file is [TMPLT_1]:FILTER_1; ...; [TMPLT_N]:FILTER_N; where each\n"
+   "filter corresponds with one output interface. One-line comments starting with\n"
+   "'#' are allowed. When is -O flag missing, template from input is used on output.\n"
    "\n"
    "Usage:\n"
    "   ./unirecfilter -i IFC_SPEC -I TMPLT [-O TMPLT] [-F FLTR]\n"
@@ -81,65 +84,163 @@ trap_module_info_t module_info = {
    "\n"
    "Interfaces:\n"
    "   Inputs: 1\n"
-   "   Outputs: 1\n",
+   "   Outputs: variable\n",
    1,       // Number of input interfaces
-   1,       // Number of output interfaces
+   -1,      // Number of output interfaces (-1 = variable)
 };
 
 static int stop = 0;
 
 unsigned int num_records = 0; // Number of records received (total of all inputs)
 unsigned int max_num_records = 0; // Exit after this number of records is received
+unsigned int max_num_ifaces = 32; // Maximum number of output interfaces
 
 char *str_buffer = NULL;
 
 // Function to handle SIGTERM and SIGINT signals (used to stop the module)
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
-/**
- * \brief Get UniRec specifier part of argument
- * \param[in] str    is in following format: "<unirec spec>[:<filter>]"
- * \return copy of string, UniRec specifier of output IFC; NULL on failure
- */
-char *getOutputSpec(const char *str)
+// Structure with information for each output interface
+struct unirec_output_t
 {
-   char *p = NULL;
-   int l = strlen(str);
-   char *outS = NULL;
-   p = strchr(str, SPEC_COND_DELIM);
-   if (p == NULL) {
-      /* not found */
-      return strdup(str);
-   } else {
-      outS = (char *) calloc(p - str + 1, sizeof(char));
-      if (outS != NULL) {
-         strncpy(outS, str, p - str);
+   char *unirec_output_specifier;
+   char *filter;
+   struct ast * tree;
+   ur_template_t *out_tmplt;
+   void *out_rec;
+};
+
+// Parse file with filters and specifiers, fill structures with specified data
+int parse_file(char *str, struct unirec_output_t **output_specifiers, int n_outputs)
+{
+   int iface_index = 0; // output interface index
+   int output_specifiers_size = 1;  // size of allocated output_specifiers structure
+   char *beg_ptr = str;
+   char *end_ptr = str;
+   
+   while (iface_index < max_num_ifaces && iface_index < n_outputs)
+   {
+      // Skip leading whitespaces
+      while (isspace(*end_ptr)) {
+        end_ptr++;
       }
-      return outS;
+      
+      // Check end of file buffer
+      if (*(end_ptr) == '\0') {
+         return iface_index;
+      }
+      
+      // Line starts with '#', skip comment
+      if (*end_ptr == '#') {
+         // Rewind to end of line
+         while (*end_ptr != '\n') {
+            if (*end_ptr++ == '\0') {
+               return iface_index;
+            }
+         }
+      }
+      // Set pointer to beginning of next part
+      beg_ptr = ++end_ptr;
+      
+      // Look for output fields specification
+      while (*end_ptr != ':') {
+         if (*end_ptr++ == '\0') {
+            fprintf(stderr, "Syntax error while parsing filter file: delimiter ':' not found.\n");
+            return -1;
+         }
+      }
+      // Allocate and fill field for output fields specification for this interface
+      if ((output_specifiers[iface_index]->unirec_output_specifier = (char *) malloc(end_ptr - beg_ptr)) == NULL) {
+         fprintf(stderr, "Filter is too large, not enough memory.\n");
+            return -1;
+      };
+      memcpy(output_specifiers[iface_index]->unirec_output_specifier, beg_ptr, end_ptr - beg_ptr);
+      
+      // Set pointer to beginning of next part
+      beg_ptr = ++end_ptr;
+      
+      // Look for end of filter
+      while (*end_ptr != ';') {
+         if (*(end_ptr++) == '\0') {
+            fprintf(stderr, "Syntax error while parsing filter file: delimiter ';' not found.\n");
+            return -1;
+         }
+      }
+      // Allocate and fill field for filter specification for this interface
+      if ((output_specifiers[iface_index]->filter = (char *) malloc(end_ptr - beg_ptr))  == NULL) {
+         fprintf(stderr, "Filter is too large, not enough memory.\n");
+            return -1;
+      };
+      
+      memcpy(output_specifiers[iface_index]->filter, beg_ptr, end_ptr - beg_ptr);
+
+      end_ptr++;
+      iface_index++;
    }
+   
+   return iface_index;
+}
+
+char *load_file(char * file)
+{
+   int f_size;   // size of file with filter
+   char *file_buffer = NULL;
+   FILE *f = NULL;
+   
+   f = fopen(file, "rt");
+   // File cannot be opened / not found
+   if (f == NULL) {
+      fprintf(stderr, "Error: File %s could not be opened.\n", file);
+      return NULL;
+   }
+   
+   // Determine the file size for memory allocation
+   fseek(f, 0, SEEK_END);
+   f_size = ftell(f);
+   fseek(f, 0, SEEK_SET);
+
+   file_buffer = (char *) malloc (f_size + 1);
+
+   if (fread(file_buffer, sizeof(char), f_size, f) != f_size) {
+      fprintf(stderr, "Error: File %s could not be read.\n", file);
+      free(file_buffer);
+      fclose(f);
+      return NULL;
+   }
+
+   fclose(f);
+   file_buffer[f_size] = '\0'; 
+   
+   return file_buffer;
 }
 
 int main(int argc, char **argv)
 {
+   struct unirec_output_t **output_specifiers = NULL;
    char *unirec_output_specifier = NULL;
-   char *unirec_output = NULL;
    char *unirec_input_specifier = NULL;
    char *filter = NULL;
    char *file = NULL;
+   char *file_buffer = NULL;
    ur_template_t *in_tmplt;
-   ur_template_t *out_tmplt;
-   void *out_rec;
    char opt;
    int ret;
+   int i;
    int from = 0; // 0 - template and filter from CMD, 1 - from file
-   int f_size;   // size of file with filter
    int memory_needed = 0;
+   int n_outputs;
    ur_field_id_t field_id = UR_INVALID_FIELD;
-   struct ast * tree = NULL;
-
-   // ***** TRAP initialization *****
-   // Let TRAP library parse command-line arguments and extract its parameters
-   TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
+   
+   trap_ifc_spec_t ifc_spec;
+   ret = trap_parse_params(&argc, argv, &ifc_spec);
+   if (ret != TRAP_E_OK) {
+      if (ret == TRAP_E_HELP) { // "-h" was found
+         trap_print_help(&module_info);
+         return 0;
+      }
+      fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
+      return 1;
+   }
 
    // Parse command-line options
    while ((opt = getopt(argc, argv, "I:O:F:f:c:")) != -1) {
@@ -150,11 +251,12 @@ int main(int argc, char **argv)
       case 'O':
          unirec_output_specifier = optarg;
          break;
-      case 'F': //Filter
+      case 'F': // Filter
          filter = optarg;
          break;
-      case 'f':
+      case 'f': // File
          file = optarg;
+         from = 1;
          break;
       case 'c': {
          int nb = atoi(optarg);
@@ -174,18 +276,39 @@ int main(int argc, char **argv)
          return 4;
       }
    }
-
+   
+   // Count number of output interfaces
+   n_outputs = strlen(ifc_spec.types)-1;
+   module_info.num_ifc_out = n_outputs;
+   printf("Output interfaces: %d\n\n", n_outputs);
+   
+   // No output interfaces
+   if (n_outputs < 1) {
+      fprintf(stderr, "Error: You must specify at least one UniRec template.\n");
+      TRAP_DEFAULT_FINALIZATION();
+      return 1;
+   }
+   // More than one output interface specified from command line
+   if (from == 0 && n_outputs > 1) {
+      fprintf(stderr, "Error: For more than one output interfaces, please use parameter -f FILE.\n");
+      TRAP_DEFAULT_FINALIZATION();
+      return 1;
+   }
+   // Number of output interfaces exceeds TRAP limit
+   if (n_outputs > 32) {
+      fprintf(stderr, "Error: More than 32 interfaces is not allowed by TRAP library.\n");
+      TRAP_DEFAULT_FINALIZATION();
+      return 1;
+   }
    // Input format specifier is missing
    if (unirec_input_specifier == NULL) {
       fprintf(stderr, "Error: Invalid arguments - no input specifier.\n");
-      // Do all necessary cleanup before exiting
       TRAP_DEFAULT_FINALIZATION();
       return 5;
    }
    // Input format specifier is not valid
    else if ((in_tmplt = ur_create_template(unirec_input_specifier)) == NULL) {
       fprintf(stderr, "Error: Invalid arguments - input specifier is not valid.\n");
-      // Do all necessary cleanup before exiting
       TRAP_DEFAULT_FINALIZATION();
       return 5;
    }
@@ -193,79 +316,81 @@ int main(int argc, char **argv)
    // Output format specifier and file are both set (-O and -f)
    if ((unirec_output_specifier != NULL) && (file != NULL)) {
       fprintf(stderr, "Error: Invalid arguments - two output specifiers.\n");
-      // Do all necessary cleanup before exiting
       TRAP_DEFAULT_FINALIZATION();
       return 6;
    }
    // Filter and file are both set (-F and -f)
    else if ((filter != NULL) && (file != NULL)) {
       fprintf(stderr, "Error: Invalid arguments - two filters.\n");
-      // Do all necessary cleanup before exiting
       TRAP_DEFAULT_FINALIZATION();
       return 6;
    }
-   // Output format specifier and filter are in a file
-   if (file != NULL) {
-      FILE *f = fopen(file, "rt");
-      // File cannot be opened / not found
-      if (!f) {
-         fprintf(stderr, "Error: File %s could not be opened.\n", file);
-         // Do all necessary cleanup before exiting
+   
+   // Initialize TRAP library (create and init all interfaces)
+   ret = trap_init(&module_info, ifc_spec);
+   if (ret != TRAP_E_OK) {
+      fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
+      trap_free_ifc_spec(ifc_spec);
+      TRAP_DEFAULT_FINALIZATION();
+      return 1;
+   }
+
+   // Free ifc_spec structure
+   trap_free_ifc_spec(ifc_spec);
+   
+   // Create array of structures with output interfaces specifications
+   output_specifiers = (struct unirec_output_t**) malloc(sizeof(struct unirec_output_t*) * n_outputs);
+   
+   // Allocate new structures with output interfaces specifications
+   for (i=0; i < n_outputs; i++) {
+      output_specifiers[i] = (struct unirec_output_t*) malloc(sizeof(struct unirec_output_t));
+   }
+   
+   if (from == 1) {
+      // Copy file content into buffer
+      if ((file_buffer = load_file(file)) == NULL) {
          TRAP_DEFAULT_FINALIZATION();
          return 7;
       }
-      from = 1;
-      // Determine the file size for memory allocation
-      fseek(f, 0, SEEK_END);
-      f_size = ftell(f);
-      fseek(f, 0, SEEK_SET);
-
-      unirec_output = (char *) malloc (f_size * sizeof(char) + 1);
-
-      if (fread(unirec_output, sizeof(char), f_size, f) != f_size) {
-         fprintf(stderr, "Error: File %s could not be read.\n", file);
-         // Do all necessary cleanup before exiting
-         free(unirec_output);
-         fclose(f);
+      // Fill structure(s) with output specifications
+      if ((ret = parse_file(file_buffer, output_specifiers, n_outputs)) < 0) {
+         free(file_buffer);
          TRAP_DEFAULT_FINALIZATION();
          return 7;
+      };
+      // Number of filters specified in file is not sufficient
+      if (ret < n_outputs) {
+         fprintf(stderr, "Warning: number of output filters specified in file is lower than expected (%d < %d).\n", ret, n_outputs);
       }
-
-      fclose(f);
-      unirec_output[f_size] = '\0';
-
-      // Get output format specifier
-      if (!(unirec_output_specifier = getOutputSpec(unirec_output))) {
-         fprintf(stderr, "Error: Not enough memory for output UniRec.\n");
-         // Do all necessary cleanup before exiting
-         free(unirec_output);
-         TRAP_DEFAULT_FINALIZATION();
-         return 8;
+      free(file_buffer);
+   }
+   
+   else { // From command line
+      output_specifiers[0]->unirec_output_specifier = unirec_output_specifier;
+      output_specifiers[0]->filter = filter;
+   }
+   
+   // Create trees and templates for all items
+   for (i = 0; i < n_outputs; i++) {
+      // Get Abstract syntax tree from filter
+      output_specifiers[i]->tree = getTree(output_specifiers[i]->filter);
+      
+      // Create UniRec output template and record
+      if (unirec_output_specifier && unirec_output_specifier[0] != '\0') { // Not NULL or Empty
+         output_specifiers[i]->out_tmplt = ur_create_template(output_specifiers[i]->unirec_output_specifier);
+      } else { //output template == input template
+         output_specifiers[i]->out_tmplt = ur_create_template(unirec_input_specifier);
       }
-   }
-
-   // Get Abstract syntax tree from filter
-   if (from == 1) { // From File
-      tree = getTree(unirec_output);
-   } else { // From CMD
-      tree = getTree(filter);
-   }
-
-   // Create UniRec output template and record
-   if (unirec_output_specifier && unirec_output_specifier[0] != '\0') { // Not NULL or Empty
-      out_tmplt = ur_create_template(unirec_output_specifier);
-   } else { //output template == input template
-      out_tmplt = ur_create_template(unirec_input_specifier);
-   }
-   // calculate maximum needed memory for dynamic fields
-   while ((field_id = ur_iter_fields(out_tmplt, field_id)) != UR_INVALID_FIELD) {
-      if (ur_is_dynamic(field_id)) {
-         memory_needed += DYN_FIELD_MAX_SIZE;
+      // Calculate maximum needed memory for dynamic fields
+      while ((field_id = ur_iter_fields(output_specifiers[i]->out_tmplt, field_id)) != UR_INVALID_FIELD) {
+         if (ur_is_dynamic(field_id)) {
+            memory_needed += DYN_FIELD_MAX_SIZE;
+         }
       }
+      output_specifiers[i]->out_rec = ur_create(output_specifiers[i]->out_tmplt, memory_needed);
    }
-   out_rec = ur_create(out_tmplt, memory_needed);
-
-   // allocate auxiliary buffer for evalAST()
+   
+   // Allocate auxiliary buffer for evalAST()
    str_buffer = (char *) malloc(65536 * sizeof(char)); // no string in unirec can be longer than 64kB
 
    if (str_buffer == NULL) {
@@ -278,6 +403,7 @@ int main(int argc, char **argv)
    while (!stop) {
       const void *in_rec;
       uint16_t in_rec_size;
+      
       // Receive data from any input interface, wait until data are available
       ret = trap_recv(0, &in_rec, &in_rec_size);
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
@@ -294,49 +420,50 @@ int main(int argc, char **argv)
          }
       }
       // PROCESS THE DATA
-
-      if (!tree || (tree && evalAST(tree, in_tmplt, in_rec))) {
-        //Iterate over all output fields; if the field is present in input template, copy it to output record
-        // If missing, set null
-        void *ptr1 = NULL, *ptr2 = NULL;
-        ur_field_id_t id;
-        ur_iter_t iter = UR_ITER_BEGIN;
-        while ((id = ur_iter_fields_tmplt(out_tmplt, &iter)) != UR_INVALID_FIELD) {
-           if (!ur_is_dynamic(id)) { //static field
-              if (ur_is_present(in_tmplt, id)) {
-                 ptr1 = ur_get_ptr_by_id(in_tmplt, in_rec, id);
-                 ptr2 = ur_get_ptr_by_id(out_tmplt, out_rec, id);
-             //copy the data
-                 if ((ptr1 != NULL) && (ptr2 != NULL)) {
-                    memcpy(ptr2, ptr1, ur_get_size_by_id(id));
+      for (i = 0; i < n_outputs; i++) {
+         if (!(output_specifiers[i]->tree) || (output_specifiers[i]->tree && evalAST(output_specifiers[i]->tree, in_tmplt, in_rec))) {
+           //Iterate over all output fields; if the field is present in input template, copy it to output record
+           // If missing, set null
+           void *ptr1 = NULL, *ptr2 = NULL;
+           ur_field_id_t id;
+           ur_iter_t iter = UR_ITER_BEGIN;
+           while ((id = ur_iter_fields_tmplt(output_specifiers[i]->out_tmplt, &iter)) != UR_INVALID_FIELD) {
+              if (!ur_is_dynamic(id)) { //static field
+                 if (ur_is_present(in_tmplt, id)) {
+                    ptr1 = ur_get_ptr_by_id(in_tmplt, in_rec, id);
+                    ptr2 = ur_get_ptr_by_id(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id);
+                //copy the data
+                    if ((ptr1 != NULL) && (ptr2 != NULL)) {
+                       memcpy(ptr2, ptr1, ur_get_size_by_id(id));
+                    }
+                 } else { //missing static field
+                    SET_NULL(id, output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec);
                  }
-              } else { //missing static field
-                 SET_NULL(id, out_tmplt, out_rec);
-              }
-           } else { //dynamic field
-              if (ur_is_present(in_tmplt, id)) {
-                 char* in_ptr = ur_get_dyn(in_tmplt, in_rec, id);
-                 int size = ur_get_dyn_size(in_tmplt, in_rec, id);
-                 char* out_ptr = ur_get_dyn(out_tmplt, out_rec, id);
-                 // Check size of dynamic field and if longer than maximum size then cut it
-                 if (size > DYN_FIELD_MAX_SIZE)
-                    size = DYN_FIELD_MAX_SIZE;
-                 //copy the data
-                 memcpy(out_ptr, in_ptr, size);
-                 //set offset to the end of the data in the new record
-                 int new_offset = ur_get_dyn_offset_start(out_tmplt, out_rec, id) + size;
-                 ur_set_dyn_offset(out_tmplt, out_rec, id, new_offset);
-              } else { //missing dynamic field
-                 ur_set_dyn_offset(out_tmplt, out_rec, id, ur_get_dyn_offset_start(out_tmplt, out_rec, id));
+              } else { //dynamic field
+                 if (ur_is_present(in_tmplt, id)) {
+                    char* in_ptr = ur_get_dyn(in_tmplt, in_rec, id);
+                    int size = ur_get_dyn_size(in_tmplt, in_rec, id);
+                    char* out_ptr = ur_get_dyn(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id);
+                    // Check size of dynamic field and if longer than maximum size then cut it
+                    if (size > DYN_FIELD_MAX_SIZE)
+                       size = DYN_FIELD_MAX_SIZE;
+                    //copy the data
+                    memcpy(out_ptr, in_ptr, size);
+                    //set offset to the end of the data in the new record
+                    int new_offset = ur_get_dyn_offset_start(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id) + size;
+                    ur_set_dyn_offset(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id, new_offset);
+                 } else { //missing dynamic field
+                    ur_set_dyn_offset(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id, 
+                                      ur_get_dyn_offset_start(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id));
+                 }
               }
            }
+           // Send record to corresponding interface
+           ret = trap_send(i, output_specifiers[i]->out_rec, ur_rec_size(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec));
+           trap_send_flush(i);
+           // Handle possible errors
+           TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, 0, break);
         }
-
-        // Send record to interface 0
-        ret = trap_send(0, out_rec, ur_rec_size(out_tmplt, out_rec));
-        trap_send_flush(0);
-        // Handle possible errors
-        TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, 0, break);
      }
 
       // Quit if maximum number of records has been reached
@@ -344,27 +471,31 @@ int main(int argc, char **argv)
       if (max_num_records && max_num_records == num_records) {
          stop = 1;
       }
-
    }
    free(str_buffer);
 
    // ***** Cleanup *****
    TRAP_DEFAULT_FINALIZATION();
 
-   freeAST(tree);
-
-   if (unirec_output_specifier != NULL) {
-      free(unirec_output_specifier);
-      unirec_output_specifier = NULL;
-   }
-   if (from && unirec_output != NULL) {
-      free(unirec_output);
-      unirec_output = NULL;
-   }
-   ur_free(out_rec);
    ur_free_template(in_tmplt);
-   ur_free_template(out_tmplt);
+      
+   for (i = 0; i < n_outputs; i++) {
+      if (output_specifiers[i]->tree != NULL) {
+         freeAST(output_specifiers[i]->tree);
+      }
 
+      if (output_specifiers[i]->unirec_output_specifier != NULL) {
+         free(output_specifiers[i]->unirec_output_specifier);
+         output_specifiers[i]->unirec_output_specifier = NULL;
+      }
+      
+      ur_free(output_specifiers[i]->out_rec);
+      ur_free_template(output_specifiers[i]->out_tmplt);
+      
+      free(output_specifiers[i]);
+   }
+
+   free(output_specifiers);
    return 0;
 }
 
