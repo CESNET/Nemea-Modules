@@ -105,7 +105,7 @@ struct unirec_output_t
 {
    char *unirec_output_specifier;
    char *filter;
-   struct ast * tree;
+   struct ast *tree;
    ur_template_t *out_tmplt;
    void *out_rec;
 };
@@ -114,71 +114,65 @@ struct unirec_output_t
 int parse_file(char *str, struct unirec_output_t **output_specifiers, int n_outputs)
 {
    int iface_index = 0; // output interface index
-   int output_specifiers_size = 1;  // size of allocated output_specifiers structure
    char *beg_ptr = str;
    char *end_ptr = str;
    
    while (iface_index < max_num_ifaces && iface_index < n_outputs)
    {
-      // Skip leading whitespaces
-      while (isspace(*end_ptr)) {
-        end_ptr++;
-      }
-      
-      // Check end of file buffer
-      if (*(end_ptr) == '\0') {
+      switch (*end_ptr) {
+      // End of file
+      case '\0':
          return iface_index;
-      }
-      
-      // Line starts with '#', skip comment
-      if (*end_ptr == '#') {
-         // Rewind to end of line
-         while (*end_ptr != '\n') {
-            if (*end_ptr++ == '\0') {
-               return iface_index;
-            }
+      // Comment
+      case '#':
+         if ((end_ptr = strchr(end_ptr, '\n')) == NULL) {
+            return iface_index;
          }
-      }
-      // Set pointer to beginning of next part
-      beg_ptr = ++end_ptr;
-      
-      // Look for output fields specification
-      while (*end_ptr != ':') {
-         if (*end_ptr++ == '\0') {
+         break;
+      // Beginning of filter
+      case ':':
+         beg_ptr = end_ptr + 1;
+         if ((end_ptr = strchr(end_ptr, ';')) == NULL) {
+            fprintf(stderr, "Syntax error while parsing file: delimiter ';' not found.\n");
+            return -1;
+         }
+         else if (end_ptr == beg_ptr) {
+            // Empty filter
+            output_specifiers[iface_index]->filter = NULL;
+         }
+         else {
+            // Allocate and fill field for filter for this interface
+            if ((output_specifiers[iface_index]->filter = (char *) malloc(end_ptr - beg_ptr)) == NULL) {
+               fprintf(stderr, "Filter is too large, not enough memory.\n");
+                  return -1;
+            }
+            memcpy(output_specifiers[iface_index]->filter, beg_ptr, end_ptr - beg_ptr);
+         }
+         iface_index++;
+         break;
+      // End of previous filter or whitespace
+      case ';':
+      case ' ':
+      case '\t':
+      case '\n':
+         end_ptr++;
+         break;
+      // Beginning of output specifier
+      default:
+         beg_ptr = end_ptr;
+         if ((end_ptr = strchr(end_ptr, ':')) == NULL) {
             fprintf(stderr, "Syntax error while parsing filter file: delimiter ':' not found.\n");
             return -1;
          }
+         // Allocate and fill field for output specification for this interface
+         if ((output_specifiers[iface_index]->unirec_output_specifier = (char *) malloc(end_ptr - beg_ptr)) == NULL) {
+            fprintf(stderr, "Filter is too large, not enough memory.\n");
+            return -1;
+         };
+         memcpy(output_specifiers[iface_index]->unirec_output_specifier, beg_ptr, end_ptr - beg_ptr);
+         break;
       }
-      // Allocate and fill field for output fields specification for this interface
-      if ((output_specifiers[iface_index]->unirec_output_specifier = (char *) malloc(end_ptr - beg_ptr)) == NULL) {
-         fprintf(stderr, "Filter is too large, not enough memory.\n");
-            return -1;
-      };
-      memcpy(output_specifiers[iface_index]->unirec_output_specifier, beg_ptr, end_ptr - beg_ptr);
-      
-      // Set pointer to beginning of next part
-      beg_ptr = ++end_ptr;
-      
-      // Look for end of filter
-      while (*end_ptr != ';') {
-         if (*(end_ptr++) == '\0') {
-            fprintf(stderr, "Syntax error while parsing filter file: delimiter ';' not found.\n");
-            return -1;
-         }
-      }
-      // Allocate and fill field for filter specification for this interface
-      if ((output_specifiers[iface_index]->filter = (char *) malloc(end_ptr - beg_ptr))  == NULL) {
-         fprintf(stderr, "Filter is too large, not enough memory.\n");
-            return -1;
-      };
-      
-      memcpy(output_specifiers[iface_index]->filter, beg_ptr, end_ptr - beg_ptr);
-
-      end_ptr++;
-      iface_index++;
    }
-   
-   return iface_index;
 }
 
 char *load_file(char * file)
@@ -216,7 +210,8 @@ char *load_file(char * file)
 
 int main(int argc, char **argv)
 {
-   struct unirec_output_t **output_specifiers = NULL;
+   struct unirec_output_t **output_specifiers = NULL; // filters and output specifiers
+   char **port_numbers; 
    char *unirec_output_specifier = NULL;
    char *unirec_input_specifier = NULL;
    char *filter = NULL;
@@ -249,10 +244,11 @@ int main(int argc, char **argv)
          unirec_input_specifier = optarg;
          break;
       case 'O':
-         unirec_output_specifier = optarg;
+         // Using strdup is necessary for freeing correctly
+         unirec_output_specifier = strdup(optarg);
          break;
       case 'F': // Filter
-         filter = optarg;
+         filter = strdup(optarg);
          break;
       case 'f': // File
          file = optarg;
@@ -278,10 +274,10 @@ int main(int argc, char **argv)
    }
    
    // Count number of output interfaces
-   n_outputs = strlen(ifc_spec.types)-1;
+   n_outputs = strlen(ifc_spec.types) - 1;
    module_info.num_ifc_out = n_outputs;
-   printf("Output interfaces: %d\n\n", n_outputs);
-   
+   printf("Output interfaces: %d\n", n_outputs);
+
    // No output interfaces
    if (n_outputs < 1) {
       fprintf(stderr, "Error: You must specify at least one UniRec template.\n");
@@ -290,7 +286,7 @@ int main(int argc, char **argv)
    }
    // More than one output interface specified from command line
    if (from == 0 && n_outputs > 1) {
-      fprintf(stderr, "Error: For more than one output interfaces, please use parameter -f FILE.\n");
+      fprintf(stderr, "Error: For more than one output interface use parameter -f FILE.\n");
       TRAP_DEFAULT_FINALIZATION();
       return 1;
    }
@@ -325,42 +321,63 @@ int main(int argc, char **argv)
       TRAP_DEFAULT_FINALIZATION();
       return 6;
    }
+
+   // Save output interfaces numbers
+   port_numbers = (char**) malloc(n_outputs * sizeof(char*));
+   for (i = 1; i <= n_outputs; i++) {
+      port_numbers[i-1] = strdup(ifc_spec.params[i]);
+   }
    
    // Initialize TRAP library (create and init all interfaces)
    ret = trap_init(&module_info, ifc_spec);
    if (ret != TRAP_E_OK) {
       fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
       trap_free_ifc_spec(ifc_spec);
+      for (i = 0; i < n_outputs; i++) {
+          free(port_numbers[i]);
+      }
+      free(port_numbers);
       TRAP_DEFAULT_FINALIZATION();
       return 1;
    }
-
-   // Free ifc_spec structure
-   trap_free_ifc_spec(ifc_spec);
    
    // Create array of structures with output interfaces specifications
    output_specifiers = (struct unirec_output_t**) malloc(sizeof(struct unirec_output_t*) * n_outputs);
    
    // Allocate new structures with output interfaces specifications
-   for (i=0; i < n_outputs; i++) {
+   for (i = 0; i < n_outputs; i++) {
       output_specifiers[i] = (struct unirec_output_t*) malloc(sizeof(struct unirec_output_t));
    }
    
    if (from == 1) {
       // Copy file content into buffer
       if ((file_buffer = load_file(file)) == NULL) {
+         for (i = 0; i < n_outputs; i++) {
+            free(port_numbers[i]);
+         }
+         free(port_numbers);
          TRAP_DEFAULT_FINALIZATION();
          return 7;
       }
       // Fill structure(s) with output specifications
       if ((ret = parse_file(file_buffer, output_specifiers, n_outputs)) < 0) {
+         for (i = 0; i < n_outputs; i++) {
+            free(port_numbers[i]);
+         }
+         free(port_numbers);
          free(file_buffer);
          TRAP_DEFAULT_FINALIZATION();
          return 7;
       };
       // Number of filters specified in file is not sufficient
       if (ret < n_outputs) {
-         fprintf(stderr, "Warning: number of output filters specified in file is lower than expected (%d < %d).\n", ret, n_outputs);
+         fprintf(stderr, "Error: number of output filters specified in file is lower than expected (%d < %d).\n", ret, n_outputs);
+         for (i = 0; i < n_outputs; i++) {
+            free(port_numbers[i]);
+         }
+         free(port_numbers);
+         TRAP_DEFAULT_FINALIZATION();
+         return 8;
       }
       free(file_buffer);
    }
@@ -372,6 +389,9 @@ int main(int argc, char **argv)
    
    // Create trees and templates for all items
    for (i = 0; i < n_outputs; i++) {
+      // Print output interface port number
+      printf("[%s] ", port_numbers[i]);
+
       // Get Abstract syntax tree from filter
       output_specifiers[i]->tree = getTree(output_specifiers[i]->filter);
       
@@ -392,11 +412,13 @@ int main(int argc, char **argv)
    
    // Allocate auxiliary buffer for evalAST()
    str_buffer = (char *) malloc(65536 * sizeof(char)); // no string in unirec can be longer than 64kB
-
    if (str_buffer == NULL) {
-      stop = 1;
       fprintf(stderr, "Error: Not enough memory for string buffer.\n");
+      stop = 1;
    }
+
+   // Free ifc_spec structure
+   trap_free_ifc_spec(ifc_spec);
 
    /* main loop */
    // Copy data from input to output
@@ -472,9 +494,9 @@ int main(int argc, char **argv)
          stop = 1;
       }
    }
-   free(str_buffer);
 
    // ***** Cleanup *****
+   free(str_buffer);
    TRAP_DEFAULT_FINALIZATION();
 
    ur_free_template(in_tmplt);
@@ -482,19 +504,22 @@ int main(int argc, char **argv)
    for (i = 0; i < n_outputs; i++) {
       if (output_specifiers[i]->tree != NULL) {
          freeAST(output_specifiers[i]->tree);
+         output_specifiers[i]->tree = NULL;
       }
-
       if (output_specifiers[i]->unirec_output_specifier != NULL) {
          free(output_specifiers[i]->unirec_output_specifier);
          output_specifiers[i]->unirec_output_specifier = NULL;
       }
-      
+      if (output_specifiers[i]->filter != NULL) {
+         free(output_specifiers[i]->filter);
+         output_specifiers[i]->filter = NULL;
+      }
       ur_free(output_specifiers[i]->out_rec);
       ur_free_template(output_specifiers[i]->out_tmplt);
-      
       free(output_specifiers[i]);
+      free(port_numbers[i]);
    }
-
+   free(port_numbers);
    free(output_specifiers);
    return 0;
 }
