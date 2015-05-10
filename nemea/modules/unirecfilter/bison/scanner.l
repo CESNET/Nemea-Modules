@@ -36,7 +36,6 @@ HEX [0-9a-fA-F]{0,4}
 "("                                                      { return LEFT; }
 ")"                                                      { return RIGHT; }
 " "+|\t+|\n+                                             { /* skip whitespaces */ }
-<<EOF>>                                                  { return END; }
 %%
 
 YY_BUFFER_STATE get_buf(){

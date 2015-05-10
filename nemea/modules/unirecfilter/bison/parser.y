@@ -1,5 +1,7 @@
 %{
     #include <stdio.h>
+    extern struct ast *main_tree;
+
     /* functions definition */
     struct ast *newAST(struct ast *l, struct ast *r, int operator);
     struct ast *newExpression(char *column, char *cmp, int number);
@@ -37,14 +39,18 @@
 %token END
 
 %type <ast> exp explist
+%start body
 %%
 
-explist: END { return 0; }
-    | exp { $$ = newAST($1, NULL, 0); }
+body:
+    | explist { changeProtocol(&$1); main_tree = $1; }
+    ;
+
+explist:
+    exp { $$ = newAST($1, NULL, 0); }
     | explist OPERATOR exp { $$ = newAST($1, $3, $2); }
     | explist OPERATOR LEFT explist RIGHT { $$ = newAST($1, (struct ast *) newBrack($4), $2); }
     | LEFT explist RIGHT { $$ = (struct ast *) newBrack($2); }
-    | explist END { /*printAST($$); printf("\n");*/ changeProtocol(&$$); return (int) $$;}
     ;
  
 exp:

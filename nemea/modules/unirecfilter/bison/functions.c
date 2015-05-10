@@ -54,6 +54,8 @@
 #include <sys/types.h>
 #include <regex.h>
 
+struct ast *main_tree = NULL;
+
 struct ast *newAST(struct ast *l, struct ast *r, int operator)
 {
     struct ast *newast = malloc(sizeof(struct ast));
@@ -373,18 +375,17 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
               return 1;
            }
         } else {
-           if (strncmp(((struct str*) ast)->s, expr, size) == 0) { //Same strings
-              if ( ((struct str*) ast)->cmp==0 ) {
-                 return 1;
-              } else {
-                 return 0;
-              }
-           } else { //Different strings
-              if ( ((struct str*) ast)->cmp==1 ) {
-                 return 1;
-              } else {
-                 return 0;
-              }
+           //TODO add comments
+           int ret;
+           if (strlen(((struct str*) ast)->s) != size || strncmp(((struct str*) ast)->s, expr, size) != 0) {
+              ret = 0;
+           } else {
+              ret = 1;
+           }
+           if ( ((struct str*) ast)->cmp == 0) {
+              return ret;
+           } else {
+              return !ret;
            }
         }
     }
@@ -432,33 +433,30 @@ void changeProtocol(struct ast **ast)
 
 /**
  * \brief Get Abstract syntax tree from filter
- * \param[in] str    is in following format: "<filter>" or "<template>:<filter>"
+ * \param[in] str is in following format: "<filter>"
  * \return pointer to abstract syntax tree
  */
+ 
 struct ast *getTree(const char *str)
 {
+   struct ast *result;
    if (str == NULL || str[0] == '\0') {
       printf("No Filter.\n");
       return NULL;
    }
-   char *p = NULL;
-   p = strchr(str, SPEC_COND_DELIM);
-   /* ':' not found */
-   if (p == NULL) { //Format: "FLRT"
-      yy_scan_string (str);
-   /* ':' found */
-   } else { //Format: "TMPLT:FLTR" or ":FLTR" or "TMPLT:"
-      if (*(p+1) == '\0') {
-        printf("No Filter.\n");
-        return NULL;
-      }
-      yy_scan_string (p+1);
+   yy_scan_string(str);
+   
+   if (yyparse()) {        // failure
+      result = NULL;
+   } else {
+      result = main_tree;  // success
    }
-   struct ast * tmp = (struct ast *) yyparse(); //this returns pointer to the tree
    yy_delete_buffer(get_buf());
+   
    printf("Filter: ");
-   printAST(tmp);
+   printAST(result);
    printf("\n");
-   return tmp;
+ 
+   return result;
 }
 
