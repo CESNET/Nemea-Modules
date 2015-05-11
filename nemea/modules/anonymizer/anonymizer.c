@@ -44,6 +44,7 @@
 
 #include "anonymizer.h"
 #include "panonymizer.h"
+#include <nemea-common.h>
 
 
 
@@ -205,11 +206,12 @@ void ip_anonymize(ur_template_t *tmplt, const void *data, uint8_t mode)
    }
 }
 
-
+NMCM_PROGRESS_DECL
 
 
 int main(int argc, char **argv)
 {
+NMCM_PROGRESS_DEF
    int ret;
    uint8_t init_key[32] = {0};
    char *secret_key = "01234567890123450123456789012345";
@@ -226,7 +228,7 @@ int main(int argc, char **argv)
    #endif
    // ***************************** //
 
-
+NMCM_PROGRESS_INIT(500,puts("-"))
 
    // ***** TRAP initialization *****
    TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
@@ -294,17 +296,42 @@ int main(int argc, char **argv)
       uint16_t data_size;
       ret = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
       TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
-
       // Check size of received data
-      if (data_size < ur_rec_static_size(tmplt)) {
-         if (data_size <= 1) {
+      if (data_size == 1) {
+        break;
+      }
+      if (data_size != 1 && (data_size < ur_rec_static_size(tmplt) || data_size > 250)) {
+          #ifdef __cplusplus
+          extern "C" {
+          #endif
+          extern void *trap_glob_ctx;
+          #ifdef __cplusplus
+          }
+          #endif
+          extern void *trap_glob_ctx;
+          trap_ctx_create_ifc_dump(trap_glob_ctx, NULL);
+              printf("%u\n", data_size);
+              for (int i = -64; i < 256; i++) {
+                      printf("%02x ", (unsigned int)((unsigned char*)data)[i]);
+                      if (i % 16 == 15 || i % 16 == -1)
+                              printf("\n");
+		      if (i == -1)
+			      printf("\n--\n");
+              }
+              printf("\n");
+              exit(1);
+         fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
+                 ur_rec_static_size(tmplt), data_size);
+         continue;
+         /*if (data_size <= 1) {
+            printf("EOF received\n");
             break; // End of data (used for testing purposes)
          }
          else {
             fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
                     ur_rec_static_size(tmplt), data_size);
             break;
-         }
+         }*/
       }
 
 
@@ -326,7 +353,7 @@ int main(int argc, char **argv)
 
       // Send anonymized data
       trap_send_data(0, data, ur_rec_size(tmplt, data), TRAP_NO_WAIT);
-
+      NMCM_PROGRESS_PRINT
    }
 
    // ***** ONLY FOR DEBUGING ***** //
