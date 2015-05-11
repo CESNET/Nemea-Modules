@@ -228,7 +228,7 @@ NMCM_PROGRESS_DEF
    #endif
    // ***************************** //
 
-NMCM_PROGRESS_INIT(500,puts("-"))
+NMCM_PROGRESS_INIT(10000,puts("-"))
 
    // ***** TRAP initialization *****
    TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
@@ -288,7 +288,7 @@ NMCM_PROGRESS_INIT(500,puts("-"))
       PAnonymizer_Init(init_key);
    }
 
-
+   trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_AUTOFLUSH_TIMEOUT, TRAP_NO_AUTO_FLUSH);
    // ***** Main processing loop *****
    while (!stop) {
       // Receive data from any interface, wait until data are available
@@ -309,6 +309,7 @@ NMCM_PROGRESS_INIT(500,puts("-"))
           }
           #endif
           extern void *trap_glob_ctx;
+          printf("tmpl: %d\n", ur_rec_static_size(tmplt));
           trap_ctx_create_ifc_dump(trap_glob_ctx, NULL);
               printf("%u\n", data_size);
               for (int i = -64; i < 256; i++) {
@@ -352,7 +353,11 @@ NMCM_PROGRESS_INIT(500,puts("-"))
       #endif
 
       // Send anonymized data
-      trap_send_data(0, data, ur_rec_size(tmplt, data), TRAP_NO_WAIT);
+      uint16_t s = ur_rec_size(tmplt, data);
+      //if (s > data_size) {
+      //  fprintf(stderr, "send: wrong size: (tx) %"PRIu16" x %"PRIu16" (rx)\n", s, data_size);
+      //}
+      trap_send_data(0, data, data_size, TRAP_NO_WAIT);
       NMCM_PROGRESS_PRINT
    }
 
