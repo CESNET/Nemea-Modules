@@ -178,6 +178,8 @@ int main(int argc, char **argv)
    map<int,string> dynamic_field_map;
    unsigned int num_records = 0; // Number of records received (total of all inputs)
    unsigned int max_num_records = 0; // Exit after this number of records is received
+   char is_limited = 0;
+   trap_ctx_t *ctx = NULL;
 
    // ***** Process parameters *****
 
@@ -187,8 +189,10 @@ int main(int argc, char **argv)
    if (ret != TRAP_E_OK) {
       if (ret == TRAP_E_HELP) { // "-h" was found
          trap_print_help(&module_info);
+         trap_free_ifc_spec(ifc_spec);
          return 0;
       }
+      trap_free_ifc_spec(ifc_spec);
       fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
       return 1;
    }
@@ -207,6 +211,7 @@ int main(int argc, char **argv)
             break;
          case 'c':
             max_num_records = atoi(optarg);
+            is_limited = 1;
             if (max_num_records == 0) {
                fprintf(stderr, "Error: Parameter of -c option must be integer > 0.\n");
                return 1;
@@ -225,12 +230,15 @@ int main(int argc, char **argv)
          //   break;
          default:
             fprintf(stderr, "Error: Invalid arguments.\n");
-            return 1;
+            goto exit;
       }
+   }
+   if (in_filename == NULL) {
+      fprintf(stderr, "Error: Missing parameter -f with input file.\n");
+      goto exit;
    }
 
    f_in.open(in_filename);
-   trap_ctx_t *ctx = NULL;
 
    if (f_in.good()) {
       getline(f_in, line, record_delim);
@@ -264,14 +272,10 @@ int main(int argc, char **argv)
       ctx = trap_ctx_init(&module_info, ifc_spec);
       if (ret != TRAP_E_OK) {
          fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
-         trap_free_ifc_spec(ifc_spec);
          ret = 2;
          goto exit;
       }
 
-      // We don't need ifc_spec anymore, destroy it
-      trap_free_ifc_spec(ifc_spec);
-      
       // Set interface tineout to TRAP_WAIT (and disable buffering (why?))
       trap_ctx_ifcctl(ctx, TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
       //trap_ctx_ifcctl(ctx, TRAPIFC_OUTPUT, 0, TRAPCTL_BUFFERSWITCH, 0);
@@ -287,7 +291,7 @@ int main(int argc, char **argv)
 
       /* main loop */
       while (f_in.good()) {
-         if (num_records++ >= max_num_records) {
+         if ((is_limited == 1) && (num_records++ >= max_num_records)) {
             break;
          }
 
@@ -330,6 +334,7 @@ int main(int argc, char **argv)
    // ***** Cleanup *****
 
 exit:
+   trap_free_ifc_spec(ifc_spec);
    if (f_in.is_open()) {
       f_in.close();
    }
