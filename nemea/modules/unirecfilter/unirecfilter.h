@@ -1,11 +1,14 @@
 /**
  * \file unirecfilter.h
  * \brief NEMEA module selecting records and sending specified fields.
+ * \author Zdenek Kasner <kasnezde@fit.cvut.cz>
  * \author Tomas Cejka <cejkat@cesnet.cz>
+ * \date 2013
  * \date 2014
+ * \date 2015
  */
 /*
- * Copyright (C) 2013,2014 CESNET
+ * Copyright (C) 2013-2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -48,7 +51,7 @@
 #include <regex.h>
 
 #define SPEC_COND_DELIM    ':'
-#define DYN_FIELD_MAX_SIZE 1024 // Maximum size of dynamic field, longer fields will be cutted to this size
+#define DYN_FIELD_MAX_SIZE 1024 // Maximal size of dynamic field, longer fields will be cutted to this size
 
 #define SET_NULL(field_id, tmpl, data) \
 memset(ur_get_ptr_by_id(tmpl, data, field_id), 0, ur_get_size_by_id(field_id));

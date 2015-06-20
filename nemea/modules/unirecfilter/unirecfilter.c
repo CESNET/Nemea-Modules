@@ -2,11 +2,14 @@
  * \file unirecfilter.c
  * \brief NEMEA module selecting records and sending specified fields.
  * \author Klara Drhova <drhovkla@fit.cvut.cz>
+ * \author Zdenek Kasner <kasnezde@fit.cvut.cz>
  * \author Tomas Cejka <cejkat@cesnet.cz>
+ * \date 2013
  * \date 2014
+ * \date 2015
  */
 /*
- * Copyright (C) 2013,2014 CESNET
+ * Copyright (C) 2013-2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -116,7 +119,7 @@ int parse_file(char *str, struct unirec_output_t **output_specifiers, int n_outp
    int iface_index = 0; // output interface index
    char *beg_ptr = str;
    char *end_ptr = str;
-   
+
    while (iface_index < max_num_ifaces && iface_index < n_outputs)
    {
       switch (*end_ptr) {
@@ -180,14 +183,14 @@ char *load_file(char * file)
    int f_size;   // size of file with filter
    char *file_buffer = NULL;
    FILE *f = NULL;
-   
+
    f = fopen(file, "rt");
    // File cannot be opened / not found
    if (f == NULL) {
       fprintf(stderr, "Error: File %s could not be opened.\n", file);
       return NULL;
    }
-   
+
    // Determine the file size for memory allocation
    fseek(f, 0, SEEK_END);
    f_size = ftell(f);
@@ -203,15 +206,15 @@ char *load_file(char * file)
    }
 
    fclose(f);
-   file_buffer[f_size] = '\0'; 
-   
+   file_buffer[f_size] = '\0';
+
    return file_buffer;
 }
 
 int main(int argc, char **argv)
 {
    struct unirec_output_t **output_specifiers = NULL; // filters and output specifiers
-   char **port_numbers; 
+   char **port_numbers;
    char *unirec_output_specifier = NULL;
    char *unirec_input_specifier = NULL;
    char *filter = NULL;
@@ -225,7 +228,7 @@ int main(int argc, char **argv)
    int memory_needed = 0;
    int n_outputs;
    ur_field_id_t field_id = UR_INVALID_FIELD;
-   
+
    trap_ifc_spec_t ifc_spec;
    ret = trap_parse_params(&argc, argv, &ifc_spec);
    if (ret != TRAP_E_OK) {
@@ -272,7 +275,7 @@ int main(int argc, char **argv)
          return 4;
       }
    }
-   
+
    // Count number of output interfaces
    n_outputs = strlen(ifc_spec.types) - 1;
    module_info.num_ifc_out = n_outputs;
@@ -327,7 +330,7 @@ int main(int argc, char **argv)
    for (i = 1; i <= n_outputs; i++) {
       port_numbers[i-1] = strdup(ifc_spec.params[i]);
    }
-   
+
    // Initialize TRAP library (create and init all interfaces)
    ret = trap_init(&module_info, ifc_spec);
    if (ret != TRAP_E_OK) {
@@ -340,15 +343,15 @@ int main(int argc, char **argv)
       TRAP_DEFAULT_FINALIZATION();
       return 1;
    }
-   
+
    // Create array of structures with output interfaces specifications
    output_specifiers = (struct unirec_output_t**) malloc(sizeof(struct unirec_output_t*) * n_outputs);
-   
+
    // Allocate new structures with output interfaces specifications
    for (i = 0; i < n_outputs; i++) {
       output_specifiers[i] = (struct unirec_output_t*) malloc(sizeof(struct unirec_output_t));
    }
-   
+
    if (from == 1) {
       // Copy file content into buffer
       if ((file_buffer = load_file(file)) == NULL) {
@@ -381,12 +384,12 @@ int main(int argc, char **argv)
       }
       free(file_buffer);
    }
-   
+
    else { // From command line
       output_specifiers[0]->unirec_output_specifier = unirec_output_specifier;
       output_specifiers[0]->filter = filter;
    }
-   
+
    // Create trees and templates for all items
    for (i = 0; i < n_outputs; i++) {
       // Print output interface port number
@@ -394,7 +397,7 @@ int main(int argc, char **argv)
 
       // Get Abstract syntax tree from filter
       output_specifiers[i]->tree = getTree(output_specifiers[i]->filter);
-      
+
       // Create UniRec output template and record
       if (unirec_output_specifier && unirec_output_specifier[0] != '\0') { // Not NULL or Empty
          output_specifiers[i]->out_tmplt = ur_create_template(output_specifiers[i]->unirec_output_specifier);
@@ -409,7 +412,7 @@ int main(int argc, char **argv)
       }
       output_specifiers[i]->out_rec = ur_create(output_specifiers[i]->out_tmplt, memory_needed);
    }
-   
+
    // Allocate auxiliary buffer for evalAST()
    str_buffer = (char *) malloc(65536 * sizeof(char)); // no string in unirec can be longer than 64kB
    if (str_buffer == NULL) {
@@ -425,7 +428,7 @@ int main(int argc, char **argv)
    while (!stop) {
       const void *in_rec;
       uint16_t in_rec_size;
-      
+
       // Receive data from any input interface, wait until data are available
       ret = trap_recv(0, &in_rec, &in_rec_size);
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
@@ -475,7 +478,7 @@ int main(int argc, char **argv)
                     int new_offset = ur_get_dyn_offset_start(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id) + size;
                     ur_set_dyn_offset(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id, new_offset);
                  } else { //missing dynamic field
-                    ur_set_dyn_offset(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id, 
+                    ur_set_dyn_offset(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id,
                                       ur_get_dyn_offset_start(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id));
                  }
               }
@@ -500,7 +503,7 @@ int main(int argc, char **argv)
    TRAP_DEFAULT_FINALIZATION();
 
    ur_free_template(in_tmplt);
-      
+
    for (i = 0; i < n_outputs; i++) {
       if (output_specifiers[i]->tree != NULL) {
          freeAST(output_specifiers[i]->tree);

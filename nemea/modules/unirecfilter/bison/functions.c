@@ -1,13 +1,16 @@
 /**
  * \file unirecfilter.c
  * \brief NEMEA module selecting records and sending specified fields.
+ * \author Zdenek Kasner <kasnezde@fit.cvut.cz>
  * \author Klara Drhova <drhovkla@fit.cvut.cz>
  * \author Tomas Cejka <cejkat@cesnet.cz>
  * \author Vaclav Bartos <washek@cesnet.cz>
+ * \date 2013
  * \date 2014
+ * \date 2015
  */
 /*
- * Copyright (C) 2013,2014 CESNET
+ * Copyright (C) 2013-2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -68,32 +71,33 @@ struct ast *newAST(struct ast *l, struct ast *r, int operator)
 
 struct ast *newExpression(char *column, char *cmp, int number)
 {
-    struct expression *newast = malloc(sizeof(struct expression));
-    newast->type = 'E';
-    newast->column = column;
-    newast->number = number;
-    if (strcmp(cmp, "==")==0 || strcmp(cmp, "=")==0)
-        newast->cmp = 0;
-    else if (strcmp(cmp, "!=")==0 || strcmp(cmp, "<>")==0)
-        newast->cmp = 1;
-    else if (strcmp(cmp, "<")==0)
-        newast->cmp = 2;
-    else if (strcmp(cmp, "<=")==0 || strcmp(cmp, "=<")==0)
-        newast->cmp = 3;
-    else if (strcmp(cmp, ">")==0)
-        newast->cmp = 4;
-    else if (strcmp(cmp, "=~")==0)
-        newast->cmp = 6;
-    else {
-        // >=
-        newast->cmp = 5;
-    }
-    free(cmp);
+   struct expression *newast = malloc(sizeof(struct expression));
+   newast->type = 'E';
+   newast->column = column;
+   newast->number = number;
+   if (strcmp(cmp, "==") == 0 || strcmp(cmp, "=") == 0) {
+      newast->cmp = 0;
+   } else if (strcmp(cmp, "!=") == 0 || strcmp(cmp, "<>") == 0) {
+      newast->cmp = 1;
+   } else if (strcmp(cmp, "<") == 0) {
+      newast->cmp = 2;
+   } else if (strcmp(cmp, "<=") == 0 || strcmp(cmp, "=<") == 0) {
+      newast->cmp = 3;
+   } else if (strcmp(cmp, ">") == 0) {
+      newast->cmp = 4;
+   } else if (strcmp(cmp, "=~") == 0) {
+      newast->cmp = 6;
+   } else {
+      // >=
+      newast->cmp = 5;
+   }
+   free(cmp);
 
-    newast->id = ur_get_id_by_name(column);
-    if (newast->id == UR_INVALID_FIELD)
-        printf("Warning: %s is not a valid UniRec field.\n", column);
-    return (struct ast *) newast;
+   newast->id = ur_get_id_by_name(column);
+   if (newast->id == UR_INVALID_FIELD) {
+      printf("Warning: %s is not a valid UniRec field.\n", column);
+   }
+   return (struct ast *) newast;
 }
 
 struct ast *newProtocol(char *cmp, char *data)
@@ -107,30 +111,34 @@ struct ast *newProtocol(char *cmp, char *data)
 
 struct ast *newIP(char *column, char *cmp, char *ipAddr)
 {
-    struct ip *newast = malloc(sizeof(struct ip));
-    newast->type = 'I';
-    newast->column = column;
-    if (strcmp(cmp, "==")==0 || strcmp(cmp, "=")==0)
-        newast->cmp = 0;
-    else if (strcmp(cmp, "!=")==0 || strcmp(cmp, "<>")==0)
-        newast->cmp = 1;
-    else if (strcmp(cmp, "<")==0)
-        newast->cmp = 2;
-    else if (strcmp(cmp, "<=")==0 || strcmp(cmp, "=<")==0)
-        newast->cmp = 3;
-    else if (strcmp(cmp, ">")==0)
-        newast->cmp = 4;
-    else
-        newast->cmp = 5;
-    free(cmp);
-    if (!ip_from_str(ipAddr, &(newast->ipAddr)))
-        printf("Warning: %s is not a valid IP address.\n", ipAddr);
-    newast->id = ur_get_id_by_name(column);
-    if (newast->id == UR_INVALID_FIELD)
-        printf("Warning: %s is not a valid UniRec field.\n", column);
-    if (ur_get_type_by_id(newast->id) != UR_TYPE_IP)
-        printf("Warning: Type of %s is not IP address.\n", column);
-    return (struct ast *) newast;
+   struct ip *newast = malloc(sizeof(struct ip));
+   newast->type = 'I';
+   newast->column = column;
+   if (strcmp(cmp, "==") == 0 || strcmp(cmp, "=") == 0) {
+      newast->cmp = 0;
+   } else if (strcmp(cmp, "!=") == 0 || strcmp(cmp, "<>") == 0) {
+      newast->cmp = 1;
+   } else if (strcmp(cmp, "<") == 0) {
+      newast->cmp = 2;
+   } else if (strcmp(cmp, "<=") == 0 || strcmp(cmp, "=<") == 0) {
+      newast->cmp = 3;
+   } else if (strcmp(cmp, ">") == 0) {
+      newast->cmp = 4;
+   } else {
+      newast->cmp = 5;
+   }
+   free(cmp);
+   if (!ip_from_str(ipAddr, &(newast->ipAddr))) {
+      printf("Warning: %s is not a valid IP address.\n", ipAddr);
+   }
+   newast->id = ur_get_id_by_name(column);
+   if (newast->id == UR_INVALID_FIELD) {
+      printf("Warning: %s is not a valid UniRec field.\n", column);
+   }
+   if (ur_get_type_by_id(newast->id) != UR_TYPE_IP) {
+      printf("Warning: Type of %s is not IP address.\n", column);
+   }
+   return (struct ast *) newast;
 }
 
 struct ast *newString(char *column, char *cmp, char *s)
@@ -142,9 +150,9 @@ struct ast *newString(char *column, char *cmp, char *s)
    newast->type = 'S';
    newast->column = column;
 
-   if (strcmp(cmp, "=~")==0) {
+   if (strcmp(cmp, "=~") == 0) {
       newast->cmp = 6;
-   } else if (strcmp(cmp, "==")==0 || strcmp(cmp, "=")==0) {
+   } else if (strcmp(cmp, "==") == 0 || strcmp(cmp, "=") == 0) {
       newast->cmp = 0;
    } else {
       newast->cmp = 1;
@@ -162,17 +170,18 @@ struct ast *newString(char *column, char *cmp, char *s)
       newast->s = s;
    }
    newast->id = ur_get_id_by_name(column);
-   if (newast->id == UR_INVALID_FIELD)
+   if (newast->id == UR_INVALID_FIELD) {
       printf("Warning: %s is not a valid UniRec field.\n", column);
+   }
    return (struct ast *) newast;
 }
 
 struct ast *newBrack(struct ast *b)
 {
-    struct brack *newast = malloc(sizeof(struct brack));
-    newast->type = 'B';
-    newast->b = b;
-    return (struct ast *) newast;
+   struct brack *newast = malloc(sizeof(struct brack));
+   newast->type = 'B';
+   newast->b = b;
+   return (struct ast *) newast;
 }
 
 void printAST(struct ast *ast)
@@ -185,31 +194,34 @@ void printAST(struct ast *ast)
    case 'A':
       printAST(ast->l);
 
-      if (ast->operator == 1)
+      if (ast->operator == 1) {
          printf(" || ");
-      else if (ast->operator == 2)
+      } else if (ast->operator == 2) {
          printf(" && ");
+      }
 
-      if (ast->r)
+      if (ast->r) {
          printAST(ast->r);
+      }
       break;
    case 'E':
       printf("%s",
             ((struct expression*) ast)->column);
-      if (((struct ip*) ast)->cmp == 0)
+      if (((struct ip*) ast)->cmp == 0) {
          printf(" == ");
-      else if (((struct ip*) ast)->cmp == 1)
+      } else if (((struct ip*) ast)->cmp == 1) {
          printf(" != ");
-      else if (((struct ip*) ast)->cmp == 2)
+      } else if (((struct ip*) ast)->cmp == 2) {
          printf(" < ");
-      else if (((struct ip*) ast)->cmp == 3)
+      } else if (((struct ip*) ast)->cmp == 3) {
          printf(" <= ");
-      else if (((struct ip*) ast)->cmp == 4)
+      } else if (((struct ip*) ast)->cmp == 4) {
          printf(" > ");
-      else if (((struct ip*) ast)->cmp == 5)
+      } else if (((struct ip*) ast)->cmp == 5) {
          printf(" >= ");
-      else if (((struct ip*) ast)->cmp == 6)
+      } else if (((struct ip*) ast)->cmp == 6) {
          printf(" =~ ");
+      }
       printf("%i", ((struct expression*) ast)->number);
       break;
    case 'P':
@@ -222,30 +234,32 @@ void printAST(struct ast *ast)
       ip_to_str(&(((struct ip*) ast)->ipAddr), str);
       printf("%s",
             ((struct ip*) ast)->column);
-      if (((struct ip*) ast)->cmp == 0)
+      if (((struct ip*) ast)->cmp == 0) {
          printf(" == ");
-      else if (((struct ip*) ast)->cmp == 1)
+      } else if (((struct ip*) ast)->cmp == 1) {
          printf(" != ");
-      else if (((struct ip*) ast)->cmp == 2)
+      } else if (((struct ip*) ast)->cmp == 2) {
          printf(" < ");
-      else if (((struct ip*) ast)->cmp == 3)
+      } else if (((struct ip*) ast)->cmp == 3) {
          printf(" <= ");
-      else if (((struct ip*) ast)->cmp == 4)
+      } else if (((struct ip*) ast)->cmp == 4) {
          printf(" > ");
-      else if (((struct ip*) ast)->cmp == 5)
+      } else if (((struct ip*) ast)->cmp == 5) {
          printf(" >= ");
+      }
       printf("%s", str);
 
       break;
       }
    case 'S':
       printf("%s", ((struct str*) ast)->column);
-      if (((struct str*) ast)->cmp == 0)
+      if (((struct str*) ast)->cmp == 0) {
          printf(" == ");
-      else if (((struct ip*) ast)->cmp == 6)
+      } else if (((struct ip*) ast)->cmp == 6) {
          printf(" =~ ");
-      else
+      } else {
          printf(" != ");
+      }
       printf("\"%s\"", ((struct str*) ast)->s);
       break;
    case 'B':
@@ -259,176 +273,194 @@ void printAST(struct ast *ast)
 
 void freeAST(struct ast *ast)
 {
-    if (!ast) return;
-    switch (ast->type) {
-    case 'A':
-        freeAST(ast->l);
-        if (ast->r)
-            freeAST(ast->r);
-    break;
-    case 'E':
-        free(((struct expression*) ast)->column);
-    break;
-    case 'P':
-        free(((struct protocol*) ast)->cmp);
-        free(((struct protocol*) ast)->data);
-    break;
-    case 'I':
-        free(((struct ip*) ast)->column);
-        free(&(((struct ip*) ast)->ipAddr));
-    break;
-    case 'S':
-        free(((struct str*) ast)->column);
-        free(((struct str*) ast)->s);
-        ((struct str*) ast)->s = NULL;
-        regfree(&((struct str*) ast)->re);
-    break;
-    case 'B':
-        freeAST(((struct brack*) ast)->b);
-    break;
-    }
-    free(ast);
+   if (!ast) {
+      return;
+   }
+   switch (ast->type) {
+   case 'A':
+      freeAST(ast->l);
+      if (ast->r) {
+         freeAST(ast->r);
+      }
+      break;
+   case 'E':
+      free(((struct expression*) ast)->column);
+      break;
+   case 'P':
+      free(((struct protocol*) ast)->cmp);
+      free(((struct protocol*) ast)->data);
+      break;
+   case 'I':
+      free(((struct ip*) ast)->column);
+      free(&(((struct ip*) ast)->ipAddr));
+      break;
+   case 'S':
+      free(((struct str*) ast)->column);
+      free(((struct str*) ast)->s);
+      ((struct str*) ast)->s = NULL;
+      regfree(&((struct str*) ast)->re);
+      break;
+   case 'B':
+      freeAST(((struct brack*) ast)->b);
+      break;
+   }
+   free(ast);
 }
 
 // this compares two numbers
 int compareNum(int a, int b, int cmp)
 {
-    if (a<b && ( cmp==2 || cmp==3 || cmp==1 )) // <, <=, !=
-        return 1;
-    else if (a>b && ( cmp==4 || cmp==5 || cmp==1 )) // >, >=, !=
-        return 1;
-    else if (a==b && ( cmp==0 || cmp==3 || cmp==5 )) // ==, <=, >=
-        return 1;
+   if (a < b && (cmp == 2 || cmp == 3 || cmp == 1)) { // <, <=, !=
+      return 1;
+   } else if (a > b && (cmp == 4 || cmp == 5 || cmp == 1)) { // >, >=, !=
+      return 1;
+   } else if (a == b && (cmp ==0 || cmp == 3 || cmp == 5)) { // ==, <=, >=
+      return 1;
+   }
 
-    return 0;
+   return 0;
 }
 
 int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
 {
-    if (!ast) return 0; // NULL
-    switch (ast->type) {
-    case 'A':
-        if (ast->operator == 0)
-            return evalAST(ast->l, in_tmplt, in_rec);
-        else if (ast->operator == 1)
-            return (evalAST(ast->l, in_tmplt, in_rec) || evalAST(ast->r, in_tmplt, in_rec) ? 1 : 0);
-        else if (ast->operator == 2)
-            return (evalAST(ast->l, in_tmplt, in_rec) && evalAST(ast->r, in_tmplt, in_rec) ? 1 : 0);
-    case 'E':  // Expression
-        if (((struct expression*) ast)->id == UR_INVALID_FIELD)
+   size_t size;
+   char *expr;
+   int ret;
+   if (!ast) {
+      return 0; // NULL
+   }
+   switch (ast->type) {
+   case 'A':
+      if (ast->operator == 0) {
+         return evalAST(ast->l, in_tmplt, in_rec);
+      } else if (ast->operator == 1) {
+         return (evalAST(ast->l, in_tmplt, in_rec) || evalAST(ast->r, in_tmplt, in_rec) ? 1 : 0);
+      } else if (ast->operator == 2) {
+         return (evalAST(ast->l, in_tmplt, in_rec) && evalAST(ast->r, in_tmplt, in_rec) ? 1 : 0);
+      }
+   case 'E':  // Expression
+      if (((struct expression*) ast)->id == UR_INVALID_FIELD) {
+         return 0;
+      }
+      int type = ur_get_type_by_id(((struct expression*) ast)->id);
+      switch (type) {
+      case UR_TYPE_UINT8:
+         return compareNum(*(uint8_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression*) ast)->id)), ((struct expression*) ast)->number, ((struct expression*) ast)->cmp);
+      case UR_TYPE_INT8:
+         return compareNum(*(int8_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression*) ast)->id)), ((struct expression*) ast)->number, ((struct expression*) ast)->cmp);
+      case UR_TYPE_INT16:
+         return compareNum(*(int16_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression*) ast)->id)), ((struct expression*) ast)->number, ((struct expression*) ast)->cmp);
+      case UR_TYPE_UINT16:
+         return compareNum(*(uint16_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression*) ast)->id)), ((struct expression*) ast)->number, ((struct expression*) ast)->cmp);
+      case UR_TYPE_INT32:
+         return compareNum(*(int32_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression*) ast)->id)), ((struct expression*) ast)->number, ((struct expression*) ast)->cmp);
+      case UR_TYPE_UINT32:
+         return compareNum(*(uint32_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression*) ast)->id)), ((struct expression*) ast)->number, ((struct expression*) ast)->cmp);
+      case UR_TYPE_INT64:
+         return compareNum(*(int64_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression*) ast)->id)), ((struct expression*) ast)->number, ((struct expression*) ast)->cmp);
+      case UR_TYPE_UINT64:
+         return compareNum(*(uint64_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression*) ast)->id)), ((struct expression*) ast)->number, ((struct expression*) ast)->cmp);
+      }
+
+      return 0;
+   case 'I': //IP address
+      if (((struct ip*) ast)->id == UR_INVALID_FIELD) {
+         return 0;
+      }
+      int cmp_res = ip_cmp((ip_addr_t *) (ur_get_ptr_by_id(in_tmplt, in_rec, ((struct ip*) ast)->id)), &(((struct ip*) ast)->ipAddr));
+      int cmp = ((struct ip*) ast)->cmp;
+      if (cmp_res == 0) { // Same addresses
+         if (cmp == 0 || cmp == 3 || cmp == 5) { // ==, <=, >=
+            return 1;
+         } else {
             return 0;
-        int type = ur_get_type_by_id(((struct expression*) ast)->id);
-        if (type == UR_TYPE_UINT8)
-            return compareNum(*(uint8_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression*) ast)->id)), ((struct expression*) ast)->number, ((struct expression*) ast)->cmp);
-        if (type == UR_TYPE_INT8)
-            return compareNum(*(int8_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression*) ast)->id)), ((struct expression*) ast)->number, ((struct expression*) ast)->cmp);
-        if (type == UR_TYPE_INT16)
-            return compareNum(*(int16_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression*) ast)->id)), ((struct expression*) ast)->number, ((struct expression*) ast)->cmp);
-        if (type == UR_TYPE_UINT16)
-            return compareNum(*(uint16_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression*) ast)->id)), ((struct expression*) ast)->number, ((struct expression*) ast)->cmp);
-        if (type == UR_TYPE_INT32)
-            return compareNum(*(int32_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression*) ast)->id)), ((struct expression*) ast)->number, ((struct expression*) ast)->cmp);
-        if (type == UR_TYPE_UINT32)
-            return compareNum(*(uint32_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression*) ast)->id)), ((struct expression*) ast)->number, ((struct expression*) ast)->cmp);
-        if (type == UR_TYPE_INT64)
-            return compareNum(*(int64_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression*) ast)->id)), ((struct expression*) ast)->number, ((struct expression*) ast)->cmp);
-        if (type == UR_TYPE_UINT64)
-            return compareNum(*(uint64_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression*) ast)->id)), ((struct expression*) ast)->number, ((struct expression*) ast)->cmp);
-
-        return 0;
-    case 'I': {  //IP address
-        if (((struct ip*) ast)->id == UR_INVALID_FIELD)
+         }
+      } else if (cmp_res < 0) { // Address in record is lower than the given one
+         if (cmp == 1 || cmp == 2 || cmp == 3) { // !=, <, <=
+            return 1;
+         } else {
             return 0;
-        int cmp_res = ip_cmp((ip_addr_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct ip*) ast)->id)), &(((struct ip*) ast)->ipAddr));
-        int cmp = ((struct ip*) ast)->cmp;
-        if (cmp_res == 0) { // Same addresses
-            if (cmp == 0 || cmp == 3 || cmp == 5) // ==, <=, >=
-                return 1;
-            else return 0;
-        } else if (cmp_res < 0) { // Address in record is lower than the given one
-            if (cmp == 1 || cmp == 2 || cmp == 3) // !=, <, <=
-                return 1;
-            else return 0;
-        } else { // Address in record is higher than the given one
-            if (cmp == 1 || cmp == 4 || cmp == 5) // !=, >, >=
-                return 1;
-            else return 0;
-        }
-
-    }
-    case 'S': { //String
-        size_t size = ur_get_dyn_size(in_tmplt, in_rec, ((struct str*) ast)->id);
-        char * expr = (char *)(ur_get_dyn(in_tmplt, in_rec, ((struct str*) ast)->id));
-
-        if (((struct str*) ast)->id == UR_INVALID_FIELD)
+         }
+      } else { // Address in record is higher than the given one
+         if (cmp == 1 || cmp == 4 || cmp == 5) { // !=, >, >=
+            return 1;
+         } else {
             return 0;
-        if (((struct str*) ast)->cmp == 6) {
+         }
+      }
 
-           memcpy(str_buffer, expr, size);
-           str_buffer[size] = '\0';
+   case 'S': //String
+      size = ur_get_dyn_size(in_tmplt, in_rec, ((struct str*) ast)->id);
+      expr = (char *)(ur_get_dyn(in_tmplt, in_rec, ((struct str*) ast)->id));
 
-           if (regexec(&((struct str*) ast)->re, str_buffer, 0, NULL, 0) == REG_NOMATCH) {
-              // string does not match regular expression
-              return 0;
-           } else {
-              // match
-              return 1;
-           }
-        } else {
-           //TODO add comments
-           int ret;
-           if (strlen(((struct str*) ast)->s) != size || strncmp(((struct str*) ast)->s, expr, size) != 0) {
-              ret = 0;
-           } else {
-              ret = 1;
-           }
-           if ( ((struct str*) ast)->cmp == 0) {
-              return ret;
-           } else {
-              return !ret;
-           }
-        }
-    }
-    case 'B':
-        return evalAST(((struct brack*) ast)->b, in_tmplt, in_rec);
-    }
+      if (((struct str*) ast)->id == UR_INVALID_FIELD) {
+         return 0;
+      }
+      if (((struct str*) ast)->cmp == 6) {
+
+         memcpy(str_buffer, expr, size);
+         str_buffer[size] = '\0';
+
+         if (regexec(&((struct str*) ast)->re, str_buffer, 0, NULL, 0) == REG_NOMATCH) {
+            // string does not match regular expression
+            return 0;
+         } else {
+            // match
+            return 1;
+         }
+      } else {
+         //TODO add comments
+         if (strlen(((struct str*) ast)->s) != size || strncmp(((struct str*) ast)->s, expr, size) != 0) {
+            ret = 0;
+         } else {
+            ret = 1;
+         }
+         if ( ((struct str*) ast)->cmp == 0) {
+            return ret;
+         } else {
+            return !ret;
+         }
+      }
+   case 'B':
+      return evalAST(((struct brack*) ast)->b, in_tmplt, in_rec);
+   }
 }
 
 void changeProtocol(struct ast **ast)
 {
-    if (!(*ast)) return; // NULL
-    switch ((*ast)->type) {
-    case 'A':
-        changeProtocol(&((*ast)->l));
-        changeProtocol(&((*ast)->r));
-        return;
-    case 'E':
-        return;
-    case 'P': {
-        int protocol;
-        struct protoent *proto = NULL;
-        proto = getprotobyname(((struct protocol*) (*ast))->data);
-        if (proto != NULL) {
-           protocol = proto->p_proto;
-        } else {
-           fprintf(stderr, "Error: Protocol %s is not known, revisit /etc/protocols.\n", (((struct protocol *) (*ast))->data));
-        }
-        char *cmp = ((struct protocol*) (*ast))->cmp;
-        free (((struct protocol*) (*ast))->data);
-        free (*ast);
-        char *retezec = calloc(9, sizeof(char));
-        strcpy(retezec, "PROTOCOL");
-        *ast = newExpression(retezec, cmp, protocol);
-        return;
-    }
-    case 'I':
-        return;
-    case 'S':
-        return;
-    case 'B':
-        changeProtocol(&(((struct brack*) (*ast))->b));
-        return;
-    }
+   int protocol;
+   struct protoent *proto = NULL;
+   char *cmp, *retezec;
+   if (!(*ast)) return; // NULL
+   switch ((*ast)->type) {
+   case 'A':
+      changeProtocol(&((*ast)->l));
+      changeProtocol(&((*ast)->r));
+      return;
+   case 'E':
+      return;
+   case 'P':
+      proto = getprotobyname(((struct protocol*) (*ast))->data);
+      if (proto != NULL) {
+         protocol = proto->p_proto;
+      } else {
+         fprintf(stderr, "Error: Protocol %s is not known, revisit /etc/protocols.\n", (((struct protocol *) (*ast))->data));
+      }
+      cmp = ((struct protocol*) (*ast))->cmp;
+      free(((struct protocol*) (*ast))->data);
+      free(*ast);
+      retezec = calloc(9, sizeof(char));
+      strcpy(retezec, "PROTOCOL");
+      *ast = newExpression(retezec, cmp, protocol);
+      return;
+   case 'I':
+      return;
+   case 'S':
+      return;
+   case 'B':
+      changeProtocol(&(((struct brack*) (*ast))->b));
+      return;
+   }
 }
 
 /**
@@ -445,18 +477,18 @@ struct ast *getTree(const char *str)
       return NULL;
    }
    yy_scan_string(str);
-   
+
    if (yyparse()) {        // failure
       result = NULL;
    } else {
       result = main_tree;  // success
    }
    yy_delete_buffer(get_buf());
-   
+
    printf("Filter: ");
    printAST(result);
    printf("\n");
- 
+
    return result;
 }
 
