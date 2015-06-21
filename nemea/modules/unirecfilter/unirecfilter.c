@@ -168,7 +168,7 @@ int parse_file(char *str, struct unirec_output_t **output_specifiers, int n_outp
             return -1;
          }
          // Allocate and fill field for output specification for this interface
-         if ((output_specifiers[iface_index]->unirec_output_specifier = (char *) malloc(end_ptr - beg_ptr)) == NULL) {
+         if ((output_specifiers[iface_index]->unirec_output_specifier = (char *) calloc(end_ptr - beg_ptr + 1, 1)) == NULL) {
             fprintf(stderr, "Filter is too large, not enough memory.\n");
             return -1;
          };
@@ -399,7 +399,7 @@ int main(int argc, char **argv)
       output_specifiers[i]->tree = getTree(output_specifiers[i]->filter);
 
       // Create UniRec output template and record
-      if (unirec_output_specifier && unirec_output_specifier[0] != '\0') { // Not NULL or Empty
+      if (output_specifiers[i]->unirec_output_specifier && output_specifiers[i]->unirec_output_specifier[0] != '\0') { // Not NULL or Empty
          output_specifiers[i]->out_tmplt = ur_create_template(output_specifiers[i]->unirec_output_specifier);
       } else { //output template == input template
          output_specifiers[i]->out_tmplt = ur_create_template(unirec_input_specifier);
