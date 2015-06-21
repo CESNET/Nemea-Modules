@@ -145,7 +145,7 @@ int parse_file(char *str, struct unirec_output_t **output_specifiers, int n_outp
          }
          else {
             // Allocate and fill field for filter for this interface
-            if ((output_specifiers[iface_index]->filter = (char *) malloc(end_ptr - beg_ptr)) == NULL) {
+            if ((output_specifiers[iface_index]->filter = (char *) calloc(end_ptr - beg_ptr + 1, 1)) == NULL) {
                fprintf(stderr, "Filter is too large, not enough memory.\n");
                   return -1;
             }
@@ -345,11 +345,11 @@ int main(int argc, char **argv)
    }
 
    // Create array of structures with output interfaces specifications
-   output_specifiers = (struct unirec_output_t**) malloc(sizeof(struct unirec_output_t*) * n_outputs);
+   output_specifiers = (struct unirec_output_t**) calloc(sizeof(struct unirec_output_t*), n_outputs);
 
    // Allocate new structures with output interfaces specifications
    for (i = 0; i < n_outputs; i++) {
-      output_specifiers[i] = (struct unirec_output_t*) malloc(sizeof(struct unirec_output_t));
+      output_specifiers[i] = (struct unirec_output_t*) calloc(sizeof(struct unirec_output_t), 1);
    }
 
    if (from == 1) {
@@ -500,6 +500,7 @@ int main(int argc, char **argv)
 
    // ***** Cleanup *****
    free(str_buffer);
+
    TRAP_DEFAULT_FINALIZATION();
 
    ur_free_template(in_tmplt);

@@ -50,50 +50,69 @@
 #include <string.h>
 #include "../unirecfilter.h"
 
-/* get numbers of protocols and services */
+// get numbers of protocols and services 
 #include <netdb.h>
 
-/* regexp */
+// regexp
 #include <sys/types.h>
 #include <regex.h>
 
 struct ast *main_tree = NULL;
 
+// prevent warnings
+extern struct yy_buffer_state * get_buf();
+extern struct yy_buffer_state * yy_scan_string(const char* yy_str);
+extern void yy_delete_buffer(struct yy_buffer_state * buffer);
+
+// mapping between strings and enumerated types of operators
+typedef struct { char * op_str; cmp_op op_type; } op_pair;
+
+op_pair cmp_op_table[] = { 
+   { "==", OP_EQ },
+   { "=",  OP_EQ },
+   { "!=", OP_NE },
+   { "<>", OP_NE },
+   { "<",  OP_LT },
+   { "<=", OP_LE },
+   { ">",  OP_GT },
+   { ">=", OP_GE },
+   { "=~", OP_RE }
+};
+
+cmp_op get_op_type( char* cmp ) {
+   size_t table_size = sizeof(cmp_op_table) / sizeof(cmp_op_table[0]);
+
+   for (op_pair *ptr = cmp_op_table; ptr < cmp_op_table + table_size; ptr++)
+   {
+      if (strcmp(cmp, ptr->op_str) == 0 ) {
+         return ptr->op_type;
+      }
+   }
+}
+
 struct ast *newAST(struct ast *l, struct ast *r, int operator)
 {
-    struct ast *newast = malloc(sizeof(struct ast));
-    newast->type = 'A';
-    newast->operator = operator;
-    newast->l = l;
-    newast->r = r;
-    return newast;
+   struct ast *newast = (struct ast *) malloc(sizeof(struct ast));
+
+   newast->type = NODE_T_AST;
+   newast->operator = operator;
+   newast->l = l;
+   newast->r = r;
+
+   return newast;
 }
 
 struct ast *newExpression(char *column, char *cmp, int number)
 {
-   struct expression *newast = malloc(sizeof(struct expression));
-   newast->type = 'E';
+   struct expression *newast = (struct expression *) malloc(sizeof(struct expression));
+
+   newast->type = NODE_T_EXPRESSION;
    newast->column = column;
    newast->number = number;
-   if (strcmp(cmp, "==") == 0 || strcmp(cmp, "=") == 0) {
-      newast->cmp = 0;
-   } else if (strcmp(cmp, "!=") == 0 || strcmp(cmp, "<>") == 0) {
-      newast->cmp = 1;
-   } else if (strcmp(cmp, "<") == 0) {
-      newast->cmp = 2;
-   } else if (strcmp(cmp, "<=") == 0 || strcmp(cmp, "=<") == 0) {
-      newast->cmp = 3;
-   } else if (strcmp(cmp, ">") == 0) {
-      newast->cmp = 4;
-   } else if (strcmp(cmp, "=~") == 0) {
-      newast->cmp = 6;
-   } else {
-      // >=
-      newast->cmp = 5;
-   }
+   newast->id = ur_get_id_by_name(column);
+   newast->cmp = get_op_type(cmp);
    free(cmp);
 
-   newast->id = ur_get_id_by_name(column);
    if (newast->id == UR_INVALID_FIELD) {
       printf("Warning: %s is not a valid UniRec field.\n", column);
    }
@@ -102,8 +121,8 @@ struct ast *newExpression(char *column, char *cmp, int number)
 
 struct ast *newProtocol(char *cmp, char *data)
 {
-    struct protocol *newast = malloc(sizeof(struct protocol));
-    newast->type = 'P';
+    struct protocol *newast = (struct protocol *) malloc(sizeof(struct protocol));
+    newast->type = NODE_T_PROTOCOL;
     newast->data = data;
     newast->cmp = cmp;
     return (struct ast *) newast;
@@ -111,26 +130,17 @@ struct ast *newProtocol(char *cmp, char *data)
 
 struct ast *newIP(char *column, char *cmp, char *ipAddr)
 {
-   struct ip *newast = malloc(sizeof(struct ip));
-   newast->type = 'I';
+   struct ip *newast = (struct ip *) malloc(sizeof(struct ip));
+   newast->type = NODE_T_IP;
    newast->column = column;
-   if (strcmp(cmp, "==") == 0 || strcmp(cmp, "=") == 0) {
-      newast->cmp = 0;
-   } else if (strcmp(cmp, "!=") == 0 || strcmp(cmp, "<>") == 0) {
-      newast->cmp = 1;
-   } else if (strcmp(cmp, "<") == 0) {
-      newast->cmp = 2;
-   } else if (strcmp(cmp, "<=") == 0 || strcmp(cmp, "=<") == 0) {
-      newast->cmp = 3;
-   } else if (strcmp(cmp, ">") == 0) {
-      newast->cmp = 4;
-   } else {
-      newast->cmp = 5;
-   }
+   newast->cmp = get_op_type(cmp);
    free(cmp);
+
    if (!ip_from_str(ipAddr, &(newast->ipAddr))) {
       printf("Warning: %s is not a valid IP address.\n", ipAddr);
    }
+   free(ipAddr);
+
    newast->id = ur_get_id_by_name(column);
    if (newast->id == UR_INVALID_FIELD) {
       printf("Warning: %s is not a valid UniRec field.\n", column);
@@ -146,19 +156,14 @@ struct ast *newString(char *column, char *cmp, char *s)
    int retval;
    char errb[1024];
    errb[1023] = 0;
-   struct str *newast = malloc(sizeof(struct str));
-   newast->type = 'S';
+   struct str *newast = (struct str *) malloc(sizeof(struct str));
+   newast->type = NODE_T_STRING;
    newast->column = column;
 
-   if (strcmp(cmp, "=~") == 0) {
-      newast->cmp = 6;
-   } else if (strcmp(cmp, "==") == 0 || strcmp(cmp, "=") == 0) {
-      newast->cmp = 0;
-   } else {
-      newast->cmp = 1;
-   }
+   newast->cmp = get_op_type(cmp);
    free(cmp);
-   if (newast->cmp == 6) {
+
+   if (newast->cmp == OP_RE) {
       newast->s = strdup(s);
       if ((retval = regcomp(&newast->re, s, REG_EXTENDED)) != 0) {
          regerror(retval, &newast->re, errb, 1023);
@@ -178,8 +183,8 @@ struct ast *newString(char *column, char *cmp, char *s)
 
 struct ast *newBrack(struct ast *b)
 {
-   struct brack *newast = malloc(sizeof(struct brack));
-   newast->type = 'B';
+   struct brack *newast = (struct brack *) malloc(sizeof(struct brack));
+   newast->type = NODE_T_BRACKET;
    newast->b = b;
    return (struct ast *) newast;
 }
@@ -191,7 +196,7 @@ void printAST(struct ast *ast)
       return;
    }
    switch (ast->type) {
-   case 'A':
+   case NODE_T_AST:
       printAST(ast->l);
 
       if (ast->operator == 1) {
@@ -199,70 +204,96 @@ void printAST(struct ast *ast)
       } else if (ast->operator == 2) {
          printf(" && ");
       }
-
       if (ast->r) {
          printAST(ast->r);
       }
       break;
-   case 'E':
-      printf("%s",
-            ((struct expression*) ast)->column);
-      if (((struct ip*) ast)->cmp == 0) {
+   case NODE_T_EXPRESSION:
+      printf("%s", ((struct expression*) ast)->column);
+
+      switch (((struct ip*) ast)->cmp) {
+      case (OP_EQ):
          printf(" == ");
-      } else if (((struct ip*) ast)->cmp == 1) {
+         break;
+      case (OP_NE):
          printf(" != ");
-      } else if (((struct ip*) ast)->cmp == 2) {
+         break;
+      case (OP_LT):
          printf(" < ");
-      } else if (((struct ip*) ast)->cmp == 3) {
+         break;
+      case (OP_LE):
          printf(" <= ");
-      } else if (((struct ip*) ast)->cmp == 4) {
+         break;
+      case (OP_GT):
          printf(" > ");
-      } else if (((struct ip*) ast)->cmp == 5) {
+         break;
+      case (OP_GE):
          printf(" >= ");
-      } else if (((struct ip*) ast)->cmp == 6) {
+         break;
+      case (OP_RE):
          printf(" =~ ");
+         break;
+      default:
+         printf(" <invalid operator> ");
       }
       printf("%i", ((struct expression*) ast)->number);
       break;
-   case 'P':
+   case NODE_T_PROTOCOL:
       printf("PROTOCOL %s %s",
             ((struct protocol*) ast)->cmp,
             ((struct protocol*) ast)->data);
       break;
-   case 'I': {
+   case NODE_T_IP: {
       char str[46];
       ip_to_str(&(((struct ip*) ast)->ipAddr), str);
-      printf("%s",
+      
+      printf("%s", 
             ((struct ip*) ast)->column);
-      if (((struct ip*) ast)->cmp == 0) {
+
+      switch (((struct ip*) ast)->cmp) {
+      case (OP_EQ):
          printf(" == ");
-      } else if (((struct ip*) ast)->cmp == 1) {
+         break;
+      case (OP_NE):
          printf(" != ");
-      } else if (((struct ip*) ast)->cmp == 2) {
+         break;
+      case (OP_LT):
          printf(" < ");
-      } else if (((struct ip*) ast)->cmp == 3) {
+         break;
+      case (OP_LE):
          printf(" <= ");
-      } else if (((struct ip*) ast)->cmp == 4) {
+         break;
+      case (OP_GT):
          printf(" > ");
-      } else if (((struct ip*) ast)->cmp == 5) {
+         break;
+      case (OP_GE):
          printf(" >= ");
+         break;
+      default:
+         printf(" <invalid operator> ");
       }
       printf("%s", str);
 
       break;
       }
-   case 'S':
+   case NODE_T_STRING:
       printf("%s", ((struct str*) ast)->column);
-      if (((struct str*) ast)->cmp == 0) {
+      switch (((struct ip*) ast)->cmp) {
+      case (OP_EQ):
          printf(" == ");
-      } else if (((struct ip*) ast)->cmp == 6) {
-         printf(" =~ ");
-      } else {
+         break;
+      case (OP_NE):
          printf(" != ");
+         break;
+      case (OP_RE):
+         printf(" =~ ");
+         break;
+      default:
+         printf(" <invalid operator> ");
       }
       printf("\"%s\"", ((struct str*) ast)->s);
       break;
-   case 'B':
+   case NODE_T_BRACKET:
       printf("( ");
       printAST(((struct brack*) ast)->b);
       printf(" )");
@@ -277,47 +308,53 @@ void freeAST(struct ast *ast)
       return;
    }
    switch (ast->type) {
-   case 'A':
+   case NODE_T_AST:
       freeAST(ast->l);
       if (ast->r) {
          freeAST(ast->r);
       }
       break;
-   case 'E':
+   case NODE_T_EXPRESSION:
       free(((struct expression*) ast)->column);
       break;
-   case 'P':
+   case NODE_T_PROTOCOL:
       free(((struct protocol*) ast)->cmp);
       free(((struct protocol*) ast)->data);
       break;
-   case 'I':
+   case NODE_T_IP:
       free(((struct ip*) ast)->column);
-      free(&(((struct ip*) ast)->ipAddr));
+      // free(&(((struct ip*) ast)->ipAddr));
       break;
-   case 'S':
+   case NODE_T_STRING:
       free(((struct str*) ast)->column);
       free(((struct str*) ast)->s);
       ((struct str*) ast)->s = NULL;
       regfree(&((struct str*) ast)->re);
       break;
-   case 'B':
+   case NODE_T_BRACKET:
       freeAST(((struct brack*) ast)->b);
       break;
    }
    free(ast);
 }
 
-// this compares two numbers
-int compareNum(int a, int b, int cmp)
+// compares two numbers
+int compareNum(int a, int b, cmp_op op)
 {
-   if (a < b && (cmp == 2 || cmp == 3 || cmp == 1)) { // <, <=, !=
-      return 1;
-   } else if (a > b && (cmp == 4 || cmp == 5 || cmp == 1)) { // >, >=, !=
-      return 1;
-   } else if (a == b && (cmp ==0 || cmp == 3 || cmp == 5)) { // ==, <=, >=
-      return 1;
+   switch (op) {
+      case OP_LE: 
+         return a <= b;
+      case OP_LT: 
+         return a < b;
+      case OP_NE: 
+         return a != b;
+      case OP_GE: 
+         return a >= b;
+      case OP_GT: 
+         return a > b;
+      case OP_EQ: 
+         return a == b;
    }
-
    return 0;
 }
 
@@ -330,7 +367,7 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
       return 0; // NULL
    }
    switch (ast->type) {
-   case 'A':
+   case NODE_T_AST:
       if (ast->operator == 0) {
          return evalAST(ast->l, in_tmplt, in_rec);
       } else if (ast->operator == 1) {
@@ -338,7 +375,7 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
       } else if (ast->operator == 2) {
          return (evalAST(ast->l, in_tmplt, in_rec) && evalAST(ast->r, in_tmplt, in_rec) ? 1 : 0);
       }
-   case 'E':  // Expression
+   case NODE_T_EXPRESSION:
       if (((struct expression*) ast)->id == UR_INVALID_FIELD) {
          return 0;
       }
@@ -363,40 +400,32 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
       }
 
       return 0;
-   case 'I': //IP address
+   case NODE_T_IP:
       if (((struct ip*) ast)->id == UR_INVALID_FIELD) {
          return 0;
       }
       int cmp_res = ip_cmp((ip_addr_t *) (ur_get_ptr_by_id(in_tmplt, in_rec, ((struct ip*) ast)->id)), &(((struct ip*) ast)->ipAddr));
-      int cmp = ((struct ip*) ast)->cmp;
-      if (cmp_res == 0) { // Same addresses
-         if (cmp == 0 || cmp == 3 || cmp == 5) { // ==, <=, >=
-            return 1;
-         } else {
-            return 0;
-         }
-      } else if (cmp_res < 0) { // Address in record is lower than the given one
-         if (cmp == 1 || cmp == 2 || cmp == 3) { // !=, <, <=
-            return 1;
-         } else {
-            return 0;
-         }
-      } else { // Address in record is higher than the given one
-         if (cmp == 1 || cmp == 4 || cmp == 5) { // !=, >, >=
-            return 1;
-         } else {
-            return 0;
-         }
+      cmp_op cmp = ((struct ip*) ast)->cmp;
+
+      if (cmp_res == 0) { 
+      // Same addresses
+         return cmp == OP_EQ || cmp == OP_LE || cmp == OP_GE;
+      } else if (cmp_res < 0) {
+       // Address in record is lower than the given one
+         return cmp == OP_NE || cmp == OP_LT || cmp == OP_LE;
+      } else {
+      // Address in record is higher than the given one
+         return cmp == OP_NE || cmp == OP_GT || cmp == OP_GE;
       }
 
-   case 'S': //String
+   case NODE_T_STRING:
       size = ur_get_dyn_size(in_tmplt, in_rec, ((struct str*) ast)->id);
       expr = (char *)(ur_get_dyn(in_tmplt, in_rec, ((struct str*) ast)->id));
 
       if (((struct str*) ast)->id == UR_INVALID_FIELD) {
          return 0;
       }
-      if (((struct str*) ast)->cmp == 6) {
+      if (((struct str*) ast)->cmp == OP_RE) {
 
          memcpy(str_buffer, expr, size);
          str_buffer[size] = '\0';
@@ -409,19 +438,21 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
             return 1;
          }
       } else {
-         //TODO add comments
+         // strings are different in size/content (size comparisson necessary for zero-sized strings)
          if (strlen(((struct str*) ast)->s) != size || strncmp(((struct str*) ast)->s, expr, size) != 0) {
             ret = 0;
          } else {
             ret = 1;
          }
-         if ( ((struct str*) ast)->cmp == 0) {
+         if ( ((struct str*) ast)->cmp == OP_EQ) {
+            // return for equality operator
             return ret;
          } else {
+            // return for non-equality operator
             return !ret;
          }
       }
-   case 'B':
+   case NODE_T_BRACKET:
       return evalAST(((struct brack*) ast)->b, in_tmplt, in_rec);
    }
 }
@@ -431,15 +462,19 @@ void changeProtocol(struct ast **ast)
    int protocol;
    struct protoent *proto = NULL;
    char *cmp, *retezec;
-   if (!(*ast)) return; // NULL
+   
+   if (!(*ast)) {
+      return; // NULL
+   }
+
    switch ((*ast)->type) {
-   case 'A':
+   case NODE_T_AST:
       changeProtocol(&((*ast)->l));
       changeProtocol(&((*ast)->r));
       return;
-   case 'E':
+   case NODE_T_EXPRESSION:
       return;
-   case 'P':
+   case NODE_T_PROTOCOL:
       proto = getprotobyname(((struct protocol*) (*ast))->data);
       if (proto != NULL) {
          protocol = proto->p_proto;
@@ -453,11 +488,11 @@ void changeProtocol(struct ast **ast)
       strcpy(retezec, "PROTOCOL");
       *ast = newExpression(retezec, cmp, protocol);
       return;
-   case 'I':
+   case NODE_T_IP:
       return;
-   case 'S':
+   case NODE_T_STRING:
       return;
-   case 'B':
+   case NODE_T_BRACKET:
       changeProtocol(&(((struct brack*) (*ast))->b));
       return;
    }
