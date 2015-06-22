@@ -72,7 +72,7 @@
 #define MINIMAL_SENDING_RATE  100
 
 // Struct with information about module
-trap_module_info_t module_info = {
+trap_module_info_t *module_info = NULL; /*{
    (char *) "Nfdump-reader module", // Module name
    // Module description
    (char *) "This module reads a given nfdump file and outputs flow records in \n"
@@ -104,7 +104,23 @@ trap_module_info_t module_info = {
    "",
    0, // Number of input interfaces
    1, // Number of output interfaces
-};
+};*/
+
+#define MODULE_BASIC_INFO(BASIC) \
+  BASIC("Nfdump-reader module","This module reads a given nfdump file and outputs flow records in UniRec format. If more files are specified, all flows from the first file are read, then all flows from second file and so on.",0,1)
+
+#define MODULE_PARAMS(PARAM) \
+   PARAM('F', NULL, "A file in nfdump format.", 1, "string") \
+   PARAM('f', NULL, "A nfdump-like filter expression. Only records matching the filter will be sent to the output.", 1, "string") \
+   PARAM('c', NULL, "Read only the first N flow records.", 1, "uint64") \
+   PARAM('n', NULL, "Don't send EOF message at the end.", 0, NULL) \
+   PARAM('T', NULL, "Replace original timestamps by record actual sending time.", 0, NULL) \
+   PARAM('D', NULL, "Fill DIR_BIT_FIELD according to record direction.", 0, NULL) \
+   PARAM('l', NULL, "Use link mask m for LINK_BIT_FIELD. m is 8-bit hexadecimal number e.g. m should be 1, c2, AB,...", 1, "string") \
+   PARAM('p', NULL, "Show progress - print a dot every N flows.", 1, "uint64") \
+   PARAM('r', NULL, "Rate limiting. Limiting sending flow rate to N records/sec.", 1, "uint64") \
+   PARAM('R', NULL, "Real time re-sending. Resending records from given files in real time, respecting original timestamps (seconds). Since this mode is timestamp order dependent, real time re-sending is done only at approximate time.", 0,NULL)
+
 
 static int stop = 0;
 
@@ -145,6 +161,7 @@ void delay_sending_rate(struct timeval *sr_start){
 
 int main(int argc, char **argv)
 {
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
    //------------ General ------------------------------------------------------
    int module_state = STATE_OK;
    int ret;
@@ -178,7 +195,7 @@ int main(int argc, char **argv)
    ret = trap_parse_params(&argc, argv, &ifc_spec);
    if (ret != TRAP_E_OK) {
       if (ret == TRAP_E_HELP) { // "-h" was found
-         trap_print_help(&module_info);
+         trap_print_help(module_info);
          return 0;
       }
       fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
@@ -253,7 +270,7 @@ int main(int argc, char **argv)
    if (verbose) {
       printf("Initializing TRAP library ...\n");
    }
-   ret = trap_init(&module_info, ifc_spec);
+   ret = trap_init(module_info, ifc_spec);
    if (ret != TRAP_E_OK) {
       fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
       return 4;
@@ -399,6 +416,6 @@ exit:
    ur_free(rec_out);
    ur_free_template(tmplt);
    ur_free_links(links);
-
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
    return module_state;
 }
