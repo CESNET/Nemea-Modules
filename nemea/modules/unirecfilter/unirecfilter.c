@@ -73,6 +73,8 @@ trap_module_info_t module_info = {
    "Format of the file is [TMPLT_1]:FILTER_1; ...; [TMPLT_N]:FILTER_N; where each\n"
    "filter corresponds with one output interface. One-line comments starting with\n"
    "'#' are allowed. When is -O flag missing, template from input is used on output.\n"
+   "To reload filter \"on the run\", save changes in filter file and send signal\n"
+   "SIGUSR1 (10) to the running process.\n"
    "\n"
    "Usage:\n"
    "   ./unirecfilter -i IFC_SPEC -I TMPLT [-O TMPLT] [-F FLTR]\n"
@@ -92,7 +94,8 @@ trap_module_info_t module_info = {
    -1,      // Number of output interfaces (-1 = variable)
 };
 
-static int stop = 0;
+static int stop = 0;               // Flag to interrupt process
+int reload_filter = 0;             // Flag to reload filter from file
 
 unsigned int num_records = 0; // Number of records received (total of all inputs)
 unsigned int max_num_records = 0; // Exit after this number of records is received
@@ -102,6 +105,11 @@ char *str_buffer = NULL;
 
 // Function to handle SIGTERM and SIGINT signals (used to stop the module)
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
+
+// Handler for SIGUSR1 to set flag for force filter reloading
+void reload_filter_signal_handler(int signum) {
+   reload_filter = 1;
+}
 
 // Structure with information for each output interface
 struct unirec_output_t
@@ -178,19 +186,19 @@ int parse_file(char *str, struct unirec_output_t **output_specifiers, int n_outp
    }
 }
 
-char *load_file(char * file)
+// Read file content to buffer, return pointer to buffer
+char *load_file(char *filename)
 {
    int f_size;   // size of file with filter
    char *file_buffer = NULL;
    FILE *f = NULL;
 
-   f = fopen(file, "rt");
+   f = fopen(filename, "rt");
    // File cannot be opened / not found
    if (f == NULL) {
-      fprintf(stderr, "Error: File %s could not be opened.\n", file);
+      fprintf(stderr, "Error: File %s could not be opened.\n", filename);
       return NULL;
    }
-
    // Determine the file size for memory allocation
    fseek(f, 0, SEEK_END);
    f_size = ftell(f);
@@ -199,16 +207,71 @@ char *load_file(char * file)
    file_buffer = (char *) malloc (f_size + 1);
 
    if (fread(file_buffer, sizeof(char), f_size, f) != f_size) {
-      fprintf(stderr, "Error: File %s could not be read.\n", file);
+      fprintf(stderr, "Error: File %s could not be read.\n", filename);
       free(file_buffer);
       fclose(f);
       return NULL;
    }
-
-   fclose(f);
    file_buffer[f_size] = '\0';
+   fclose(f);
 
    return file_buffer;
+}
+
+// Load filter from file, handle errors
+int get_filter_from_file(char * filename, struct unirec_output_t **output_specifiers, int n_outputs)
+{
+   int ret;
+   char *file_buffer = NULL;
+   
+   // Copy file content into buffer
+   if ((file_buffer = load_file(filename)) == NULL) {
+      return 7;
+   }
+   // Fill structure(s) with output specifications
+   if ((ret = parse_file(file_buffer, output_specifiers, n_outputs)) < 0) {
+      free(file_buffer);
+      return 7;
+   };
+   // Number of filters specified in file is not sufficient
+   if (ret < n_outputs) {
+      fprintf(stderr, "Error: number of output filters specified in file (%d) is lower than expected (%d).\n", ret, n_outputs);
+      free(file_buffer);
+      return 8;
+   }
+   free(file_buffer);
+   return 0;
+}
+
+// Create templates based on data from filter
+int create_templates(int n_outputs, char **port_numbers, struct unirec_output_t **output_specifiers, char *unirec_input_specifier) {
+   int i;
+   int memory_needed = 0;
+   ur_field_id_t field_id = UR_INVALID_FIELD;
+
+   // Create trees and templates for all items
+   for (i = 0; i < n_outputs; i++) {
+      // Print output interface port number
+      printf("[%s] ", port_numbers[i]);
+
+      // Get Abstract syntax tree from filter
+      output_specifiers[i]->tree = getTree(output_specifiers[i]->filter);
+
+      // Create UniRec output template and record
+      if (output_specifiers[i]->unirec_output_specifier && output_specifiers[i]->unirec_output_specifier[0] != '\0') { // Not NULL or Empty
+         output_specifiers[i]->out_tmplt = ur_create_template(output_specifiers[i]->unirec_output_specifier);
+      } else { //output template == input template
+         output_specifiers[i]->out_tmplt = ur_create_template(unirec_input_specifier);
+      }
+      // Calculate maximum needed memory for dynamic fields
+      while ((field_id = ur_iter_fields(output_specifiers[i]->out_tmplt, field_id)) != UR_INVALID_FIELD) {
+         if (ur_is_dynamic(field_id)) {
+            memory_needed += DYN_FIELD_MAX_SIZE;
+         }
+      }
+      output_specifiers[i]->out_rec = ur_create(output_specifiers[i]->out_tmplt, memory_needed);
+   }
+   return 0;
 }
 
 int main(int argc, char **argv)
@@ -218,18 +281,18 @@ int main(int argc, char **argv)
    char *unirec_output_specifier = NULL;
    char *unirec_input_specifier = NULL;
    char *filter = NULL;
-   char *file = NULL;
-   char *file_buffer = NULL;
+   char *filename = NULL;
    ur_template_t *in_tmplt;
    char opt;
    int ret;
    int i;
    int from = 0; // 0 - template and filter from CMD, 1 - from file
-   int memory_needed = 0;
    int n_outputs;
-   ur_field_id_t field_id = UR_INVALID_FIELD;
-
    trap_ifc_spec_t ifc_spec;
+
+   // Register signal handler for reloading file with filter
+   signal(SIGUSR1, reload_filter_signal_handler);
+
    ret = trap_parse_params(&argc, argv, &ifc_spec);
    if (ret != TRAP_E_OK) {
       if (ret == TRAP_E_HELP) { // "-h" was found
@@ -254,7 +317,7 @@ int main(int argc, char **argv)
          filter = strdup(optarg);
          break;
       case 'f': // File
-         file = optarg;
+         filename = optarg;
          from = 1;
          break;
       case 'c': {
@@ -313,13 +376,13 @@ int main(int argc, char **argv)
    }
 
    // Output format specifier and file are both set (-O and -f)
-   if ((unirec_output_specifier != NULL) && (file != NULL)) {
+   if ((unirec_output_specifier != NULL) && (filename != NULL)) {
       fprintf(stderr, "Error: Invalid arguments - two output specifiers.\n");
       TRAP_DEFAULT_FINALIZATION();
       return 6;
    }
    // Filter and file are both set (-F and -f)
-   else if ((filter != NULL) && (file != NULL)) {
+   else if ((filter != NULL) && (filename != NULL)) {
       fprintf(stderr, "Error: Invalid arguments - two filters.\n");
       TRAP_DEFAULT_FINALIZATION();
       return 6;
@@ -352,65 +415,31 @@ int main(int argc, char **argv)
       output_specifiers[i] = (struct unirec_output_t*) calloc(sizeof(struct unirec_output_t), 1);
    }
 
-   if (from == 1) {
-      // Copy file content into buffer
-      if ((file_buffer = load_file(file)) == NULL) {
-         for (i = 0; i < n_outputs; i++) {
-            free(port_numbers[i]);
-         }
-         free(port_numbers);
-         TRAP_DEFAULT_FINALIZATION();
-         return 7;
-      }
-      // Fill structure(s) with output specifications
-      if ((ret = parse_file(file_buffer, output_specifiers, n_outputs)) < 0) {
-         for (i = 0; i < n_outputs; i++) {
-            free(port_numbers[i]);
-         }
-         free(port_numbers);
-         free(file_buffer);
-         TRAP_DEFAULT_FINALIZATION();
-         return 7;
-      };
-      // Number of filters specified in file is not sufficient
-      if (ret < n_outputs) {
-         fprintf(stderr, "Error: number of output filters specified in file is lower than expected (%d < %d).\n", ret, n_outputs);
-         for (i = 0; i < n_outputs; i++) {
-            free(port_numbers[i]);
-         }
-         free(port_numbers);
-         TRAP_DEFAULT_FINALIZATION();
-         return 8;
-      }
-      free(file_buffer);
-   }
-
-   else { // From command line
+   // From command line
+   if (from == 0) { 
       output_specifiers[0]->unirec_output_specifier = unirec_output_specifier;
       output_specifiers[0]->filter = filter;
+   } else {  // From file
+      if ((ret = get_filter_from_file(filename, output_specifiers, n_outputs)) != 0) {
+         for (i = 0; i < n_outputs; i++) {
+            free(port_numbers[i]);
+         }
+         free(port_numbers);
+         trap_free_ifc_spec(ifc_spec);
+         TRAP_DEFAULT_FINALIZATION();
+         return ret;
+      }
    }
 
-   // Create trees and templates for all items
-   for (i = 0; i < n_outputs; i++) {
-      // Print output interface port number
-      printf("[%s] ", port_numbers[i]);
-
-      // Get Abstract syntax tree from filter
-      output_specifiers[i]->tree = getTree(output_specifiers[i]->filter);
-
-      // Create UniRec output template and record
-      if (output_specifiers[i]->unirec_output_specifier && output_specifiers[i]->unirec_output_specifier[0] != '\0') { // Not NULL or Empty
-         output_specifiers[i]->out_tmplt = ur_create_template(output_specifiers[i]->unirec_output_specifier);
-      } else { //output template == input template
-         output_specifiers[i]->out_tmplt = ur_create_template(unirec_input_specifier);
-      }
-      // Calculate maximum needed memory for dynamic fields
-      while ((field_id = ur_iter_fields(output_specifiers[i]->out_tmplt, field_id)) != UR_INVALID_FIELD) {
-         if (ur_is_dynamic(field_id)) {
-            memory_needed += DYN_FIELD_MAX_SIZE;
+   // Create templates from output specifiers
+   if ((ret = create_templates(n_outputs, port_numbers, output_specifiers, unirec_input_specifier)) != 0) {
+      for (i = 0; i < n_outputs; i++) {
+            free(port_numbers[i]);
          }
-      }
-      output_specifiers[i]->out_rec = ur_create(output_specifiers[i]->out_tmplt, memory_needed);
+      free(port_numbers);
+      trap_free_ifc_spec(ifc_spec);
+      TRAP_DEFAULT_FINALIZATION();
+      return ret;
    }
 
    // Allocate auxiliary buffer for evalAST()
@@ -491,11 +520,23 @@ int main(int argc, char **argv)
         }
      }
 
+      // SIGUSR1 has been sent, reload filter
+      if (reload_filter == 1) {
+         printf("\nReloading filter...\n\n");
+         printf("New filter:\n");
+         
+         if (get_filter_from_file(filename, output_specifiers, n_outputs) != 0
+            || create_templates(n_outputs, port_numbers, output_specifiers, unirec_input_specifier) != 0) {
+               stop = 1;
+         }
+         reload_filter = 0;         
+      }
       // Quit if maximum number of records has been reached
       num_records++;
       if (max_num_records && max_num_records == num_records) {
          stop = 1;
       }
+
    }
 
    // ***** Cleanup *****
