@@ -97,11 +97,11 @@ trap_module_info_t module_info = {
 static int stop = 0;               // Flag to interrupt process
 int reload_filter = 0;             // Flag to reload filter from file
 
-unsigned int num_records = 0; // Number of records received (total of all inputs)
-unsigned int max_num_records = 0; // Exit after this number of records is received
-unsigned int max_num_ifaces = 32; // Maximum number of output interfaces
+unsigned int num_records = 0;      // Number of records received (total of all inputs)
+unsigned int max_num_records = 0;  // Exit after this number of records is received
+unsigned int max_num_ifaces = 32;  // Maximum number of output interfaces
 
-char *str_buffer = NULL;
+char *str_buffer = NULL;           // Auxiliary buffer for evalAST()
 
 // Function to handle SIGTERM and SIGINT signals (used to stop the module)
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
@@ -121,10 +121,10 @@ struct unirec_output_t
    void *out_rec;
 };
 
-// Parse file with filters and specifiers, fill structures with specified data
+// Parse file and fill structures with filters and specifiers, return number of succesfully loaded interfaces
 int parse_file(char *str, struct unirec_output_t **output_specifiers, int n_outputs)
 {
-   int iface_index = 0; // output interface index
+   int iface_index = 0; // Output interface index
    char *beg_ptr = str;
    char *end_ptr = str;
 
@@ -189,7 +189,7 @@ int parse_file(char *str, struct unirec_output_t **output_specifiers, int n_outp
 // Read file content to buffer, return pointer to buffer
 char *load_file(char *filename)
 {
-   int f_size;   // size of file with filter
+   int f_size;   // Size of file with filter
    char *file_buffer = NULL;
    FILE *f = NULL;
 
@@ -204,7 +204,8 @@ char *load_file(char *filename)
    f_size = ftell(f);
    fseek(f, 0, SEEK_SET);
 
-   file_buffer = (char *) malloc (f_size + 1);
+   // Allocate file buffer
+   file_buffer = (char*) malloc (f_size + 1);
 
    if (fread(file_buffer, sizeof(char), f_size, f) != f_size) {
       fprintf(stderr, "Error: File %s could not be read.\n", filename);
@@ -293,6 +294,7 @@ int main(int argc, char **argv)
    // Register signal handler for reloading file with filter
    signal(SIGUSR1, reload_filter_signal_handler);
 
+   // Parse TRAP parameters
    ret = trap_parse_params(&argc, argv, &ifc_spec);
    if (ret != TRAP_E_OK) {
       if (ret == TRAP_E_HELP) { // "-h" was found
@@ -443,7 +445,7 @@ int main(int argc, char **argv)
    }
 
    // Allocate auxiliary buffer for evalAST()
-   str_buffer = (char *) malloc(65536 * sizeof(char)); // no string in unirec can be longer than 64kB
+   str_buffer = (char *) malloc(65536 * sizeof(char)); // No string in unirec can be longer than 64kB
    if (str_buffer == NULL) {
       fprintf(stderr, "Error: Not enough memory for string buffer.\n");
       stop = 1;
@@ -452,7 +454,7 @@ int main(int argc, char **argv)
    // Free ifc_spec structure
    trap_free_ifc_spec(ifc_spec);
 
-   /* main loop */
+   // Main loop
    // Copy data from input to output
    while (!stop) {
       const void *in_rec;
@@ -476,50 +478,49 @@ int main(int argc, char **argv)
       // PROCESS THE DATA
       for (i = 0; i < n_outputs; i++) {
          if (!(output_specifiers[i]->tree) || (output_specifiers[i]->tree && evalAST(output_specifiers[i]->tree, in_tmplt, in_rec))) {
-           //Iterate over all output fields; if the field is present in input template, copy it to output record
-           // If missing, set null
-           void *ptr1 = NULL, *ptr2 = NULL;
-           ur_field_id_t id;
-           ur_iter_t iter = UR_ITER_BEGIN;
-           while ((id = ur_iter_fields_tmplt(output_specifiers[i]->out_tmplt, &iter)) != UR_INVALID_FIELD) {
-              if (!ur_is_dynamic(id)) { //static field
-                 if (ur_is_present(in_tmplt, id)) {
-                    ptr1 = ur_get_ptr_by_id(in_tmplt, in_rec, id);
-                    ptr2 = ur_get_ptr_by_id(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id);
-                //copy the data
-                    if ((ptr1 != NULL) && (ptr2 != NULL)) {
-                       memcpy(ptr2, ptr1, ur_get_size_by_id(id));
-                    }
-                 } else { //missing static field
+            //Iterate over all output fields; if the field is present in input template, copy it to output record
+            // If missing, set null
+            void *ptr1 = NULL, *ptr2 = NULL;
+            ur_field_id_t id;
+            ur_iter_t iter = UR_ITER_BEGIN;
+            while ((id = ur_iter_fields_tmplt(output_specifiers[i]->out_tmplt, &iter)) != UR_INVALID_FIELD) {
+               if (!ur_is_dynamic(id)) { //static field
+                  if (ur_is_present(in_tmplt, id)) {
+                     ptr1 = ur_get_ptr_by_id(in_tmplt, in_rec, id);
+                     ptr2 = ur_get_ptr_by_id(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id);
+                     //copy the data
+                     if ((ptr1 != NULL) && (ptr2 != NULL)) {
+                        memcpy(ptr2, ptr1, ur_get_size_by_id(id));
+                     }
+                  } else { //missing static field
                     SET_NULL(id, output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec);
-                 }
-              } else { //dynamic field
-                 if (ur_is_present(in_tmplt, id)) {
-                    char* in_ptr = ur_get_dyn(in_tmplt, in_rec, id);
-                    int size = ur_get_dyn_size(in_tmplt, in_rec, id);
-                    char* out_ptr = ur_get_dyn(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id);
-                    // Check size of dynamic field and if longer than maximum size then cut it
-                    if (size > DYN_FIELD_MAX_SIZE)
-                       size = DYN_FIELD_MAX_SIZE;
-                    //copy the data
-                    memcpy(out_ptr, in_ptr, size);
-                    //set offset to the end of the data in the new record
-                    int new_offset = ur_get_dyn_offset_start(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id) + size;
-                    ur_set_dyn_offset(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id, new_offset);
-                 } else { //missing dynamic field
-                    ur_set_dyn_offset(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id,
-                                      ur_get_dyn_offset_start(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id));
-                 }
-              }
-           }
-           // Send record to corresponding interface
-           ret = trap_send(i, output_specifiers[i]->out_rec, ur_rec_size(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec));
-           trap_send_flush(i);
-           // Handle possible errors
-           TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, 0, break);
-        }
-     }
-
+                  }
+               } else { //dynamic field
+                  if (ur_is_present(in_tmplt, id)) {
+                     char* in_ptr = ur_get_dyn(in_tmplt, in_rec, id);
+                     int size = ur_get_dyn_size(in_tmplt, in_rec, id);
+                     char* out_ptr = ur_get_dyn(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id);
+                     // Check size of dynamic field and if longer than maximum size then cut it
+                     if (size > DYN_FIELD_MAX_SIZE)
+                        size = DYN_FIELD_MAX_SIZE;
+                     //copy the data
+                     memcpy(out_ptr, in_ptr, size);
+                     //set offset to the end of the data in the new record
+                     int new_offset = ur_get_dyn_offset_start(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id) + size;
+                     ur_set_dyn_offset(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id, new_offset);
+                  } else { //missing dynamic field
+                     ur_set_dyn_offset(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id,
+                                       ur_get_dyn_offset_start(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id));
+                  }
+               }
+            }
+            // Send record to corresponding interface
+            ret = trap_send(i, output_specifiers[i]->out_rec, ur_rec_size(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec));
+            trap_send_flush(i);
+            // Handle possible errors
+            TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, 0, break);
+         }
+      }
       // SIGUSR1 has been sent, reload filter
       if (reload_filter == 1) {
          printf("\nReloading filter...\n\n");
@@ -536,14 +537,12 @@ int main(int argc, char **argv)
       if (max_num_records && max_num_records == num_records) {
          stop = 1;
       }
-
    }
 
    // ***** Cleanup *****
    free(str_buffer);
 
    TRAP_DEFAULT_FINALIZATION();
-
    ur_free_template(in_tmplt);
 
    for (i = 0; i < n_outputs; i++) {
