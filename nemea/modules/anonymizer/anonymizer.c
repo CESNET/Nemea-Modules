@@ -44,6 +44,7 @@
 
 #include "anonymizer.h"
 #include "panonymizer.h"
+#include "fields.c"
 #include <nemea-common.h>
 
 
@@ -52,6 +53,24 @@
 #define SECRET_KEY_FILE "secret_key.txt"   // File with secret key
 #define SECRET_KEY_MAX_SIZE 67             // Max length of secret key
 
+UR_FIELDS(
+  //BASIC_FLOW
+  ipaddr SRC_IP,      //Source address of a flow
+  ipaddr DST_IP,      //Destination address of a flow
+  uint16 SRC_PORT,    //Source transport-layer port
+  uint16 DST_PORT,    //Destination transport-layer port
+  uint8 PROTOCOL,     //L4 protocol (TCP, UDP, ICMP, etc.)
+  uint32 PACKETS,     //Number of packets in a flow or in an interval
+  uint64 BYTES,       //Number of bytes in a flow or in an interval
+  time TIME_FIRST,    //Timestamp of the first packet of a flow
+  time TIME_LAST,     //Timestamp of the last packet of a flow
+  uint8 TCP_FLAGS,    //TCP flags of a flow (logical OR over TCP flags field of all packets)
+  //COLLECTOR_FLOW
+  uint64 LINK_BIT_FIELD,  //Bit field where each bit marks whether a flow was captured on corresponding link
+  uint8 DIR_BIT_FIELD,    //Bit field used for detemining incomming/outgoing flow
+  uint8 TOS,              //IP type of service
+  uint8 TTL,              //IP time to live
+)
 
 /* ****************************** Modify here ****************************** */
 // Struct with information about module
@@ -176,10 +195,10 @@ void ip_anonymize(ur_template_t *tmplt, const void *data, uint8_t mode)
    uint64_t  ip_v6_src_anon[2] = {0}, ip_v6_dst_anon[2] = {0};
    uint64_t *ip_v6_src_ptr, *ip_v6_dst_ptr;
 
-   if (ip_is4(ur_get_ptr(tmplt, data, UR_SRC_IP))) {
+   if (ip_is4(ur_get_ptr(tmplt, data, F_SRC_IP))) {
       // Anonymize IP version 4
-      ip_v4_src_ptr =  (uint32_t *) ip_get_v4_as_bytes(ur_get_ptr(tmplt, data, UR_SRC_IP));
-      ip_v4_dst_ptr =  (uint32_t *) ip_get_v4_as_bytes(ur_get_ptr(tmplt, data, UR_DST_IP));
+      ip_v4_src_ptr =  (uint32_t *) ip_get_v4_as_bytes(ur_get_ptr(tmplt, data, F_SRC_IP));
+      ip_v4_dst_ptr =  (uint32_t *) ip_get_v4_as_bytes(ur_get_ptr(tmplt, data, F_DST_IP));
       if (mode == ANONYMIZATION) {
          ip_v4_src_anon = anonymize(ntohl(*ip_v4_src_ptr));
          ip_v4_dst_anon = anonymize(ntohl(*ip_v4_dst_ptr));
@@ -191,8 +210,8 @@ void ip_anonymize(ur_template_t *tmplt, const void *data, uint8_t mode)
       *ip_v4_dst_ptr = htonl(ip_v4_dst_anon);
    } else {
       // Anonymize IP version 6
-      ip_v6_src_ptr = (uint64_t *) ur_get_ptr(tmplt, data, UR_SRC_IP);
-      ip_v6_dst_ptr = (uint64_t *) ur_get_ptr(tmplt, data, UR_DST_IP);
+      ip_v6_src_ptr = (uint64_t *) ur_get_ptr(tmplt, data, F_SRC_IP);
+      ip_v6_dst_ptr = (uint64_t *) ur_get_ptr(tmplt, data, F_DST_IP);
       if (mode == ANONYMIZATION) {
          anonymize_v6(ip_v6_src_ptr, ip_v6_src_anon);
          anonymize_v6(ip_v6_dst_ptr, ip_v6_dst_anon);
@@ -240,7 +259,7 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
 
 
    // ***** Create UniRec template *****
-   char *unirec_specifier = "<COLLECTOR_FLOW>";
+   char *unirec_specifier = "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL";
    char opt;
    while ((opt = getopt(argc, argv, "u:k:f:Md")) != -1) {
       switch (opt) {
@@ -264,10 +283,14 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
             return 3;
       }
    }
-
-   ur_template_t *tmplt = ur_create_template(unirec_specifier);
+   char * errstr = NULL;
+   ur_template_t *tmplt = ur_create_template(unirec_specifier, &errstr);
    if (tmplt == NULL) {
       fprintf(stderr, "Error: Invalid UniRec specifier.\n");
+      if(errstr != NULL){
+        fprintf(stderr, "%s\n", errstr);
+        free(errstr);
+      }
       trap_finalize();
       return 4;
    }
@@ -300,7 +323,7 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
       if (data_size == 1) {
         break;
       }
-      if (data_size != 1 && (data_size < ur_rec_static_size(tmplt) || data_size > 250)) {
+      if (data_size != 1 && (data_size < ur_rec_fixlen_size(tmplt) || data_size > 250)) {
           #ifdef __cplusplus
           extern "C" {
           #endif
@@ -309,7 +332,7 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
           }
           #endif
           extern void *trap_glob_ctx;
-          printf("tmpl: %d\n", ur_rec_static_size(tmplt));
+          printf("tmpl: %d\n", ur_rec_fixlen_size(tmplt));
           trap_ctx_create_ifc_dump(trap_glob_ctx, NULL);
               printf("%u\n", data_size);
               for (int i = -64; i < 256; i++) {
@@ -322,7 +345,7 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
               printf("\n");
               exit(1);
          fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
-                 ur_rec_static_size(tmplt), data_size);
+                 ur_rec_fixlen_size(tmplt), data_size);
          continue;
          /*if (data_size <= 1) {
             printf("EOF received\n");
@@ -330,7 +353,7 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
          }
          else {
             fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
-                    ur_rec_static_size(tmplt), data_size);
+                    ur_rec_fixlen_size(tmplt), data_size);
             break;
          }*/
       }
@@ -339,12 +362,12 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
       // ***** ONLY FOR DEBUGING ***** //
       #ifdef DEBUG
          char ip1_buff[64], ip2_buff[64];
-         ip_to_str(ur_get_ptr(tmplt, data, UR_SRC_IP), ip1_buff);
-         ip_to_str(ur_get_ptr(tmplt, data, UR_DST_IP), ip2_buff);
+         ip_to_str(ur_get_ptr(tmplt, data, F_SRC_IP), ip1_buff);
+         ip_to_str(ur_get_ptr(tmplt, data, F_DST_IP), ip2_buff);
          fprintf(stderr, "ORIG: %15s   ->   %15s\n", ip1_buff, ip2_buff);
          ip_anonymize(tmplt, data, mode);
-         ip_to_str(ur_get_ptr(tmplt, data, UR_SRC_IP), ip1_buff);
-         ip_to_str(ur_get_ptr(tmplt, data, UR_DST_IP), ip2_buff);
+         ip_to_str(ur_get_ptr(tmplt, data, F_SRC_IP), ip1_buff);
+         ip_to_str(ur_get_ptr(tmplt, data, F_DST_IP), ip2_buff);
          fprintf(stderr, "ANON: %15s   ->   %15s\n\n", ip1_buff, ip2_buff);
       #endif
       // ***************************** //

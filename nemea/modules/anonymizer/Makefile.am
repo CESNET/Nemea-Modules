@@ -8,3 +8,4 @@ anonymizer_SOURCES=anonymizer.c \
 anonymizer_LDADD=-ltrap -lunirec -lnemea-common
 pkgdocdir=${docdir}/anonymizer
 pkgdoc_DATA=README
+include ../aminclude.am
