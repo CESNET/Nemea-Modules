@@ -74,7 +74,7 @@ UR_FIELDS(
 
 /* ****************************** Modify here ****************************** */
 // Struct with information about module
-trap_module_info_t module_info = {
+trap_module_info_t *module_info = NULL; /*{
    "Anonymizer", // Module name
    // Module description
    "Module for anonymizing incoming flow records.\n"
@@ -90,8 +90,18 @@ trap_module_info_t module_info = {
    "*Secret key must be 32 characters long string or 32B sized hex string starting with 0x\n",
    1, // Number of input interfaces
    1, // Number of output interfaces
-};
+};*/
 /* ************************************************************************* */
+
+#define MODULE_BASIC_INFO(BASIC) \
+  BASIC("Anonymizer module","Module for anonymizing incoming flow records.",1,1)
+
+#define MODULE_PARAMS(PARAM) \
+   PARAM('u', "unirec", "Specify UniRec template expected on the input interface.", required_argument, "string") \
+   PARAM('k', "key", "Specify secret key, the key must be 32 characters long string or 32B sized hex string starting with 0x", required_argument, "string") \
+   PARAM('f', "file", "Specify file containing secret key, the key must be 32 characters long string or 32B sized hex string starting with 0x", required_argument, "string") \
+   PARAM('M', "murmur", "Use MurmurHash3 instead of Rijndael cipher.", no_argument, "none") \
+   PARAM('d', "de-anonym", "Switch to de-anonymization mode.", no_argument, "none")
 
 static int stop = 0;
 
@@ -238,7 +248,8 @@ NMCM_PROGRESS_DEF
 
    uint8_t mode = ANONYMIZATION;          // Default mode
    ANONYMIZATION_ALGORITHM = RIJNDAEL_BC; // Default algorithm
-
+   
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    // ***** ONLY FOR DEBUGING ***** //
    #ifdef DEBUG
@@ -250,7 +261,7 @@ NMCM_PROGRESS_DEF
 NMCM_PROGRESS_INIT(10000,puts("-"))
 
    // ***** TRAP initialization *****
-   TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
+   TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
 
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
@@ -261,7 +272,7 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
    // ***** Create UniRec template *****
    char *unirec_specifier = "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL";
    char opt;
-   while ((opt = getopt(argc, argv, "u:k:f:Md")) != -1) {
+   while ((opt = getopt(argc, argv, module_getopt_string)) != -1) {
       switch (opt) {
          case 'u':
             unirec_specifier = optarg;
@@ -280,6 +291,7 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
             break;
          default:
             fprintf(stderr, "Invalid arguments.\n");
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
             return 3;
       }
    }
@@ -292,6 +304,7 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
         free(errstr);
       }
       trap_finalize();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 4;
    }
 
@@ -300,12 +313,14 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
    if (secret_file != NULL) {
       if (!init_from_file(secret_file, init_key)) {
          trap_finalize();
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return 7;
       }
    }
    else {
       if (!ParseCryptoPAnKey(secret_key, init_key)) {
          trap_finalize();
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return 7;
       }
       PAnonymizer_Init(init_key);
@@ -390,6 +405,7 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
    // ***** Do all necessary cleanup before exiting *****
    TRAP_DEFAULT_FINALIZATION();
    ur_free_template(tmplt);
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    return 0;
 }
