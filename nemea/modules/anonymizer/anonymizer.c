@@ -376,10 +376,6 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
       #endif
 
       // Send anonymized data
-      uint16_t s = ur_rec_size(tmplt, data);
-      //if (s > data_size) {
-      //  fprintf(stderr, "send: wrong size: (tx) %"PRIu16" x %"PRIu16" (rx)\n", s, data_size);
-      //}
       trap_send_data(0, data, data_size, TRAP_NO_WAIT);
       NMCM_PROGRESS_PRINT
    }

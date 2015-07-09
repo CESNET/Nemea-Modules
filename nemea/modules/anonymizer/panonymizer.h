@@ -84,12 +84,12 @@
 // PAnonymizer_Init need a 256-bit key
 // The first 128 bits of the key are used as the secret key for rijndael cipher
 // The second 128 bits of the key are used as the secret pad for padding
-void PAnonymizer_Init(uint8_t * key);
+void PAnonymizer_Init(uint8_t *key);
 
-int ParseCryptoPAnKey ( char *s, char *key );
+int ParseCryptoPAnKey (char *s, uint8_t *key);
 
-uint32_t anonymize( const uint32_t orig_addr);
-uint32_t deanonymize( const uint32_t orig_addr);
+uint32_t anonymize(const uint32_t orig_addr);
+uint32_t deanonymize(const uint32_t orig_addr);
 
 void anonymize_v6(const uint64_t orig_addr[2], uint64_t *anon_addr);
 void deanonymize_v6(const uint64_t orig_addr[2], uint64_t *anon_addr);

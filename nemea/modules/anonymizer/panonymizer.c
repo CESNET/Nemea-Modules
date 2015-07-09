@@ -105,7 +105,7 @@ void PAnonymizer_Init(uint8_t * key) {
   Rijndael_blockEncrypt(key + 16, 128, m_pad);
 }
 
-int ParseCryptoPAnKey ( char *s, char *key ) {
+int ParseCryptoPAnKey (char *s, uint8_t *key ) {
 int i, j;
 char numstr[3];
 uint32_t len = strlen(s);
@@ -118,7 +118,7 @@ uint32_t len = strlen(s);
 
 	if ( strlen(s) == 32 ) {
 		// Key is a string
-		strncpy(key, s, 32);
+		strncpy((char*)key, s, 32);
 		return 1;
 	}
 
