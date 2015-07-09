@@ -70,7 +70,7 @@
 
 /* ****************************** Modify here ****************************** */
 // Struct with information about module
-trap_module_info_t module_info = {
+trap_module_info_t *module_info = NULL; /*{
 	"Flow-counter module",		  // Module name
 	// Module description
 	"Example module for counting number of incoming flow records.\n"
@@ -86,7 +86,18 @@ trap_module_info_t module_info = {
 	2,
 	"-h", "--help", "prints help", 0, NULL,
 	"-c", "--cell", "cell test", 0, NULL
-};
+};*/
+
+#define MODULE_BASIC_INFO(BASIC) \
+  BASIC("Flow-counter module","Example module for counting number of incoming flow records.",1,0)
+
+#define MODULE_PARAMS(PARAM) \
+  PARAM('u', NULL, "Specify UniRec template expected on the input interface.", 0, NULL) \
+  PARAM('p', NULL, "Show progress - print a dot every N flows.", required_argument, "int32") \
+  PARAM('P', NULL, "When showing progress, print CHAR instead of dot.", required_argument, "string") \
+  PARAM('o', NULL, "Send @VOLUME record filled with current counters every SEC second(s).", required_argument, "int32")
+
+
 
 /* ************************************************************************* */
 
@@ -157,7 +168,6 @@ void get_o_param(int argc, char **argv)
 					HANDLE_ERROR("-o: bad interval range");
 				}
 				send_interval = tmp_interval;
-				module_info.num_ifc_out = 1;
 				break;
 			}
 		default:
@@ -179,13 +189,15 @@ int main(int argc, char **argv)
 {
 	int ret;
 
+	INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+
 	// Declare progress structure, pointer to this struct, initialize progress limit
 	NMCM_PROGRESS_DEF;
 
 	get_o_param(argc, argv);	  /* output have to be known before TRAP init */
 
 	// ***** TRAP initialization *****
-	TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
+	TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
 
 	// Register signal handler.
 	TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
@@ -221,6 +233,7 @@ int main(int argc, char **argv)
 	if (tmplt == NULL) {
 		fprintf(stderr, "Error: Invalid UniRec specifier.\n");
 		trap_finalize();
+		FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
 		return 4;
 	}
 
@@ -230,6 +243,7 @@ int main(int argc, char **argv)
 		if (!out_tmplt) {
 			fprintf(stderr, "Error: Invalid UniRec specifier.\n");
 			trap_finalize();
+			FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
 			return 4;
 		}
 		/* allocate space for output record with no dynamic part */
@@ -237,6 +251,7 @@ int main(int argc, char **argv)
 		if (!out_rec) {
 			ur_free_template(out_tmplt);
 			TRAP_DEFAULT_FINALIZATION();
+			FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
 			return 4;
 		}
 		ret = trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
@@ -245,6 +260,7 @@ int main(int argc, char **argv)
 			ur_free(out_rec);
 			fprintf(stderr, "Error: trap_ifcctl.\n");
 			trap_finalize();
+			FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
 			return 4;
 		}
 		alarm(send_interval);	  /* arrange SIGARLM in send_interval seconds */
@@ -270,8 +286,8 @@ int main(int argc, char **argv)
 			}
 		}
 
-      // Printing progress
-      NMCM_PROGRESS_PRINT;
+		// Printing progress
+		NMCM_PROGRESS_PRINT;
 
 		// Update counters
 		cnt_flows += 1;
@@ -306,6 +322,6 @@ int main(int argc, char **argv)
 	}
 
 	ur_free_template(tmplt);
-
+	FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
 	return EXIT_SUCCESS;
 }
