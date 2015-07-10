@@ -72,26 +72,8 @@ UR_FIELDS(
   uint8 TTL,              //IP time to live
 )
 
-/* ****************************** Modify here ****************************** */
 // Struct with information about module
-trap_module_info_t *module_info = NULL; /*{
-   "Anonymizer", // Module name
-   // Module description
-   "Module for anonymizing incoming flow records.\n"
-   "Parameters:\n"
-   "   -u TMPLT    Specify UniRec template expected on the input interface.\n"
-   "   -k KEY      Specify secret key*.\n"
-   "   -f FILE     Specify file containing secret key*.\n"
-   "   -M          Use MurmurHash3 instead of Rijndael cipher.\n"
-   "   -d          Switch to de-anonymization mode.\n"
-   "Interfaces:\n"
-   "   Inputs: 1	(UniRec template --- set up as -u parameter)\n"
-   "   Outputs: 1	(UniRec template --- same UniRec format as input UniRec but with anonymized IP addresses)\n"
-   "*Secret key must be 32 characters long string or 32B sized hex string starting with 0x\n",
-   1, // Number of input interfaces
-   1, // Number of output interfaces
-};*/
-/* ************************************************************************* */
+trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
   BASIC("Anonymizer module","Module for anonymizing incoming flow records.",1,1)
