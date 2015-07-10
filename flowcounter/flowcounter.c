@@ -68,25 +68,8 @@
 #define HANDLE_ERROR(msg) \
 	do { fprintf(stderr, "%s\n", msg); exit(EXIT_FAILURE); } while(0)
 
-/* ****************************** Modify here ****************************** */
 // Struct with information about module
-trap_module_info_t *module_info = NULL; /*{
-	"Flow-counter module",		  // Module name
-	// Module description
-	"Example module for counting number of incoming flow records.\n"
-		 "Parameters:\n"
-		 "   -u TMPLT    Specify UniRec template expected on the input interface.\n"
-		 "   -p N        Show progress - print a dot every N flows.\n"
-		 "   -P CHAR     When showing progress, print CHAR instead of dot.\n"
-		 "   -o SEC      Send @VOLUME record filled with current counters every SEC second(s).\n"
-		 "Interfaces:\n"
-		 "   Inputs: 1 (flow records)\n" "   Outputs: 0/1 (affected by -o parameter)\n",
-	1,									  // Number of input interfaces
-	0,									  // Number of output interfaces
-	2,
-	"-h", "--help", "prints help", 0, NULL,
-	"-c", "--cell", "cell test", 0, NULL
-};*/
+trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
   BASIC("Flow-counter module","Example module for counting number of incoming flow records.",1,0)
@@ -95,7 +78,7 @@ trap_module_info_t *module_info = NULL; /*{
   PARAM('u', "unirec", "Specify UniRec template expected on the input interface.", required_argument, "string") \
   PARAM('p', "print", "Show progress - print a dot every N flows.", required_argument, "int32") \
   PARAM('P', "print_c", "When showing progress, print CHAR instead of dot.", required_argument, "string") \
-  PARAM('o', "output", "Send @VOLUME record filled with current counters every SEC second(s).", required_argument, "int32")
+  PARAM('o', "send_time", "Send @VOLUME record filled with current counters every SEC second(s).", required_argument, "int32")
 
 
 
