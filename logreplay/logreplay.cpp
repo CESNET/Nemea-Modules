@@ -323,11 +323,16 @@ int main(int argc, char **argv)
                store_value(utmpl, data, tmpl_f_id, dynamic_field_map[tmpl_f_id]);
             }
          }
+
          trap_ctx_send(ctx, 0, data, ur_rec_size(utmpl, data));
          //trap_ctx_send_flush(ctx, 0);
 
       }
+   } else {
+      fprintf(stderr, "Error: Cannot open file.\n");
+      goto exit;
    }
+
 
    // ***** Cleanup *****
 
