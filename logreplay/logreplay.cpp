@@ -166,11 +166,9 @@ int main(int argc, char **argv)
    int ret;
    int send_eof = 1;
    int time_flag = 0;
-   char *out_template_str = NULL;
-   char *in = NULL, *in_filename = NULL;
+   char *in_filename = NULL;
    char record_delim = '\n';
    char field_delim = ',';
-   char dyn_field_quote = '"'; // dynamic fields are enquoted
    ifstream f_in;
    string line;
    ur_template_t *utmpl = NULL;
