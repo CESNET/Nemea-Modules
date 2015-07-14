@@ -235,6 +235,7 @@ int main(int argc, char **argv)
       utmpl = ur_create_template(line.c_str());
       if (utmpl == NULL) {
          fprintf(stderr, "Error: Cannot create unirec template from header fields.\n");
+         ret = 1;
          goto exit;
       }
 
@@ -250,6 +251,7 @@ int main(int argc, char **argv)
       data = ur_create(utmpl, memory_needed);
       if (data == NULL) {
          fprintf(stderr, "Error: Cannot create template for dynamic fields (not enough memory?).\n");
+         ret = 1;
          goto exit;
       }
 
@@ -273,7 +275,15 @@ int main(int argc, char **argv)
       string column;
 
       while (getline(ss, column, field_delim)) {
-         field_ids.push_back(urgetidbyname(column.c_str()));
+         ur_field_id_t id = urgetidbyname(column.c_str());
+
+         // Can happen in cases of fields macro (e.g. <COLLECTOR_FLOW>) in the header
+         if (id == UR_INVALID_FIELD) {
+            fprintf(stderr, "Error: Invalid unirec field %s\n", column.c_str());
+            ret = 3;
+            goto exit;
+         }
+         field_ids.push_back(id);
       }
 
 
@@ -330,6 +340,7 @@ int main(int argc, char **argv)
       }
    } else {
       fprintf(stderr, "Error: Cannot open file.\n");
+      ret = 4;
       goto exit;
    }
 
