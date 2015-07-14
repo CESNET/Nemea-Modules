@@ -234,6 +234,7 @@ int main(int argc, char **argv)
       }
       utmpl = ur_create_template(line.c_str());
       if (utmpl == NULL) {
+         fprintf(stderr, "Error: Cannot create unirec template from header fields.\n");
          goto exit;
       }
 
@@ -248,6 +249,7 @@ int main(int argc, char **argv)
 
       data = ur_create(utmpl, memory_needed);
       if (data == NULL) {
+         fprintf(stderr, "Error: Cannot create template for dynamic fields (not enough memory?).\n");
          goto exit;
       }
 
