@@ -62,42 +62,20 @@
 #include <ctype.h>
 
 // Struct with information about module
-trap_module_info_t module_info = {
-   "Logger", // Module name
-   // Module description
-   "This module logs all incoming UniRec records to standard output or into a\n"
-   "specified file. Each record is written as one line containing values of its\n"
-   "fields in human-readable format separated by chosen delimiters (CSV format).\n"
-   "Number of input intefaces and their UniRec formats are given on command line\n"
-   "(if you specify N UniRec formats, N input interfaces will be created).\n"
-   "Output contains union of all fields of all input formats by default, but it may\n"
-   "be redefined using -o option.\n"
-   "\n"
-   "Interfaces:\n"
-   "   Inputs: variable\n"
-   "   Outputs: 0\n"
-   "\n"
-   "Usage:\n"
-   "   ./logger -i IFC_SPEC [-w|-a FILE] UNIREC_FMT [UNIREC_FMT ...] [-o OUT_FMT] [-t] [-n] [-c N] [-d X]\n"
-   "\n"
-   "Module specific parameters:\n"
-   "   UNIREC_FMT   The i-th parameter of this type specifies format of UniRec\n"
-   "                expected on the i-th input interface.\n"
-   "   -w FILE      Write output to FILE instead of stdout (rewrite the file).\n"
-   "   -a FILE      Write output to FILE instead of stdout (append to the end).\n"
-   "   -o OUT_FMT   Set of fields included in the output (UniRec specifier).\n"
-   "                Union of all input formats is used by default.\n"
-   "   -t           Write names of fields on the first line.\n"
-   "   -T           Add the time when the record was received as the first field.\n"
-   "   -n           Add the number of interface the record was received on as the\n"
-   "                first field (or second when -T is specified).\n"
-   "   -c N         Quit after N records are received, 0 can be useful in combination with -t to print UniRec.\n"
-   "   -d X         Optionally modifies delimiter to inserted value X (implicitely ',').\n"
-   "                Delimiter has to be one character, except for printable\n"
-   "                escape sequences.",
-   -1, // Number of input interfaces (-1 means variable)
-   0, // Number of output interfaces
-};
+trap_module_info_t *module_info = NULL;
+
+#define MODULE_BASIC_INFO(BASIC) \
+  BASIC("Logger","This module logs all incoming UniRec records to standard output or into a specified file. Each record is written as one line containing values of its fields in human-readable format separated by chosen delimiters (CSV format).",-1,0)
+
+#define MODULE_PARAMS(PARAM) \
+  PARAM('w', "write", "Write output to FILE instead of stdout (rewrite the file).", required_argument, "string") \
+  PARAM('a', "append", "Write output to FILE instead of stdout (append to the end).", required_argument, "string") \
+  PARAM('o', "output_fields", "Set of fields included in the output (UniRec specifier). Union of all input formats is used by default.", required_argument, "string") \
+  PARAM('t', "title", "Write names of fields on the first line.", no_argument, "none") \
+  PARAM('T', "time", "Add the time when the record was received as the first field.", no_argument, "none") \
+  PARAM('n', "ifc_num", "Add the number of interface the record was received on as the first field (or second when -T is specified).", no_argument, "none") \
+  PARAM('c', "cut", "Quit after N records are received, 0 can be useful in combination with -t to print UniRec.", required_argument, "uint32") \
+  PARAM('d', "delimiter", "Optionally modifies delimiter to inserted value X (implicitely ','). Delimiter has to be one character, except for printable escape sequences.", required_argument, "string")
 
 /* If delimiter is escape sequence, assigns its value from input to delimiter var. */
 #define ESCAPE_SEQ(arg,err_cmd) do { \
@@ -339,6 +317,7 @@ int main(int argc, char **argv)
    int print_title = 0;
    char delimiter = ',';
 
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    // ***** Process parameters *****
 
    // Let TRAP library parse command-line arguments and extract its parameters
@@ -346,7 +325,7 @@ int main(int argc, char **argv)
    ret = trap_parse_params(&argc, argv, &ifc_spec);
    if (ret != TRAP_E_OK) {
       if (ret == TRAP_E_HELP) { // "-h" was found
-         trap_print_help(&module_info);
+         trap_print_help(module_info);
          return 0;
       }
       fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
@@ -360,7 +339,7 @@ int main(int argc, char **argv)
 
    // Parse remaining parameters and get configuration
    char opt;
-   while ((opt = getopt(argc, argv, "w:a:o:c:d:tnT")) != -1) {
+   while ((opt = getopt(argc, argv, module_getopt_string)) != -1) {
       switch (opt) {
       case 'a':
          append = 1;
@@ -398,9 +377,11 @@ int main(int argc, char **argv)
 
          fprintf(stderr, "Error: Parameter of -d option must contain 1 character"
                             " or escape sequence.\n");
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return 1;
       default:
          fprintf(stderr, "Error: Invalid arguments.\n");
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return 1;
       }
    }
@@ -412,10 +393,12 @@ int main(int argc, char **argv)
    }
    if (n_inputs < 1) {
       fprintf(stderr, "Error: You must specify at least one UniRec template.\n");
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 0;
    }
    if (n_inputs > 32) {
       fprintf(stderr, "Error: More than 32 interfaces is not allowed by TRAP library.\n");
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 4;
    }
 
@@ -425,6 +408,7 @@ int main(int argc, char **argv)
    templates = malloc(n_inputs*sizeof(*templates));
    if (templates == NULL) {
       fprintf(stderr, "Memory allocation error.\n");
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return -1;
    }
 
@@ -436,6 +420,7 @@ int main(int argc, char **argv)
             ur_free_template(templates[i]);
          }
          free(templates);
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return 2;
       }
    }
@@ -462,14 +447,14 @@ int main(int argc, char **argv)
    // ***** TRAP initialization *****
 
    // Set number of input interfaces
-   module_info.num_ifc_in = n_inputs;
+   module_info->num_ifc_in = n_inputs;
 
    if (verbose >= 0) {
       printf("Initializing TRAP library ...\n");
    }
 
    // Initialize TRAP library (create and init all interfaces)
-   ret = trap_init(&module_info, ifc_spec);
+   ret = trap_init(module_info, ifc_spec);
    if (ret != TRAP_E_OK) {
       fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
       trap_free_ifc_spec(ifc_spec);
@@ -562,6 +547,7 @@ exit:
    }
    free(templates);
    ur_free_template(out_template);
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    return ret;
 }
