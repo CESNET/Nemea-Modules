@@ -133,13 +133,13 @@ string get_next_field(stringstream &line)
 }
 
 
-void store_value(ur_template_t *t, void *data, int f_id, string &column)
+int store_value(ur_template_t *t, void *data, int f_id, string &column)
 {
    // Check size of dynamic field and if longer than maximum size then cut it
    if (column.length() > DYN_FIELD_MAX_SIZE) {
       column[DYN_FIELD_MAX_SIZE] = 0;
    }
-   ur_set_from_string(t, data, f_id, column.c_str());
+   return ur_set_from_string(t, data, f_id, column.c_str());
 }
 
 ur_field_id_t urgetidbyname(const char *name)
@@ -289,7 +289,7 @@ int main(int argc, char **argv)
 
       /* main loop */
       while (f_in.good()) {
-         if ((is_limited == 1) && (num_records++ >= max_num_records)) {
+         if ((num_records++ >= max_num_records) && (is_limited == 1)) {
             break;
          }
 
@@ -299,6 +299,7 @@ int main(int argc, char **argv)
          }
          stringstream sl(line);
          int skipped_time = 0;
+         bool valid = true;
          for (vector<ur_field_id_t>::iterator it = field_ids.begin(); it != field_ids.end(); ++it) {
             column = get_next_field(sl);
             // Skip timestamp added by logger
@@ -312,7 +313,11 @@ int main(int argc, char **argv)
                dynamic_field_map[*it] = column;
             } else {
                // store static field in unirec structure
-               store_value(utmpl, data, *it, column);
+               if (store_value(utmpl, data, *it, column) != 0) {
+                  fprintf(stderr, "Warning: invalid field \"%s\", record %d skipped.\n", column.c_str(), num_records);
+                  valid = false;
+                  break;
+               }
             }
          }
          // store dynamic fields in correct order to unirec structure
@@ -320,12 +325,17 @@ int main(int argc, char **argv)
          ur_iter_t iter = UR_ITER_BEGIN;
          while ((tmpl_f_id = ur_iter_fields_tmplt(utmpl, &iter)) != UR_INVALID_FIELD) {
             if (ur_is_dynamic(tmpl_f_id) != 0) {
-               store_value(utmpl, data, tmpl_f_id, dynamic_field_map[tmpl_f_id]);
+               if (store_value(utmpl, data, tmpl_f_id, dynamic_field_map[tmpl_f_id]) != 0) {
+                  fprintf(stderr, "Warning: invalid field \"%s\", record %d skipped.\n", column.c_str(), num_records);
+                  valid = false;
+                  break;
+               }
             }
          }
-
-         trap_ctx_send(ctx, 0, data, ur_rec_size(utmpl, data));
-         //trap_ctx_send_flush(ctx, 0);
+         if (valid) {
+            trap_ctx_send(ctx, 0, data, ur_rec_size(utmpl, data));
+            //trap_ctx_send_flush(ctx, 0);
+         }
 
       }
    } else {
