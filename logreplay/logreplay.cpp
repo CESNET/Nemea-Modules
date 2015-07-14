@@ -152,11 +152,9 @@ int main(int argc, char **argv)
    int ret;
    int send_eof = 1;
    int time_flag = 0;
-   char *out_template_str = NULL;
-   char *in = NULL, *in_filename = NULL;
+   char *in_filename = NULL;
    char record_delim = '\n';
    char field_delim = ',';
-   char dyn_field_quote = '"'; // dynamic fields are enquoted
    ifstream f_in;
    string line;
    ur_template_t *utmpl = NULL;
@@ -313,11 +311,16 @@ int main(int argc, char **argv)
                store_value(utmpl, data, tmpl_f_id, dynamic_field_map[tmpl_f_id]);
             }
          }
+
          trap_ctx_send(ctx, 0, data, ur_rec_size(utmpl, data));
          //trap_ctx_send_flush(ctx, 0);
 
       }
+   } else {
+      fprintf(stderr, "Error: Cannot open file.\n");
+      goto exit;
    }
+
 
    // ***** Cleanup *****
 
