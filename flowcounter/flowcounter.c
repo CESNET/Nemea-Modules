@@ -68,34 +68,17 @@
 #define HANDLE_ERROR(msg) \
 	do { fprintf(stderr, "%s\n", msg); exit(EXIT_FAILURE); } while(0)
 
-/* ****************************** Modify here ****************************** */
 // Struct with information about module
-trap_module_info_t *module_info = NULL; /*{
-	"Flow-counter module",		  // Module name
-	// Module description
-	"Example module for counting number of incoming flow records.\n"
-		 "Parameters:\n"
-		 "   -u TMPLT    Specify UniRec template expected on the input interface.\n"
-		 "   -p N        Show progress - print a dot every N flows.\n"
-		 "   -P CHAR     When showing progress, print CHAR instead of dot.\n"
-		 "   -o SEC      Send @VOLUME record filled with current counters every SEC second(s).\n"
-		 "Interfaces:\n"
-		 "   Inputs: 1 (flow records)\n" "   Outputs: 0/1 (affected by -o parameter)\n",
-	1,									  // Number of input interfaces
-	0,									  // Number of output interfaces
-	2,
-	"-h", "--help", "prints help", 0, NULL,
-	"-c", "--cell", "cell test", 0, NULL
-};*/
+trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
   BASIC("Flow-counter module","Example module for counting number of incoming flow records.",1,0)
 
 #define MODULE_PARAMS(PARAM) \
-  PARAM('u', NULL, "Specify UniRec template expected on the input interface.", 0, NULL) \
-  PARAM('p', NULL, "Show progress - print a dot every N flows.", required_argument, "int32") \
-  PARAM('P', NULL, "When showing progress, print CHAR instead of dot.", required_argument, "string") \
-  PARAM('o', NULL, "Send @VOLUME record filled with current counters every SEC second(s).", required_argument, "int32")
+  PARAM('u', "unirec", "Specify UniRec template expected on the input interface.", required_argument, "string") \
+  PARAM('p', "print", "Show progress - print a dot every N flows.", required_argument, "int32") \
+  PARAM('P', "print_c", "When showing progress, print CHAR instead of dot.", required_argument, "string") \
+  PARAM('o', "send_time", "Send @VOLUME record filled with current counters every SEC second(s).", required_argument, "int32")
 
 
 
@@ -189,7 +172,7 @@ int main(int argc, char **argv)
 {
 	int ret;
 
-	INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+	INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
 	// Declare progress structure, pointer to this struct, initialize progress limit
 	NMCM_PROGRESS_DEF;
@@ -209,7 +192,7 @@ int main(int argc, char **argv)
 	// ***** Create UniRec template *****
 	char *unirec_specifier = "<COLLECTOR_FLOW>", opt;
 
-	while ((opt = getopt(argc, argv, "u:p:P:o:")) != -1) {
+	while ((opt = getopt(argc, argv, module_getopt_string)) != -1) {
 		switch (opt) {
 		case 'u':
 			unirec_specifier = optarg;
@@ -225,6 +208,7 @@ int main(int argc, char **argv)
 			break;
 		default:
 			fprintf(stderr, "Invalid arguments.\n");
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 			return 3;
 		}
 	}
@@ -233,7 +217,7 @@ int main(int argc, char **argv)
 	if (tmplt == NULL) {
 		fprintf(stderr, "Error: Invalid UniRec specifier.\n");
 		trap_finalize();
-		FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+		FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 		return 4;
 	}
 
@@ -243,7 +227,7 @@ int main(int argc, char **argv)
 		if (!out_tmplt) {
 			fprintf(stderr, "Error: Invalid UniRec specifier.\n");
 			trap_finalize();
-			FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+			FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 			return 4;
 		}
 		/* allocate space for output record with no dynamic part */
@@ -251,7 +235,7 @@ int main(int argc, char **argv)
 		if (!out_rec) {
 			ur_free_template(out_tmplt);
 			TRAP_DEFAULT_FINALIZATION();
-			FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+			FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 			return 4;
 		}
 		ret = trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
@@ -260,7 +244,7 @@ int main(int argc, char **argv)
 			ur_free(out_rec);
 			fprintf(stderr, "Error: trap_ifcctl.\n");
 			trap_finalize();
-			FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+			FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 			return 4;
 		}
 		alarm(send_interval);	  /* arrange SIGARLM in send_interval seconds */
@@ -322,6 +306,6 @@ int main(int argc, char **argv)
 	}
 
 	ur_free_template(tmplt);
-	FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+	FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 	return EXIT_SUCCESS;
 }

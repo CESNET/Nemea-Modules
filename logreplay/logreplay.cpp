@@ -64,29 +64,15 @@
 #define DYN_FIELD_MAX_SIZE 1024 // Maximum size of dynamic field, longer fields will be cutted to this size
 
 // Struct with information about module
-trap_module_info_t module_info = {
-   (char *) "LogReplay", // Module name
-   // Module description
-   (char *) "This module converts CSV from logger and sends it in UniRec.\n"
-   "CSV is expected to have UniRec specifier in the first line (logger -t).\n"
-   "\n"
-   "Interfaces:\n"
-   "   Inputs: 0\n"
-   "   Outputs: 1\n"
-   "\n"
-   "Usage:\n"
-   "   ./logreplay -i IFC_SPEC -f FILE\n"
-   "\n"
-   "Module specific parameters:\n"
-   "   -f FILE      Read FILE.\n"
-   "   -c N         Quit after N records are received.\n"
-   "   -n           Don't send \"EOF message\" at the end.\n"
-//   "   -s C         Field separator (default ',').\n"
-//   "   -r C         Record separator (default '\\n').\n"
-   ,
-   0, // Number of input interfaces (-1 means variable)
-   1, // Number of output interfaces
-};
+trap_module_info_t *module_info = NULL;
+
+#define MODULE_BASIC_INFO(BASIC) \
+  BASIC("LogReplay","This module converts CSV from logger and sends it in UniRec.",0,1)
+
+#define MODULE_PARAMS(PARAM) \
+  PARAM('f', "file", "Specify path to a file to be read.", required_argument, "string") \
+  PARAM('c', "cut", "Quit after N records are received.", required_argument, "uint32") \
+  PARAM('n', "no_eof", "Don't send 'EOF message' at the end.", no_argument, "none")
 
 static int stop = 0;
 
@@ -133,13 +119,13 @@ string get_next_field(stringstream &line)
 }
 
 
-void store_value(ur_template_t *t, void *data, int f_id, string &column)
+int store_value(ur_template_t *t, void *data, int f_id, string &column)
 {
    // Check size of dynamic field and if longer than maximum size then cut it
    if (column.length() > DYN_FIELD_MAX_SIZE) {
       column[DYN_FIELD_MAX_SIZE] = 0;
    }
-   ur_set_from_string(t, data, f_id, column.c_str());
+   return ur_set_from_string(t, data, f_id, column.c_str());
 }
 
 ur_field_id_t urgetidbyname(const char *name)
@@ -166,11 +152,9 @@ int main(int argc, char **argv)
    int ret;
    int send_eof = 1;
    int time_flag = 0;
-   char *out_template_str = NULL;
-   char *in = NULL, *in_filename = NULL;
+   char *in_filename = NULL;
    char record_delim = '\n';
    char field_delim = ',';
-   char dyn_field_quote = '"'; // dynamic fields are enquoted
    ifstream f_in;
    string line;
    ur_template_t *utmpl = NULL;
@@ -181,6 +165,7 @@ int main(int argc, char **argv)
    char is_limited = 0;
    trap_ctx_t *ctx = NULL;
 
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    // ***** Process parameters *****
 
    // Let TRAP library parse command-line arguments and extract its parameters
@@ -188,7 +173,7 @@ int main(int argc, char **argv)
    ret = trap_parse_params(&argc, argv, &ifc_spec);
    if (ret != TRAP_E_OK) {
       if (ret == TRAP_E_HELP) { // "-h" was found
-         trap_print_help(&module_info);
+         trap_print_help(module_info);
          trap_free_ifc_spec(ifc_spec);
          return 0;
       }
@@ -204,7 +189,7 @@ int main(int argc, char **argv)
 
    // Parse remaining parameters and get configuration
    char opt;
-   while ((opt = getopt(argc, argv, "f:c:n" /* r:s: */)) != -1) {
+   while ((opt = getopt(argc, argv, module_getopt_string)) != -1) {
       switch (opt) {
          case 'f':
             in_filename = optarg;
@@ -214,6 +199,7 @@ int main(int argc, char **argv)
             is_limited = 1;
             if (max_num_records == 0) {
                fprintf(stderr, "Error: Parameter of -c option must be integer > 0.\n");
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
                return 1;
             }
             break;
@@ -248,6 +234,8 @@ int main(int argc, char **argv)
       }
       utmpl = ur_create_template(line.c_str());
       if (utmpl == NULL) {
+         fprintf(stderr, "Error: Cannot create unirec template from header fields.\n");
+         ret = 1;
          goto exit;
       }
 
@@ -262,6 +250,8 @@ int main(int argc, char **argv)
 
       data = ur_create(utmpl, memory_needed);
       if (data == NULL) {
+         fprintf(stderr, "Error: Cannot create template for dynamic fields (not enough memory?).\n");
+         ret = 1;
          goto exit;
       }
 
@@ -269,7 +259,7 @@ int main(int argc, char **argv)
       if (verbose >= 0) {
          printf("Initializing TRAP library ...\n");
       }
-      ctx = trap_ctx_init(&module_info, ifc_spec);
+      ctx = trap_ctx_init(module_info, ifc_spec);
       if (ret != TRAP_E_OK) {
          fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
          ret = 2;
@@ -285,13 +275,21 @@ int main(int argc, char **argv)
       string column;
 
       while (getline(ss, column, field_delim)) {
-         field_ids.push_back(urgetidbyname(column.c_str()));
+         ur_field_id_t id = urgetidbyname(column.c_str());
+
+         // Can happen in cases of fields macro (e.g. <COLLECTOR_FLOW>) in the header
+         if (id == UR_INVALID_FIELD) {
+            fprintf(stderr, "Error: Invalid unirec field %s\n", column.c_str());
+            ret = 3;
+            goto exit;
+         }
+         field_ids.push_back(id);
       }
 
 
       /* main loop */
       while (f_in.good()) {
-         if ((is_limited == 1) && (num_records++ >= max_num_records)) {
+         if ((num_records++ >= max_num_records) && (is_limited == 1)) {
             break;
          }
 
@@ -301,6 +299,7 @@ int main(int argc, char **argv)
          }
          stringstream sl(line);
          int skipped_time = 0;
+         bool valid = true;
          for (vector<ur_field_id_t>::iterator it = field_ids.begin(); it != field_ids.end(); ++it) {
             column = get_next_field(sl);
             // Skip timestamp added by logger
@@ -314,7 +313,11 @@ int main(int argc, char **argv)
                dynamic_field_map[*it] = column;
             } else {
                // store static field in unirec structure
-               store_value(utmpl, data, *it, column);
+               if (store_value(utmpl, data, *it, column) != 0) {
+                  fprintf(stderr, "Warning: invalid field \"%s\", record %d skipped.\n", column.c_str(), num_records);
+                  valid = false;
+                  break;
+               }
             }
          }
          // store dynamic fields in correct order to unirec structure
@@ -322,14 +325,25 @@ int main(int argc, char **argv)
          ur_iter_t iter = UR_ITER_BEGIN;
          while ((tmpl_f_id = ur_iter_fields_tmplt(utmpl, &iter)) != UR_INVALID_FIELD) {
             if (ur_is_dynamic(tmpl_f_id) != 0) {
-               store_value(utmpl, data, tmpl_f_id, dynamic_field_map[tmpl_f_id]);
+               if (store_value(utmpl, data, tmpl_f_id, dynamic_field_map[tmpl_f_id]) != 0) {
+                  fprintf(stderr, "Warning: invalid field \"%s\", record %d skipped.\n", column.c_str(), num_records);
+                  valid = false;
+                  break;
+               }
             }
          }
-         trap_ctx_send(ctx, 0, data, ur_rec_size(utmpl, data));
-         //trap_ctx_send_flush(ctx, 0);
+         if (valid) {
+            trap_ctx_send(ctx, 0, data, ur_rec_size(utmpl, data));
+            //trap_ctx_send_flush(ctx, 0);
+         }
 
       }
+   } else {
+      fprintf(stderr, "Error: Cannot open file.\n");
+      ret = 4;
+      goto exit;
    }
+
 
    // ***** Cleanup *****
 
@@ -358,6 +372,8 @@ exit:
       ur_free(data);
       data = NULL;
    }
+
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    return ret;
 }
