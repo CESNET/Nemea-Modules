@@ -51,21 +51,15 @@
 #include <unirec/unirec.h>
 
 // Struct with information about module
-trap_module_info_t module_info = {
-   "Test receiver module for nfdump reader.", // Module name
-   // Module description
-   "This module reveiving UniRec messages from nfdump reader and print received\n"
-   "messages (counts) to stdout. In default, it prints received messages in format\n"
-   " <CNT>. <TIME_FIRST> | <TIME_LAST>. If parameter -t N is set, output will be\n"
-   "switched to \"counter\" mode and it outputs counts of received messages every\n"
-   "N seconds."
-   "Interfaces:\n"
-   "   Inputs: 1 (<COLLECTOR_FLOW>)\n"
-   "   Outputs: 0\n",
-   1, // Number of input interfaces
-   0, // Number of output interfaces
-};
+trap_module_info_t *module_info = NULL;
 
+#define MODULE_BASIC_INFO(BASIC) \
+  BASIC("Test receiver module for nfdump reader.","This module reveiving UniRec messages from nfdump reader and print received messages (counts) to stdout. In default, it prints received messages in format <CNT>. <TIME_FIRST> | <TIME_LAST>.",1,0)
+
+#define MODULE_PARAMS(PARAM) \
+  PARAM('D', "difference", "Set differences.", no_argument, "none") \
+  PARAM('t', "counter", "Switch output to 'counter' mode, outputing counts of received messages every N seconds.", required_argument, "int32") \
+  PARAM('F', "field", "Set fields.", no_argument, "none")
 
 static int stop = 0;
 
@@ -87,6 +81,8 @@ int main(int argc, char **argv)
    uint64_t msg_counter = 0;
    uint64_t act_msg_counter = 0;
 
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+
    // Let TRAP library parse command-line arguments and extract its parameters
    ret = trap_parse_params(&argc, argv, &ifc_spec);
    if (ret != TRAP_E_OK) {
@@ -100,40 +96,45 @@ int main(int argc, char **argv)
 
    // Parse remaining parameters
    char opt;
-   while ((opt = getopt(argc, argv, "t:DF")) != -1) {
+   while ((opt = getopt(argc, argv, module_getopt_string)) != -1) {
       switch (opt) {
-      	case 'D':
-				differences = 1;
-				break;
+         case 'D':
+            differences = 1;
+            break;
          case 't':
             time_interval = atoi(optarg);
             if (time_interval == 0) {
                fprintf(stderr, "Invalid time interval (-t).\n");
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
                return 2;
             }
-			case 'F':
+         case 'F':
             fields = 1;
             break;
          default:
             fprintf(stderr, "Invalid arguments.\n");
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
             return 2;
       }
    }
 
    if (optind > argc) {
       fprintf(stderr, "Wrong number of parameters.\nUsage: %s -i trap-ifc-specifier [-t N]\n", argv[0]);
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 2;
    }
 
-   if (differences && fields){
-		fprintf(stderr, "Wrong parameters, use only one of \"-F\" or \"-D\"\n.");
-		return 2;
+   if (differences && fields) {
+      fprintf(stderr, "Wrong parameters, use only one of \"-F\" or \"-D\"\n.");
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      return 2;
    }
 
    // Initialize TRAP library (create and init all interfaces)
    ret = trap_init(&module_info, ifc_spec);
    if (ret != TRAP_E_OK) {
       fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 4;
    }
    trap_free_ifc_spec(ifc_spec); // We don't need ifc_spec anymore
@@ -168,36 +169,36 @@ int main(int argc, char **argv)
          }
       }
 
-		// PROCESS THE DATA
-		++msg_counter;
-		first = ur_time_get_sec(ur_get(in_tmplt, in_rec, UR_TIME_FIRST));
-		last = ur_time_get_sec(ur_get(in_tmplt, in_rec, UR_TIME_LAST));
+      // PROCESS THE DATA
+      ++msg_counter;
+      first = ur_time_get_sec(ur_get(in_tmplt, in_rec, UR_TIME_FIRST));
+      last = ur_time_get_sec(ur_get(in_tmplt, in_rec, UR_TIME_LAST));
 
-      if (time_interval){
-			if (init_flag){
-				init_flag = 0;
-				act_time = first;
-				next_time = act_time + time_interval;
-			}
-			if (first >= next_time){
-				printf("Time interval %lu - %lu: %llu messages.\n", act_time, next_time, msg_counter - act_msg_counter);
-				act_time = first;
-				next_time = act_time + time_interval;
-				act_msg_counter = msg_counter;
-			}
-      }else if (differences){
-			printf("%llu. %lu\n", msg_counter, last - first);
-		}else if (fields){
-			printf("%llu. L:%lu D:%i\n", msg_counter, ur_get(in_tmplt, in_rec, UR_LINK_BIT_FIELD), ur_get(in_tmplt, in_rec, UR_DIR_BIT_FIELD));
-		}else{
-			printf("%llu. %lu | %lu\n", msg_counter, first, last);
+      if (time_interval) {
+         if (init_flag) {
+            init_flag = 0;
+            act_time = first;
+            next_time = act_time + time_interval;
+         }
+         if (first >= next_time) {
+            printf("Time interval %lu - %lu: %llu messages.\n", act_time, next_time, msg_counter - act_msg_counter);
+            act_time = first;
+            next_time = act_time + time_interval;
+            act_msg_counter = msg_counter;
+         }
+      } else if (differences) {
+         printf("%llu. %lu\n", msg_counter, last - first);
+      } else if (fields) {
+         printf("%llu. L:%lu D:%i\n", msg_counter, ur_get(in_tmplt, in_rec, UR_LINK_BIT_FIELD), ur_get(in_tmplt, in_rec, UR_DIR_BIT_FIELD));
+      } else {
+         printf("%llu. %lu | %lu\n", msg_counter, first, last);
       }
 
    }
 
    // ***** Cleanup *****
-   if (time_interval){
-		printf("Time interval %lu - %lu: %llu messages.\n", act_time, next_time, msg_counter - act_msg_counter);
+   if (time_interval) {
+      printf("Time interval %lu - %lu: %llu messages.\n", act_time, next_time, msg_counter - act_msg_counter);
    }
    fprintf(stderr, "TOTAL RECEIVED MESSAGES: %llu\n", msg_counter);
 
@@ -205,6 +206,7 @@ int main(int argc, char **argv)
    TRAP_DEFAULT_FINALIZATION();
 
    ur_free_template(in_tmplt);
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    return 0;
 }
