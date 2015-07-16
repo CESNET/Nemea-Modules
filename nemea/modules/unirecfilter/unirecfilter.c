@@ -60,39 +60,17 @@
 #include "unirecfilter.h"
 
 // Struct with information about module
-trap_module_info_t module_info = {
-   "Unirecfilter module",  // Module name
-   // Module description
-   "This NEMEA module selects records according to parameters in filter and sends\n"
-   "only fields specified in output template.\n"
-   "Unirecfilter expects unirec format of messages on input. Output format is\n"
-   "specified with -O flag, input format specified with -I flag.\n"
-   "Filter is specified with -F flag and contains expressions (<=, ==, &&, ...).\n"
-   "You can also specify output format and filter in a FILE, which allows sending \n"
-   "output to multiple interfaces.\n"
-   "Format of the file is [TMPLT_1]:FILTER_1; ...; [TMPLT_N]:FILTER_N; where each\n"
-   "filter corresponds with one output interface. One-line comments starting with\n"
-   "'#' are allowed. When is -O flag missing, template from input is used on output.\n"
-   "To reload filter \"on the run\", save changes in filter file and send signal\n"
-   "SIGUSR1 (10) to the running process.\n"
-   "\n"
-   "Usage:\n"
-   "   ./unirecfilter -i IFC_SPEC -I TMPLT [-O TMPLT] [-F FLTR]\n"
-   "   ./unirecfilter -i IFC_SPEC -I TMPLT [-f FILE]\n"
-   "\n"
-   "Parameters:\n"
-   "   -I TMPLT       Specify UniRec template expected on the input interface.\n"
-   "   -O TMPLT       Specify UniRec template expected on the output interface.\n"
-   "   -F FLTR        Specify filter.\n"
-   "   -f FILE        Read template and filter from FILE.\n"
-   "   -c N           Quit after N records are received.\n"
-   "\n"
-   "Interfaces:\n"
-   "   Inputs: 1\n"
-   "   Outputs: variable\n",
-   1,       // Number of input interfaces
-   -1,      // Number of output interfaces (-1 = variable)
-};
+trap_module_info_t *module_info = NULL;
+
+#define MODULE_BASIC_INFO(BASIC) \
+  BASIC("Unirecfilter module","This NEMEA module selects records according to parameters in filter and sends only fields specified in output template.",1,-1)
+
+#define MODULE_PARAMS(PARAM) \
+  PARAM('I', "unirec_in", "Specify UniRec template expected on the input interface.", required_argument, "nstring") \
+  PARAM('O', "unirec_out", "Specify UniRec template expected on the output interface.", required_argument, "string") \
+  PARAM('F', "filter", "Specify filter.", required_argument, "string") \
+  PARAM('f', "file", "Read template and filter from file.", required_argument, "string") \
+  PARAM('c', "cut", "Quit after N records are received.", required_argument, "int32") \
 
 static int stop = 0;               // Flag to interrupt process
 int reload_filter = 0;             // Flag to reload filter from file
@@ -291,6 +269,8 @@ int main(int argc, char **argv)
    int n_outputs;
    trap_ifc_spec_t ifc_spec;
 
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+
    // Register signal handler for reloading file with filter
    signal(SIGUSR1, reload_filter_signal_handler);
 
@@ -298,15 +278,17 @@ int main(int argc, char **argv)
    ret = trap_parse_params(&argc, argv, &ifc_spec);
    if (ret != TRAP_E_OK) {
       if (ret == TRAP_E_HELP) { // "-h" was found
-         trap_print_help(&module_info);
+         trap_print_help(module_info);
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return 0;
       }
       fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 1;
    }
 
    // Parse command-line options
-   while ((opt = getopt(argc, argv, "I:O:F:f:c:")) != -1) {
+   while ((opt = getopt(argc, argv, module_getopt_string)) != -1) {
       switch (opt) {
       case 'I':
          unirec_input_specifier = optarg;
@@ -328,6 +310,7 @@ int main(int argc, char **argv)
             fprintf(stderr, "Error: Parameter of -c option must be > 0.\n");
             // Do all necessary cleanup before exiting
             TRAP_DEFAULT_FINALIZATION();
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
             return 3;
          }
          max_num_records = nb;
@@ -337,43 +320,49 @@ int main(int argc, char **argv)
          fprintf(stderr, "Error: Invalid arguments.\n");
          // Do all necessary cleanup before exiting
          TRAP_DEFAULT_FINALIZATION();
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return 4;
       }
    }
 
    // Count number of output interfaces
    n_outputs = strlen(ifc_spec.types) - 1;
-   module_info.num_ifc_out = n_outputs;
+   module_info->num_ifc_out = n_outputs;
    printf("Output interfaces: %d\n", n_outputs);
 
    // No output interfaces
    if (n_outputs < 1) {
       fprintf(stderr, "Error: You must specify at least one UniRec template.\n");
       TRAP_DEFAULT_FINALIZATION();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 1;
    }
    // More than one output interface specified from command line
    if (from == 0 && n_outputs > 1) {
       fprintf(stderr, "Error: For more than one output interface use parameter -f FILE.\n");
       TRAP_DEFAULT_FINALIZATION();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 1;
    }
    // Number of output interfaces exceeds TRAP limit
    if (n_outputs > 32) {
       fprintf(stderr, "Error: More than 32 interfaces is not allowed by TRAP library.\n");
       TRAP_DEFAULT_FINALIZATION();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 1;
    }
    // Input format specifier is missing
    if (unirec_input_specifier == NULL) {
       fprintf(stderr, "Error: Invalid arguments - no input specifier.\n");
       TRAP_DEFAULT_FINALIZATION();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 5;
    }
    // Input format specifier is not valid
    else if ((in_tmplt = ur_create_template(unirec_input_specifier)) == NULL) {
       fprintf(stderr, "Error: Invalid arguments - input specifier is not valid.\n");
       TRAP_DEFAULT_FINALIZATION();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 5;
    }
 
@@ -381,12 +370,14 @@ int main(int argc, char **argv)
    if ((unirec_output_specifier != NULL) && (filename != NULL)) {
       fprintf(stderr, "Error: Invalid arguments - two output specifiers.\n");
       TRAP_DEFAULT_FINALIZATION();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 6;
    }
    // Filter and file are both set (-F and -f)
    else if ((filter != NULL) && (filename != NULL)) {
       fprintf(stderr, "Error: Invalid arguments - two filters.\n");
       TRAP_DEFAULT_FINALIZATION();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 6;
    }
 
@@ -397,7 +388,7 @@ int main(int argc, char **argv)
    }
 
    // Initialize TRAP library (create and init all interfaces)
-   ret = trap_init(&module_info, ifc_spec);
+   ret = trap_init(module_info, ifc_spec);
    if (ret != TRAP_E_OK) {
       fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
       trap_free_ifc_spec(ifc_spec);
@@ -406,6 +397,7 @@ int main(int argc, char **argv)
       }
       free(port_numbers);
       TRAP_DEFAULT_FINALIZATION();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 1;
    }
 
@@ -429,6 +421,7 @@ int main(int argc, char **argv)
          free(port_numbers);
          trap_free_ifc_spec(ifc_spec);
          TRAP_DEFAULT_FINALIZATION();
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return ret;
       }
    }
@@ -441,6 +434,7 @@ int main(int argc, char **argv)
       free(port_numbers);
       trap_free_ifc_spec(ifc_spec);
       TRAP_DEFAULT_FINALIZATION();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return ret;
    }
 
@@ -565,6 +559,7 @@ int main(int argc, char **argv)
    }
    free(port_numbers);
    free(output_specifiers);
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    return 0;
 }
 
