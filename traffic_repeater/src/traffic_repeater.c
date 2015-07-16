@@ -43,19 +43,17 @@
 
 #include "traffic_repeater.h"
 
+trap_module_info_t *module_info = NULL;
+
+#define MODULE_BASIC_INFO(BASIC) \
+  BASIC("Traffic repeater","This module receive data from input interface and resend it to the output interface based on given arguments in -i option.",1,1)
+
+#define MODULE_PARAMS(PARAM)
+
 static char stop = 0; /*!< Global variable used by signal handler to end the traffic repeater. */
 static int verb = 0; /*< Global variable used to print verbose messages. */
 
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
-
-void module_init(trap_module_info_t *module)
-{
-   module->name = "Traffic repeater";  
-   module->description = "This module receive data from input interface and resend it to the output interface "
-                         "based on given arguments in -i option";
-   module->num_ifc_in = IFC_IN_NUM;
-   module->num_ifc_out = IFC_OUT_NUM;
-}
 
 void traffic_repeater(void)
 {
@@ -104,13 +102,12 @@ void traffic_repeater(void)
 
 int main(int argc, char **argv)
 {
-   trap_module_info_t module_info;
-   
-   module_init(&module_info);
-   TRAP_DEFAULT_INITIALIZATION(argc, argv, module_info);
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+   TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
    verb = (trap_get_verbose_level() >= 0);
    traffic_repeater();
    TRAP_DEFAULT_FINALIZATION();
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    
    return EXIT_SUCCESS;
 }

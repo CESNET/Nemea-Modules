@@ -71,13 +71,6 @@
 /*! \} */
 
 /*!
- * \brief Module initialization.
- * Function to initialize the module structure by given values.
- * \param[in,out] module Pointer to a module structure to be initialized.
- */
-void module_init(trap_module_info_t *module);
-
-/*!
  * \brief Traffic repeater function
  * Function to resend received data from input interface to output interface. 
  */
