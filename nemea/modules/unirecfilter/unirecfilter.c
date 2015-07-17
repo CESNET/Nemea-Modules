@@ -66,7 +66,7 @@ trap_module_info_t *module_info = NULL;
   BASIC("Unirecfilter module","This NEMEA module selects records according to parameters in filter and sends only fields specified in output template.",1,-1)
 
 #define MODULE_PARAMS(PARAM) \
-  PARAM('I', "unirec_in", "Specify UniRec template expected on the input interface.", required_argument, "nstring") \
+  PARAM('I', "unirec_in", "Specify UniRec template expected on the input interface.", required_argument, "string") \
   PARAM('O', "unirec_out", "Specify UniRec template expected on the output interface.", required_argument, "string") \
   PARAM('F', "filter", "Specify filter.", required_argument, "string") \
   PARAM('f', "file", "Read template and filter from file.", required_argument, "string") \
