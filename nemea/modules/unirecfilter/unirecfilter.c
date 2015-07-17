@@ -84,7 +84,7 @@ char *str_buffer = NULL;           // Auxiliary buffer for evalAST()
 // Function to handle SIGTERM and SIGINT signals (used to stop the module)
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
-// Handler for SIGUSR1 to set flag for force filter reloading
+// Handler for SIGUSR1 - set flag for force filter reloading
 void reload_filter_signal_handler(int signum) {
    reload_filter = 1;
 }
@@ -225,6 +225,7 @@ int get_filter_from_file(char * filename, struct unirec_output_t **output_specif
 // Create templates based on data from filter
 int create_templates(int n_outputs, char **port_numbers, struct unirec_output_t **output_specifiers, char *unirec_input_specifier) {
    int i;
+   char *out_tmplt_str = NULL;
    int memory_needed = 0;
    ur_field_id_t field_id = UR_INVALID_FIELD;
 
@@ -238,9 +239,14 @@ int create_templates(int n_outputs, char **port_numbers, struct unirec_output_t 
 
       // Create UniRec output template and record
       if (output_specifiers[i]->unirec_output_specifier && output_specifiers[i]->unirec_output_specifier[0] != '\0') { // Not NULL or Empty
-         output_specifiers[i]->out_tmplt = ur_create_template(output_specifiers[i]->unirec_output_specifier);
+         out_tmplt_str = output_specifiers[i]->unirec_output_specifier;
       } else { //output template == input template
-         output_specifiers[i]->out_tmplt = ur_create_template(unirec_input_specifier);
+         out_tmplt_str = unirec_input_specifier;
+      }
+      output_specifiers[i]->out_tmplt = ur_create_template(out_tmplt_str);
+      if (output_specifiers[i]->out_tmplt == NULL) {
+         fprintf(stderr, "Error: Invalid template: %s.\n", out_tmplt_str);
+         return -1;
       }
       // Calculate maximum needed memory for dynamic fields
       while ((field_id = ur_iter_fields(output_specifiers[i]->out_tmplt, field_id)) != UR_INVALID_FIELD) {
@@ -249,6 +255,10 @@ int create_templates(int n_outputs, char **port_numbers, struct unirec_output_t 
          }
       }
       output_specifiers[i]->out_rec = ur_create(output_specifiers[i]->out_tmplt, memory_needed);
+      if (output_specifiers[i]->out_rec == NULL) {
+         fprintf(stderr, "Error: Invalid template: %s.\n", out_tmplt_str);
+         return -1;
+      }
    }
    return 0;
 }
