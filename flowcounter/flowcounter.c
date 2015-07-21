@@ -257,7 +257,8 @@ int main(int argc, char **argv)
       // Receive data from input interface (block until data are available)
       const void *data;
       uint16_t data_size;
-      TRAP_RECEIVE(ret, 0, data, data_size, tmplt);
+      ret = TRAP_RECEIVE(0, data, data_size, tmplt);
+      printf("%d\n", ret);
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
 
       // Check size of received data
