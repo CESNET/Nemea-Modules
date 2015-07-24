@@ -42,6 +42,7 @@
  */
 
 #include "traffic_repeater.h"
+#include "fields.c"
 
 trap_module_info_t *module_info = NULL;
 
@@ -62,16 +63,21 @@ void traffic_repeater(void)
    uint64_t cnt_r, cnt_s, cnt_t, diff;
    const void *data;
    struct timespec start, end;
-   
+
    data_size = 0;
    cnt_r = cnt_s = cnt_t = 0;
    data = NULL;
-   TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
    if (verb) {
       fprintf(stderr, "Info: Initializing traffic repeater...\n");
    }
    clock_gettime(CLOCK_MONOTONIC, &start);
-   
+
+   //set NULL to required format on input interface
+   trap_set_required_fmt(0, TRAP_FMT_UNIREC, NULL);
+
+   TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
+
+   //main loop
    while (stop == 0) {
       ret = trap_recv(0, &data, &data_size);
       if (ret == TRAP_E_OK) {
@@ -81,17 +87,38 @@ void traffic_repeater(void)
                fprintf(stderr, "Info: Final record received, terminating repeater...\n");
             }
             stop = 1;
-         }          
+         }
          ret = trap_send(0, data, data_size);
          if (ret == TRAP_E_OK) {
             cnt_s++;
             continue;
-	     } 
+         }
          TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, cnt_t++; continue, break);
       }
-      TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, cnt_t++; continue, break);
+      else if (ret == TRAP_E_OK_FORMAT_CHANGED && trap_get_in_ifc_state(0) == FMT_SUBSET) {
+         //receive data format and set it to output IFC
+         const char *spec = NULL;
+         char *spec2 = NULL;
+         uint8_t data_fmt;
+         if (trap_get_data_fmt(TRAPIFC_INPUT, 0, &data_fmt, &spec) != TRAP_E_OK) {
+            fprintf(stderr, "Data format was not loaded.");
+            return;
+         }
+         //set the data format to output interface
+         spec2 = malloc (sizeof(char) * (strlen(spec) + 1));
+         if (spec2 == NULL) {
+            fprintf(stderr, "Memory allocation problem");
+            return;
+         }
+         strcpy(spec2, spec);
+         trap_set_data_fmt(0, TRAP_FMT_UNIREC, spec2);
+         //confirm state
+         trap_confirm_ifc_state(0);
+      } else {
+         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, cnt_t++; continue, break);
+      }
    }
-   
+
    clock_gettime(CLOCK_MONOTONIC, &end);
    diff = (end.tv_sec * NS + end.tv_nsec) - (start.tv_sec * NS + start.tv_nsec);
    fprintf(stderr, "Info: Flows received:  %16lu\n", cnt_r > 0 ? cnt_r - 1 : cnt_r);
@@ -108,6 +135,6 @@ int main(int argc, char **argv)
    traffic_repeater();
    TRAP_DEFAULT_FINALIZATION();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-   
+
    return EXIT_SUCCESS;
 }
