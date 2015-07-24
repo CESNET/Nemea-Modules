@@ -7,7 +7,7 @@
  * \author Tomas Cejka <cejkat@cesnet.cz>
  * \date 2013
  * \date 2014
- * \date 2015 
+ * \date 2015
  */
 /*
  * Copyright (C) 2013-2015 CESNET
@@ -60,20 +60,24 @@
 #include <unirec/unirec.h>
 #include <omp.h>
 #include <ctype.h>
+#include "fields.c"
+
+UR_FIELDS()
 
 // Struct with information about module
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Logger","This module logs all incoming UniRec records to standard output or into a specified file. Each record is written as one line containing values of its fields in human-readable format separated by chosen delimiters (CSV format).",-1,0)
+  BASIC("Logger","This module logs all incoming UniRec records to standard output or into a specified file. Each record is written as one line containing values of its fields in human-readable format separated by chosen delimiters (CSV format). If you use more than one input interface you have to specify output format by parameter \"-o\".",-1,0)
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('w', "write", "Write output to FILE instead of stdout (rewrite the file).", required_argument, "string") \
   PARAM('a', "append", "Write output to FILE instead of stdout (append to the end).", required_argument, "string") \
-  PARAM('o', "output_fields", "Set of fields included in the output (UniRec specifier). Union of all input formats is used by default.", required_argument, "string") \
+  PARAM('o', "output_fields", "Set of fields included in the output (UniRec data format. Example:\"uint32 FOO,time BAR\")", required_argument, "string") \
   PARAM('t', "title", "Write names of fields on the first line.", no_argument, "none") \
   PARAM('T', "time", "Add the time when the record was received as the first field.", no_argument, "none") \
   PARAM('n', "ifc_num", "Add the number of interface the record was received on as the first field (or second when -T is specified).", no_argument, "none") \
+  PARAM('N', "interface_count", "Number of input interfaces. Default: 1 interface", required_argument, "uint32") \
   PARAM('c', "cut", "Quit after N records are received, 0 can be useful in combination with -t to print UniRec.", required_argument, "uint32") \
   PARAM('d', "delimiter", "Optionally modifies delimiter to inserted value X (implicitely ','). Delimiter has to be one character, except for printable escape sequences.", required_argument, "string")
 
@@ -101,7 +105,7 @@ trap_module_info_t *module_info = NULL;
 static int stop = 0;
 
 int verbose;
-static int n_inputs; // Number of input interfaces
+static int n_inputs = 1; // Number of input interfaces
 static ur_template_t **templates; // UniRec templates of input interfaces (array of length n_inputs)
 static ur_template_t *out_template; // UniRec template with union of fields of all inputs
 int print_ifc_num = 0;
@@ -134,7 +138,7 @@ void capture_thread(int index, char delimiter)
       }
 
       // Receive data from index-th input interface, wait until data are available
-      ret = trap_recv(index, &rec, &rec_size);
+      TRAP_RECEIVE(index, rec, rec_size, templates[index]);
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
 
       if (verbose >= 2) {
@@ -142,7 +146,7 @@ void capture_thread(int index, char delimiter)
       }
 
       // Check size of received data
-      if (rec_size < ur_rec_static_size(templates[index])) {
+      if (rec_size < ur_rec_fixlen_size(templates[index])) {
          if (rec_size <= 1) {
             if (verbose >= 0) {
                printf("Interface %i received ending record, the interface will be closed.\n", index);
@@ -150,7 +154,7 @@ void capture_thread(int index, char delimiter)
             break; // End of data (used for testing purposes)
          } else {
             fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
-                    ur_rec_static_size(templates[index]), rec_size);
+                    ur_rec_fixlen_size(templates[index]), rec_size);
             break;
          }
       }
@@ -169,9 +173,9 @@ void capture_thread(int index, char delimiter)
          }
          // Iterate over all output fields
          int delim = 0;
-         ur_field_id_t id;
-         ur_iter_t iter = UR_ITER_BEGIN;
-         while((id = ur_iter_fields_tmplt(out_template, &iter)) != UR_INVALID_FIELD) {
+         int i = 0;
+         ur_field_id_t id = 0;
+         while ((id = ur_iter_fields_record_order(out_template, i++)) != UR_ITER_END) {
             if (delim != 0) {
                fprintf(file,"%c", delimiter);
             }
@@ -179,15 +183,8 @@ void capture_thread(int index, char delimiter)
             if (ur_is_present(templates[index], id)) {
                // Get pointer to the field (valid for static fields only)
                void *ptr = ur_get_ptr_by_id(templates[index], rec, id);
-               // Print the field
-               if (id == UR_TIMESLOT) {
-                  char str[32];
-                  time_t ts = *(uint32_t*)ptr;
-                  strftime(str, 31, "%FT%T", gmtime(&ts));
-                  fprintf(file, "%s", str);
-               } else {
                   // Static field - check what type is it and use appropriate format
-                  switch (ur_get_type_by_id(id)) {
+               switch (ur_get_type(id)) {
                   case UR_TYPE_UINT8:
                      fprintf(file, "%u", *(uint8_t*)ptr);
                      break;
@@ -242,8 +239,8 @@ void capture_thread(int index, char delimiter)
                   case UR_TYPE_STRING:
                      {
                         // Printable string - print it as it is
-                        int size = ur_get_dyn_size(templates[index], rec, id);
-                        char *data = ur_get_dyn(templates[index], rec, id);
+                        int size = ur_get_var_len(templates[index], rec, id);
+                        char *data = ur_get_ptr_by_id(templates[index], rec, id);
                         putc('"', file);
                         while (size--) {
                            switch (*data) {
@@ -267,8 +264,8 @@ void capture_thread(int index, char delimiter)
                   case UR_TYPE_BYTES:
                      {
                         // Generic string of bytes - print each byte as two hex digits
-                        int size = ur_get_dyn_size(templates[index], rec, id);
-                        unsigned char *data = ur_get_dyn(templates[index], rec, id);
+                        int size = ur_get_var_len(templates[index], rec, id);
+                        unsigned char *data = ur_get_ptr_by_id(templates[index], rec, id);
                         while (size--) {
                            fprintf(file, "%02x", *data++);
                         }
@@ -277,15 +274,14 @@ void capture_thread(int index, char delimiter)
                   default:
                      {
                         // Unknown type - print the value in hex
-                        int size = ur_get_size_by_id(id);
+                        int size = ur_get_len(templates[index], rec, id);
                         fprintf(file, "0x");
                         for (int i = 0; i < size; i++) {
                            fprintf(file, "%02x", ((unsigned char*)ptr)[i]);
                         }
                      }
                      break;
-                  } // case (field type)
-               } // if (not) dynamic
+               } // case (field type)
             } // if present
          } // loop over fields
          fprintf(file,"\n");
@@ -300,7 +296,7 @@ void capture_thread(int index, char delimiter)
          trap_terminate();
          break;
       }
-   } // end while(!stop)
+   } // end while (!stop)
 
    if (verbose >= 1) {
       printf("Thread %i exitting.\n", index);
@@ -333,7 +329,7 @@ int main(int argc, char **argv)
    }
 
    verbose = trap_get_verbose_level();
-   if (verbose >= 0){
+   if (verbose >= 0) {
       printf("Verbosity level: %i\n", trap_get_verbose_level());
    }
 
@@ -359,6 +355,9 @@ int main(int argc, char **argv)
          break;
       case 'n':
          print_ifc_num = 1;
+         break;
+      case 'N':
+         n_inputs = atoi(optarg);
          break;
       case 'T':
          print_time = 1;
@@ -386,8 +385,9 @@ int main(int argc, char **argv)
       }
    }
 
+   // ***** TRAP initialization *****
+
    // Create UniRec templates
-   n_inputs = argc - optind;
    if (verbose >= 0) {
       printf("Number of inputs: %i\n", n_inputs);
    }
@@ -401,50 +401,14 @@ int main(int argc, char **argv)
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 4;
    }
-
+   if (out_template_str == NULL && n_inputs > 1) {
+      fprintf(stderr, "Error: If you use more than one interface, output template has to be specified.\n");
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      return 4;
+   }
    if (verbose >= 0) {
       printf("Creating UniRec templates ...\n");
    }
-   templates = malloc(n_inputs*sizeof(*templates));
-   if (templates == NULL) {
-      fprintf(stderr, "Memory allocation error.\n");
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-      return -1;
-   }
-
-   for (int i = 0; i < n_inputs; i++) {
-      templates[i] = ur_create_template(argv[i+optind]);
-      if (templates[i] == NULL) {
-         fprintf(stderr, "Error: Invalid template: %s\n", argv[i+optind]);
-         while (i--) {
-            ur_free_template(templates[i]);
-         }
-         free(templates);
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-         return 2;
-      }
-   }
-
-   // Create output UniRec template (user-specified or union of all inputs)
-   if (out_template_str == NULL) {
-      // Create output template as a union of all input templates
-      out_template = ur_union_templates(templates, n_inputs);
-      if (out_template == NULL) {
-         fprintf(stderr, "Memory allocation error\n");
-         ret = -1;
-         goto exit;
-      }
-   } else {
-      out_template = ur_create_template(out_template_str);
-      if (out_template == NULL) {
-         fprintf(stderr, "Error: Invalid template: %s\n", out_template_str);
-         ret = -1;
-         goto exit;
-      }
-   }
-
-
-   // ***** TRAP initialization *****
 
    // Set number of input interfaces
    module_info->num_ifc_in = n_inputs;
@@ -462,12 +426,84 @@ int main(int argc, char **argv)
       goto exit;
    }
 
+
+
+   templates = (ur_template_t**)calloc(n_inputs, sizeof(*templates));
+   if (templates == NULL) {
+      fprintf(stderr, "Memory allocation error.\n");
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      return -1;
+   }
+   //inicialize templates for negociation
+   for (int i = 0; i < n_inputs; i++) {
+      templates[i] = ur_create_input_template(i, NULL, NULL);
+      if (templates[i] == NULL) {
+         fprintf(stderr, "Memory allocation error.\n");
+         ret = -1;
+         goto exit;
+      }
+      trap_set_required_fmt(i, TRAP_FMT_UNIREC, NULL);
+   }
+
    // We don't need ifc_spec anymore, destroy it
    trap_free_ifc_spec(ifc_spec);
 
    // Register signal handler.
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
+   // Create output UniRec template (user-specified or union of all inputs)
 
+   if (out_template_str != NULL) {
+      if (ur_define_set_of_fields(out_template_str) != UR_OK) {
+         fprintf(stderr, "Error: output template format is not accurate.\n \
+It should be: \"type1 name1,type2 name2,...\".\n \
+Name of field may be any string matching the reqular expression [A-Za-z][A-Za-z0-9_]*\n\
+Available types are: int8, int16, int32, int64, uint8, uint16, uint32, uint64, char,\
+ float, double, ipaddr, time, string, bytes");
+         ret = 2;
+         goto exit;
+      }
+      char *f_names = ur_ifc_data_fmt_to_field_names(out_template_str);
+      out_template = ur_create_template(f_names, NULL);
+      free(f_names);
+      if (out_template == NULL) {
+         fprintf(stderr, "Memory allocation error\n");
+         ret = -1;
+         goto exit;
+      }
+   } else {
+      //receive data format for input and output template
+      const void *rec;
+      uint16_t rec_size;
+      //trap_set_required_fmt(0, TRAP_FMT_UNIREC, "");
+      int ret = trap_recv(0, &rec, &rec_size);
+      if (ret == TRAP_E_OK_FORMAT_CHANGED && trap_get_in_ifc_state(0) == FMT_SUBSET) {
+         const char *spec = NULL;
+         uint8_t data_fmt;
+         if (trap_get_data_fmt(TRAPIFC_INPUT, 0, &data_fmt, &spec) != TRAP_E_OK) {
+            fprintf(stderr, "Error: Data format was not loaded.");
+            ret = 2;
+            goto exit;
+         } else {
+            templates[0] = ur_define_fields_and_expand_template(spec, templates[0]);
+            if (templates[0] == NULL) {
+               fprintf(stderr, "Error: Template could not be created");
+               ret = 2;
+               goto exit;
+            }
+            out_template = ur_define_fields_and_expand_template(spec, out_template);
+            if (out_template == NULL) {
+               fprintf(stderr, "Error: Template could not be created");
+               ret = 2;
+               goto exit;
+            }
+            trap_confirm_ifc_state(0);
+         }
+      } else {
+         fprintf(stderr, "Error: Data format was not received. Trap error: %d, IFC state: %d\n", ret,  trap_get_in_ifc_state(0));
+         ret = 2;
+         goto exit;
+      }
+   }
 
    // ***** Open output file *****
 
@@ -502,17 +538,14 @@ int main(int argc, char **argv)
       if (print_ifc_num) {
          fprintf(file, "ifc,");
       }
-      int delim = 0;
-      ur_field_id_t id;
-      ur_iter_t iter = UR_ITER_BEGIN;
-      while((id = ur_iter_fields_tmplt(out_template, &iter)) != UR_INVALID_FIELD) {
-         if (delim) {
-            fprintf(file, "%c", delimiter);
-         }
-         fprintf(file, "%s", ur_get_name_by_id(id));
-         delim = 1;
+      char *data_format = ur_template_string_delimiter(out_template, delimiter);
+      if (data_format == NULL) {
+         fprintf(stderr, "Memory allocation error\n");
+         ret = -1;
+         goto exit;
       }
-      fprintf(file, "\n");
+      fprintf(file, "%s\n", data_format);
+      free(data_format);
       fflush(file);
    }
 
@@ -547,6 +580,7 @@ exit:
    }
    free(templates);
    ur_free_template(out_template);
+   ur_finalize();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    return ret;
