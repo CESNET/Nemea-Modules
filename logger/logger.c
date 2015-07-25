@@ -484,13 +484,13 @@ Available types are: int8, int16, int32, int64, uint8, uint16, uint32, uint64, c
             ret = 2;
             goto exit;
          } else {
-            templates[0] = ur_define_fields_and_expand_template(spec, templates[0]);
+            templates[0] = ur_define_fields_and_update_template(spec, templates[0]);
             if (templates[0] == NULL) {
                fprintf(stderr, "Error: Template could not be created");
                ret = 2;
                goto exit;
             }
-            out_template = ur_define_fields_and_expand_template(spec, out_template);
+            out_template = ur_define_fields_and_update_template(spec, out_template);
             if (out_template == NULL) {
                fprintf(stderr, "Error: Template could not be created");
                ret = 2;

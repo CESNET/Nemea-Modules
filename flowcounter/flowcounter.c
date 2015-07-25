@@ -258,7 +258,6 @@ int main(int argc, char **argv)
       const void *data;
       uint16_t data_size;
       ret = TRAP_RECEIVE(0, data, data_size, tmplt);
-      printf("%d\n", ret);
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
 
       // Check size of received data
