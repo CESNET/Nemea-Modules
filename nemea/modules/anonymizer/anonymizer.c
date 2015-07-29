@@ -54,22 +54,8 @@
 #define SECRET_KEY_MAX_SIZE 67             // Max length of secret key
 
 UR_FIELDS(
-  //BASIC_FLOW
   ipaddr SRC_IP,      //Source address of a flow
   ipaddr DST_IP,      //Destination address of a flow
-  uint16 SRC_PORT,    //Source transport-layer port
-  uint16 DST_PORT,    //Destination transport-layer port
-  uint8 PROTOCOL,     //L4 protocol (TCP, UDP, ICMP, etc.)
-  uint32 PACKETS,     //Number of packets in a flow or in an interval
-  uint64 BYTES,       //Number of bytes in a flow or in an interval
-  time TIME_FIRST,    //Timestamp of the first packet of a flow
-  time TIME_LAST,     //Timestamp of the last packet of a flow
-  uint8 TCP_FLAGS,    //TCP flags of a flow (logical OR over TCP flags field of all packets)
-  //COLLECTOR_FLOW
-  uint64 LINK_BIT_FIELD,  //Bit field where each bit marks whether a flow was captured on corresponding link
-  uint8 DIR_BIT_FIELD,    //Bit field used for detemining incomming/outgoing flow
-  uint8 TOS,              //IP type of service
-  uint8 TTL,              //IP time to live
 )
 
 // Struct with information about module
@@ -252,7 +238,7 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
 
 
    // ***** Create UniRec template *****
-   char *unirec_specifier = "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL";
+   char *unirec_specifier = "SRC_IP,DST_IP";
    char opt;
    while ((opt = getopt(argc, argv, module_getopt_string)) != -1) {
       switch (opt) {
@@ -278,7 +264,7 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
       }
    }
    char * errstr = NULL;
-   ur_template_t *tmplt = ur_create_template(unirec_specifier, &errstr);
+   ur_template_t *tmplt = ur_create_bidirectional_template(0, 0, unirec_specifier, &errstr);
    if (tmplt == NULL) {
       fprintf(stderr, "Error: Invalid UniRec specifier.\n");
       if(errstr != NULL){
@@ -314,7 +300,7 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
       // Receive data from any interface, wait until data are available
       const void *data;
       uint16_t data_size;
-      ret = trap_get_data(TRAP_MASK_ALL, &data, &data_size, TRAP_WAIT);
+      ret = TRAP_RECEIVE(0, data, data_size, tmplt);
       TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
       // Check size of received data
       if (data_size == 1) {
