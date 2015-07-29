@@ -42,7 +42,6 @@
  */
 
 #include "traffic_repeater.h"
-#include "fields.c"
 
 trap_module_info_t *module_info = NULL;
 
