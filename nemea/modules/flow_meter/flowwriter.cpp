@@ -2,7 +2,7 @@
 #include "../../unirec/unirec.h"
 
 #include "flowwriter.h"
-
+#include "fields.h"
 #include <cstring>
 #include <iostream>
 
@@ -50,10 +50,10 @@ int FlowWriter::open(const std::string &infilename)
    // Moved to main.cpp   
 
    // Create template <COLLECTOR_FLOW>
-   tmplt = ur_create_template("<COLLECTOR_FLOW>");
+   tmplt = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL", NULL);
    
    // Create buffer for output data
-   data = ur_create(tmplt, 0);
+   data = ur_create_record(tmplt, 0);
 
    return 0;
 }
@@ -124,12 +124,12 @@ int FlowWriter::export_flow(FlowRecord &flow)
 
    if (flow.ipVersion == 4) {
       // IPv4
-      ur_set(tmplt, data, UR_SRC_IP, ip_from_4_bytes_le((char*)&flow.sourceIPv4Address));
-      ur_set(tmplt, data, UR_DST_IP, ip_from_4_bytes_le((char*)&flow.destinationIPv4Address));
+      ur_set(tmplt, data, F_SRC_IP, ip_from_4_bytes_le((char*)&flow.sourceIPv4Address));
+      ur_set(tmplt, data, F_DST_IP, ip_from_4_bytes_le((char*)&flow.destinationIPv4Address));
    } else {
       // IPv6
-      ur_set(tmplt, data, UR_SRC_IP, ip_from_16_bytes_le((char*)&flow.sourceIPv6Address));
-      ur_set(tmplt, data, UR_DST_IP, ip_from_16_bytes_le((char*)&flow.destinationIPv6Address));
+      ur_set(tmplt, data, F_SRC_IP, ip_from_16_bytes_le((char*)&flow.sourceIPv6Address));
+      ur_set(tmplt, data, F_DST_IP, ip_from_16_bytes_le((char*)&flow.destinationIPv6Address));
 
 
    }
@@ -139,30 +139,30 @@ int FlowWriter::export_flow(FlowRecord &flow)
    time_sec = (uint32_t)flow.flowStartTimestamp;
    time_msec = (uint32_t)((flow.flowStartTimestamp - ((double)((uint32_t)flow.flowStartTimestamp))) * 1000);
    tmp_time = ur_time_from_sec_msec(time_sec, time_msec);
-   ur_set(tmplt, data, UR_TIME_FIRST, tmp_time);
+   ur_set(tmplt, data, F_TIME_FIRST, tmp_time);
 
    time_sec = (uint32_t)flow.flowEndTimestamp;
    time_msec = (uint32_t)((flow.flowEndTimestamp - ((double)((uint32_t)flow.flowEndTimestamp))) * 1000);
    tmp_time = ur_time_from_sec_msec(time_sec, time_msec);
-   ur_set(tmplt, data, UR_TIME_LAST, tmp_time);
+   ur_set(tmplt, data, F_TIME_LAST, tmp_time);
    
    
 
 
-   ur_set(tmplt, data, UR_PROTOCOL, flow.protocolIdentifier);
-   ur_set(tmplt, data, UR_SRC_PORT, flow.sourceTransportPort);
-   ur_set(tmplt, data, UR_DST_PORT, flow.destinationTransportPort);
-   ur_set(tmplt, data, UR_PACKETS, flow.packetTotalCount);
-   ur_set(tmplt, data, UR_BYTES, flow.octetTotalLength);
-   ur_set(tmplt, data, UR_TCP_FLAGS, flow.tcpControlBits);
+   ur_set(tmplt, data, F_PROTOCOL, flow.protocolIdentifier);
+   ur_set(tmplt, data, F_SRC_PORT, flow.sourceTransportPort);
+   ur_set(tmplt, data, F_DST_PORT, flow.destinationTransportPort);
+   ur_set(tmplt, data, F_PACKETS, flow.packetTotalCount);
+   ur_set(tmplt, data, F_BYTES, flow.octetTotalLength);
+   ur_set(tmplt, data, F_TCP_FLAGS, flow.tcpControlBits);
 
 
    
-   ur_set(tmplt, data, UR_DIR_BIT_FIELD, 0);
-   ur_set(tmplt, data, UR_LINK_BIT_FIELD, 0);
+   ur_set(tmplt, data, F_DIR_BIT_FIELD, 0);
+   ur_set(tmplt, data, F_LINK_BIT_FIELD, 0);
 
 
-   trap_send_data(0, data, ur_rec_static_size(tmplt), TRAP_WAIT);
+   trap_send_data(0, data, ur_rec_fixlen_size(tmplt), TRAP_WAIT);
 
 
 
