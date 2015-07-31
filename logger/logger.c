@@ -73,7 +73,7 @@ trap_module_info_t *module_info = NULL;
 #define MODULE_PARAMS(PARAM) \
   PARAM('w', "write", "Write output to FILE instead of stdout (rewrite the file).", required_argument, "string") \
   PARAM('a', "append", "Write output to FILE instead of stdout (append to the end).", required_argument, "string") \
-  PARAM('o', "output_fields", "Set of fields included in the output (UniRec data format. Example:\"uint32 FOO,time BAR\")", required_argument, "string") \
+  PARAM('o', "output_fields", "Set of fields included in the output (UniRec data format example:\"uint32 FOO,time BAR\")", required_argument, "string") \
   PARAM('t', "title", "Write names of fields on the first line.", no_argument, "none") \
   PARAM('T', "time", "Add the time when the record was received as the first field.", no_argument, "none") \
   PARAM('n', "ifc_num", "Add the number of interface the record was received on as the first field (or second when -T is specified).", no_argument, "none") \
