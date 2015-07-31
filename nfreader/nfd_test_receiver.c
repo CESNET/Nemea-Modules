@@ -49,9 +49,26 @@
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
-
+#include "fields.c"
 // Struct with information about module
 trap_module_info_t *module_info = NULL;
+
+UR_FIELDS (
+   ipaddr DST_IP,
+   ipaddr SRC_IP,
+   uint64 BYTES,
+   uint64 LINK_BIT_FIELD,
+   time TIME_FIRST,
+   time TIME_LAST,
+   uint32 PACKETS,
+   uint16 DST_PORT,
+   uint16 SRC_PORT,
+   uint8 DIR_BIT_FIELD,
+   uint8 PROTOCOL,
+   uint8 TCP_FLAGS,
+   uint8 TOS,
+   uint8 TTL
+)
 
 #define MODULE_BASIC_INFO(BASIC) \
   BASIC("Test receiver module for nfdump reader.","This module reveiving UniRec messages from nfdump reader and print received messages (counts) to stdout. In default, it prints received messages in format <CNT>. <TIME_FIRST> | <TIME_LAST>.",1,0)
@@ -144,7 +161,7 @@ int main(int argc, char **argv)
 
 
    // ***** Create UniRec templates *****
-   ur_template_t *in_tmplt = ur_create_template("<COLLECTOR_FLOW>");
+   ur_template_t *in_tmplt = ur_create_input_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL", NULL);
 
    // ***** Main processing loop *****
 
@@ -154,25 +171,25 @@ int main(int argc, char **argv)
       uint16_t in_rec_size;
 
       // Receive data from any input interface, wait until data are available
-      ret = trap_get_data(TRAP_MASK_ALL, &in_rec, &in_rec_size, TRAP_WAIT);
+      ret = TRAP_RECEIVE(0, in_rec, in_rec_size, in_tmplt);
       // Handle possible errors
       TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
 
       // Check size of received data
-      if (in_rec_size < ur_rec_static_size(in_tmplt)) {
+      if (in_rec_size < ur_rec_fixlen_size(in_tmplt)) {
          if (in_rec_size <= 1) {
             break; // End of data (used for testing purposes)
          } else {
             fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
-                    ur_rec_static_size(in_tmplt), in_rec_size);
+                    ur_rec_fixlen_size(in_tmplt), in_rec_size);
             break;
          }
       }
 
       // PROCESS THE DATA
       ++msg_counter;
-      first = ur_time_get_sec(ur_get(in_tmplt, in_rec, UR_TIME_FIRST));
-      last = ur_time_get_sec(ur_get(in_tmplt, in_rec, UR_TIME_LAST));
+      first = ur_time_get_sec(ur_get(in_tmplt, in_rec, F_TIME_FIRST));
+      last = ur_time_get_sec(ur_get(in_tmplt, in_rec, F_TIME_LAST));
 
       if (time_interval) {
          if (init_flag) {
@@ -189,7 +206,7 @@ int main(int argc, char **argv)
       } else if (differences) {
          printf("%llu. %lu\n", msg_counter, last - first);
       } else if (fields) {
-         printf("%llu. L:%lu D:%i\n", msg_counter, ur_get(in_tmplt, in_rec, UR_LINK_BIT_FIELD), ur_get(in_tmplt, in_rec, UR_DIR_BIT_FIELD));
+         printf("%llu. L:%lu D:%i\n", msg_counter, ur_get(in_tmplt, in_rec, F_LINK_BIT_FIELD), ur_get(in_tmplt, in_rec, F_DIR_BIT_FIELD));
       } else {
          printf("%llu. %lu | %lu\n", msg_counter, first, last);
       }
