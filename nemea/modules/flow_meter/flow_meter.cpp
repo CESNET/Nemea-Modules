@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
 
    int opt;
    char* cptr;
-   while ((opt = getopt(argc, argv, module_getopt_string)) != -1) {
+   while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
       case 't':
          cptr = strchr(optarg, ':');
