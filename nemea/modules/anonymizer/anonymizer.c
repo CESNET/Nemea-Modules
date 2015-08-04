@@ -240,7 +240,7 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
    // ***** Create UniRec template *****
    char *unirec_specifier = "SRC_IP,DST_IP";
    char opt;
-   while ((opt = getopt(argc, argv, module_getopt_string)) != -1) {
+   while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
          case 'u':
             unirec_specifier = optarg;
