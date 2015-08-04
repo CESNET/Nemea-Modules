@@ -44,6 +44,9 @@
  * if advised of the possibility of such damage.
  *
  */
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
 #include <signal.h>
 #include <stdio.h>
@@ -298,7 +301,7 @@ int main(int argc, char **argv)
    }
 
    // Parse command-line options
-   while ((opt = getopt(argc, argv, module_getopt_string)) != -1) {
+   while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
       case 'I':
          unirec_input_specifier = optarg;
