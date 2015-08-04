@@ -125,14 +125,14 @@ void send_handler(int signal)
 	alarm(send_interval);
 }
 
-void get_o_param(int argc, char **argv)
+void get_o_param(int argc, char **argv, const char *module_getopt_string, const struct option *long_options)
 {
 	/* backup global variables */
 	int bck_optind = optind, bck_optopt = optopt, bck_opterr = opterr;
 	char *bck_optarg = optarg, opt;
 
 	opterr = 0;						  /* disable getopt error output */
-	while ((opt = getopt(argc, argv, "-o:")) != -1) {
+	while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
 		switch (opt) {
 		case 'o':
 			{
@@ -177,7 +177,7 @@ int main(int argc, char **argv)
 	// Declare progress structure, pointer to this struct, initialize progress limit
 	NMCM_PROGRESS_DEF;
 
-	get_o_param(argc, argv);	  /* output have to be known before TRAP init */
+	get_o_param(argc, argv, module_getopt_string, long_options);	  /* output have to be known before TRAP init */
 
 	// ***** TRAP initialization *****
 	TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
@@ -192,7 +192,7 @@ int main(int argc, char **argv)
 	// ***** Create UniRec template *****
 	char *unirec_specifier = "<COLLECTOR_FLOW>", opt;
 
-	while ((opt = getopt(argc, argv, module_getopt_string)) != -1) {
+	while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
 		switch (opt) {
 		case 'u':
 			unirec_specifier = optarg;
