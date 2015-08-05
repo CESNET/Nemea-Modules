@@ -68,25 +68,8 @@
 #define HANDLE_ERROR(msg) \
 	do { fprintf(stderr, "%s\n", msg); exit(EXIT_FAILURE); } while(0)
 
-/* ****************************** Modify here ****************************** */
 // Struct with information about module
-trap_module_info_t *module_info = NULL; /*{
-	"Flow-counter module",		  // Module name
-	// Module description
-	"Example module for counting number of incoming flow records.\n"
-		 "Parameters:\n"
-		 "   -u TMPLT    Specify UniRec template expected on the input interface.\n"
-		 "   -p N        Show progress - print a dot every N flows.\n"
-		 "   -P CHAR     When showing progress, print CHAR instead of dot.\n"
-		 "   -o SEC      Send @VOLUME record filled with current counters every SEC second(s).\n"
-		 "Interfaces:\n"
-		 "   Inputs: 1 (flow records)\n" "   Outputs: 0/1 (affected by -o parameter)\n",
-	1,									  // Number of input interfaces
-	0,									  // Number of output interfaces
-	2,
-	"-h", "--help", "prints help", 0, NULL,
-	"-c", "--cell", "cell test", 0, NULL
-};*/
+trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
   BASIC("Flow-counter module","Example module for counting number of incoming flow records.",1,0)
@@ -95,7 +78,7 @@ trap_module_info_t *module_info = NULL; /*{
   PARAM('u', "unirec", "Specify UniRec template expected on the input interface.", required_argument, "string") \
   PARAM('p', "print", "Show progress - print a dot every N flows.", required_argument, "int32") \
   PARAM('P', "print_c", "When showing progress, print CHAR instead of dot.", required_argument, "string") \
-  PARAM('o', "output", "Send @VOLUME record filled with current counters every SEC second(s).", required_argument, "int32")
+  PARAM('o', "send_time", "Send @VOLUME record filled with current counters every SEC second(s).", required_argument, "int32")
 
 
 
@@ -142,14 +125,14 @@ void send_handler(int signal)
 	alarm(send_interval);
 }
 
-void get_o_param(int argc, char **argv)
+void get_o_param(int argc, char **argv, const char *module_getopt_string, const struct option *long_options)
 {
 	/* backup global variables */
 	int bck_optind = optind, bck_optopt = optopt, bck_opterr = opterr;
 	char *bck_optarg = optarg, opt;
 
 	opterr = 0;						  /* disable getopt error output */
-	while ((opt = getopt(argc, argv, "-o:")) != -1) {
+	while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
 		switch (opt) {
 		case 'o':
 			{
@@ -194,7 +177,7 @@ int main(int argc, char **argv)
 	// Declare progress structure, pointer to this struct, initialize progress limit
 	NMCM_PROGRESS_DEF;
 
-	get_o_param(argc, argv);	  /* output have to be known before TRAP init */
+	get_o_param(argc, argv, module_getopt_string, long_options);	  /* output have to be known before TRAP init */
 
 	// ***** TRAP initialization *****
 	TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
@@ -209,7 +192,7 @@ int main(int argc, char **argv)
 	// ***** Create UniRec template *****
 	char *unirec_specifier = "<COLLECTOR_FLOW>", opt;
 
-	while ((opt = getopt(argc, argv, module_getopt_string)) != -1) {
+	while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
 		switch (opt) {
 		case 'u':
 			unirec_specifier = optarg;

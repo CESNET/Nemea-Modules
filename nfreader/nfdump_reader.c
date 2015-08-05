@@ -72,55 +72,22 @@
 #define MINIMAL_SENDING_RATE  100
 
 // Struct with information about module
-trap_module_info_t *module_info = NULL; /*{
-   (char *) "Nfdump-reader module", // Module name
-   // Module description
-   (char *) "This module reads a given nfdump file and outputs flow records in \n"
-   "UniRec format. If more files are specified, all flows from the first file\n"
-   "are read, then all flows from second file and so on.\n"
-   "\n"
-   "Interfaces:\n"
-   "   Inputs: 0\n"
-   "   Outputs: 1 (<COLLECTOR_FLOW>) [FIXME: Not all fields are filled]\n"
-   "\n"
-   "Usage:\n"
-   "   ./nfdump_reader -i IFC_SPEC [-f FILTER] [-c N] [-n] FILE [FILE...]"
-   "\n"
-   "   FILE   A file in nfdump format.\n"
-   "   -f FILTER  A nfdump-like filter expression. Only records matching the filter\n"
-   "              will be sent to the output.\n"
-   "   -c N   Read only the first N flow records.\n"
-   "   -n     Don't send \"EOF message\" at the end.\n"
-   "   -T     Replace original timestamps by record actual sending time.\n"
-   "   -D     Fill DIR_BIT_FIELD according to record direction.\n"
-   "   -l m   Use link mask m for LINK_BIT_FIELD. m is 8-bit hexadecimal number.\n"
-   "          e.g. m should be \"1\", \"c2\", \"AB\",...\n"
-   "   -p N   Show progress - print a dot every N flows.\n"
-   "   -r N   Rate limiting. Limiting sending flow rate to N records/sec.\n"
-   "   -R     Real time re-sending. Resending records from given files in real\n"
-   "          time, respecting original timestamps (seconds). Since this mode\n"
-   "          is timestamp order dependent, real time re-sending is done only at\n"
-   "          approximate time.\n"
-   "",
-   0, // Number of input interfaces
-   1, // Number of output interfaces
-};*/
+trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
   BASIC("Nfdump-reader module","This module reads a given nfdump file and outputs flow records in UniRec format. If more files are specified, all flows from the first file are read, then all flows from second file and so on.",0,1)
 
 #define MODULE_PARAMS(PARAM) \
-   PARAM('F', NULL, "A file in nfdump format.", 1, "string") \
-   PARAM('f', NULL, "A nfdump-like filter expression. Only records matching the filter will be sent to the output.", 1, "string") \
-   PARAM('c', NULL, "Read only the first N flow records.", 1, "uint64") \
-   PARAM('n', NULL, "Don't send EOF message at the end.", 0, NULL) \
-   PARAM('T', NULL, "Replace original timestamps by record actual sending time.", 0, NULL) \
-   PARAM('D', NULL, "Fill DIR_BIT_FIELD according to record direction.", 0, NULL) \
-   PARAM('l', NULL, "Use link mask m for LINK_BIT_FIELD. m is 8-bit hexadecimal number e.g. m should be 1, c2, AB,...", 1, "string") \
-   PARAM('p', NULL, "Show progress - print a dot every N flows.", 1, "uint64") \
-   PARAM('r', NULL, "Rate limiting. Limiting sending flow rate to N records/sec.", 1, "uint64") \
-   PARAM('R', NULL, "Real time re-sending. Resending records from given files in real time, respecting original timestamps (seconds). Since this mode is timestamp order dependent, real time re-sending is done only at approximate time.", 0,NULL)
-
+   PARAM('F', "file", "A file in nfdump format.", required_argument, "string") \
+   PARAM('f', "filter", "A nfdump-like filter expression. Only records matching the filter will be sent to the output.", required_argument, "string") \
+   PARAM('c', "first", "Read only the first N flow records.", required_argument, "uint64") \
+   PARAM('n', "no_eof", "Don't send EOF message at the end.", no_argument, "none") \
+   PARAM('T', "send_time", "Replace original timestamps by record actual sending time.", no_argument, "none") \
+   PARAM('D', "DBF_record", "Fill DIR_BIT_FIELD according to record direction.", no_argument, "none") \
+   PARAM('l', "link_mask", "Use link mask m for LINK_BIT_FIELD. m is 8-bit hexadecimal number e.g. m should be 1, c2, AB,...", required_argument, "string") \
+   PARAM('p', "print", "Show progress - print a dot every N flows.", required_argument, "uint64") \
+   PARAM('r', "rate", "Rate limiting. Limiting sending flow rate to N records/sec.", required_argument, "uint64") \
+   PARAM('R', "resend", "Real time re-sending. Resending records from given files in real time, respecting original timestamps (seconds). Since this mode is timestamp order dependent, real time re-sending is done only at approximate time.", no_argument, "none")
 
 static int stop = 0;
 
@@ -135,7 +102,7 @@ enum module_states{
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 
-void set_actual_timestamps(master_record_t *src_rec, void *out_rec, ur_template_t* tmplt){
+void set_actual_timestamps(master_record_t *src_rec, void *out_rec, ur_template_t* tmplt) {
    time_t act_time;
    uint64_t first;
    uint64_t last;
@@ -149,19 +116,19 @@ void set_actual_timestamps(master_record_t *src_rec, void *out_rec, ur_template_
    ur_set(tmplt, out_rec, UR_TIME_LAST, last);
 }
 
-void delay_sending_rate(struct timeval *sr_start){
+void delay_sending_rate(struct timeval *sr_start) {
    struct timeval sr_end;
 
    gettimeofday(&sr_end, NULL);
    long sr_diff = ((sr_end.tv_sec * 1000000 + sr_end.tv_usec) - (sr_start->tv_sec * 1000000 + sr_start->tv_usec));
-   if (sr_diff < 1000000){
+   if (sr_diff < 1000000) {
       usleep(1000000 - sr_diff);
    }
 }
 
 int main(int argc, char **argv)
 {
-   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    //------------ General ------------------------------------------------------
    int module_state = STATE_OK;
    int ret;
@@ -196,9 +163,11 @@ int main(int argc, char **argv)
    if (ret != TRAP_E_OK) {
       if (ret == TRAP_E_HELP) { // "-h" was found
          trap_print_help(module_info);
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return 0;
       }
       fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 1;
    }
 
@@ -206,7 +175,7 @@ int main(int argc, char **argv)
 
    // Parse remaining parameters
    char opt;
-   while ((opt = getopt(argc, argv, "f:c:nl:Dp:r:RT")) != -1) {
+   while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
          case 'f':
             filter = optarg;
@@ -229,11 +198,12 @@ int main(int argc, char **argv)
             break;
          case 'p':
             NMCM_PROGRESS_INIT(atoi(optarg), return 2);
-			   break;
+            break;
          case 'r':
             sending_rate = atoi(optarg);
             if (sending_rate < MINIMAL_SENDING_RATE) {
                fprintf(stderr, "Invalid sending rate (%i rec/s is minimum).\n", MINIMAL_SENDING_RATE);
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
                return 2;
             }
             break;
@@ -245,6 +215,7 @@ int main(int argc, char **argv)
             break;
          default:
             fprintf(stderr, "Invalid arguments.\n");
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
             return 2;
       }
    }
@@ -252,17 +223,20 @@ int main(int argc, char **argv)
    if (optind >= argc) {
       fprintf(stderr, "Wrong number of parameters.\nUsage: %s -i trap-ifc-specifier \
             [-f FILTER] [-n] [-c NUM] [-r NUM] [-R] [-T] [-l MASK] [-D] nfdump-file [nfdump-file...]\n", argv[0]);
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 2;
    }
 
    links = ur_create_links(link_mask);
-   if (links == NULL){
+   if (links == NULL) {
       fprintf(stderr, "Invalid link mask.\n");
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 2;
    }
 
    if (sending_rate && rt_sending) {
       fprintf(stderr, "Wrong parameters, use only one of -r / -R.\n");
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 2;
    }
 
@@ -273,12 +247,13 @@ int main(int argc, char **argv)
    ret = trap_init(module_info, ifc_spec);
    if (ret != TRAP_E_OK) {
       fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 4;
    }
    trap_free_ifc_spec(ifc_spec); // We don't need ifc_spec anymore
 
-//   if (trap_ifcctl(TRAPIFC_OUTPUT, 0,TRAPCTL_BUFFERSWITCH, 1) != TRAP_E_OK){
-//   if (trap_ifcctl(TRAPIFC_OUTPUT, 0,TRAPCTL_BUFFERSWITCH, 0) != TRAP_E_OK){
+//   if (trap_ifcctl(TRAPIFC_OUTPUT, 0,TRAPCTL_BUFFERSWITCH, 1) != TRAP_E_OK) {
+//   if (trap_ifcctl(TRAPIFC_OUTPUT, 0,TRAPCTL_BUFFERSWITCH, 0) != TRAP_E_OK) {
 //      fprintf(stderr, "Error while turning off buffering.\n");
 //   }
 
@@ -287,7 +262,7 @@ int main(int argc, char **argv)
    // Allocate memory for output UniRec record (0 bytes for dynamic fields)
    void *rec_out = ur_create(tmplt, 0);
 
-   if (rt_sending){
+   if (rt_sending) {
       RT_INIT(rt_sending_state, 10, 1000, 100, 3.5, goto exit;);
    }
 
@@ -311,7 +286,7 @@ int main(int argc, char **argv)
          goto exit;
       }
 
-      if (sending_rate){
+      if (sending_rate) {
          gettimeofday(&sr_start, NULL);
       }
 
@@ -355,8 +330,8 @@ int main(int argc, char **argv)
          ur_set(tmplt, rec_out, UR_PACKETS, src_rec->dPkts);
          ur_set(tmplt, rec_out, UR_BYTES, src_rec->dOctets);
          ur_set(tmplt, rec_out, UR_LINK_BIT_FIELD, ur_get_link_mask(links));
-         if (set_dir_bit_field){
-            if (src_rec->input > 0){
+         if (set_dir_bit_field) {
+            if (src_rec->input > 0) {
                ur_set(tmplt, rec_out, UR_DIR_BIT_FIELD, (1 << src_rec->input));
             } else {
                ur_set(tmplt, rec_out, UR_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
@@ -367,11 +342,11 @@ int main(int argc, char **argv)
          ur_set(tmplt, rec_out, UR_TIME_FIRST, ur_time_from_sec_msec(src_rec->first, src_rec->msec_first));
          ur_set(tmplt, rec_out, UR_TIME_LAST, ur_time_from_sec_msec(src_rec->last, src_rec->msec_last));
 
-         if (rt_sending){
+         if (rt_sending) {
             RT_CHECK_DELAY(record_counter, src_rec->last, rt_sending_state);
          }
 
-         if (actual_timestamps){
+         if (actual_timestamps) {
             set_actual_timestamps(src_rec, rec_out, tmplt);
          }
 
@@ -379,8 +354,8 @@ int main(int argc, char **argv)
          trap_send(0, rec_out, ur_rec_static_size(tmplt));
          record_counter++;
 
-         if (sending_rate){
-            if ((record_counter % sending_rate) == 0){
+         if (sending_rate) {
+            if ((record_counter % sending_rate) == 0) {
                delay_sending_rate(&sr_start);
                gettimeofday(&sr_start, NULL);
             }
@@ -409,13 +384,13 @@ int main(int argc, char **argv)
    }
 
 exit:
-   if (rt_sending){
+   if (rt_sending) {
       RT_DESTROY(rt_sending_state);
    }
    trap_finalize();
    ur_free(rec_out);
    ur_free_template(tmplt);
    ur_free_links(links);
-   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    return module_state;
 }

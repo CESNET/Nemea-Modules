@@ -51,6 +51,7 @@
 #include <vector>
 #include <iostream>
 #include <iomanip>
+#include <getopt.h>
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
@@ -65,18 +66,12 @@ struct UniRecSpaceholder {
 };
 
 // Struct with information about module
-trap_module_info_t module_info = {
-   (char *) "Nfdump-reader module", // Module name
-   // Module description
-   (char *) "This module module reads a given nfdump file and outputs flow records in \n"
-   "UniRec format (special version for throughput testing - it reads all records into\n"
-   "memory before sending them to TRAP interface).\n"
-   "Interfaces:\n"
-   "   Inputs: 0\n"
-   "   Outputs: 1 (<BASIC_FLOW>)\n",
-   0, // Number of input interfaces
-   1, // Number of output interfaces
-};
+trap_module_info_t *module_info = NULL;
+
+#define MODULE_BASIC_INFO(BASIC) \
+  BASIC("Nfdump-reader module","This module reads a given nfdump file and outputs flow records in UniRec format (special version for throughput testing - it reads all records into memory before sending them to TRAP interface).",0,1)
+
+#define MODULE_PARAMS(PARAM)
 
 static int stop = 0;
 
@@ -93,24 +88,29 @@ int main(int argc, char **argv)
    int ret;
    nfdump_iter_t iter;
    trap_ifc_spec_t ifc_spec;
-   
+
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+
    // Create UniRec template
    ur_template_t *tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS");
    //ur_template_t *tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD");
-   
+
    // Let TRAP library parse command-line arguments and extract its parameters
    ret = trap_parse_params(&argc, argv, &ifc_spec);
    if (ret != TRAP_E_OK) {
       if (ret == TRAP_E_HELP) { // "-h" was found
-         trap_print_help(&module_info);
+         trap_print_help(module_info);
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return 0;
       }
       fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 1;
    }
 
    if (argc != 2) {
       fprintf(stderr, "Wrong number of parameters.\nUsage: %s -i trap-ifc-specifier nfdump-file\n", argv[0]);
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       trap_finalize();
       return 2;
    }
@@ -119,22 +119,24 @@ int main(int argc, char **argv)
    if (ret != 0) {
       fprintf(stderr, "Error when trying to open file \"%s\"\n", argv[1]);
       trap_finalize();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 3;
    }
-   
+
    // Initialize TRAP library (create and init all interfaces)
-   ret = trap_init(&module_info, ifc_spec);
+   ret = trap_init(module_info, ifc_spec);
    if (ret != TRAP_E_OK) {
       nfdump_iter_end(&iter);
       fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 4;
    }
    trap_free_ifc_spec(ifc_spec); // We don't need ifc_spec anymore
-   
+
    signal(SIGTERM, signal_handler);
    signal(SIGINT, signal_handler);
-   
-   
+
+
    vector<UniRecSpaceholder> records;
    unsigned cnt_rec = 0;
    srand(time(NULL));
@@ -151,12 +153,13 @@ int main(int argc, char **argv)
          fprintf(stderr, "Error during reading file (%i).\n", ret);
          nfdump_iter_end(&iter);
          trap_finalize();
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return 3;
       }
 
       // Allocate new UniRec and put it into records vector
       records.push_back(UniRecSpaceholder());
-      void* rec2 = (void*)&records.back();
+      void *rec2 = (void*)&records.back();
 
       ++cnt_rec;
 
@@ -174,7 +177,7 @@ int main(int argc, char **argv)
          ur_set(tmplt, rec2, UR_SRC_IP, ip_from_16_bytes_le((char *)rec->ip_union._v6.srcaddr));
          ur_set(tmplt, rec2, UR_DST_IP, ip_from_16_bytes_le((char *)rec->ip_union._v6.dstaddr));
       }
-      else { // IPv4  
+      else { // IPv4
          ur_set(tmplt, rec2, UR_SRC_IP, ip_from_4_bytes_le((char *)&rec->ip_union._v4.srcaddr));
          ur_set(tmplt, rec2, UR_DST_IP, ip_from_4_bytes_le((char *)&rec->ip_union._v4.dstaddr));
 
@@ -189,7 +192,7 @@ int main(int argc, char **argv)
       uint64_t last  = ur_time_from_sec_msec(rec->last, rec->msec_last);
       ur_set(tmplt, rec2, UR_TIME_FIRST, first);
       ur_set(tmplt, rec2, UR_TIME_LAST, last);
-      
+
       // assign value for link and direction of the flow
       /*if ((counter % (rand() % 50000 + 50000)) == 0) {
           ur_set(tmplt, rec2, UR_LINK_BIT_FIELD, 0x01);
@@ -198,7 +201,7 @@ int main(int argc, char **argv)
       } else {
           ur_set(tmplt, rec2, UR_LINK_BIT_FIELD, 0x04);
       }
-      
+
       ur_set(tmplt, rec2, UR_DIR_BIT_FIELD, rec->input);
       */
 
@@ -224,6 +227,7 @@ int main(int argc, char **argv)
    // Do all necessary cleanup before exiting
    ur_free_template(tmplt);
    trap_finalize();
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    return 0;
 }

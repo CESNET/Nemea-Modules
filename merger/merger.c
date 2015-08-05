@@ -69,35 +69,17 @@
 #define MODE_TIME_AWARE    1
 
 // Struct with information about module
-trap_module_info_t module_info = {
-   "Traffic Merger (2nd version)", // Module name
-   // Module description
-   "This module merges traffic from multiple input interfaces to one output\n"
-   "interface. There are two supported versions:\n"
-   "   - normal (default) - resending incoming data as they come.\n"
-   "   - timestamp aware - incoming data are sended with respect to timestamp.\n"
-   "     order.\n"
-   "\n"
-   "Interfaces:\n"
-   "   Inputs: variable\n"
-   "   Outputs: 1\n"
-   "\n"
-   "Usage:\n"
-   "   ./merger -i IFC_SPEC -n CNT [-u FMT] [-T] [-F] [-t MS]\n"
-   "\n"
-   "Module specific parameters:\n"
-   "   -F         (timestamp aware version) Sorts timestamps based on TIME_FIRST\n"
-   "              field, instead of TIME_LAST (default).\n"
-   "   -n CNT     Sets count of input links. Must correspond to parameter -i (trap).\n"
-   "   -u FMT     UniRec specifier of input/output data (same to all links).\n"
-   "              (default <COLLECTOR_FLOW>).\n"
-   "   -t MS      (timestamp aware version) Set initial timeout for incoming\n"
-   "              interfaces (in seconds). Timeout is set to 0, if no data\n"
-   "              received in initial timeout (default 1s).\n"
-   "   -T         Set mode to timestamp aware (not by default).\n",
-   -1, // Number of input interfaces (-1 means variable)
-   1, // Number of output interfaces
-};
+trap_module_info_t *module_info = NULL;
+
+#define MODULE_BASIC_INFO(BASIC) \
+  BASIC("module_name","module_description",-1,1)
+
+#define MODULE_PARAMS(PARAM) \
+  PARAM('F', "time_first", "(timestamp aware version) Sorts timestamps based on TIME_FIRST field, instead of TIME_LAST (default).", no_argument, "none") \
+  PARAM('n', "link_count", "Sets count of input links. Must correspond to parameter -i (trap).", required_argument, "int32") \
+  PARAM('u', "unirec", "UniRec specifier of input/output data (same to all links). (default <COLLECTOR_FLOW>).", required_argument, "string") \
+  PARAM('t', "timeout", "(timestamp aware version) Set initial timeout for incoming interfaces (in seconds). Timeout is set to 0, if no data received in initial timeout (default 1s).", required_argument, "int32") \
+  PARAM('T', "timestamp", "Set mode to timestamp aware (not by default).", no_argument, "none")
 
 static int stop = 0;
 static int verbose;
@@ -355,13 +337,15 @@ int main(int argc, char **argv)
    int mode = MODE_TIME_IGNORE;
    int n_inputs = 0;
 
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+
    // ***** Process parameters *****
    // Let TRAP library parse command-line arguments and extract its parameters
    trap_ifc_spec_t ifc_spec;
    ret = trap_parse_params(&argc, argv, &ifc_spec);
    if (ret != TRAP_E_OK) {
       if (ret == TRAP_E_HELP) { // "-h" was found
-         trap_print_help(&module_info);
+         trap_print_help(module_info);
          return 0;
       }
       fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
@@ -376,7 +360,7 @@ int main(int argc, char **argv)
 
    // Parse remaining parameters and get configuration
    char opt;
-   while ((opt = getopt(argc, argv, "Fn:u:t:T")) != -1) {
+   while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
          case 'F':
             timestamp_selector = TS_FIRST;
@@ -396,6 +380,7 @@ int main(int argc, char **argv)
             break;
          default:
             fprintf(stderr, "Error: Invalid arguments.\n");
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
             return 1;
       }
    }
@@ -427,14 +412,14 @@ int main(int argc, char **argv)
 
    // ***** TRAP initialization *****
    // Set number of input interfaces
-   module_info.num_ifc_in = n_inputs;
+   module_info->num_ifc_in = n_inputs;
 
    if (verbose >= 0) {
       printf("Initializing TRAP library ...\n");
    }
 
    // Initialize TRAP library (create and init all interfaces)
-   ret = trap_init(&module_info, ifc_spec);
+   ret = trap_init(module_info, ifc_spec);
    if (ret != TRAP_E_OK) {
       fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
       trap_free_ifc_spec(ifc_spec);
@@ -479,6 +464,7 @@ int main(int argc, char **argv)
 exit:
    // Do all necessary cleanup before exiting
    TRAP_DEFAULT_FINALIZATION();
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    return ret;
 }
