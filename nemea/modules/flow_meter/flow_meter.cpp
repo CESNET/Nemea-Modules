@@ -1,3 +1,4 @@
+#include <config.h>
 #include <getopt.h>
 #include <string>
 #include <iostream>
