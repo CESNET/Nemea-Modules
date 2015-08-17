@@ -1,3 +1,5 @@
+include ../aminclude.am
+
 bin_PROGRAMS=anonymizer
 anonymizer_SOURCES=anonymizer.c \
                    anonymizer.h \
@@ -8,4 +10,3 @@ anonymizer_SOURCES=anonymizer.c \
 anonymizer_LDADD=-ltrap -lunirec -lnemea-common
 pkgdocdir=${docdir}/anonymizer
 pkgdoc_DATA=README
-include ../aminclude.am
