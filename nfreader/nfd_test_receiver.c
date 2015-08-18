@@ -45,6 +45,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 #include <getopt.h>
 
 #include <libtrap/trap.h>
@@ -54,7 +55,14 @@
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Test receiver module for nfdump reader.","This module reveiving UniRec messages from nfdump reader and print received messages (counts) to stdout. In default, it prints received messages in format <CNT>. <TIME_FIRST> | <TIME_LAST>.",1,0)
+   BASIC("Test receiver module for nfdump reader.", \
+   "This module reveiving UniRec messages from nfdump reader and print received\n" \
+   "messages (counts) to stdout. In default, it prints received messages in format\n" \
+    " <CNT>. <TIME_FIRST> | <TIME_LAST>. If parameter -t N is set, output will be\n" \
+    "switched to \"counter\" mode and it outputs counts of received messages every\n" \
+    "N seconds." \
+    "Interfaces:\n" \
+   , 1, 0)
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('D', "difference", "Set differences.", no_argument, "none") \
@@ -137,10 +145,9 @@ int main(int argc, char **argv)
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 4;
    }
+
    trap_free_ifc_spec(ifc_spec); // We don't need ifc_spec anymore
 
-   signal(SIGTERM, signal_handler);
-   signal(SIGINT, signal_handler);
 
 
    // ***** Create UniRec templates *****
