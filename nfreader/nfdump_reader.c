@@ -1,4 +1,3 @@
-//#define LIBNF_OLD
 /**
  * \file nfdump_reader.h
  * \brief Nfdump reader module reads a given nfdump file and outputs flow
@@ -61,11 +60,11 @@
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
-#ifdef LIBNF_OLD
+#ifdef HAVE_LIBNFDUMP
 #include <libnfdump.h>
 #else
 #include <libnf.h>
-#endif /* LIBNF_OLD */
+#endif /* HAVE_LIBNFDUMP */
 #include <nemea-common.h>
 
 #include <real_time_sending.h>
@@ -107,7 +106,7 @@ enum module_states{
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 
-#ifdef LIBNF_OLD
+#ifdef HAVE_LIBNFDUMP
 void set_actual_timestamps(master_record_t *src_rec, void *out_rec, ur_template_t *tmplt)
 {
    time_t act_time;
@@ -137,7 +136,7 @@ void set_actual_timestamps(lnf_brec1_t *brec, void *out_rec, ur_template_t *tmpl
    ur_set(tmplt, out_rec, UR_TIME_FIRST, first);
    ur_set(tmplt, out_rec, UR_TIME_LAST, last);
 }
-#endif /* LIBNF_OLD */
+#endif /* HAVE_LIBNFDUMP */
 
 void delay_sending_rate(struct timeval *sr_start)
 {
@@ -179,10 +178,10 @@ int main(int argc, char **argv)
    rt_state_t rt_sending_state;
    //---------------------------------------------------------------------------
 
-#ifndef LIBNF_OLD
+#ifndef HAVE_LIBNFDUMP
    lnf_brec1_t brec;
    lnf_filter_t * filterp;
-#endif /* LIBNF_OLD*/
+#endif /* HAVE_LIBNFDUMP */
 
    // Create UniRec template
    ur_template_t *tmplt = ur_create_template("<COLLECTOR_FLOW>");
@@ -299,23 +298,23 @@ int main(int argc, char **argv)
       printf("Sending records ...\n");
    }
 
-#ifndef LIBNF_OLD
+#ifndef HAVE_LIBNFDUMP
    lnf_rec_t * recp;
    lnf_file_t * filep;
-#endif /* LIBNF_OLD */
+#endif /* HAVE_LIBNFDUMP */
 
    // For all input files...
    do {
-#ifdef LIBNF_OLD
+#ifdef HAVE_LIBNFDUMP
       nfdump_iter_t iter;
-#endif /* LIBNF_OLD */
+#endif /* HAVE_LIBNFDUMP */
 
       // Open nfdump file
       if (verbose) {
          printf("Reading file %s\n", argv[optind]);
       }
 
-#ifdef LIBNF_OLD
+#ifdef HAVE_LIBNFDUMP
       ret = nfdump_iter_start(&iter, argv[optind], filter);
       if (ret != 0) {
          fprintf(stderr, "Error when trying to open file \"%s\"\n", argv[optind]);
@@ -329,13 +328,13 @@ int main(int argc, char **argv)
          module_state = STATE_ERR;
          goto exit;
       }
-#endif /* LIBNF_OLD */
+#endif /* HAVE_LIBNFDUMP */
 
       if (sending_rate) {
          gettimeofday(&sr_start, NULL);
       }
 
-#ifndef LIBNF_OLD
+#ifndef HAVE_LIBNFDUMP
       lnf_rec_init(&recp);
 
       if (filter != NULL && lnf_filter_init(&filterp, filter) != LNF_OK) {
@@ -343,11 +342,11 @@ int main(int argc, char **argv)
          module_state = STATE_ERR;
          goto exit;
       }
-#endif /* LIBNF_OLD */
+#endif /* HAVE_LIBNFDUMP */
 
        // For all records in the file...
       while (!stop && (max_records == 0 || record_counter < max_records)) {
-#ifdef LIBNF_OLD
+#ifdef HAVE_LIBNFDUMP
          master_record_t *src_rec;
          ret = nfdump_iter_next(&iter, &src_rec);
 #else
@@ -355,10 +354,10 @@ int main(int argc, char **argv)
          if (filter != NULL && !lnf_filter_match(filterp, recp)) {
             continue;
          }
-#endif /* LIBNF_OLD */
+#endif /* HAVE_LIBNFDUMP */
 
          // Read a record from the file
-#ifdef LIBNF_OLD
+#ifdef HAVE_LIBNFDUMP
          if (ret != 0) {
             if (ret == NFDUMP_EOF) { // no more records
                break;
@@ -368,19 +367,19 @@ int main(int argc, char **argv)
             if (ret == LNF_EOF) {
                break;
             }
-#endif /* LIBNF_OLD */
+#endif /* HAVE_LIBNFDUMP */
 
             fprintf(stderr, "Error during reading file (%i).\n", ret);
-#ifdef LIBNF_OLD
+#ifdef HAVE_LIBNFDUMP
             nfdump_iter_end(&iter);
 #else
             lnf_close(filep);
-#endif /* LIBNF_OLD */
+#endif /* HAVE_LIBNFDUMP */
             module_state = STATE_ERR;
             goto exit;
          }
 
-#ifdef LIBNF_OLD
+#ifdef HAVE_LIBNFDUMP
          // Copy data from master_record_t to UniRec record
          if (src_rec->flags & 0x01) { // IPv6
             uint64_t tmp_ip_v6_addr;
@@ -465,7 +464,7 @@ int main(int argc, char **argv)
        if (actual_timestamps) {
           set_actual_timestamps(&brec, rec_out, tmplt);
        }
-#endif /* LIBNF_OLD */
+#endif /* HAVE_LIBNFDUMP */
 
          // Send data to output interface
          trap_send(0, rec_out, ur_rec_static_size(tmplt));
@@ -485,7 +484,7 @@ int main(int argc, char **argv)
       if (verbose) {
          printf("done.\n");
       }
-#ifdef LIBNF_OLD
+#ifdef HAVE_LIBNFDUMP
       nfdump_iter_end(&iter);
 #else
       lnf_rec_free(recp);
@@ -493,7 +492,7 @@ int main(int argc, char **argv)
       if (filter != NULL) {
          lnf_filter_free(filterp);
       }
-#endif /* LIBNF_OLD */
+#endif /* HAVE_LIBNFDUMP */
    } while (!stop && ++optind < argc); // For all input files
 
    NMCM_PROGRESS_NEWLINE;

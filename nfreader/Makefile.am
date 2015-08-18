@@ -1,7 +1,15 @@
-bin_PROGRAMS=nfdump_reader nfdump_reader_test nf
-nfdump_reader_SOURCES=nfdump_reader.c
-nfdump_reader_test_SOURCES=nfdump_reader_test.cpp
-nfdump_reader_LDADD=-lunirec -ltrap -lnfdump
+bin_PROGRAMS=nfdump_reader
 
-nf_SOURCES=nfdump_reader.c
-nf_LDADD=-lunirec -ltrap -lnf
+if HAVE_LIBNFDUMP
+bin_PROGRAMS+=nfdump_reader_test
+nfdump_reader_test_SOURCES=nfdump_reader_test.cpp
+endif
+
+nfdump_reader_SOURCES=nfdump_reader.c
+if HAVE_LIBNF
+LDADD=-lunirec -ltrap -lnf
+else
+LDADD=-lunirec -ltrap -lnfdump
+AM_CPPFLAGS=-DHAVE_LIBNFDUMP=1
+endif
+
