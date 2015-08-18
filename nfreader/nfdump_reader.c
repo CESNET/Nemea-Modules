@@ -1,3 +1,4 @@
+//#define LIBNF_OLD
 /**
  * \file nfdump_reader.h
  * \brief Nfdump reader module reads a given nfdump file and outputs flow
@@ -60,7 +61,11 @@
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
+#ifdef LIBNF_OLD
 #include <libnfdump.h>
+#else
+#include <libnf.h>
+#endif /* LIBNF_OLD */
 #include <nemea-common.h>
 
 #include <real_time_sending.h>
@@ -102,7 +107,9 @@ enum module_states{
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 
-void set_actual_timestamps(master_record_t *src_rec, void *out_rec, ur_template_t* tmplt) {
+#ifdef LIBNF_OLD
+void set_actual_timestamps(master_record_t *src_rec, void *out_rec, ur_template_t *tmplt)
+{
    time_t act_time;
    uint64_t first;
    uint64_t last;
@@ -115,8 +122,25 @@ void set_actual_timestamps(master_record_t *src_rec, void *out_rec, ur_template_
    ur_set(tmplt, out_rec, UR_TIME_FIRST, first);
    ur_set(tmplt, out_rec, UR_TIME_LAST, last);
 }
+#else
 
-void delay_sending_rate(struct timeval *sr_start) {
+void set_actual_timestamps(lnf_brec1_t *brec, void *out_rec, ur_template_t *tmplt){
+   time_t act_time;
+   uint64_t first;
+   uint64_t last;
+
+   time(&act_time);
+
+   first = ur_time_from_sec_msec(act_time - (brec->last - brec->first), 0);
+   last = ur_time_from_sec_msec(act_time, 0);
+
+   ur_set(tmplt, out_rec, UR_TIME_FIRST, first);
+   ur_set(tmplt, out_rec, UR_TIME_LAST, last);
+}
+#endif /* LIBNF_OLD */
+
+void delay_sending_rate(struct timeval *sr_start)
+{
    struct timeval sr_end;
 
    gettimeofday(&sr_end, NULL);
@@ -154,6 +178,11 @@ int main(int argc, char **argv)
    uint8_t rt_sending = 0;
    rt_state_t rt_sending_state;
    //---------------------------------------------------------------------------
+
+#ifndef LIBNF_OLD
+   lnf_brec1_t brec;
+   lnf_filter_t * filterp;
+#endif /* LIBNF_OLD*/
 
    // Create UniRec template
    ur_template_t *tmplt = ur_create_template("<COLLECTOR_FLOW>");
@@ -270,42 +299,88 @@ int main(int argc, char **argv)
       printf("Sending records ...\n");
    }
 
+#ifndef LIBNF_OLD
+   lnf_rec_t * recp;
+   lnf_file_t * filep;
+#endif /* LIBNF_OLD */
+
    // For all input files...
    do {
+#ifdef LIBNF_OLD
       nfdump_iter_t iter;
+#endif /* LIBNF_OLD */
 
       // Open nfdump file
       if (verbose) {
          printf("Reading file %s\n", argv[optind]);
       }
 
+#ifdef LIBNF_OLD
       ret = nfdump_iter_start(&iter, argv[optind], filter);
       if (ret != 0) {
          fprintf(stderr, "Error when trying to open file \"%s\"\n", argv[optind]);
          module_state = STATE_ERR;
          goto exit;
       }
+#else
+      ret = lnf_open(&filep, argv[optind], LNF_READ, NULL);
+      if (ret != LNF_OK) {
+         fprintf(stderr, "Error when trying to open file \"%s\"\n", argv[optind]);
+         module_state = STATE_ERR;
+         goto exit;
+      }
+#endif /* LIBNF_OLD */
 
       if (sending_rate) {
          gettimeofday(&sr_start, NULL);
       }
 
+#ifndef LIBNF_OLD
+      lnf_rec_init(&recp);
+
+      if (filter != NULL && lnf_filter_init(&filterp, filter) != LNF_OK) {
+         fprintf(stderr, "Can not init filter '%s'\n", filter);
+         module_state = STATE_ERR;
+         goto exit;
+      }
+#endif /* LIBNF_OLD */
+
        // For all records in the file...
       while (!stop && (max_records == 0 || record_counter < max_records)) {
+#ifdef LIBNF_OLD
          master_record_t *src_rec;
+         ret = nfdump_iter_next(&iter, &src_rec);
+#else
+         ret = lnf_read(filep, recp);
+         if (filter != NULL && !lnf_filter_match(filterp, recp)) {
+            continue;
+         }
+#endif /* LIBNF_OLD */
 
          // Read a record from the file
-         ret = nfdump_iter_next(&iter, &src_rec);
+#ifdef LIBNF_OLD
          if (ret != 0) {
             if (ret == NFDUMP_EOF) { // no more records
                break;
             }
+#else
+         if (ret != LNF_OK) {
+            if (ret == LNF_EOF) {
+               break;
+            }
+#endif /* LIBNF_OLD */
+
             fprintf(stderr, "Error during reading file (%i).\n", ret);
+#ifdef LIBNF_OLD
             nfdump_iter_end(&iter);
+#else
+            lnf_close(filep);
+#endif /* LIBNF_OLD */
             module_state = STATE_ERR;
             goto exit;
          }
 
+#ifdef LIBNF_OLD
          // Copy data from master_record_t to UniRec record
          if (src_rec->flags & 0x01) { // IPv6
             uint64_t tmp_ip_v6_addr;
@@ -322,7 +397,7 @@ int main(int argc, char **argv)
             ur_set(tmplt, rec_out, UR_SRC_IP, ip_from_4_bytes_le((char *)&src_rec->ip_union._v4.srcaddr));
             ur_set(tmplt, rec_out, UR_DST_IP, ip_from_4_bytes_le((char *)&src_rec->ip_union._v4.dstaddr));
          }
-//            printf("%i \n", (void *)&src_rec->input - (void *)&src_rec);
+
          ur_set(tmplt, rec_out, UR_SRC_PORT, src_rec->srcport);
          ur_set(tmplt, rec_out, UR_DST_PORT, src_rec->dstport);
          ur_set(tmplt, rec_out, UR_PROTOCOL, src_rec->prot);
@@ -349,6 +424,48 @@ int main(int argc, char **argv)
          if (actual_timestamps) {
             set_actual_timestamps(src_rec, rec_out, tmplt);
          }
+#else
+         uint16_t flags;
+         lnf_rec_fget(recp, LNF_FLD_BREC1, &brec);
+         lnf_rec_fget(recp, LNF_FLD_TCP_FLAGS, &flags);
+         if (flags & 0x01) {
+         ur_set(tmplt, rec_out, UR_SRC_IP, ip_from_16_bytes_le((char *)&brec.srcaddr.data));
+         ur_set(tmplt, rec_out, UR_DST_IP, ip_from_16_bytes_le((char *)&brec.dstaddr.data));
+       } else {
+          ur_set(tmplt, rec_out, UR_SRC_IP, ip_from_4_bytes_le((char *)&brec.srcaddr.data));
+          ur_set(tmplt, rec_out, UR_DST_IP, ip_from_4_bytes_le((char *)&brec.dstaddr.data));
+       }
+
+       ur_set(tmplt, rec_out, UR_SRC_PORT, brec.srcport);
+       ur_set(tmplt, rec_out, UR_DST_PORT, brec.dstport);
+       ur_set(tmplt, rec_out, UR_PROTOCOL, brec.prot);
+       ur_set(tmplt, rec_out, UR_PACKETS, brec.pkts);
+       ur_set(tmplt, rec_out, UR_BYTES, brec.bytes);
+       ur_set(tmplt, rec_out, UR_LINK_BIT_FIELD, ur_get_link_mask(links));
+
+       uint32_t input;
+       lnf_rec_fget(recp, LNF_FLD_INPUT, &input);
+       if (set_dir_bit_field) {
+          if (input > 0) {
+             ur_set(tmplt, rec_out, UR_DIR_BIT_FIELD, (1 << input));
+          } else {
+             ur_set(tmplt, rec_out, UR_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
+          }
+       } else {
+          ur_set(tmplt, rec_out, UR_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
+       }
+
+       ur_set(tmplt, rec_out, UR_TIME_FIRST, ur_time_from_sec_msec(brec.first, 0));
+       ur_set(tmplt, rec_out, UR_TIME_LAST, ur_time_from_sec_msec(brec.last, 0));
+
+       if (rt_sending) {
+          RT_CHECK_DELAY(record_counter, brec.last, rt_sending_state);
+       }
+
+       if (actual_timestamps) {
+          set_actual_timestamps(&brec, rec_out, tmplt);
+       }
+#endif /* LIBNF_OLD */
 
          // Send data to output interface
          trap_send(0, rec_out, ur_rec_static_size(tmplt));
@@ -368,7 +485,15 @@ int main(int argc, char **argv)
       if (verbose) {
          printf("done.\n");
       }
+#ifdef LIBNF_OLD
       nfdump_iter_end(&iter);
+#else
+      lnf_rec_free(recp);
+      lnf_close(filep);
+      if (filter != NULL) {
+         lnf_filter_free(filterp);
+      }
+#endif /* LIBNF_OLD */
    } while (!stop && ++optind < argc); // For all input files
 
    NMCM_PROGRESS_NEWLINE;
@@ -392,5 +517,6 @@ exit:
    ur_free_template(tmplt);
    ur_free_links(links);
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+
    return module_state;
 }
