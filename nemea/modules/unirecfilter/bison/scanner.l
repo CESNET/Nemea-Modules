@@ -32,7 +32,7 @@ HEX [0-9a-fA-F]{0,4}
 "PROTOCOL"                                               { return PROTOCOL; }
 "TCP"|"ICMP"|"UDP"                                       { yylval.string = copyString(yytext, yyleng); return VAL; }
 [a-zA-Z_]+                                               { yylval.string = copyString(yytext, yyleng); return COLUMN; }
-\"[^\"]*\"                                               { yylval.string = cutString(yytext, yyleng); return STRING; }
+\"(\\.|[^"])*\"                                          { yylval.string = cutString(yytext, yyleng); return STRING; }
 "("                                                      { return LEFT; }
 ")"                                                      { return RIGHT; }
 " "+|\t+|\n+                                             { /* skip whitespaces */ }

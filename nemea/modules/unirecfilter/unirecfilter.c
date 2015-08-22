@@ -102,6 +102,27 @@ struct unirec_output_t
    void *out_rec;
 };
 
+// Search for delimiter (skip literals within string)
+char *skip_str_chr(char *ptr, char delim)
+{
+   char c;
+   int str_flag = 0;
+
+   while ((c = *ptr) != delim || str_flag) {
+      if (!(*++ptr)) {
+         return NULL;
+      }
+      // Skip escaped character
+      if (c == '\\') {
+         ptr++;
+      } else if (c == '"') {
+      // Toggle string flag
+         str_flag = !str_flag;
+      }
+   }
+   return ptr;
+}
+
 // Parse file and fill structures with filters and specifiers, return number of succesfully loaded interfaces
 int parse_file(char *str, struct unirec_output_t **output_specifiers, int n_outputs)
 {
@@ -124,7 +145,7 @@ int parse_file(char *str, struct unirec_output_t **output_specifiers, int n_outp
       // Beginning of filter
       case ':':
          beg_ptr = end_ptr + 1;
-         if ((end_ptr = strchr(end_ptr, ';')) == NULL) {
+         if ((end_ptr = skip_str_chr(end_ptr, ';')) == NULL) {
             fprintf(stderr, "Syntax error while parsing file: delimiter ';' not found.\n");
             return -1;
          }
@@ -152,7 +173,7 @@ int parse_file(char *str, struct unirec_output_t **output_specifiers, int n_outp
       // Beginning of output specifier
       default:
          beg_ptr = end_ptr;
-         if ((end_ptr = strchr(end_ptr, ':')) == NULL) {
+         if ((end_ptr = skip_str_chr(end_ptr, ':')) == NULL) {
             fprintf(stderr, "Syntax error while parsing filter file: delimiter ':' not found.\n");
             return -1;
          }
