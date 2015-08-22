@@ -103,15 +103,18 @@ string get_next_field(stringstream &line)
 
    while (!fin && ((ch = line.get()) != EOF)) {
        switch(ch) {
-          case '"': ++quotes;
-                    ++in_quotes;
-                    break;
+          case '"':
+            if (prev != '\\') { 
+               ++quotes;
+               ++in_quotes;
+            }
+            break;
           case ',': // if it was static field (no quotes were present)
                     // or if it was dynamic field (even count of quotes)
-                    if (quotes == 0 || (prev == '"' && (quotes & 1) == 0)) {
-                       fin = true;
-                    }
-                    break;
+           if (quotes == 0 || (prev == '"' && (quotes & 1) == 0)) {
+              fin = true;
+           }
+           break;
        }
        // skip last comma and deduplicate double quotes (store only one)
        if ((ch != '"' || ((in_quotes & 1) == 0)) && !fin) {
