@@ -68,12 +68,30 @@
 #include <nemea-common.h>
 
 #include <real_time_sending.h>
+#include "fields.c"
 
 // ***** Defaults and parameters *****
 #define DEFAULT_DIR_BIT_FIELD 0
 #define DEFAULT_LINK_MASK "1"
 
 #define MINIMAL_SENDING_RATE  100
+
+UR_FIELDS (
+   ipaddr DST_IP,
+   ipaddr SRC_IP,
+   uint64 BYTES,
+   uint64 LINK_BIT_FIELD,
+   time TIME_FIRST,
+   time TIME_LAST,
+   uint32 PACKETS,
+   uint16 DST_PORT,
+   uint16 SRC_PORT,
+   uint8 DIR_BIT_FIELD,
+   uint8 PROTOCOL,
+   uint8 TCP_FLAGS,
+   uint8 TOS,
+   uint8 TTL
+)
 
 // Struct with information about module
 trap_module_info_t *module_info = NULL;
@@ -118,8 +136,8 @@ void set_actual_timestamps(master_record_t *src_rec, void *out_rec, ur_template_
    first = ur_time_from_sec_msec(act_time - (src_rec->last - src_rec->first), src_rec->msec_first);
    last = ur_time_from_sec_msec(act_time , src_rec->msec_last);
 
-   ur_set(tmplt, out_rec, UR_TIME_FIRST, first);
-   ur_set(tmplt, out_rec, UR_TIME_LAST, last);
+   ur_set(tmplt, out_rec, F_TIME_FIRST, first);
+   ur_set(tmplt, out_rec, F_TIME_LAST, last);
 }
 #else
 
@@ -133,8 +151,8 @@ void set_actual_timestamps(lnf_brec1_t *brec, void *out_rec, ur_template_t *tmpl
    first = ur_time_from_sec_msec(act_time - (brec->last - brec->first), 0);
    last = ur_time_from_sec_msec(act_time, 0);
 
-   ur_set(tmplt, out_rec, UR_TIME_FIRST, first);
-   ur_set(tmplt, out_rec, UR_TIME_LAST, last);
+   ur_set(tmplt, out_rec, F_TIME_FIRST, first);
+   ur_set(tmplt, out_rec, F_TIME_LAST, last);
 }
 #endif /* HAVE_LIBNFDUMP */
 
@@ -182,9 +200,6 @@ int main(int argc, char **argv)
    lnf_brec1_t brec;
    lnf_filter_t * filterp;
 #endif /* HAVE_LIBNFDUMP */
-
-   // Create UniRec template
-   ur_template_t *tmplt = ur_create_template("<COLLECTOR_FLOW>");
 
    // Let TRAP library parse command-line arguments and extract its parameters
    ret = trap_parse_params(&argc, argv, &ifc_spec);
@@ -287,8 +302,16 @@ int main(int argc, char **argv)
 
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
+   // Create UniRec template
+   ur_template_t *tmplt = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL", NULL);
+   if (tmplt == NULL) {
+      trap_finalize();
+      fprintf(stderr, "ERROR in allocation template\n");
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      return 2;
+   }
    // Allocate memory for output UniRec record (0 bytes for dynamic fields)
-   void *rec_out = ur_create(tmplt, 0);
+   void *rec_out = ur_create_record(tmplt, 0);
 
    if (rt_sending) {
       RT_INIT(rt_sending_state, 10, 1000, 100, 3.5, goto exit;);
@@ -390,31 +413,30 @@ int main(int argc, char **argv)
             tmp_ip_v6_addr = src_rec->ip_union._v6.dstaddr[0];
             src_rec->ip_union._v6.dstaddr[0] = src_rec->ip_union._v6.dstaddr[1];
             src_rec->ip_union._v6.dstaddr[1] = tmp_ip_v6_addr;
-            ur_set(tmplt, rec_out, UR_SRC_IP, ip_from_16_bytes_le((char *)src_rec->ip_union._v6.srcaddr));
-            ur_set(tmplt, rec_out, UR_DST_IP, ip_from_16_bytes_le((char *)src_rec->ip_union._v6.dstaddr));
+            ur_set(tmplt, rec_out, F_SRC_IP, ip_from_16_bytes_le((char *)src_rec->ip_union._v6.srcaddr));
+            ur_set(tmplt, rec_out, F_DST_IP, ip_from_16_bytes_le((char *)src_rec->ip_union._v6.dstaddr));
          } else { // IPv4
-            ur_set(tmplt, rec_out, UR_SRC_IP, ip_from_4_bytes_le((char *)&src_rec->ip_union._v4.srcaddr));
-            ur_set(tmplt, rec_out, UR_DST_IP, ip_from_4_bytes_le((char *)&src_rec->ip_union._v4.dstaddr));
+            ur_set(tmplt, rec_out, F_SRC_IP, ip_from_4_bytes_le((char *)&src_rec->ip_union._v4.srcaddr));
+            ur_set(tmplt, rec_out, F_DST_IP, ip_from_4_bytes_le((char *)&src_rec->ip_union._v4.dstaddr));
          }
-
-         ur_set(tmplt, rec_out, UR_SRC_PORT, src_rec->srcport);
-         ur_set(tmplt, rec_out, UR_DST_PORT, src_rec->dstport);
-         ur_set(tmplt, rec_out, UR_PROTOCOL, src_rec->prot);
-         ur_set(tmplt, rec_out, UR_TCP_FLAGS, src_rec->tcp_flags);
-         ur_set(tmplt, rec_out, UR_PACKETS, src_rec->dPkts);
-         ur_set(tmplt, rec_out, UR_BYTES, src_rec->dOctets);
-         ur_set(tmplt, rec_out, UR_LINK_BIT_FIELD, ur_get_link_mask(links));
+         ur_set(tmplt, rec_out, F_SRC_PORT, src_rec->srcport);
+         ur_set(tmplt, rec_out, F_DST_PORT, src_rec->dstport);
+         ur_set(tmplt, rec_out, F_PROTOCOL, src_rec->prot);
+         ur_set(tmplt, rec_out, F_TCP_FLAGS, src_rec->tcp_flags);
+         ur_set(tmplt, rec_out, F_PACKETS, src_rec->dPkts);
+         ur_set(tmplt, rec_out, F_BYTES, src_rec->dOctets);
+         ur_set(tmplt, rec_out, F_LINK_BIT_FIELD, ur_get_link_mask(links));
          if (set_dir_bit_field) {
             if (src_rec->input > 0) {
-               ur_set(tmplt, rec_out, UR_DIR_BIT_FIELD, (1 << src_rec->input));
+               ur_set(tmplt, rec_out, F_DIR_BIT_FIELD, (1 << src_rec->input));
             } else {
-               ur_set(tmplt, rec_out, UR_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
+               ur_set(tmplt, rec_out, F_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
             }
          } else {
-            ur_set(tmplt, rec_out, UR_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
+            ur_set(tmplt, rec_out, F_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
          }
-         ur_set(tmplt, rec_out, UR_TIME_FIRST, ur_time_from_sec_msec(src_rec->first, src_rec->msec_first));
-         ur_set(tmplt, rec_out, UR_TIME_LAST, ur_time_from_sec_msec(src_rec->last, src_rec->msec_last));
+         ur_set(tmplt, rec_out, F_TIME_FIRST, ur_time_from_sec_msec(src_rec->first, src_rec->msec_first));
+         ur_set(tmplt, rec_out, F_TIME_LAST, ur_time_from_sec_msec(src_rec->last, src_rec->msec_last));
 
          if (rt_sending) {
             RT_CHECK_DELAY(record_counter, src_rec->last, rt_sending_state);
@@ -428,34 +450,34 @@ int main(int argc, char **argv)
          lnf_rec_fget(recp, LNF_FLD_BREC1, &brec);
          lnf_rec_fget(recp, LNF_FLD_TCP_FLAGS, &flags);
          if (flags & 0x01) {
-         ur_set(tmplt, rec_out, UR_SRC_IP, ip_from_16_bytes_le((char *)&brec.srcaddr.data));
-         ur_set(tmplt, rec_out, UR_DST_IP, ip_from_16_bytes_le((char *)&brec.dstaddr.data));
+         ur_set(tmplt, rec_out, F_SRC_IP, ip_from_16_bytes_le((char *)&brec.srcaddr.data));
+         ur_set(tmplt, rec_out, F_DST_IP, ip_from_16_bytes_le((char *)&brec.dstaddr.data));
        } else {
-          ur_set(tmplt, rec_out, UR_SRC_IP, ip_from_4_bytes_le((char *)&brec.srcaddr.data));
-          ur_set(tmplt, rec_out, UR_DST_IP, ip_from_4_bytes_le((char *)&brec.dstaddr.data));
+          ur_set(tmplt, rec_out, F_SRC_IP, ip_from_4_bytes_le((char *)&brec.srcaddr.data));
+          ur_set(tmplt, rec_out, F_DST_IP, ip_from_4_bytes_le((char *)&brec.dstaddr.data));
        }
 
-       ur_set(tmplt, rec_out, UR_SRC_PORT, brec.srcport);
-       ur_set(tmplt, rec_out, UR_DST_PORT, brec.dstport);
-       ur_set(tmplt, rec_out, UR_PROTOCOL, brec.prot);
-       ur_set(tmplt, rec_out, UR_PACKETS, brec.pkts);
-       ur_set(tmplt, rec_out, UR_BYTES, brec.bytes);
-       ur_set(tmplt, rec_out, UR_LINK_BIT_FIELD, ur_get_link_mask(links));
+       ur_set(tmplt, rec_out, F_SRC_PORT, brec.srcport);
+       ur_set(tmplt, rec_out, F_DST_PORT, brec.dstport);
+       ur_set(tmplt, rec_out, F_PROTOCOL, brec.prot);
+       ur_set(tmplt, rec_out, F_PACKETS, brec.pkts);
+       ur_set(tmplt, rec_out, F_BYTES, brec.bytes);
+       ur_set(tmplt, rec_out, F_LINK_BIT_FIELD, ur_get_link_mask(links));
 
        uint32_t input;
        lnf_rec_fget(recp, LNF_FLD_INPUT, &input);
        if (set_dir_bit_field) {
           if (input > 0) {
-             ur_set(tmplt, rec_out, UR_DIR_BIT_FIELD, (1 << input));
+             ur_set(tmplt, rec_out, F_DIR_BIT_FIELD, (1 << input));
           } else {
-             ur_set(tmplt, rec_out, UR_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
+             ur_set(tmplt, rec_out, F_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
           }
        } else {
-          ur_set(tmplt, rec_out, UR_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
+          ur_set(tmplt, rec_out, F_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
        }
 
-       ur_set(tmplt, rec_out, UR_TIME_FIRST, ur_time_from_sec_msec(brec.first, 0));
-       ur_set(tmplt, rec_out, UR_TIME_LAST, ur_time_from_sec_msec(brec.last, 0));
+       ur_set(tmplt, rec_out, F_TIME_FIRST, ur_time_from_sec_msec(brec.first, 0));
+       ur_set(tmplt, rec_out, F_TIME_LAST, ur_time_from_sec_msec(brec.last, 0));
 
        if (rt_sending) {
           RT_CHECK_DELAY(record_counter, brec.last, rt_sending_state);
@@ -467,7 +489,7 @@ int main(int argc, char **argv)
 #endif /* HAVE_LIBNFDUMP */
 
          // Send data to output interface
-         trap_send(0, rec_out, ur_rec_static_size(tmplt));
+         trap_send(0, rec_out, ur_rec_fixlen_size(tmplt));
          record_counter++;
 
          if (sending_rate) {
@@ -512,7 +534,7 @@ exit:
       RT_DESTROY(rt_sending_state);
    }
    trap_finalize();
-   ur_free(rec_out);
+   ur_free_record(rec_out);
    ur_free_template(tmplt);
    ur_free_links(links);
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)

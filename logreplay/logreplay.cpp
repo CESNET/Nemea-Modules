@@ -4,7 +4,7 @@
  * \author Tomas Cejka <cejkat@cesnet.cz>
  * \author Sabik Erik <xsabik02@stud.fit.vutbr.cz>
  * \date 2014
- * \date 2015 
+ * \date 2015
  */
 /*
  * Copyright (C) 2014,2015 CESNET
@@ -60,6 +60,10 @@
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 #include <map>
+#include "fields.c"
+
+UR_FIELDS(
+)
 
 #define DYN_FIELD_MAX_SIZE 1024 // Maximum size of dynamic field, longer fields will be cutted to this size
 
@@ -67,7 +71,7 @@
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("LogReplay","This module converts CSV from logger and sends it in UniRec.",0,1)
+  BASIC("LogReplay","This module converts CSV from logger and sends it in UniRec. The first row of CSV file has to be data format of fields.",0,1)
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('f', "file", "Specify path to a file to be read.", required_argument, "string") \
@@ -99,15 +103,18 @@ string get_next_field(stringstream &line)
 
    while (!fin && ((ch = line.get()) != EOF)) {
        switch(ch) {
-          case '"': ++quotes;
-                    ++in_quotes;
-                    break;
+          case '"':
+            if (prev != '\\') { 
+               ++quotes;
+               ++in_quotes;
+            }
+            break;
           case ',': // if it was static field (no quotes were present)
                     // or if it was dynamic field (even count of quotes)
-                    if (quotes == 0 || (prev == '"' && (quotes & 1) == 0)) {
-                       fin = true;
-                    }
-                    break;
+           if (quotes == 0 || (prev == '"' && (quotes & 1) == 0)) {
+              fin = true;
+           }
+           break;
        }
        // skip last comma and deduplicate double quotes (store only one)
        if ((ch != '"' || ((in_quotes & 1) == 0)) && !fin) {
@@ -128,15 +135,6 @@ int store_value(ur_template_t *t, void *data, int f_id, string &column)
    return ur_set_from_string(t, data, f_id, column.c_str());
 }
 
-ur_field_id_t urgetidbyname(const char *name)
-{
-   for (int id = 0; id < UR_FIELDS_NUM; id++) {
-      if (strcmp(name, UR_FIELD_NAMES[id]) == 0) {
-         return id;
-      }
-   }
-   return UR_INVALID_FIELD;
-}
 
 string replace_string(string subject, const string &search, const string &replace) {
    size_t pos = 0;
@@ -183,7 +181,7 @@ int main(int argc, char **argv)
    }
 
    verbose = trap_get_verbose_level();
-   if (verbose >= 0){
+   if (verbose >= 0) {
       printf("Verbosity level: %i\n", trap_get_verbose_level());
    }
 
@@ -232,25 +230,8 @@ int main(int argc, char **argv)
          time_flag = 1;
          line.erase(0,5);
       }
-      utmpl = ur_create_template(line.c_str());
-      if (utmpl == NULL) {
-         fprintf(stderr, "Error: Cannot create unirec template from header fields.\n");
-         ret = 1;
-         goto exit;
-      }
-
-      // calculate maximum needed memory for dynamic fields
-      int memory_needed = 0;
-      ur_field_id_t field_id = UR_INVALID_FIELD;
-      while ((field_id = ur_iter_fields(utmpl, field_id)) != UR_INVALID_FIELD) {
-         if (ur_is_dynamic(field_id) != 0) {
-            memory_needed += DYN_FIELD_MAX_SIZE;
-         }
-      }
-
-      data = ur_create(utmpl, memory_needed);
-      if (data == NULL) {
-         fprintf(stderr, "Error: Cannot create template for dynamic fields (not enough memory?).\n");
+      if (ur_define_set_of_fields(line.c_str()) != UR_OK) {
+         fprintf(stderr, "Error: Cannot define UniRec fields from header fields.\n");
          ret = 1;
          goto exit;
       }
@@ -270,15 +251,46 @@ int main(int argc, char **argv)
       trap_ctx_ifcctl(ctx, TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
       //trap_ctx_ifcctl(ctx, TRAPIFC_OUTPUT, 0, TRAPCTL_BUFFERSWITCH, 0);
 
+      char * f_names = ur_ifc_data_fmt_to_field_names(line.c_str());
+      if (f_names == NULL) {
+         fprintf(stderr, "Error: Cannot convert data format to field names\n");
+         ret = 1;
+         goto exit;
+      }
+      line = string(f_names);
+      utmpl = ur_ctx_create_output_template(ctx, 0, f_names, NULL);
+      free(f_names);
+      if (utmpl == NULL) {
+         fprintf(stderr, "Error: Cannot create unirec template from header fields.\n");
+         ret = 1;
+         goto exit;
+      }
+
+      // calculate maximum needed memory for dynamic fields
+      int memory_needed = 0;
+      ur_field_id_t field_id = UR_ITER_BEGIN;
+      while ((field_id = ur_iter_fields(utmpl, field_id)) != UR_ITER_END) {
+         if (ur_is_dynamic(field_id) != 0) {
+            memory_needed += DYN_FIELD_MAX_SIZE;
+         }
+      }
+
+      data = ur_create_record(utmpl, memory_needed);
+      if (data == NULL) {
+         fprintf(stderr, "Error: Cannot create template for dynamic fields (not enough memory?).\n");
+         ret = 1;
+         goto exit;
+      }
+
       stringstream ss(line);
       vector<ur_field_id_t> field_ids;
       string column;
 
       while (getline(ss, column, field_delim)) {
-         ur_field_id_t id = urgetidbyname(column.c_str());
+         ur_field_id_t id = ur_get_id_by_name(column.c_str());
 
          // Can happen in cases of fields macro (e.g. <COLLECTOR_FLOW>) in the header
-         if (id == UR_INVALID_FIELD) {
+         if (id == UR_E_INVALID_NAME) {
             fprintf(stderr, "Error: Invalid unirec field %s\n", column.c_str());
             ret = 3;
             goto exit;
@@ -321,15 +333,15 @@ int main(int argc, char **argv)
             }
          }
          // store dynamic fields in correct order to unirec structure
-         ur_field_id_t tmpl_f_id;
-         ur_iter_t iter = UR_ITER_BEGIN;
-         while ((tmpl_f_id = ur_iter_fields_tmplt(utmpl, &iter)) != UR_INVALID_FIELD) {
-            if (ur_is_dynamic(tmpl_f_id) != 0) {
-               if (store_value(utmpl, data, tmpl_f_id, dynamic_field_map[tmpl_f_id]) != 0) {
-                  fprintf(stderr, "Warning: invalid field \"%s\", record %d skipped.\n", column.c_str(), num_records);
-                  valid = false;
-                  break;
-               }
+         ur_field_id_t field_id = UR_ITER_BEGIN;
+
+         while ((field_id = ur_iter_fields(utmpl, field_id)) != UR_ITER_END) {
+            if (ur_is_dynamic(field_id) != 0) {
+               if (store_value(utmpl, data, field_id, dynamic_field_map[field_id]) != 0) {
+                     fprintf(stderr, "Warning: invalid field \"%s\", record %d skipped.\n", column.c_str(), num_records);
+                     valid = false;
+                     break;
+               };
             }
          }
          if (valid) {
@@ -369,7 +381,7 @@ exit:
       utmpl = NULL;
    }
    if (data != NULL) {
-      ur_free(data);
+      ur_free_record(data);
       data = NULL;
    }
 
