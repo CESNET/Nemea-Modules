@@ -65,7 +65,6 @@ trap_module_info_t *module_info = NULL;
   BASIC("Anonymizer module","Module for anonymizing incoming flow records.",1,1)
 
 #define MODULE_PARAMS(PARAM) \
-   PARAM('u', "unirec", "Specify UniRec template expected on the input interface.", required_argument, "string") \
    PARAM('k', "key", "Specify secret key, the key must be 32 characters long string or 32B sized hex string starting with 0x", required_argument, "string") \
    PARAM('f', "file", "Specify file containing secret key, the key must be 32 characters long string or 32B sized hex string starting with 0x", required_argument, "string") \
    PARAM('M', "murmur", "Use MurmurHash3 instead of Rijndael cipher.", no_argument, "none") \
@@ -237,14 +236,10 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
 
 
 
-   // ***** Create UniRec template *****
-   char *unirec_specifier = "SRC_IP,DST_IP";
+
    char opt;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
-         case 'u':
-            unirec_specifier = optarg;
-            break;
          case 'k':
             secret_key = optarg;
             break;
@@ -263,19 +258,6 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
             return 3;
       }
    }
-   char * errstr = NULL;
-   ur_template_t *tmplt = ur_create_bidirectional_template(0, 0, unirec_specifier, &errstr);
-   if (tmplt == NULL) {
-      fprintf(stderr, "Error: Invalid UniRec specifier.\n");
-      if(errstr != NULL){
-        fprintf(stderr, "%s\n", errstr);
-        free(errstr);
-      }
-      trap_finalize();
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-      return 4;
-   }
-
 
    // Check if secret key was specified and initialize panonymizer
    if (secret_file != NULL) {
@@ -295,6 +277,23 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
    }
 
    trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_AUTOFLUSH_TIMEOUT, TRAP_NO_AUTO_FLUSH);
+   trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
+
+   // ***** Create UniRec input template *****
+   char *unirec_specifier = "SRC_IP,DST_IP";
+   char * errstr = NULL;
+   ur_template_t *tmplt = ur_create_input_template(0, unirec_specifier, &errstr);
+   if (tmplt == NULL) {
+      fprintf(stderr, "Error: Invalid UniRec specifier.\n");
+      if(errstr != NULL){
+        fprintf(stderr, "%s\n", errstr);
+        free(errstr);
+      }
+      trap_finalize();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      return 4;
+   }
+   int first = 1;
    // ***** Main processing loop *****
    while (!stop) {
       // Receive data from any interface, wait until data are available
@@ -359,14 +358,19 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
       #endif
 
       // Send anonymized data
-      trap_send_data(0, data, data_size, TRAP_NO_WAIT);
+      if(first == 1) {
+         //set output format for first output record. 
+         ur_set_output_template(0,tmplt);
+         first = 0;
+      }
+      trap_send(0, data, data_size);
       NMCM_PROGRESS_PRINT
    }
 
    // ***** ONLY FOR DEBUGING ***** //
    #ifdef DEBUG
       char dummy[1] = {0};
-      trap_send_data(0, dummy, 1, TRAP_WAIT);
+      trap_send(0, dummy, 1);
    #endif
    // ***************************** //
 
