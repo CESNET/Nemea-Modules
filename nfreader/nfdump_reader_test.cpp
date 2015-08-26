@@ -105,7 +105,7 @@ int main(int argc, char **argv)
    trap_ifc_spec_t ifc_spec;
 
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-
+   trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
 
    // Let TRAP library parse command-line arguments and extract its parameters
    ret = trap_parse_params(&argc, argv, &ifc_spec);
@@ -230,14 +230,14 @@ int main(int argc, char **argv)
    for (int i = 0; i < records.size() && !stop; i++)
    {
       // Send data to output interface
-      trap_send_data(0, &records[i], sizeof(records[i]), TRAP_WAIT);
+      trap_send(0, &records[i], sizeof(records[i]));
       //usleep(100);
    }
    cout << "Sending terminating record..." << endl;
 
    // Send data with zero length to signalize end
    if (!stop)
-      trap_send_data(0, &records[0], 1, TRAP_WAIT); // FIXME: zero-length messages doesn't work, send message of length 1
+      trap_send(0, &records[0], 1); // FIXME: zero-length messages doesn't work, send message of length 1
 
    // Do all necessary cleanup before exiting
    ur_free_template(tmplt);
