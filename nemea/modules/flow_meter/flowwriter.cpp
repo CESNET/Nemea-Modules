@@ -62,7 +62,7 @@ int FlowWriter::close()
 {
    // Send terminating signal to output interface
    char dummy[1] = {0};
-   trap_send_data(0, dummy, 1, TRAP_WAIT);
+   trap_send(0, dummy, 1);
 
    // TRAP finalize
    trap_finalize();
@@ -162,7 +162,7 @@ int FlowWriter::export_flow(FlowRecord &flow)
    ur_set(tmplt, data, F_LINK_BIT_FIELD, 0);
 
 
-   trap_send_data(0, data, ur_rec_fixlen_size(tmplt), TRAP_WAIT);
+   trap_send(0, data, ur_rec_fixlen_size(tmplt));
 
 
 

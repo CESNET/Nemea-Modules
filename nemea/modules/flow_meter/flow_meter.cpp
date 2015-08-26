@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
    // ***** TRAP initialization ***** 
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
-
+   trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
 
    int opt;
    char* cptr;
