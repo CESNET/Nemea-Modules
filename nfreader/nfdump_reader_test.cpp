@@ -57,9 +57,8 @@
 #include <unirec/unirec.h>
 #ifdef HAVE_LIBNFDUMP
 #include <libnfdump.h>
-#else
-#include <libnf.h>
-#endif /* HAVE_LIBNFDUMP */
+#include "fields.c"
+
 using namespace std;
 
 
@@ -67,6 +66,20 @@ using namespace std;
 struct UniRecSpaceholder {
    char x[66];
 };
+
+UR_FIELDS (
+   ipaddr DST_IP,
+   ipaddr SRC_IP,
+   uint64 BYTES,
+   time TIME_FIRST,
+   time TIME_LAST,
+   uint32 PACKETS,
+   uint16 DST_PORT,
+   uint16 SRC_PORT,
+   uint8 PROTOCOL,
+   uint8 TCP_FLAGS
+)
+
 
 // Struct with information about module
 trap_module_info_t *module_info = NULL;
@@ -98,10 +111,7 @@ int main(int argc, char **argv)
 #endif /* HAVE_LIBNFDUMP */
    trap_ifc_spec_t ifc_spec;
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-
-   // Create UniRec template
-   ur_template_t *tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS");
-   //ur_template_t *tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD");
+   trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
 
    // Let TRAP library parse command-line arguments and extract its parameters
    ret = trap_parse_params(&argc, argv, &ifc_spec);
@@ -157,6 +167,9 @@ int main(int argc, char **argv)
    signal(SIGTERM, signal_handler);
    signal(SIGINT, signal_handler);
 
+   // Create UniRec template
+   ur_template_t *tmplt = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS", NULL);
+   //ur_template_t *tmplt = ur_create_template("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST,PACKETS,BYTES,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD");
 
    vector<UniRecSpaceholder> records;
    unsigned cnt_rec = 0;
@@ -208,42 +221,24 @@ int main(int argc, char **argv)
          rec->ip_union._v6.dstaddr[0] = rec->ip_union._v6.dstaddr[1];
          rec->ip_union._v6.dstaddr[1] = tmp_ip_v6_addr;
 
-         ur_set(tmplt, rec2, UR_SRC_IP, ip_from_16_bytes_le((char *)rec->ip_union._v6.srcaddr));
-         ur_set(tmplt, rec2, UR_DST_IP, ip_from_16_bytes_le((char *)rec->ip_union._v6.dstaddr));
+         ur_set(tmplt, rec2, F_SRC_IP, ip_from_16_bytes_le((char *)rec->ip_union._v6.srcaddr));
+         ur_set(tmplt, rec2, F_DST_IP, ip_from_16_bytes_le((char *)rec->ip_union._v6.dstaddr));
       }
       else { // IPv4
-         ur_set(tmplt, rec2, UR_SRC_IP, ip_from_4_bytes_le((char *)&rec->ip_union._v4.srcaddr));
-         ur_set(tmplt, rec2, UR_DST_IP, ip_from_4_bytes_le((char *)&rec->ip_union._v4.dstaddr));
+         ur_set(tmplt, rec2, F_SRC_IP, ip_from_4_bytes_le((char *)&rec->ip_union._v4.srcaddr));
+         ur_set(tmplt, rec2, F_DST_IP, ip_from_4_bytes_le((char *)&rec->ip_union._v4.dstaddr));
 
       }
-      ur_set(tmplt, rec2, UR_SRC_PORT, rec->srcport);
-      ur_set(tmplt, rec2, UR_DST_PORT, rec->dstport);
-      ur_set(tmplt, rec2, UR_PROTOCOL, rec->prot);
-      ur_set(tmplt, rec2, UR_TCP_FLAGS, rec->tcp_flags);
-      ur_set(tmplt, rec2, UR_PACKETS, rec->dPkts);
-      ur_set(tmplt, rec2, UR_BYTES, rec->dOctets);
+      ur_set(tmplt, rec2, F_SRC_PORT, rec->srcport);
+      ur_set(tmplt, rec2, F_DST_PORT, rec->dstport);
+      ur_set(tmplt, rec2, F_PROTOCOL, rec->prot);
+      ur_set(tmplt, rec2, F_TCP_FLAGS, rec->tcp_flags);
+      ur_set(tmplt, rec2, F_PACKETS, rec->dPkts);
+      ur_set(tmplt, rec2, F_BYTES, rec->dOctets);
       uint64_t first = ur_time_from_sec_msec(rec->first, rec->msec_first);
       uint64_t last  = ur_time_from_sec_msec(rec->last, rec->msec_last);
-      ur_set(tmplt, rec2, UR_TIME_FIRST, first);
-      ur_set(tmplt, rec2, UR_TIME_LAST, last);
-#else
-      lnf_rec_fget(recp, LNF_FLD_BREC1, &brec);
-      if (!IN6_IS_ADDR_V4COMPAT(brec.srcaddr.data)) {
-         uint64_t tmp_ip_v6_addr;
-         // Swap IPv6 halves
-         tmp_ip_v6_addr = brec.srcaddr.data[0];
-         brec.srcaddr.data[0] = brec.srcaddr.data[1];
-         brec.srcaddr.data[1] = tmp_ip_v6_addr;
-         tmp_ip_v6_addr = brec.dstaddr.data[0];
-         brec.dstaddr.data[0] = brec.dstaddr.data[1];
-         brec.dstaddr.data[1] = tmp_ip_v6_addr;
-         ur_set(tmplt, rec2, UR_SRC_IP, ip_from_16_bytes_be((char *)&brec.srcaddr.data));
-         ur_set(tmplt, rec2, UR_DST_IP, ip_from_16_bytes_be((char *)&brec.dstaddr.data));
-      }
-      else {
-         ur_set(tmplt, rec2, UR_SRC_IP, ip_from_4_bytes_be((char *)&(brec.srcaddr.data[3])));
-         ur_set(tmplt, rec2, UR_DST_IP, ip_from_4_bytes_be((char *)&(brec.dstaddr.data[3])));
-      }
+      ur_set(tmplt, rec2, F_TIME_FIRST, first);
+      ur_set(tmplt, rec2, F_TIME_LAST, last);
 
       ur_set(tmplt, rec2, UR_SRC_PORT, brec.srcport);
       ur_set(tmplt, rec2, UR_DST_PORT, brec.dstport);
@@ -259,14 +254,14 @@ int main(int argc, char **argv)
 #endif /* HAVE_LIBNFDUMP */
       // assign value for link and direction of the flow
       /*if ((counter % (rand() % 50000 + 50000)) == 0) {
-          ur_set(tmplt, rec2, UR_LINK_BIT_FIELD, 0x01);
+          ur_set(tmplt, rec2, F_LINK_BIT_FIELD, 0x01);
       } else if ((counter % (rand() % 40000 + 1))) {
-          ur_set(tmplt, rec2, UR_LINK_BIT_FIELD, 0x02);
+          ur_set(tmplt, rec2, F_LINK_BIT_FIELD, 0x02);
       } else {
-          ur_set(tmplt, rec2, UR_LINK_BIT_FIELD, 0x04);
+          ur_set(tmplt, rec2, F_LINK_BIT_FIELD, 0x04);
       }
 
-      ur_set(tmplt, rec2, UR_DIR_BIT_FIELD, rec->input);
+      ur_set(tmplt, rec2, F_DIR_BIT_FIELD, rec->input);
       */
 
    }
@@ -282,15 +277,14 @@ int main(int argc, char **argv)
    // Read a record from file, convert to UniRec and send to output ifc
    for (int i = 0; i < records.size() && !stop; i++) {
       // Send data to output interface
-      trap_send_data(0, &records[i], sizeof(records[i]), TRAP_WAIT);
+      trap_send(0, &records[i], sizeof(records[i]));
       //usleep(100);
    }
    cout << "Sending terminating record..." << endl;
 
    // Send data with zero length to signalize end
-   if (!stop) {
-      trap_send_data(0, &records[0], 1, TRAP_WAIT); // FIXME: zero-length messages doesn't work, send message of length 1
-   }
+   if (!stop)
+      trap_send(0, &records[0], 1); // FIXME: zero-length messages doesn't work, send message of length 1
 
    // Do all necessary cleanup before exiting
    ur_free_template(tmplt);

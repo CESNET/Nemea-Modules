@@ -12,4 +12,5 @@ else
 LDADD=-lunirec -ltrap -lnfdump
 AM_CPPFLAGS=-DHAVE_LIBNFDUMP=1
 endif
-
+nfdump_reader_test_CXXFLAGS=-Wno-write-strings
+include ../aminclude.am

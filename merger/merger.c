@@ -43,7 +43,7 @@
 
 // Information if sigaction is available for nemea signal macro registration
 #ifdef HAVE_CONFIG_H
-#include <config.h> 
+#include <config.h>
 #endif
 
 #include <stdio.h>
@@ -56,6 +56,7 @@
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
+#include "fields.c"
 
 #define TS_LAST   0
 #define TS_FIRST  1
@@ -67,6 +68,11 @@
 
 #define MODE_TIME_IGNORE   0
 #define MODE_TIME_AWARE    1
+
+UR_FIELDS (
+   time TIME_FIRST,
+   time TIME_LAST
+)
 
 // Struct with information about module
 trap_module_info_t *module_info = NULL;
@@ -90,7 +96,7 @@ static int timestamp_selector = TS_LAST; // Tells to sort timestamps based on TI
 static ur_time_t actual_min_timestamp = 0; // Actual minimal timestamp
 static ur_time_t prev_min_timestamp = 0;
 
-static ur_template_t *in_template; // UniRec template of input interface(s)
+static ur_template_t **in_template; // UniRec template of input interface(s)
 static ur_template_t *out_template; // UniRec template of output interface
 
 static int active_interfaces;
@@ -110,6 +116,8 @@ void ta_capture_thread(int index)
    int read_next = 1;
    int timeout = initial_timeout;
    ur_time_t rec_time;
+   const void *rec;
+   uint16_t rec_size;
 
    if (verbose >= 1) {
       printf("Thread %i started.\n", index);
@@ -117,12 +125,53 @@ void ta_capture_thread(int index)
 
    trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, timeout);
 
+
+   ret = trap_recv(index, &rec, &rec_size);
+   if (ret == TRAP_E_OK_FORMAT_CHANGED && trap_get_in_ifc_state(index) == FMT_SUBSET) {
+      const char *spec = NULL;
+      uint8_t data_fmt;
+      if (trap_get_data_fmt(TRAPIFC_INPUT, index, &data_fmt, &spec) != TRAP_E_OK) {
+         fprintf(stderr, "Data format was not loaded.");
+         return;
+      } else {
+         int fail = 0;
+         #pragma omp critical
+         {
+            in_template[index] = ur_define_fields_and_update_template(spec, in_template[index]);
+            if (in_template[index] == NULL) {
+               fprintf(stderr, "Template could not be edited");
+               fail = 1;
+            } else {
+               ur_expand_template(spec, out_template);
+               trap_confirm_ifc_state(index);
+               char * spec_cpy = ur_template_string(out_template);
+               if (spec_cpy == NULL) {
+                  fprintf(stderr, "Memory allocation problem.");
+                  fail = 1;
+
+               } else {
+                  trap_set_data_fmt(0, TRAP_FMT_UNIREC, spec_cpy);
+               }
+            }
+         }
+         if (fail == 1) {
+            return;
+         }
+      }
+   } else {
+      printf("ERROR on ifc %d: Negotiation was not succesfull\n", index);
+      return;
+   }
+
+   void *data_out = ur_create_record(out_template, UR_MAX_SIZE);
+   if (data_out == NULL) {
+      fprintf(stderr, "ERROR: Allocation of record\n");
+      return;
+   }
+
    // Read data from input and log them to a file
    while (!stop && !private_stop) {
       if (stop) private_stop = stop;
-
-      const void *rec;
-      uint16_t rec_size;
 
       if (read_next){
          rec_time = 0;
@@ -131,7 +180,41 @@ void ta_capture_thread(int index)
             printf("Thread %i: calling trap_recv()\n", index);
          }
          // Receive data from index-th input interface, wait until data are available
+
          ret = trap_recv(index, &rec, &rec_size);
+         //update output template
+         if (ret == TRAP_E_OK_FORMAT_CHANGED && trap_get_in_ifc_state(index) == FMT_SUBSET) {
+            const char *spec = NULL;
+            uint8_t data_fmt;
+            if (trap_get_data_fmt(TRAPIFC_INPUT, index, &data_fmt, &spec) != TRAP_E_OK) {
+               fprintf(stderr, "Data format was not loaded.");
+               return;
+            } else {
+               int fail = 0;
+               #pragma omp critical
+               {
+                  in_template[index] = ur_define_fields_and_update_template(spec, in_template[index]);
+                  if (in_template[index] == NULL) {
+                     fprintf(stderr, "Template could not be edited");
+                     fail = 1;
+                  } else {
+                     ur_expand_template(spec, out_template);
+                     trap_confirm_ifc_state(index);
+                     char * spec_cpy = ur_template_string(out_template);
+                     if (spec_cpy == NULL) {
+                        fprintf(stderr, "Memory allocation problem.");
+                        fail = 1;
+                     }
+                     trap_set_data_fmt(0, TRAP_FMT_UNIREC, spec_cpy);
+                  }
+               }
+               if (fail == 1) {
+                  break;
+               }
+               ret = trap_recv(index, &rec, &rec_size);
+               memset(data_out, 0, UR_MAX_SIZE);
+            }
+         }
 
          if (ret != TRAP_E_OK) {
             if (ret == TRAP_E_TIMEOUT) {//input probably (temporary) offline
@@ -157,16 +240,16 @@ void ta_capture_thread(int index)
                printf("Thread %i: received %hu bytes of data\n", index, rec_size);
             }
             // Check size of received data
-            if (rec_size < ur_rec_static_size(in_template)) {
+            if (rec_size < ur_rec_fixlen_size(in_template[index])) {
                if (rec_size <= 1) {
                   if (verbose >= 0) {
-                     printf("Interface %i received ending record, the interface will be closed.\n", index, rec_size);
+                     printf("Interface %i received ending record, the interface will be closed.\n", index);
                   }
 //                read_next = 0;
                } else {
                   if (verbose >= 0) {
                      fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
-                          ur_rec_static_size(in_template), rec_size);
+                          ur_rec_fixlen_size(in_template[index]), rec_size);
                   }
                }
                if(!outage_flag){
@@ -183,9 +266,9 @@ void ta_capture_thread(int index)
                   ++active_interfaces;
                }
                if (timestamp_selector == TS_FIRST){
-                  rec_time = ur_get(in_template, rec, UR_TIME_FIRST);
+                  rec_time = ur_get(in_template[index], rec, F_TIME_FIRST);
                } else {
-                  rec_time = ur_get(in_template, rec, UR_TIME_LAST);
+                  rec_time = ur_get(in_template[index], rec, F_TIME_LAST);
                }
                read_next = 0;
             }
@@ -209,9 +292,10 @@ void ta_capture_thread(int index)
 
       if (!outage_flag){
          if (actual_min_timestamp == rec_time){
+            ur_copy_fields(out_template, data_out, in_template[index], rec);
             #pragma omp critical (sending)
             {
-               ret = trap_send(0, rec, rec_size);
+               ret = trap_send(0, data_out, ur_rec_size(out_template, data_out));
 
                if (ret != TRAP_E_OK) {
                   if (ret == TRAP_E_TERMINATED) {
@@ -221,7 +305,7 @@ void ta_capture_thread(int index)
                   } else {
                      // Some error has occured
                      if (verbose >= 0) {
-                        fprintf(stderr, "Error: trap_send_data() returned %i (%s)\n", ret, trap_last_error_msg);
+                        fprintf(stderr, "Error: trap_send() returned %i (%s)\n", ret, trap_last_error_msg);
                         fprintf(stderr, "   Message skipped...\n");
                      }
                      read_next = 1;
@@ -255,6 +339,8 @@ void capture_thread(int index)
 {
    int private_stop = 0;
    int ret;
+   const void *rec;
+   uint16_t rec_size;
 //   int timeout = initial_timeout;
 
    if (verbose >= 1) {
@@ -264,16 +350,90 @@ void capture_thread(int index)
 //   trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, timeout);
    trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
 
+   ret = trap_recv(index, &rec, &rec_size);
+   if (ret == TRAP_E_OK_FORMAT_CHANGED && trap_get_in_ifc_state(index) == FMT_SUBSET) {
+      const char *spec = NULL;
+      uint8_t data_fmt;
+      if (trap_get_data_fmt(TRAPIFC_INPUT, index, &data_fmt, &spec) != TRAP_E_OK) {
+         fprintf(stderr, "Data format was not loaded.");
+         return;
+      } else {
+         int fail = 0;
+         #pragma omp critical
+         {
+            in_template[index] = ur_define_fields_and_update_template(spec, in_template[index]);
+            if (in_template[index] == NULL) {
+               fprintf(stderr, "Template could not be edited");
+               fail = 1;
+            } else {
+               ur_expand_template(spec, out_template);
+               trap_confirm_ifc_state(index);
+               char * spec_cpy = ur_template_string(out_template);
+               if (spec_cpy == NULL) {
+                  fprintf(stderr, "Memory allocation problem.");
+                  fail = 1;
+
+               } else {
+                  trap_set_data_fmt(0, TRAP_FMT_UNIREC, spec_cpy);
+               }
+            }
+         }
+         if (fail == 1) {
+            return;
+         }
+      }
+   } else {
+      printf("ERROR on ifc %d: Negotiation was not succesfull\n", index);
+      return;
+   }
+
+   void *data_out = ur_create_record(out_template, UR_MAX_SIZE);
+   if (data_out == NULL) {
+      fprintf(stderr, "ERROR: Allocation of record\n");
+      return;
+   }
    // Read data from input and log them to a file
    while (!stop && !private_stop) {
-      const void *rec;
-      uint16_t rec_size;
-
       if (verbose >= 2) {
          printf("Thread %i: calling trap_recv()\n", index);
       }
       // Receive data from index-th input interface, wait until data are available
+
       ret = trap_recv(index, &rec, &rec_size);
+      //update output template
+      if (ret == TRAP_E_OK_FORMAT_CHANGED && trap_get_in_ifc_state(index) == FMT_SUBSET) {
+         const char *spec = NULL;
+         uint8_t data_fmt;
+         if (trap_get_data_fmt(TRAPIFC_INPUT, index, &data_fmt, &spec) != TRAP_E_OK) {
+            fprintf(stderr, "Data format was not loaded.");
+            return;
+         } else {
+            int fail = 0;
+            #pragma omp critical
+            {
+               in_template[index] = ur_define_fields_and_update_template(spec, in_template[index]);
+               if (in_template[index] == NULL) {
+                  fprintf(stderr, "Template could not be edited");
+                  fail = 1;
+               } else {
+                  ur_expand_template(spec, out_template);
+                  trap_confirm_ifc_state(index);
+                  char * spec_cpy = ur_template_string(out_template);
+                  if (spec_cpy == NULL) {
+                     fprintf(stderr, "Memory allocation problem.");
+                     fail = 1;
+                  }
+                  trap_set_data_fmt(0, TRAP_FMT_UNIREC, spec_cpy);
+               }
+            }
+            if (fail == 1) {
+               break;
+            }
+            ret = trap_recv(index, &rec, &rec_size);
+            memset(data_out, 0, UR_MAX_SIZE);
+         }
+      }
+
       TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
 
       if (verbose >= 2) {
@@ -281,10 +441,10 @@ void capture_thread(int index)
       }
 
       // Check size of received data
-      if (rec_size < ur_rec_static_size(in_template)) {
+      if (rec_size < ur_rec_fixlen_size(in_template[index])) {
          if (rec_size <= 1) {
             if (verbose >= 0) {
-               printf("Interface %i received ending record, the interface will be closed.\n", index, rec_size);
+               printf("Interface %i received ending record, the interface will be closed.\n", index);
             }
             private_stop = 1;
             if (--active_interfaces > 0){// Only last thread send terminating message.
@@ -292,30 +452,32 @@ void capture_thread(int index)
             }
          } else {
             fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
-                    ur_rec_static_size(in_template), rec_size);
+                    ur_rec_fixlen_size(in_template[index]), rec_size);
             break;
          }
       }
 
-      if ((rec_size < ur_rec_static_size(in_template))) {
+      if ((rec_size < ur_rec_fixlen_size(in_template[index]))) {
          if (rec_size <= 1) { // end of data
             break;
          } else { // data corrupted
-            fprintf(stderr,"Error: Wrong data size. Expected: %i", ur_rec_static_size(in_template));
+            fprintf(stderr,"Error: Wrong data size. Expected: %i", ur_rec_fixlen_size(in_template[index]));
             fprintf(stderr," Recieved: %i.\n", rec_size);
             continue;
          }
       }
+      ur_copy_fields(out_template, data_out, in_template[index], rec);
 
       #pragma omp critical
       {
-         ret = trap_send_data(0, rec, rec_size, TRAP_NO_WAIT);
+
+         ret = trap_send(0, data_out, ur_rec_size(out_template, data_out));
          if (ret != TRAP_E_OK) {
             if (ret == TRAP_E_TERMINATED) {
                private_stop = 1; // Module was terminated while waiting for new data (e.g. by Ctrl-C)
             } else {
                // Some error has occured
-               fprintf(stderr, "Error: trap_send_data() returned %i (%s)\n", ret, trap_last_error_msg);
+               fprintf(stderr, "Error: trap_send() returned %i (%s)\n", ret, trap_last_error_msg);
                private_stop = 1;
             }
          }
@@ -325,14 +487,15 @@ void capture_thread(int index)
    if (verbose >= 1) {
       printf("Thread %i exitting.\n", index);
    }
+
 }
 
 int main(int argc, char **argv)
 {
    int ret;
 
-   char *in_template_str = "<COLLECTOR_FLOW>";
-   char *out_template_str = "<COLLECTOR_FLOW>";
+   char *in_template_str = NULL;
+   char *out_template_str = NULL;
 
    int mode = MODE_TIME_IGNORE;
    int n_inputs = 0;
@@ -370,7 +533,6 @@ int main(int argc, char **argv)
             break;
          case 'u':
             out_template_str = optarg;
-            in_template_str = optarg;
             break;
          case 't':
             initial_timeout = atoi(optarg) * 1000000; // microseconds to seconds
@@ -401,14 +563,6 @@ int main(int argc, char **argv)
       printf("Creating UniRec templates ...\n");
    }
 
-   // Create input and output UniRec template
-   in_template = ur_create_template(in_template_str);
-   out_template = ur_create_template(out_template_str);
-   if (in_template == NULL || out_template == NULL) {
-      fprintf(stderr, "Error: Invalid template: %s\n", in_template_str);
-      ret = -2;
-      goto exit;
-   }
 
    // ***** TRAP initialization *****
    // Set number of input interfaces
@@ -427,6 +581,41 @@ int main(int argc, char **argv)
       goto exit;
    }
 
+   // Create input and output UniRec template
+
+   in_template = (ur_template_t**) calloc (sizeof(ur_template_t*), n_inputs);
+   if (in_template == NULL) {
+      fprintf(stderr, "Error: allocation of templates.\n");
+      ret = -1;
+      goto exit;
+   }
+   for (int i = 0; i < n_inputs; i++) {
+      in_template[i] = ur_create_input_template(i, "", NULL);
+      if (in_template[i] == NULL) {
+         fprintf(stderr, "Error: Invalid input template %d", i);
+         ret = -2;
+         goto exit;
+      }
+   }
+   if (out_template_str != NULL) {
+      if (ur_define_set_of_fields(out_template_str) != UR_OK) {
+         fprintf(stderr, "Error: output template format is not accurate.\n \
+It should be: \"type1 name1,type2 name2,...\".\n \
+Name of field may be any string matching the reqular expression [A-Za-z][A-Za-z0-9_]*\n\
+Available types are: int8, int16, int32, int64, uint8, uint16, uint32, uint64, char,\
+ float, double, ipaddr, time, string, bytes");
+         ret = -2;
+         goto exit;
+      }
+      char *f_names = ur_ifc_data_fmt_to_field_names(out_template_str);
+      out_template = ur_create_output_template(0, out_template_str, NULL);
+      free(f_names);
+      if (out_template == NULL) {
+         fprintf(stderr, "Memory allocation error\n");
+         ret = -1;
+         goto exit;
+      }
+   }
    // We don't need ifc_spec anymore, destroy it
    trap_free_ifc_spec(ifc_spec);
 
@@ -457,8 +646,12 @@ int main(int argc, char **argv)
    if (verbose >= 0) {
       printf("Exitting ...\n");
    }
-
-   ur_free_template(in_template);
+   if (in_template != NULL) {
+      for (int i = 0; i < n_inputs; i++) {
+         ur_free_template(in_template[i]);
+      }
+      free(in_template);
+   }
    ur_free_template(out_template);
 
 exit:
