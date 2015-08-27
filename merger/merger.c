@@ -305,7 +305,7 @@ void ta_capture_thread(int index)
                   } else {
                      // Some error has occured
                      if (verbose >= 0) {
-                        fprintf(stderr, "Error: trap_send_data() returned %i (%s)\n", ret, trap_last_error_msg);
+                        fprintf(stderr, "Error: trap_send() returned %i (%s)\n", ret, trap_last_error_msg);
                         fprintf(stderr, "   Message skipped...\n");
                      }
                      read_next = 1;
@@ -477,7 +477,7 @@ void capture_thread(int index)
                private_stop = 1; // Module was terminated while waiting for new data (e.g. by Ctrl-C)
             } else {
                // Some error has occured
-               fprintf(stderr, "Error: trap_send_data() returned %i (%s)\n", ret, trap_last_error_msg);
+               fprintf(stderr, "Error: trap_send() returned %i (%s)\n", ret, trap_last_error_msg);
                private_stop = 1;
             }
          }
