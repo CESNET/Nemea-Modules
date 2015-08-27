@@ -55,8 +55,19 @@
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
+
 #ifdef HAVE_LIBNFDUMP
-#include <libnfdump.h>
+#  include <libnfdump.h>
+#else
+#  ifdef __cplusplus
+extern "C" {
+#  endif
+#  include <libnf.h>
+#  ifdef __cplusplus
+}
+#  endif
+#endif /* HAVE_LIBNFDUMP */
+
 #include "fields.c"
 
 using namespace std;
@@ -150,6 +161,7 @@ int main(int argc, char **argv)
       return 3;
    }
 #endif /* HAVE_LIBNFDUMP */
+
    // Initialize TRAP library (create and init all interfaces)
    ret = trap_init(module_info, ifc_spec);
    if (ret != TRAP_E_OK) {
@@ -179,6 +191,7 @@ int main(int argc, char **argv)
    while (1) {
 #ifdef HAVE_LIBNFDUMP
       master_record_t *rec;
+
       ret = nfdump_iter_next(&iter, &rec);
       if (ret != 0) {
          if (ret == NFDUMP_EOF) { // no more records
@@ -239,18 +252,36 @@ int main(int argc, char **argv)
       uint64_t last  = ur_time_from_sec_msec(rec->last, rec->msec_last);
       ur_set(tmplt, rec2, F_TIME_FIRST, first);
       ur_set(tmplt, rec2, F_TIME_LAST, last);
+#else
+      lnf_rec_fget(recp, LNF_FLD_BREC1, &brec);
+      if (!IN6_IS_ADDR_V4COMPAT(brec.srcaddr.data)) {
+         uint64_t tmp_ip_v6_addr;
+         // Swap IPv6 halves
+         tmp_ip_v6_addr = brec.srcaddr.data[0];
+         brec.srcaddr.data[0] = brec.srcaddr.data[1];
+         brec.srcaddr.data[1] = tmp_ip_v6_addr;
+         tmp_ip_v6_addr = brec.dstaddr.data[0];
+         brec.dstaddr.data[0] = brec.dstaddr.data[1];
+         brec.dstaddr.data[1] = tmp_ip_v6_addr;
+         ur_set(tmplt, rec2, F_SRC_IP, ip_from_16_bytes_be((char *)&brec.srcaddr.data));
+         ur_set(tmplt, rec2, F_DST_IP, ip_from_16_bytes_be((char *)&brec.dstaddr.data));
+      }
+      else {
+         ur_set(tmplt, rec2, F_SRC_IP, ip_from_4_bytes_be((char *)&(brec.srcaddr.data[3])));
+         ur_set(tmplt, rec2, F_DST_IP, ip_from_4_bytes_be((char *)&(brec.dstaddr.data[3])));
+      }
 
-      ur_set(tmplt, rec2, UR_SRC_PORT, brec.srcport);
-      ur_set(tmplt, rec2, UR_DST_PORT, brec.dstport);
-      ur_set(tmplt, rec2, UR_PROTOCOL, brec.prot);
-      ur_set(tmplt, rec2, UR_PACKETS, brec.pkts);
-      ur_set(tmplt, rec2, UR_BYTES, brec.bytes);
+      ur_set(tmplt, rec2, F_SRC_PORT, brec.srcport);
+      ur_set(tmplt, rec2, F_DST_PORT, brec.dstport);
+      ur_set(tmplt, rec2, F_PROTOCOL, brec.prot);
+      ur_set(tmplt, rec2, F_PACKETS, brec.pkts);
+      ur_set(tmplt, rec2, F_BYTES, brec.bytes);
       uint16_t flags;
       lnf_rec_fget(recp, LNF_FLD_TCP_FLAGS, &flags);
-      ur_set(tmplt, rec2, UR_TCP_FLAGS, flags);
+      ur_set(tmplt, rec2, F_TCP_FLAGS, flags);
 
-      ur_set(tmplt, rec2, UR_TIME_FIRST, ur_time_from_sec_msec(brec.first, 0));
-      ur_set(tmplt, rec2, UR_TIME_LAST, ur_time_from_sec_msec(brec.last, 0));
+      ur_set(tmplt, rec2, F_TIME_FIRST, ur_time_from_sec_msec(brec.first, 0));
+      ur_set(tmplt, rec2, F_TIME_LAST, ur_time_from_sec_msec(brec.last, 0));
 #endif /* HAVE_LIBNFDUMP */
       // assign value for link and direction of the flow
       /*if ((counter % (rand() % 50000 + 50000)) == 0) {

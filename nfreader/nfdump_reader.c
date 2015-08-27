@@ -449,66 +449,51 @@ int main(int argc, char **argv)
          lnf_rec_fget(recp, LNF_FLD_BREC1, &brec);
          if (!IN6_IS_ADDR_V4COMPAT(brec.srcaddr.data)) {
             uint64_t tmp_ip_v6_addr;
-            // Swap IPv6 halves
             tmp_ip_v6_addr = brec.srcaddr.data[0];
             brec.srcaddr.data[0] = brec.srcaddr.data[1];
             brec.srcaddr.data[1] = tmp_ip_v6_addr;
             tmp_ip_v6_addr = brec.dstaddr.data[0];
             brec.dstaddr.data[0] = brec.dstaddr.data[1];
             brec.dstaddr.data[1] = tmp_ip_v6_addr;
-            ur_set(tmplt, rec_out, UR_SRC_IP, ip_from_16_bytes_be((char *)&brec.srcaddr.data));
-            ur_set(tmplt, rec_out, UR_DST_IP, ip_from_16_bytes_be((char *)&brec.dstaddr.data));
+            ur_set(tmplt, rec_out, F_SRC_IP, ip_from_16_bytes_be((char *)&brec.srcaddr.data));
+            ur_set(tmplt, rec_out, F_DST_IP, ip_from_16_bytes_be((char *)&brec.dstaddr.data));
          } else {
-            ur_set(tmplt, rec_out, UR_SRC_IP, ip_from_4_bytes_be((char *)&(brec.srcaddr.data[3])));
-            ur_set(tmplt, rec_out, UR_DST_IP, ip_from_4_bytes_be((char *)&(brec.dstaddr.data[3])));
+            ur_set(tmplt, rec_out, F_SRC_IP, ip_from_4_bytes_be((char *)&(brec.srcaddr.data[3])));
+            ur_set(tmplt, rec_out, F_DST_IP, ip_from_4_bytes_be((char *)&(brec.dstaddr.data[3])));
          }
 
-         ur_set(tmplt, rec_out, UR_SRC_PORT, brec.srcport);
-         ur_set(tmplt, rec_out, UR_DST_PORT, brec.dstport);
-         ur_set(tmplt, rec_out, UR_PROTOCOL, brec.prot);
-         ur_set(tmplt, rec_out, UR_PACKETS, brec.pkts);
-         ur_set(tmplt, rec_out, UR_BYTES, brec.bytes);
-         ur_set(tmplt, rec_out, UR_LINK_BIT_FIELD, ur_get_link_mask(links));
+         ur_set(tmplt, rec_out, F_SRC_PORT, brec.srcport);
+         ur_set(tmplt, rec_out, F_DST_PORT, brec.dstport);
+         ur_set(tmplt, rec_out, F_PROTOCOL, brec.prot);
+         ur_set(tmplt, rec_out, F_PACKETS, brec.pkts);
+         ur_set(tmplt, rec_out, F_BYTES, brec.bytes);
+         ur_set(tmplt, rec_out, F_LINK_BIT_FIELD, ur_get_link_mask(links));
 
          uint16_t flags;
          lnf_rec_fget(recp, LNF_FLD_TCP_FLAGS, &flags);
-         if (flags & 0x01) {
-         ur_set(tmplt, rec_out, F_SRC_IP, ip_from_16_bytes_le((char *)&brec.srcaddr.data));
-         ur_set(tmplt, rec_out, F_DST_IP, ip_from_16_bytes_le((char *)&brec.dstaddr.data));
-       } else {
-          ur_set(tmplt, rec_out, F_SRC_IP, ip_from_4_bytes_le((char *)&brec.srcaddr.data));
-          ur_set(tmplt, rec_out, F_DST_IP, ip_from_4_bytes_le((char *)&brec.dstaddr.data));
-       }
+         ur_set(tmplt, rec_out, F_TCP_FLAGS, flags);
 
-       ur_set(tmplt, rec_out, F_SRC_PORT, brec.srcport);
-       ur_set(tmplt, rec_out, F_DST_PORT, brec.dstport);
-       ur_set(tmplt, rec_out, F_PROTOCOL, brec.prot);
-       ur_set(tmplt, rec_out, F_PACKETS, brec.pkts);
-       ur_set(tmplt, rec_out, F_BYTES, brec.bytes);
-       ur_set(tmplt, rec_out, F_LINK_BIT_FIELD, ur_get_link_mask(links));
+         uint32_t input;
+         lnf_rec_fget(recp, LNF_FLD_INPUT, &input);
+         if (set_dir_bit_field) {
+            if (input > 0) {
+               ur_set(tmplt, rec_out, F_DIR_BIT_FIELD, (1 << input));
+            } else {
+               ur_set(tmplt, rec_out, F_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
+            }
+         } else {
+            ur_set(tmplt, rec_out, F_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
+         }
 
-       uint32_t input;
-       lnf_rec_fget(recp, LNF_FLD_INPUT, &input);
-       if (set_dir_bit_field) {
-          if (input > 0) {
-             ur_set(tmplt, rec_out, F_DIR_BIT_FIELD, (1 << input));
-          } else {
-             ur_set(tmplt, rec_out, F_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
-          }
-       } else {
-          ur_set(tmplt, rec_out, F_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
-       }
+         ur_set(tmplt, rec_out, F_TIME_FIRST, ur_time_from_sec_msec(brec.first, 0));
+         ur_set(tmplt, rec_out, F_TIME_LAST, ur_time_from_sec_msec(brec.last, 0));
 
-       ur_set(tmplt, rec_out, F_TIME_FIRST, ur_time_from_sec_msec(brec.first, 0));
-       ur_set(tmplt, rec_out, F_TIME_LAST, ur_time_from_sec_msec(brec.last, 0));
-
-       if (rt_sending) {
-          RT_CHECK_DELAY(record_counter, brec.last, rt_sending_state);
-       }
-
-       if (actual_timestamps) {
-          set_actual_timestamps(&brec, rec_out, tmplt);
-       }
+         if (rt_sending) {
+            RT_CHECK_DELAY(record_counter, brec.last, rt_sending_state);
+         }
+         if (actual_timestamps) {
+            set_actual_timestamps(&brec, rec_out, tmplt);
+         }
 #endif /* HAVE_LIBNFDUMP */
 
          // Send data to output interface
