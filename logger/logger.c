@@ -138,7 +138,7 @@ void capture_thread(int index, char delimiter)
       }
 
       // Receive data from index-th input interface, wait until data are available
-      TRAP_RECEIVE(index, rec, rec_size, templates[index]);
+      ret = TRAP_RECEIVE(index, rec, rec_size, templates[index]);
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
 
       if (verbose >= 2) {
