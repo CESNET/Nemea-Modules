@@ -56,7 +56,7 @@ AX_PTHREAD([LIBS="$PTHREAD_LIBS $LIBS"
     [AC_MSG_ERROR([pthread not found])])
 
 AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--disable-repobuild],
-		[disable local compilation without system installed Nemea libraries, default: yea]),
+		[disable local compilation without system installed Nemea libraries, default: yes]),
 [case "${enableval}" in
 	yes) repobuild=true ;;
 	no)  repobuild=false ;;

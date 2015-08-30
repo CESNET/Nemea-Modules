@@ -1,0 +1,46 @@
+language: c
+compiler:
+  - gcc
+  - clang
+os:
+  - linux
+
+branches:
+  only:
+    - master
+    - coverity
+
+env:
+  global:
+   # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
+   #   via the "travis encrypt" command using the project repo's public key
+   - secure: "oUaboO/D5Q/tujtoGEzYFdT5xKD7VJfAqfiSLEoztv5xS2ycwmw/NFJ+3JFLYD6x23/0fjvCU/wKZ3Qyyd9VAxMyQDBkBK0aLcc6kC8fr8ECFyHazd86TCux3TOVGoAe/2IpTFE1VlqpjEKUhLAnsKHGgspLrYJ5SBUVAeWKnkpk5Kwt8Vyghz6Gir8LrVkqKEA7eGXqklDlwhExMnlyehLHMd4ZeFrCC1vI3g/ZoJJzhAvn1VSgPhMXamTi+EpHkEThpNsic7ZMmYb+tshLXjaQxIORpokcB/TIsaNFP/P5fIAtRkJXKNHapXC1lrgTRnNZHzJ6FzCrIAce/l3DChCAqTfu3WNrH885eqe6U4HbBeG7Gt2es86rTe9vPfYSuAIwQLqEFpkNfq4HtEu5CSAUXxwtGXeq3FAJrpJqsZ/8UX383ZVik0Gksw3XIdKbkjI5M1gWE/rLanK9+ZXECcBwsn7EW1lgE66LmZacX3q5WnybC1hKt+FffBfLYvubFV8X9XYolEJ6NwVvGdjTUhvNzPTYZdtWoP7WWyQwM/SBHQHkAqbqiyUQGZrkHpmsz4ohmrkLVCnOIuoEd8YeTvIIXGS0z400zbLqkHwDmATP3sRQA6pfPQfRpKz/9HaZf4kUk1MFtDHyWNo0t/XEDKKLnOzHsRbZD0LLqJHcKuQ="
+
+addons:
+  coverity_scan:
+    project:
+      name: "CESNET/Nemea-Modules"
+      description: "Build submitted via Travis CI"
+    notification_email: cejkat@cesnet.cz
+    build_command_prepend: "( cd /tmp/fw; ./bootstrap.sh && ./configure -q --disable-tests --disable-examples --disable-common --disable-unirec --disable-python --prefix=/tmp/nfw && make -j5 install; ); ./bootstrap.sh && ./configure --disable-repobuild PKG_CONFIG_PATH=/tmp/nfw/lib/pkgconfig && ./configure;"
+    build_command:   "make -j 4"
+    branch_pattern: coverity
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - gcc-c++
+      - autoconf
+      - pkg-config
+      - make
+      - automake
+      - libxml2-devel
+      - libxml2
+
+script:
+  - git clone https://github.com/CESNET/nemea-framework /tmp/fw
+  - ( cd /tmp/fw; ./bootstrap.sh && ./configure -q --disable-tests --disable-examples --disable-common --disable-unirec --disable-python --prefix=/tmp/nfw && make -j5 install; )
+  - ./bootstrap.sh && ./configure --disable-repobuild PKG_CONFIG_PATH=/tmp/nfw/lib/pkgconfig && make check
+
