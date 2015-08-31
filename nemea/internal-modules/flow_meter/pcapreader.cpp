@@ -1,6 +1,7 @@
 #include "pcapreader.h"
 #include <cstdio>
 #include <cstring>
+#include <pcap/pcap.h>
 
 //inet_ntop
 
@@ -25,6 +26,9 @@ using namespace std;
              ((x & 0xff000000) >> 24);
    }
 #endif
+
+Packet *packet_ptr;
+bool live_verbose;
 
 inline void swapbytes128(char *x)
 {
@@ -266,4 +270,145 @@ int PcapReader::parse_packet(const pcap_rec_hdr_t &hdr, const char *data, Packet
       p.packetFieldIndicator |= PCKT_PAYLOAD_MASK;
    }
    return 0;
+}
+
+PcapCapturer::PcapCapturer(const std::string & interface, bool verbose):pc(NULL), source_iface(interface), verbose(verbose) {
+}
+
+PcapCapturer::~PcapCapturer() {
+   if (pc) {
+      pcap_close(pc);
+   }
+}
+
+int PcapCapturer::init() {
+   char errbuf[PCAP_ERRBUF_SIZE];
+   live_verbose = verbose;
+
+   pc = pcap_create(source_iface.c_str(), errbuf);
+   if (pc == NULL) {
+      if (verbose) {
+         fprintf(stderr, "%s\n", errbuf);
+      }
+      return 1;
+   }
+   if (pcap_activate(pc) != 0) {
+      if (verbose) {
+         fprintf(stderr, "%s\n", pcap_geterr(pc));
+      }
+      pcap_close(pc);
+      pc = NULL;
+      return 2;
+   }
+
+   return 0;
+}
+
+void PcapCapturer::close() {
+   if (pc) {
+      pcap_close(pc);
+      pc = NULL;
+   }
+}
+
+int PcapCapturer::get_pkt(Packet &packet) {
+   packet_ptr = &packet;
+   return pcap_dispatch(pc, 0, packet_handler, NULL);
+}
+
+void packet_handler(u_char *user, const struct pcap_pkthdr *h, const u_char *bytes)
+{
+   uint32_t caplen = h->len;
+   const u_char * pkt_ptr = bytes;
+   uint16_t offset = 0;
+
+   packet_ptr->packetFieldIndicator = 0x0;
+   packet_ptr->timestamp = h->ts.tv_sec + h->ts.tv_usec/1000000.0;
+
+   packet_ptr->packetFieldIndicator |= PCKT_TIMESTAMP;
+
+   uint16_t ether_type = ((uint8_t)(bytes[12]) << 8) | (uint8_t)bytes[13];
+
+   if (ether_type == ETHER_TYPE_IPv4 || ether_type == ETHER_TYPE_IPv6) {
+      offset = 14;
+   } else if (ether_type == ETHER_TYPE_8021Q) {
+      offset = 18;
+   } else {
+      if (live_verbose) {
+         fprintf(stderr, "Unknown ethernet type, %04X, skipping...\n", ether_type);
+      }
+      return;
+   }
+
+   pkt_ptr += offset;
+   if (ether_type ==  ETHER_TYPE_IPv4 || ether_type == ETHER_TYPE_8021Q) {
+      ipv4hdr *ip_hdr = (ipv4hdr*) pkt_ptr;
+      pkt_ptr += (ip_hdr->ver_hdrlen & 0x0f)*4;
+
+      packet_ptr->ipVersion                = (ip_hdr->ver_hdrlen & 0xf0) >> 4;
+      packet_ptr->protocolIdentifier       = ip_hdr->protocol;
+      packet_ptr->ipClassOfService         = ip_hdr->tos;
+      packet_ptr->ipLength                 = ntohs(ip_hdr->tot_len);
+      packet_ptr->ipTtl                    = ip_hdr->ttl;
+      packet_ptr->sourceIPv4Address        = ntohl(ip_hdr->saddr);
+      packet_ptr->destinationIPv4Address   = ntohl(ip_hdr->daddr);
+
+      packet_ptr->packetFieldIndicator |= PCKT_IPV4_MASK;
+
+   } else if (ether_type == ETHER_TYPE_IPv6) {
+      ipv6hdr *ip_hdr = (ipv6hdr*) pkt_ptr;
+      pkt_ptr += 40;
+
+      packet_ptr->ipVersion = (ip_hdr->v6nfo & 0xf0000000) >> 28;
+      packet_ptr->ipClassOfService = (ip_hdr->v6nfo & 0x0ff00000) >> 20;
+      packet_ptr->protocolIdentifier = ip_hdr->next_hdr;
+      packet_ptr->ipLength = ntohs(ip_hdr->payload_len);
+      memcpy(packet_ptr->sourceIPv6Address, ip_hdr->saddr, 16);
+      memcpy(packet_ptr->destinationIPv6Address, ip_hdr->daddr, 16);
+
+      swapbytes128(packet_ptr->sourceIPv6Address);
+      swapbytes128(packet_ptr->destinationIPv6Address);
+
+      packet_ptr->packetFieldIndicator |= PCKT_IPV6_MASK;
+   }
+
+   if (packet_ptr->protocolIdentifier == IP_PROTO_TCP) {
+      tcphdr *tcp_hdr = (tcphdr*)pkt_ptr;
+      pkt_ptr += ((tcp_hdr->doff & 0xf0) >> 4)*4;
+
+      packet_ptr->sourceTransportPort      = ntohs(tcp_hdr->source);
+      packet_ptr->destinationTransportPort = ntohs(tcp_hdr->dest);
+      packet_ptr->tcpControlBits           = tcp_hdr->flags;
+      packet_ptr->packetFieldIndicator |= PCKT_TCP_MASK;
+   }
+   else if (packet_ptr->protocolIdentifier == IP_PROTO_UDP) {
+      udphdr *udp_hdr = (udphdr *)pkt_ptr;
+      pkt_ptr += 8;
+
+      packet_ptr->sourceTransportPort      = ntohs(udp_hdr->source);
+      packet_ptr->destinationTransportPort = ntohs(udp_hdr->dest);
+      packet_ptr->packetFieldIndicator |= PCKT_UDP_MASK;
+   } else if (packet_ptr->protocolIdentifier == IP_PROTO_ICMP || packet_ptr->protocolIdentifier == IP_PROTO_ICMPv6) {
+      pkt_ptr += 8;
+   } else {
+      if (live_verbose) {
+         fprintf(stderr, "Unknown protocol, %d, skipping...\n", packet_ptr->protocolIdentifier);
+      }
+      return;
+   }
+
+   if ( ((packet_ptr->packetFieldIndicator & PCKT_TCP_MASK) == PCKT_TCP_MASK) ||
+   ((packet_ptr->packetFieldIndicator & PCKT_UDP_MASK) == PCKT_UDP_MASK) ) {
+      packet_ptr->transportPayloadPacketSectionSize = caplen - (pkt_ptr - bytes);
+
+      if (packet_ptr->transportPayloadPacketSectionSize > MAXPCKTPAYLOADSIZE) {
+         if (live_verbose) {
+            fprintf(stderr, "Payload too long: %d, trimming to: %d\n", packet_ptr->transportPayloadPacketSectionSize, MAXPCKTPAYLOADSIZE);
+         }
+         packet_ptr->transportPayloadPacketSectionSize = MAXPCKTPAYLOADSIZE;
+      }
+      memcpy(packet_ptr->transportPayloadPacketSection, pkt_ptr, packet_ptr->transportPayloadPacketSectionSize);
+      packet_ptr->packetFieldIndicator |= PCKT_PAYLOAD_MASK;
+   }
+
 }

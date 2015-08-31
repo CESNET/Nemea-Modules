@@ -1,6 +1,8 @@
 #ifndef PCAPREADER_H
 #define PCAPREADER_H
 
+#include <pcap/pcap.h>
+
 #include "flow_meter.h"
 #include "packet.h"
 #include "packetreceiver.h"
@@ -109,5 +111,21 @@ protected:
 
    int parse_packet(const pcap_rec_hdr_t &hdr, const char *data, Packet &p);
 };
+
+class PcapCapturer : public PacketReceiver
+{
+public:
+   PcapCapturer(const std::string & interface, bool verbose);
+   ~PcapCapturer();
+   int init();
+   void close();
+   int get_pkt(Packet &packet);
+
+private:
+   pcap_t *pc;
+   std::string source_iface;
+   bool verbose;
+};
+void packet_handler(u_char *user, const struct pcap_pkthdr *h, const u_char *bytes);
 
 #endif
