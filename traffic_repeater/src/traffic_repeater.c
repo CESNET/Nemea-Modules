@@ -81,7 +81,7 @@ void traffic_repeater(void)
       ret = trap_recv(0, &data, &data_size);
       if (ret == TRAP_E_OK) {
          cnt_r++;
-         if (data_size == 1) {
+         if (data_size <= 1) {
             if (verb) {
                fprintf(stderr, "Info: Final record received, terminating repeater...\n");
             }
@@ -93,8 +93,7 @@ void traffic_repeater(void)
             continue;
          }
          TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, cnt_t++; continue, break);
-      }
-      else if (ret == TRAP_E_OK_FORMAT_CHANGED && trap_get_in_ifc_state(0) == FMT_SUBSET) {
+      } else if (ret == TRAP_E_OK_FORMAT_CHANGED && trap_get_in_ifc_state(0) == FMT_SUBSET) {
          //receive data format and set it to output IFC
          const char *spec = NULL;
          char *spec2 = NULL;
