@@ -21,7 +21,7 @@ addons:
       name: "CESNET/Nemea-Modules"
       description: "Build submitted via Travis CI"
     notification_email: cejkat@cesnet.cz
-    build_command_prepend: "( cd /tmp/fw; ./bootstrap.sh && ./configure -q --disable-tests --disable-examples --prefix=/tmp/nfw && make -j5 install; ); ./bootstrap.sh && ./configure PATH=/tmp/nfw/bin:$PATH PKG_CONFIG_PATH=/tmp/nfw/lib/pkgconfig --disable-repobuild && ./configure && make clean"
+    build_command_prepend: "( git clone https://github.com/CESNET/nemea-framework /tmp/fw; cd /tmp/fw; ./bootstrap.sh && ./configure -q --disable-tests --disable-examples --prefix=/tmp/nfw && make -j5 install; ); ./bootstrap.sh && ./configure PATH=/tmp/nfw/bin:$PATH PKG_CONFIG_PATH=/tmp/nfw/lib/pkgconfig --disable-repobuild && ./configure && make clean"
     build_command:   "make -j 4"
     branch_pattern: coverity
   apt:
@@ -37,7 +37,6 @@ addons:
       - libxml2
 
 script:
-  - git clone https://github.com/CESNET/nemea-framework /tmp/fw
-  - ( cd /tmp/fw; ./bootstrap.sh && ./configure -q --disable-tests --disable-examples --prefix=/tmp/nfw && make -j5 install; )
+  - ( git clone https://github.com/CESNET/nemea-framework /tmp/fw; cd /tmp/fw; ./bootstrap.sh && ./configure -q --disable-tests --disable-examples --prefix=/tmp/nfw && make -j5 install; )
   - ./bootstrap.sh && ./configure PATH=/tmp/nfw/bin:$PATH --disable-repobuild PKG_CONFIG_PATH=/tmp/nfw/lib/pkgconfig && make check
 
