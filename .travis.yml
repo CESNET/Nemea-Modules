@@ -16,14 +16,6 @@ env:
    - secure: "oUaboO/D5Q/tujtoGEzYFdT5xKD7VJfAqfiSLEoztv5xS2ycwmw/NFJ+3JFLYD6x23/0fjvCU/wKZ3Qyyd9VAxMyQDBkBK0aLcc6kC8fr8ECFyHazd86TCux3TOVGoAe/2IpTFE1VlqpjEKUhLAnsKHGgspLrYJ5SBUVAeWKnkpk5Kwt8Vyghz6Gir8LrVkqKEA7eGXqklDlwhExMnlyehLHMd4ZeFrCC1vI3g/ZoJJzhAvn1VSgPhMXamTi+EpHkEThpNsic7ZMmYb+tshLXjaQxIORpokcB/TIsaNFP/P5fIAtRkJXKNHapXC1lrgTRnNZHzJ6FzCrIAce/l3DChCAqTfu3WNrH885eqe6U4HbBeG7Gt2es86rTe9vPfYSuAIwQLqEFpkNfq4HtEu5CSAUXxwtGXeq3FAJrpJqsZ/8UX383ZVik0Gksw3XIdKbkjI5M1gWE/rLanK9+ZXECcBwsn7EW1lgE66LmZacX3q5WnybC1hKt+FffBfLYvubFV8X9XYolEJ6NwVvGdjTUhvNzPTYZdtWoP7WWyQwM/SBHQHkAqbqiyUQGZrkHpmsz4ohmrkLVCnOIuoEd8YeTvIIXGS0z400zbLqkHwDmATP3sRQA6pfPQfRpKz/9HaZf4kUk1MFtDHyWNo0t/XEDKKLnOzHsRbZD0LLqJHcKuQ="
 
 addons:
-  coverity_scan:
-    project:
-      name: "CESNET/Nemea-Modules"
-      description: "Build submitted via Travis CI"
-    notification_email: cejkat@cesnet.cz
-    build_command_prepend: "( git clone https://github.com/CESNET/nemea-framework /tmp/fw; cd /tmp/fw; ./bootstrap.sh && ./configure -q --disable-tests --disable-examples --prefix=/tmp/nfw && make -j5 install; ); ./bootstrap.sh && ./configure PATH=/tmp/nfw/bin:$PATH PKG_CONFIG_PATH=/tmp/nfw/lib/pkgconfig --disable-repobuild && ./configure && make clean"
-    build_command:   "make -j 4"
-    branch_pattern: coverity
   apt:
     sources:
       - ubuntu-toolchain-r-test
@@ -35,8 +27,18 @@ addons:
       - automake
       - libxml2-devel
       - libxml2
+  coverity_scan:
+    project:
+      name: "CESNET/Nemea-Modules"
+      description: "Build submitted via Travis CI"
+    notification_email: cejkat@cesnet.cz
+    build_command_prepend: "./bootstrap.sh && ./configure -q && make clean"
+    build_command:   "make -j5"
+    branch_pattern: coverity
+
+before_install:
+   - ( git clone https://github.com/CESNET/nemea-framework; cd nemea-framework; ./bootstrap.sh && ./configure -q --prefix=/usr && make -j10 && sudo make install; )
 
 script:
-  - ( git clone https://github.com/CESNET/nemea-framework /tmp/fw; cd /tmp/fw; ./bootstrap.sh && ./configure -q --disable-tests --disable-examples --prefix=/tmp/nfw && make -j5 install; )
-  - ./bootstrap.sh && ./configure PATH=/tmp/nfw/bin:$PATH --disable-repobuild PKG_CONFIG_PATH=/tmp/nfw/lib/pkgconfig && make check
+  - ./bootstrap.sh && ./configure --disable-repobuild && make check
 
