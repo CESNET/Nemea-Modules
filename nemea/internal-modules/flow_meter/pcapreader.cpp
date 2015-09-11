@@ -3,32 +3,17 @@
 #include <cstring>
 #include <pcap/pcap.h>
 
-//inet_ntop
+#include <arpa/inet.h>
+#include <netinet/ether.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/ip6.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
+#include <netinet/ip_icmp.h>
+#include <netinet/icmp6.h>
 
 using namespace std;
-
-// definition of ntohs and ntohl functions
-// (not using netinet/in.h to allow translation on windows)
-#if __BYTE_ORDER == __BIG_ENDIAN
-   #define ntohs(x) (x)
-   #define ntohl(x) (x)
-#else
-   inline uint16_t ntohs(uint16_t x)
-   {
-      return ((x & 0x00ff) << 8) |
-             ((x & 0xff00) >> 8);
-   }
-   inline uint32_t ntohl(uint32_t x)
-   {
-      return ((x & 0x000000ff) << 24) |
-             ((x & 0x0000ff00) <<  8) |
-             ((x & 0x00ff0000) >>  8) |
-             ((x & 0xff000000) >> 24);
-   }
-#endif
-
-Packet *packet_ptr;
-bool live_verbose;
 
 inline void swapbytes128(char *x)
 {
@@ -40,375 +25,199 @@ inline void swapbytes128(char *x)
    }
 }
 
-// Open given pcap file
-int PcapReader::open(const string &filename)
+void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data)
 {
-   pcap_hdr_t hdr;
+   Packet &pkt = *(Packet *)arg;
+   struct ethhdr *eth = (struct ethhdr *) data;
+   uint8_t transport_proto = 0x0;
+   int payload_len = 0x0;
 
-   file = fopen(filename.c_str(), "rb");
-   if (file == NULL) {
-      errmsg = "Can't open file.";
+   uint16_t ethertype = ntohs(eth->h_proto);
+   if (ethertype == ETH_P_8021Q) {
+      data += 18;
+      ethertype = ntohs(data[-2]);
+   } else {
+      data += 14;
+   }
+
+   pkt.packetFieldIndicator = 0x0;
+   pkt.timestamp = h->ts.tv_sec + h->ts.tv_usec/1000000.0;
+
+   if (ethertype == ETH_P_IP) {
+      struct iphdr *ip = (struct iphdr *) (data);
+
+      pkt.ipVersion = ip->version;
+      pkt.protocolIdentifier = ip->protocol;
+      pkt.ipClassOfService = ip->tos;
+      pkt.ipLength = ntohs(ip->tot_len);
+      pkt.ipTtl = ip->ttl;
+      pkt.sourceIPv4Address = ntohl(ip->saddr);
+      pkt.destinationIPv4Address = ntohl(ip->daddr);
+      pkt.packetFieldIndicator |= PCKT_IPV4_MASK;
+
+      transport_proto = ip->protocol;
+      payload_len = ntohs(ip->tot_len) - ip->ihl * 4;
+      data += ip->ihl * 4;
+
+   } else if (ethertype == ETH_P_IPV6) {
+      struct ip6_hdr *ip6 = (struct ip6_hdr *) (data);
+
+      pkt.ipVersion = (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0xf0000000) >> 28;
+      pkt.ipClassOfService = (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0x0ff00000) >> 20;
+      pkt.protocolIdentifier = ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;
+      pkt.ipLength = ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);
+      memcpy(pkt.sourceIPv6Address, (const char *)&ip6->ip6_src, 16);
+      memcpy(pkt.destinationIPv6Address, (const char *)&ip6->ip6_dst, 16);
+      pkt.packetFieldIndicator |= PCKT_IPV6_MASK;
+
+      swapbytes128(pkt.sourceIPv6Address);
+      swapbytes128(pkt.destinationIPv6Address);
+
+      transport_proto = ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;
+      payload_len = ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);   //TODO: IPv6 Extension header
+      data += 40;
+
+   } else {
+      fprintf(stderr, "Unknown ethernet type, %04X, skipping...\n", ethertype);
+      return;
+   }
+
+
+   if (transport_proto == IPPROTO_TCP) {
+      struct tcphdr *tcp = (struct tcphdr *) (data);
+
+      pkt.sourceTransportPort = ntohs(tcp->source);
+      pkt.destinationTransportPort = ntohs(tcp->dest);
+      pkt.tcpControlBits = 0x0;
+      if (tcp->fin) {
+         pkt.tcpControlBits |= TCP_FIN;
+      }
+      if (tcp->syn) {
+         pkt.tcpControlBits |= TCP_SYN;
+      }
+      if (tcp->rst) {
+         pkt.tcpControlBits |= TCP_RST;
+      }
+      if (tcp->psh) {
+         pkt.tcpControlBits |= TCP_PUSH;
+      }
+      if (tcp->ack) {
+         pkt.tcpControlBits |= TCP_ACK;
+      }
+      if (tcp->urg) {
+         pkt.tcpControlBits |= TCP_URG;
+      }
+      pkt.packetFieldIndicator |= PCKT_TCP_MASK;
+
+      data += tcp->doff * 4;
+      payload_len -= tcp->doff * 4;
+
+   } else if (transport_proto == IPPROTO_UDP) {
+      struct udphdr *udp = (struct udphdr *) (data);
+
+      pkt.sourceTransportPort = ntohs(udp->source);
+      pkt.destinationTransportPort = ntohs(udp->dest);
+      pkt.packetFieldIndicator |= PCKT_UDP_MASK;
+
+      data += 8;
+      payload_len -= 8;
+
+   } else if (transport_proto == IPPROTO_ICMP) {
+      struct icmphdr *icmp = (struct icmphdr *) (data);
+
+   } else if (transport_proto == IPPROTO_ICMPV6) {
+      struct icmp6_hdr *icmp6 = (struct icmp6_hdr *) (data);
+
+   } else {
+      fprintf(stderr, "Unknown protocol\n");
+      return;
+   }
+
+   if (((pkt.packetFieldIndicator & PCKT_TCP_MASK) == PCKT_TCP_MASK) ||
+       ((pkt.packetFieldIndicator & PCKT_UDP_MASK) == PCKT_UDP_MASK)) {
+      pkt.transportPayloadPacketSectionSize = payload_len;
+      pkt.transportPayloadPacketSection = (const char*)data;
+      pkt.packetFieldIndicator |= PCKT_PAYLOAD_MASK;
+   }
+
+   pkt.packetFieldIndicator |= PCKT_VALID;
+}
+
+
+PcapReader::PcapReader() : handle(NULL)
+{
+}
+
+PcapReader::PcapReader(options_t &options) : handle(NULL)
+{
+}
+
+PcapReader::~PcapReader()
+{
+   this->close();
+}
+
+int PcapReader::open_file(const std::string &file)
+{
+   if (handle != NULL) {
+      errmsg = "Interface or pcap file is already opened.";
       return 1;
    }
 
-   // Load file header
-   if (fread(&hdr, sizeof(hdr), 1, file) != 1
-       ||
-      (hdr.magic_number != 0xa1b2c3d4 && hdr.magic_number != 0xd4c3b2a1)) {
-
-      errmsg = "Not a valid pcap file.";
-      fclose(file);
+   char errbuf[PCAP_ERRBUF_SIZE];
+   handle = pcap_open_offline(file.c_str(), errbuf);
+   if (handle == NULL) {
+      errmsg = errbuf;
       return 2;
    }
 
-   // Swap byte order, when received header has Little Endian
-   if (hdr.magic_number==0xd4c3b2a1) {
-      ntohs(hdr.version_major);
-      ntohs(hdr.version_minor);
-      ntohl(hdr.thiszone);
-      ntohl(hdr.sigfigs);
-      ntohl(hdr.snaplen);
-      ntohl(hdr.network);
-   }
-
-// Check version
-//    if (hdr.version_major != 2 || hdr.version_minor != 4) {
-//       errmsg = "Unknown version of pcap file.";
-//       return 4;
-//    }
-
-   // Allocate buffer for packet data
-   // (pcap->hdr.snaplen should be sufficient, but it's often not set correctly)
-   if (hdr.snaplen > 4096)
-      data_buffer_size = hdr.snaplen;
-   else
-      data_buffer_size = 4096;
-   data_buffer = new char[data_buffer_size];
-
-   if (!data_buffer) {
-      errmsg = "Can't allocate memory for packet data buffer ("+string(data_buffer)+"B was requested).";
-      fclose(file);
-      return -1;
-   }
-
-   // File was successfully opened
-   opened = true;
+   errmsg = "";
    return 0;
 }
 
-// Close a file
-int PcapReader::close()
+int PcapReader::init_interface(const std::string &interface)
 {
-   if (!opened)
-      return 0;
-
-   if (fclose(file) == 0) {
-      opened = false;
-      return 0;
-   }
-   else {
-      errmsg = "Can't close file.";
+   if (handle != NULL) {
+      errmsg = "Interface or pcap file is already opened.";
       return 1;
+   }
+
+   char errbuf[PCAP_ERRBUF_SIZE];
+   handle = pcap_create(interface.c_str(), errbuf);
+   if (handle == NULL) {
+      errmsg = errbuf;
+      return 2;
+   }
+
+   if (pcap_activate(handle) != 0) {
+      errmsg = pcap_geterr(handle);
+      this->close();
+      return 3;
+   }
+
+   errmsg = "";
+   return 0;
+}
+
+void PcapReader::close()
+{
+   if (handle != NULL) {
+      pcap_close(handle);
+      handle = NULL;
    }
 }
 
-// Return next packet (which it's able to parse) from the file
 int PcapReader::get_pkt(Packet &packet)
 {
-   int ret;
-   pcap_rec_hdr_t pkt_hdr;
-
-   if (!opened) {
-      errmsg = "No file is opened.";
-      return 1;
+   if (handle == NULL) {
+      errmsg = "No live capture or file opened.";
+      return -3;
    }
 
-   do {
-      // Read packet header
-      if (fread(&pkt_hdr, sizeof(pkt_hdr), 1, file) < 1) {
-         if (feof(file)) {
-            errmsg = "EOF";
-            return -1;
-         }
-         errmsg = "Error when reading file.\n";
-         return 1;
-      }
-
-      // Check if included length of data is not larger than buffer
-      if (pkt_hdr.incl_len > data_buffer_size) {
-         errmsg = "Packet is longer than maximum. File is probably corrupted.";
-         return 2;
-      }
-
-      // Read packet data
-      if (fread(data_buffer, pkt_hdr.incl_len, 1, file) < 1) {
-         if (feof(file)) {
-            errmsg = "Unexpected end of file.";
-            return -2;
-         }
-         errmsg = "Error when reading file.";
-         return 4;
-      }
-
-      cnt_total++;
-
-      // Parse packet
-      ret = parse_packet(pkt_hdr, data_buffer, packet);
-
-   } while (ret != 0); // If packet can't be parsed properly, try next one
-
-   cnt_parsed++;
-   return 0;
-}
-
-// PcapReader -- PROTECTED ****************************************************
-
-/*
-   Based on PCAP Offline Parsing Example by Joshua Robinson, (joshua.robinson – at – gmail.com)
-   http://code.google.com/p/pcapsctpspliter/issues/detail?id=6
-*/
-
-int PcapReader::parse_packet(const pcap_rec_hdr_t &hdr, const char *data, Packet &p) {
-   uint32_t caplen = hdr.incl_len;
-   const char *pkt_ptr = data;
-
-   p.packetFieldIndicator = 0x0; // set all fields not valid
-
-// Read timestamp
-   p.timestamp = hdr.ts_sec + hdr.ts_usec/1000000.0;
-   p.packetFieldIndicator |= PCKT_TIMESTAMP;
-
-// Get ethernet type
-   uint16_t ether_type = ((uint8_t)(pkt_ptr[12]) << 8) | (uint8_t)pkt_ptr[13];
-   int ether_offset = 0;
-
-   if (ether_type == ETHER_TYPE_IPv4 || ether_type == ETHER_TYPE_IPv6)
-      ether_offset = 14;
-   else if (ether_type == ETHER_TYPE_8021Q)
-      ether_offset = 18;
-   else {
-      if (verbose)
-         fprintf(stderr, "Unknown ethernet type, %04X, skipping...\n", ether_type);
-      return 1;
+   int ret = pcap_dispatch(handle, 1, packet_handler, (u_char *)(&packet));
+   if (ret < 0) {
+      errmsg = pcap_geterr(handle);
    }
 
-   pkt_ptr += ether_offset;  // skip ethernet header
-
-// Parse IPv4 header
-   if (ether_type ==  ETHER_TYPE_IPv4 || ether_type == ETHER_TYPE_8021Q) {
-      ipv4hdr *ip_hdr = (ipv4hdr*) pkt_ptr; // point to an IP header structure
-      pkt_ptr += (ip_hdr->ver_hdrlen & 0x0f)*4;
-
-      p.ipVersion                = (ip_hdr->ver_hdrlen & 0xf0) >> 4;
-      p.protocolIdentifier       = ip_hdr->protocol;
-      p.ipClassOfService         = ip_hdr->tos;
-      p.ipLength                 = ntohs(ip_hdr->tot_len);
-      p.ipTtl                    = ip_hdr->ttl;
-      p.sourceIPv4Address        = ntohl(ip_hdr->saddr);
-      p.destinationIPv4Address   = ntohl(ip_hdr->daddr);
-
-      p.packetFieldIndicator |= PCKT_IPV4_MASK;
-   }
-
-// Parse IPv6 header
-   else if (ether_type == ETHER_TYPE_IPv6) {
-      ipv6hdr *ip_hdr = (ipv6hdr*) pkt_ptr;
-      pkt_ptr += 40;
-
-      p.ipVersion = (ip_hdr->v6nfo & 0xf0000000) >> 28;
-      p.ipClassOfService = (ip_hdr->v6nfo & 0x0ff00000) >> 20;
-      p.protocolIdentifier = ip_hdr->next_hdr;
-      p.ipLength = ntohs(ip_hdr->payload_len);
-      memcpy(p.sourceIPv6Address, ip_hdr->saddr, 16);
-      memcpy(p.destinationIPv6Address, ip_hdr->daddr, 16);
-
-      swapbytes128(p.sourceIPv6Address);
-      swapbytes128(p.destinationIPv6Address);
-
-      p.packetFieldIndicator |= PCKT_IPV6_MASK;
-   }
-
-// Parse TCP header
-   if (p.protocolIdentifier == IP_PROTO_TCP) {
-      tcphdr *tcp_hdr = (tcphdr*)pkt_ptr; //point to a TCP header structure
-      pkt_ptr += ((tcp_hdr->doff & 0xf0) >> 4)*4;
-
-      p.sourceTransportPort      = ntohs(tcp_hdr->source);
-      p.destinationTransportPort = ntohs(tcp_hdr->dest);
-      p.tcpControlBits           = tcp_hdr->flags;
-      p.packetFieldIndicator |= PCKT_TCP_MASK;
-   }
-
-// Parse UDP header
-   else if (p.protocolIdentifier == IP_PROTO_UDP) {
-      udphdr *udp_hdr = (udphdr *)pkt_ptr; //point to a UDP header structure
-      pkt_ptr += 8;
-
-      p.sourceTransportPort      = ntohs(udp_hdr->source);
-      p.destinationTransportPort = ntohs(udp_hdr->dest);
-      p.packetFieldIndicator |= PCKT_UDP_MASK;
-   }
-   else if (p.protocolIdentifier == IP_PROTO_ICMP || p.protocolIdentifier == IP_PROTO_ICMPv6) {
-      pkt_ptr += 8;
-   }
-   else {
-      if (verbose)
-         fprintf(stderr, "Unknown protocol, %d, skipping...\n", p.protocolIdentifier);
-      return 2;
-   }
-
-   if ( ((p.packetFieldIndicator & PCKT_TCP_MASK) == PCKT_TCP_MASK) ||
-        ((p.packetFieldIndicator & PCKT_UDP_MASK) == PCKT_UDP_MASK) ) {
-
-      p.transportPayloadPacketSectionSize = caplen - (pkt_ptr - data);
-      if (p.transportPayloadPacketSectionSize > MAXPCKTPAYLOADSIZE) {
-         if (verbose)
-            fprintf(stderr, "Payload too long: %d, trimming to: %d\n", p.transportPayloadPacketSectionSize, MAXPCKTPAYLOADSIZE);
-         p.transportPayloadPacketSectionSize = MAXPCKTPAYLOADSIZE;
-      }
-      memcpy(p.transportPayloadPacketSection, pkt_ptr, p.transportPayloadPacketSectionSize);
-      p.packetFieldIndicator |= PCKT_PAYLOAD_MASK;
-   }
-   return 0;
-}
-
-PcapCapturer::PcapCapturer(const std::string & interface, bool verbose):pc(NULL), source_iface(interface), verbose(verbose) {
-}
-
-PcapCapturer::~PcapCapturer() {
-   if (pc) {
-      pcap_close(pc);
-   }
-}
-
-int PcapCapturer::init() {
-   char errbuf[PCAP_ERRBUF_SIZE];
-   live_verbose = verbose;
-
-   pc = pcap_create(source_iface.c_str(), errbuf);
-   if (pc == NULL) {
-      if (verbose) {
-         fprintf(stderr, "%s\n", errbuf);
-      }
-      return 1;
-   }
-   if (pcap_activate(pc) != 0) {
-      if (verbose) {
-         fprintf(stderr, "%s\n", pcap_geterr(pc));
-      }
-      pcap_close(pc);
-      pc = NULL;
-      return 2;
-   }
-
-   return 0;
-}
-
-void PcapCapturer::close() {
-   if (pc) {
-      pcap_close(pc);
-      pc = NULL;
-   }
-}
-
-int PcapCapturer::get_pkt(Packet &packet) {
-   packet_ptr = &packet;
-   return pcap_dispatch(pc, 0, packet_handler, NULL);
-}
-
-void packet_handler(u_char *user, const struct pcap_pkthdr *h, const u_char *bytes)
-{
-   uint32_t caplen = h->len;
-   const u_char * pkt_ptr = bytes;
-   uint16_t offset = 0;
-
-   packet_ptr->packetFieldIndicator = 0x0;
-   packet_ptr->timestamp = h->ts.tv_sec + h->ts.tv_usec/1000000.0;
-
-   packet_ptr->packetFieldIndicator |= PCKT_TIMESTAMP;
-
-   uint16_t ether_type = ((uint8_t)(bytes[12]) << 8) | (uint8_t)bytes[13];
-
-   if (ether_type == ETHER_TYPE_IPv4 || ether_type == ETHER_TYPE_IPv6) {
-      offset = 14;
-   } else if (ether_type == ETHER_TYPE_8021Q) {
-      offset = 18;
-   } else {
-      if (live_verbose) {
-         fprintf(stderr, "Unknown ethernet type, %04X, skipping...\n", ether_type);
-      }
-      return;
-   }
-
-   pkt_ptr += offset;
-   if (ether_type ==  ETHER_TYPE_IPv4 || ether_type == ETHER_TYPE_8021Q) {
-      ipv4hdr *ip_hdr = (ipv4hdr*) pkt_ptr;
-      pkt_ptr += (ip_hdr->ver_hdrlen & 0x0f)*4;
-
-      packet_ptr->ipVersion                = (ip_hdr->ver_hdrlen & 0xf0) >> 4;
-      packet_ptr->protocolIdentifier       = ip_hdr->protocol;
-      packet_ptr->ipClassOfService         = ip_hdr->tos;
-      packet_ptr->ipLength                 = ntohs(ip_hdr->tot_len);
-      packet_ptr->ipTtl                    = ip_hdr->ttl;
-      packet_ptr->sourceIPv4Address        = ntohl(ip_hdr->saddr);
-      packet_ptr->destinationIPv4Address   = ntohl(ip_hdr->daddr);
-
-      packet_ptr->packetFieldIndicator |= PCKT_IPV4_MASK;
-
-   } else if (ether_type == ETHER_TYPE_IPv6) {
-      ipv6hdr *ip_hdr = (ipv6hdr*) pkt_ptr;
-      pkt_ptr += 40;
-
-      packet_ptr->ipVersion = (ip_hdr->v6nfo & 0xf0000000) >> 28;
-      packet_ptr->ipClassOfService = (ip_hdr->v6nfo & 0x0ff00000) >> 20;
-      packet_ptr->protocolIdentifier = ip_hdr->next_hdr;
-      packet_ptr->ipLength = ntohs(ip_hdr->payload_len);
-      memcpy(packet_ptr->sourceIPv6Address, ip_hdr->saddr, 16);
-      memcpy(packet_ptr->destinationIPv6Address, ip_hdr->daddr, 16);
-
-      swapbytes128(packet_ptr->sourceIPv6Address);
-      swapbytes128(packet_ptr->destinationIPv6Address);
-
-      packet_ptr->packetFieldIndicator |= PCKT_IPV6_MASK;
-   }
-
-   if (packet_ptr->protocolIdentifier == IP_PROTO_TCP) {
-      tcphdr *tcp_hdr = (tcphdr*)pkt_ptr;
-      pkt_ptr += ((tcp_hdr->doff & 0xf0) >> 4)*4;
-
-      packet_ptr->sourceTransportPort      = ntohs(tcp_hdr->source);
-      packet_ptr->destinationTransportPort = ntohs(tcp_hdr->dest);
-      packet_ptr->tcpControlBits           = tcp_hdr->flags;
-      packet_ptr->packetFieldIndicator |= PCKT_TCP_MASK;
-   }
-   else if (packet_ptr->protocolIdentifier == IP_PROTO_UDP) {
-      udphdr *udp_hdr = (udphdr *)pkt_ptr;
-      pkt_ptr += 8;
-
-      packet_ptr->sourceTransportPort      = ntohs(udp_hdr->source);
-      packet_ptr->destinationTransportPort = ntohs(udp_hdr->dest);
-      packet_ptr->packetFieldIndicator |= PCKT_UDP_MASK;
-   } else if (packet_ptr->protocolIdentifier == IP_PROTO_ICMP || packet_ptr->protocolIdentifier == IP_PROTO_ICMPv6) {
-      pkt_ptr += 8;
-   } else {
-      if (live_verbose) {
-         fprintf(stderr, "Unknown protocol, %d, skipping...\n", packet_ptr->protocolIdentifier);
-      }
-      return;
-   }
-
-   if ( ((packet_ptr->packetFieldIndicator & PCKT_TCP_MASK) == PCKT_TCP_MASK) ||
-   ((packet_ptr->packetFieldIndicator & PCKT_UDP_MASK) == PCKT_UDP_MASK) ) {
-      packet_ptr->transportPayloadPacketSectionSize = caplen - (pkt_ptr - bytes);
-
-      if (packet_ptr->transportPayloadPacketSectionSize > MAXPCKTPAYLOADSIZE) {
-         if (live_verbose) {
-            fprintf(stderr, "Payload too long: %d, trimming to: %d\n", packet_ptr->transportPayloadPacketSectionSize, MAXPCKTPAYLOADSIZE);
-         }
-         packet_ptr->transportPayloadPacketSectionSize = MAXPCKTPAYLOADSIZE;
-      }
-      memcpy(packet_ptr->transportPayloadPacketSection, pkt_ptr, packet_ptr->transportPayloadPacketSectionSize);
-      packet_ptr->packetFieldIndicator |= PCKT_PAYLOAD_MASK;
-   }
-
+   return ret;
 }

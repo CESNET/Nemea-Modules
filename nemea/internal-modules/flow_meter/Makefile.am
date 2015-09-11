@@ -6,13 +6,13 @@ flow_meter_SOURCES=flow_meter.cpp \
 		    pcapreader.h \
 		    flowifc.h \
 		    flowcache.h \
-		    flowwriter.h \
+		    unirecexporter.h \
 		    pcapreader.cpp \
 		    mapflowcache.cpp \
 		    mapflowcache.h \
 		    nhtflowcache.cpp \
 		    nhtflowcache.h \
-		    flowwriter.cpp \
+		    unirecexporter.cpp \
 		    stats.cpp \
 		    stats.h \
 		    flowcacheplugin.h

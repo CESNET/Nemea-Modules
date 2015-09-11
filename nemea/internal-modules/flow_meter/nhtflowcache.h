@@ -11,11 +11,9 @@
 class Flow
 {
    uint64_t hash;
-   uint64_t plimit;
    double inactive;
    double active;
    char key[MAX_KEYLENGTH];
-   char *payload;
 
 public:
    bool empty_flow;
@@ -37,26 +35,30 @@ public:
       flowrecord.octetTotalLength = 0;
       flowrecord.packetTotalCount = 0;
       flowrecord.tcpControlBits = 0;
-      flowrecord.flowPayloadSize = 0;
-      flowrecord.flowPayloadStart = 0;
+
+      if (flowrecord.exts != NULL) {
+         delete flowrecord.exts;
+         flowrecord.exts = NULL;
+      }
       empty_flow = true;
    }
 
-   Flow(uint64_t payloadlimit, double inactivetimeout, double activetimeout)
+   Flow(/*uint64_t payloadlimit,*/ double inactivetimeout, double activetimeout)
    {
       erase();
-      this->plimit = payloadlimit;
+//      this->plimit = payloadlimit;
       this->inactive = inactivetimeout;
       this->active = activetimeout;
-      if (plimit > 0) {
-         payload = new char(plimit);
-      }
+//       if (plimit > 0) {
+//          payload = new char(plimit);
+//       }
    };
    ~Flow()
    {
-      if (plimit > 0) {
-            delete payload;
-      }
+//       if (plimit > 0) {
+//             delete payload;
+//       }
+      // TODO uvolnit extensions z pameti
    };
 
    bool isempty();
@@ -108,7 +110,7 @@ public:
       this->statsout = options.statsout;
       flowarray = new Flow* [size];
       for (int i = 0; i < size; i++)
-         flowarray[i] = new Flow(options.payloadlimit, options.inactivetimeout, options.activetimeout);
+         flowarray[i] = new Flow(/*options.payloadlimit,*/ options.inactivetimeout, options.activetimeout);
    };
    ~NHTFlowCache()
    {

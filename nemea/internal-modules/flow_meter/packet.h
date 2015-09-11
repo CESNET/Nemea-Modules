@@ -5,7 +5,8 @@
 
 #define MAXPCKTPAYLOADSIZE 1600
 
-// Packet FlowFieldIndicator bit masks
+// Values of field presence indicator flags (packetFieldIndicator)
+// (Names of the fields are inspired by IPFIX specification)
 #define PCKT_PACKETFIELDINDICATOR               (0x1 << 0)
 #define PCKT_TIMESTAMP                          (0x1 << 1)
 #define PCKT_HASH                               (0x1 << 2)
@@ -24,7 +25,9 @@
 #define PCKT_TCPCONTROLBITS                     (0x1 << 15)
 #define PCKT_TRANSPORTPAYLOADPACKETSECTIONSIZE  (0x1 << 16)
 #define PCKT_TRANSPORTPAYLOADPACKETSECTION      (0x1 << 17)
+#define PCKT_VALID                              (0x1 << 18)
 
+// Some common sets of flags
 #define PCKT_PCAP_MASK (PCKT_TIMESTAMP) // Bit 0
 #define PCKT_INFO_MASK (\
    PCKT_HASH | \
@@ -65,6 +68,7 @@
    PCKT_TRANSPORTPAYLOADPACKETSECTION \
 )
 
+// TCP flags
 #define TCP_FIN    0x01
 #define TCP_SYN    0x02
 #define TCP_RST    0x04
@@ -72,23 +76,27 @@
 #define TCP_ACK    0x10
 #define TCP_URG    0x20
 
+// Packet parsed up to transport layer (TCP/UDP)
 struct Packet {
    uint64_t    packetFieldIndicator;
-   double      timestamp;
+   double      timestamp; // TODO: jak ukladat timestamp?
+
    uint8_t     ipVersion;
-   uint8_t     protocolIdentifier;
    uint16_t    ipLength;
-   uint8_t     ipClassOfService;
    uint8_t     ipTtl;
+   uint8_t     protocolIdentifier;
+   uint8_t     ipClassOfService;
    uint32_t    sourceIPv4Address;
    uint32_t    destinationIPv4Address;
    char        sourceIPv6Address[16];
    char        destinationIPv6Address[16];
+
    uint16_t    sourceTransportPort;
    uint16_t    destinationTransportPort;
    uint8_t     tcpControlBits;
+
    uint16_t    transportPayloadPacketSectionSize;
-   char        transportPayloadPacketSection[MAXPCKTPAYLOADSIZE];
+   const char  *transportPayloadPacketSection;
 };
 
 #endif

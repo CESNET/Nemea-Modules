@@ -12,20 +12,22 @@ struct FlowKey {
    uint8_t  proto;
 };
 
-class KeyComparator {
+class KeyComparator
+{
 public:
    bool operator()(const FlowKey &f1, const FlowKey &f2)
    {
-      if (f1.srcip != f2.srcip)
+      if (f1.srcip != f2.srcip) {
          return (f1.srcip < f2.srcip);
-      else if (f1.dstip != f2.dstip)
+      } else if (f1.dstip != f2.dstip) {
          return (f1.dstip < f2.dstip);
-      else if (f1.srcport != f2.srcport)
+      } else if (f1.srcport != f2.srcport) {
          return (f1.srcport < f2.srcport);
-      else if (f1.dstport != f2.dstport)
+      } else if (f1.dstport != f2.dstport) {
          return (f1.dstport < f2.dstport);
-      else
+      } else {
          return (f1.proto < f2.proto);
+      }
    }
 };
 
@@ -36,19 +38,17 @@ typedef CacheArray::iterator CacheArrayIter;
 class MapFlowCache : public FlowCache
 {
    CacheArray records;
-   
+
 public:
    // Put packet into the cache (i.e. update corresponding flow record or create a new one)
    virtual int put_pkt(Packet &pkt);
-   
    virtual void init();
    virtual void finish();
-   
+
 protected:
    CacheArrayIter find_record(const FlowKey &key);
    CacheArrayIter new_record(const FlowKey &key, const Packet &pkt);
    void update_record(CacheArrayIter flow, const Packet &pkt);
-   
 };
 
 #endif

@@ -21,6 +21,7 @@ struct options_t {
    double inactivetimeout;
    double activetimeout;
    double statstime;
+   std::string interface;
    std::string infilename;
    std::string outfilename;
    std::string replacementstring;

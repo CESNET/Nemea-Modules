@@ -11,8 +11,8 @@
 
 #include <libtrap/trap.h>
 
-#include "../../nemea-framework/unirec/unirec.h"
-#include "../../nemea-framework/common/include/nemea-common.h"
+#include <unirec/unirec.h>
+#include <nemea-common.h>
 
 #include "flow_meter.h"
 #include "packet.h"
@@ -20,9 +20,10 @@
 #include "pcapreader.h"
 #include "nhtflowcache.h"
 #include "mapflowcache.h"
-#include "flowwriter.h"
+#include "unirecexporter.h"
 #include "stats.h"
 #include "fields.c"
+
 using namespace std;
 
 inline bool error(const string &e)
@@ -53,7 +54,8 @@ UR_FIELDS (
   BASIC("Flow meter module","Convert packets from PCAP file into flow records.",0,1)
 
 #define MODULE_PARAMS(PARAM) \
-  PARAM('c', "capture_interface", "Interface to capture from.", required_argument, "string")\
+  PARAM('c', "count", "Quit after n packets are captured.", required_argument, "uint32")\
+  PARAM('I', "interface", "Name of capture interface. (eth0 for example)", required_argument, "string")\
   PARAM('r', "file", "Pcap file to read.", required_argument, "string") \
   PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: FLOAT:FLOAT. (DEFAULT: 300.0:30.0)", required_argument, "string") \
   PARAM('p', "payload", "Collect payload of each flow. NUMBER specifies a limit to collect first NUMBER of bytes. By default do not collect payload.", required_argument, "uint64") \
@@ -75,9 +77,9 @@ int main(int argc, char *argv[])
    options.replacementstring = DEFAULT_REPLACEMENT_STRING;
    options.statsout = false;
    options.verbose = false;
+   options.interface = "";
 
-   std::string source_iface = "";
-   bool liveCapture;
+   uint32_t pkt_limit = 0;
    int sampling = 100;
    srand(time(NULL));
 
@@ -91,7 +93,10 @@ int main(int argc, char *argv[])
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
       case 'c':
-         source_iface = string(optarg);
+         pkt_limit = strtoul(optarg, NULL, 10);
+         break;
+      case 'I':
+         options.interface = string(optarg);
          break;
       case 't':
          cptr = strchr(optarg, ':');
@@ -100,14 +105,17 @@ int main(int argc, char *argv[])
          }
          *cptr = '\0';
          options.activetimeout = atof(optarg);
-         options.inactivetimeout = atof(cptr+1);
+         options.inactivetimeout = atof(cptr + 1);
          break;
       case 'p':
-         options.payloadlimit = atoi(optarg); break;
+         options.payloadlimit = atoi(optarg);
+         break;
       case 'r':
-         options.infilename = string(optarg);break;
+         options.infilename = string(optarg);
+         break;
       case 's':
-         options.flowcachesize = atoi(optarg); break;
+         options.flowcachesize = atoi(optarg);
+         break;
       case 'S':
          options.statstime = atof(optarg);
          options.statsout = true;
@@ -116,21 +124,22 @@ int main(int argc, char *argv[])
          sampling = atoi(optarg);
          break;
       case 'v':
-         options.replacementstring = optarg; break;
+         options.replacementstring = optarg;
+         break;
       case 'V':
-         options.verbose = true; break;
+         options.verbose = true;
+         break;
       default:
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return error("Invalid arguments");
       }
    }
 
-   if (source_iface != "" && options.infilename != "") {
+   if (options.interface != "" && options.infilename != "") {
       return error("Cannot capture from file and from interface at the same time.");
-   } else if (source_iface == "" && options.infilename == "") {
+   } else if (options.interface == "" && options.infilename == "") {
       return error("Neither capture interface nor input file specified.");
    }
-   liveCapture = (source_iface != "");
 
    if (options.flowcachesize%options.flowlinesize != 0) {
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
@@ -138,27 +147,21 @@ int main(int argc, char *argv[])
    }
 
    PcapReader packetloader(options);
-   PcapCapturer packetCapturer(source_iface, options.verbose);
-   if (!liveCapture) {
-      if (packetloader.open(options.infilename) != 0) {
+   if (options.interface == "") {
+      if (packetloader.open_file(options.infilename) != 0) {
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return error("Can't open input file: "+options.infilename);
       }
    } else {
-      if (packetCapturer.init() != 0) {
+      if (packetloader.init_interface(options.interface) != 0) {
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-         return error("Unable to initialize libpcap.");
+         return error("Unable to initialize libpcap: "+packetloader.errmsg);
       }
    }
 
-   FlowWriter flowwriter(options);
+   UnirecExporter flowwriter(options);
    if (flowwriter.open(options.infilename) != 0) {
-      if (source_iface != "") {
-         packetCapturer.close();
-      } else {
-         packetloader.close();
-      }
-
+      packetloader.close();
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return error("Couldn't open output file: "+options.infilename+".flow/.data.");
    }
@@ -172,46 +175,35 @@ int main(int argc, char *argv[])
    }
 
    flowcache.init();
-
    Packet packet;
    int ret;
+   uint32_t pkt_total = 0;
 
-   if(!liveCapture) {
-      while ((ret = packetloader.get_pkt(packet)) == 0 /* && packetloader.cnt_total < 1000 */) {
-         if (((rand()%99) +1) <= sampling) {
-            flowcache.put_pkt(packet);
-         }
+   while ((ret = packetloader.get_pkt(packet)) > 0) {
+      if (packet.packetFieldIndicator & PCKT_VALID && ((rand() % 99) +1) <= sampling) {
+         flowcache.put_pkt(packet);
+         ++pkt_total;
       }
 
-      if (ret > 0) {
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-         return error("Error when reading pcap file: "+packetloader.errmsg);
-      }
-   } else {
-      while ((ret = packetCapturer.get_pkt(packet)) >= 0) {
-         if (ret > 0) {
-            flowcache.put_pkt(packet);
-         }
-      }
-      if (ret < 0) {
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-         packetCapturer.close();
-         return error("Error during live capture.");
+      if (pkt_limit != 0 && /*packetloader.cnt_parsed*/pkt_total >= pkt_limit) {
+         break;
       }
    }
 
+   if (ret < 0) {
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      packetloader.close();
+      return error("Error during reading: "+packetloader.errmsg);
+   }
+   /*
    if (!options.statsout) {
       cout << "Total packets processed: "<< packetloader.cnt_total << endl;
       cout << "Packet headers parsed: "<< packetloader.cnt_parsed << endl;
    }
-
+   */
    flowcache.finish();
    flowwriter.close();
-   if (!liveCapture) {
-      packetloader.close();
-   } else {
-      packetCapturer.close();
-   }
+   packetloader.close();
 
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 

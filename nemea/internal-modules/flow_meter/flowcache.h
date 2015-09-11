@@ -20,51 +20,67 @@ public:
    virtual int put_pkt(Packet &pkt) = 0;
 
    // Should be called before first call of recv_pkt, after all plugins are added
-   virtual void init() {
+   virtual void init()
+   {
       plugins_init();
    }
 
    // Should be called after last call of recv_pkt
-   virtual void finish() {
+   virtual void finish()
+   {
       plugins_finish();
    }
 
    // Set an instance of FlowExporter used to export flows
-   void set_exporter(FlowExporter *exp) {
+   void set_exporter(FlowExporter *exp)
+   {
       exporter = exp;
    }
 
    // Add plugin to internal list of plugins (plugins are always called in the
    // same order, as they were added)
-   void add_plugin(FlowCachePlugin* plugin) {
+   void add_plugin(FlowCachePlugin *plugin)
+   {
       plugins.push_back(plugin);
    }
 
 protected:
    // Every FlowCache implementation should call these functions at appropriate places
-   void plugins_init() {
-      for (unsigned int i = 0; i < plugins.size(); i++)
+   void plugins_init()
+   {
+      for (unsigned int i = 0; i < plugins.size(); i++) {
          plugins[i]->init();
+      }
    }
-   void plugins_post_create(FlowRecord &rec, const Packet &pkt) {
-      for (unsigned int i = 0; i < plugins.size(); i++)
+   void plugins_post_create(FlowRecord &rec, const Packet &pkt)
+   {
+      for (unsigned int i = 0; i < plugins.size(); i++) {
          plugins[i]->post_create(rec, pkt);
+      }
    }
-   void plugins_pre_update(FlowRecord &rec, Packet &pkt) {
-      for (unsigned int i = 0; i < plugins.size(); i++)
+   void plugins_pre_update(FlowRecord &rec, Packet &pkt)
+   {
+      for (unsigned int i = 0; i < plugins.size(); i++) {
          plugins[i]->pre_update(rec, pkt);
+      }
    }
-   void plugins_post_update(FlowRecord &rec, const Packet &pkt) {
-      for (unsigned int i = 0; i < plugins.size(); i++)
+   void plugins_post_update(FlowRecord &rec, const Packet &pkt)
+   {
+      for (unsigned int i = 0; i < plugins.size(); i++) {
          plugins[i]->post_update(rec, pkt);
+      }
    }
-   void plugins_pre_export(FlowRecord &rec) {
-      for (unsigned int i = 0; i < plugins.size(); i++)
+   void plugins_pre_export(FlowRecord &rec)
+   {
+      for (unsigned int i = 0; i < plugins.size(); i++) {
          plugins[i]->pre_export(rec);
+      }
    }
-   void plugins_finish() {
-      for (unsigned int i = 0; i < plugins.size(); i++)
+   void plugins_finish()
+   {
+      for (unsigned int i = 0; i < plugins.size(); i++) {
          plugins[i]->finish();
+      }
    }
 };
 

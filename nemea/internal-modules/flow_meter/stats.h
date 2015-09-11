@@ -31,7 +31,6 @@ public:
    void post_update(FlowRecord &rec, const Packet &pkt);
    void pre_export(FlowRecord &rec);
    void finish();
-
 };
 
 #endif

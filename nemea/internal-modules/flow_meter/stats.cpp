@@ -8,7 +8,8 @@ using namespace std;
 // Constructor
 StatsPlugin::StatsPlugin(double interval, ostream &out)
  : interval(interval), out(out)
-{}
+{
+}
 
 void StatsPlugin::init()
 {
@@ -34,7 +35,6 @@ void StatsPlugin::post_update(FlowRecord &rec, const Packet &pkt)
 
 void StatsPlugin::pre_export(FlowRecord &rec)
 {
-
    flows_in_cache -= 1;
 }
 

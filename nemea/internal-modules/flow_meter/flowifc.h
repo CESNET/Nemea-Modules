@@ -4,7 +4,10 @@
 /* Interface between flow cache and flow exporter. */
 
 #include <stdint.h>
+#include <stdlib.h>
 
+// Values of field presence indicator flags (flowFieldIndicator)
+// (Names of the fields are inspired by IPFIX specification)
 #define FLW_FLOWFIELDINDICATOR       (0x1 << 0)
 #define FLW_HASH                     (0x1 << 1)
 #define FLW_FLOWSTARTTIMESTAMP       (0x1 << 2)
@@ -22,9 +25,8 @@
 #define FLW_PACKETTOTALCOUNT         (0x1 << 14)
 #define FLW_OCTETTOTALLENGTH         (0x1 << 15)
 #define FLW_TCPCONTROLBITS           (0x1 << 16)
-#define FLW_FLOWPAYLOADSTART         (0x1 << 17)
-#define FLW_FLOWPAYLOADSIZE          (0x1 << 18)
 
+// Some common sets of flags
 #define FLW_IPV4_MASK (\
    FLW_IPVERSION | \
    FLW_PROTOCOLIDENTIFIER | \
@@ -68,6 +70,24 @@
    FLW_FLOWPAYLOADSIZE \
 )
 
+// Flow record extenstion base class (derived class should add their own fields)
+struct FlowRecordExt {
+   FlowRecordExt *next;
+   uint16_t extType; // Type of extension (given by some enum)
+
+   // Constructor
+   FlowRecordExt(uint16_t type) : next(NULL), extType(type)
+   {
+   }
+   // Virutal destructor, needed if some fields in derived classes are dynamically allocated
+   virtual ~FlowRecordExt()
+   {
+      if (next != NULL) {
+         delete next;
+      }
+   }
+};
+
 struct FlowRecord {
    uint64_t flowFieldIndicator;
    double   flowStartTimestamp;
@@ -85,8 +105,64 @@ struct FlowRecord {
    uint32_t packetTotalCount;
    uint64_t octetTotalLength;
    uint8_t  tcpControlBits;
-   uint64_t flowPayloadStart;
-   uint64_t flowPayloadSize;
+   //uint64_t flowPayloadStart;
+   //uint64_t flowPayloadSize;
+   FlowRecordExt *exts; // List of extestions
+
+   void addExtension(FlowRecordExt* ext)
+   {
+      if (exts == NULL) {
+         // first extenstion - just set the new one
+         exts = ext;
+         exts->next = NULL;
+      } else {
+         // there already are some extensions - find the last one and append the new one after it
+         FlowRecordExt *ext_ptr = exts;
+         while (ext_ptr->next != NULL) {
+            ext_ptr = ext_ptr->next;
+         }
+         ext_ptr->next = ext;
+         ext_ptr->next->next = NULL;
+      }
+   }
+
+   FlowRecord() : exts(NULL)
+   {
+   }
+
+   ~FlowRecord()
+   {
+      if (exts != NULL) {
+         delete exts;
+      }
+   }
+};
+
+
+// Example - HTTP extensions
+enum httpMethodEnum {
+   GET=0,
+   HEAD,
+   POST,
+   PUT,
+   DELETE,
+   TRACE,
+   OPTIONS,
+   CONNECT,
+   PATCH
+}; // TODO vse podle sepcifikace
+
+struct FlowRecordExtHTTPReq : FlowRecordExt {
+   httpMethodEnum httpReqMethod;
+   char httpReqHost[64];
+   char httpReqUrl[128];
+   char httpReqUserAgent[128];
+   char httpReqReferer[128];
+
+};
+struct FlowRecordExtHTTPResp : FlowRecordExt {
+   uint16_t httpRespCode;
+   char httpRespContentType[32];
 };
 
 //Base class FlowExporter

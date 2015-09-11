@@ -11,7 +11,7 @@ void MapFlowCache::init()
 void MapFlowCache::finish()
 {
    // Export all records
-   for (CacheArrayIter it = records.begin(); it != records.end(); ++it) {
+   for (CacheArrayIter it = records.begin();it != records.end();++it) {
       plugins_pre_export(it->second);
       exporter->export_flow(it->second);
    }
@@ -23,12 +23,14 @@ void MapFlowCache::finish()
 // Put packet into the cache (i.e. update corresponding flow record or create a new one)
 int MapFlowCache::put_pkt(Packet &pkt)
 {
-   if ((pkt.packetFieldIndicator & PCKT_IPV4_MASK) != PCKT_IPV4_MASK)
+   if ((pkt.packetFieldIndicator & PCKT_IPV4_MASK) != PCKT_IPV4_MASK) {
       return 1; // Only IPv4 packets are supported
+   }
 
    if ((pkt.packetFieldIndicator & PCKT_TCP_MASK) != PCKT_TCP_MASK ||
-       (pkt.packetFieldIndicator & PCKT_UDP_MASK) != PCKT_UDP_MASK)
+       (pkt.packetFieldIndicator & PCKT_UDP_MASK) != PCKT_UDP_MASK) {
       return 2; // Only TCP/UDP packets are supported
+   }
 
    FlowKey key;
    key.srcip = pkt.sourceIPv4Address;
@@ -45,8 +47,7 @@ int MapFlowCache::put_pkt(Packet &pkt)
       plugins_pre_update(rec_it->second, pkt);
       update_record(rec_it, pkt);
       plugins_post_update(rec_it->second, pkt);
-   }
-   else {
+   } else {
       rec_it = new_record(key, pkt);
       plugins_post_create(rec_it->second, pkt);
    }
@@ -73,10 +74,11 @@ CacheArrayIter MapFlowCache::new_record(const FlowKey &key, const Packet &pkt)
    rec.destinationTransportPort = pkt.destinationTransportPort;
    rec.packetTotalCount = 1;
    rec.octetTotalLength = pkt.ipLength;
-   if (pkt.packetFieldIndicator & PCKT_TCPCONTROLBITS)
+   if (pkt.packetFieldIndicator & PCKT_TCPCONTROLBITS) {
       rec.tcpControlBits   = pkt.tcpControlBits;
-   else
+   } else {
       rec.tcpControlBits   = 0;
+   }
    rec.flowFieldIndicator = FLW_TIMESTAMPS_MASK | FLW_IPV4_MASK |
                             FLW_TCP_MASK | FLW_IPSTAT_MASK;
 
@@ -89,6 +91,7 @@ void MapFlowCache::update_record(CacheArrayIter rec, const Packet &pkt)
    r.flowEndTimestamp  = pkt.timestamp;
    r.packetTotalCount += 1;
    r.octetTotalLength += pkt.ipLength;
-   if (pkt.packetFieldIndicator & PCKT_TCPCONTROLBITS)
+   if (pkt.packetFieldIndicator & PCKT_TCPCONTROLBITS) {
       r.tcpControlBits   |= pkt.tcpControlBits;
+   }
 }
