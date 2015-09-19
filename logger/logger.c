@@ -476,7 +476,7 @@ Available types are: int8, int16, int32, int64, uint8, uint16, uint32, uint64, c
       uint16_t rec_size;
       //trap_set_required_fmt(0, TRAP_FMT_UNIREC, "");
       int ret = trap_recv(0, &rec, &rec_size);
-      if (ret == TRAP_E_OK_FORMAT_CHANGED && trap_get_in_ifc_state(0) == FMT_SUBSET) {
+      if (ret == TRAP_E_FORMAT_CHANGED) {
          const char *spec = NULL;
          uint8_t data_fmt;
          if (trap_get_data_fmt(TRAPIFC_INPUT, 0, &data_fmt, &spec) != TRAP_E_OK) {
@@ -496,7 +496,6 @@ Available types are: int8, int16, int32, int64, uint8, uint16, uint32, uint64, c
                ret = 2;
                goto exit;
             }
-            trap_confirm_ifc_state(0);
          }
       } else {
          fprintf(stderr, "Error: Data format was not received. Trap error: %d, IFC state: %d\n", ret,  trap_get_in_ifc_state(0));

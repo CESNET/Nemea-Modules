@@ -127,7 +127,7 @@ void ta_capture_thread(int index)
 
 
    ret = trap_recv(index, &rec, &rec_size);
-   if (ret == TRAP_E_OK_FORMAT_CHANGED && trap_get_in_ifc_state(index) == FMT_SUBSET) {
+   if (ret == TRAP_E_FORMAT_CHANGED) {
       const char *spec = NULL;
       uint8_t data_fmt;
       if (trap_get_data_fmt(TRAPIFC_INPUT, index, &data_fmt, &spec) != TRAP_E_OK) {
@@ -143,7 +143,6 @@ void ta_capture_thread(int index)
                fail = 1;
             } else {
                ur_expand_template(spec, out_template);
-               trap_confirm_ifc_state(index);
                char * spec_cpy = ur_template_string(out_template);
                if (spec_cpy == NULL) {
                   fprintf(stderr, "Memory allocation problem.");
@@ -183,7 +182,7 @@ void ta_capture_thread(int index)
 
          ret = trap_recv(index, &rec, &rec_size);
          //update output template
-         if (ret == TRAP_E_OK_FORMAT_CHANGED && trap_get_in_ifc_state(index) == FMT_SUBSET) {
+         if (ret == TRAP_E_FORMAT_CHANGED) {
             const char *spec = NULL;
             uint8_t data_fmt;
             if (trap_get_data_fmt(TRAPIFC_INPUT, index, &data_fmt, &spec) != TRAP_E_OK) {
@@ -199,7 +198,6 @@ void ta_capture_thread(int index)
                      fail = 1;
                   } else {
                      ur_expand_template(spec, out_template);
-                     trap_confirm_ifc_state(index);
                      char * spec_cpy = ur_template_string(out_template);
                      if (spec_cpy == NULL) {
                         fprintf(stderr, "Memory allocation problem.");
@@ -351,7 +349,7 @@ void capture_thread(int index)
    trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
 
    ret = trap_recv(index, &rec, &rec_size);
-   if (ret == TRAP_E_OK_FORMAT_CHANGED && trap_get_in_ifc_state(index) == FMT_SUBSET) {
+   if (ret == TRAP_E_FORMAT_CHANGED) {
       const char *spec = NULL;
       uint8_t data_fmt;
       if (trap_get_data_fmt(TRAPIFC_INPUT, index, &data_fmt, &spec) != TRAP_E_OK) {
@@ -367,7 +365,6 @@ void capture_thread(int index)
                fail = 1;
             } else {
                ur_expand_template(spec, out_template);
-               trap_confirm_ifc_state(index);
                char * spec_cpy = ur_template_string(out_template);
                if (spec_cpy == NULL) {
                   fprintf(stderr, "Memory allocation problem.");
@@ -401,7 +398,7 @@ void capture_thread(int index)
 
       ret = trap_recv(index, &rec, &rec_size);
       //update output template
-      if (ret == TRAP_E_OK_FORMAT_CHANGED && trap_get_in_ifc_state(index) == FMT_SUBSET) {
+      if (ret == TRAP_E_FORMAT_CHANGED) {
          const char *spec = NULL;
          uint8_t data_fmt;
          if (trap_get_data_fmt(TRAPIFC_INPUT, index, &data_fmt, &spec) != TRAP_E_OK) {
@@ -417,7 +414,6 @@ void capture_thread(int index)
                   fail = 1;
                } else {
                   ur_expand_template(spec, out_template);
-                  trap_confirm_ifc_state(index);
                   char * spec_cpy = ur_template_string(out_template);
                   if (spec_cpy == NULL) {
                      fprintf(stderr, "Memory allocation problem.");

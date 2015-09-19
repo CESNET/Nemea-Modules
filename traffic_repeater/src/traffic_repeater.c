@@ -93,7 +93,7 @@ void traffic_repeater(void)
             continue;
          }
          TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, cnt_t++; continue, break);
-      } else if (ret == TRAP_E_OK_FORMAT_CHANGED && trap_get_in_ifc_state(0) == FMT_SUBSET) {
+      } else if (ret == TRAP_E_FORMAT_CHANGED) {
          //receive data format and set it to output IFC
          const char *spec = NULL;
          char *spec2 = NULL;
@@ -110,8 +110,6 @@ void traffic_repeater(void)
          }
          strcpy(spec2, spec);
          trap_set_data_fmt(0, TRAP_FMT_UNIREC, spec2);
-         //confirm state
-         trap_confirm_ifc_state(0);
       } else {
          TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, cnt_t++; continue, break);
       }
