@@ -23,6 +23,7 @@
 #include "unirecexporter.h"
 #include "stats.h"
 #include "fields.c"
+#include "httpplugin.h"
 
 using namespace std;
 
@@ -169,6 +170,9 @@ int main(int argc, char *argv[])
    NHTFlowCache flowcache(options);
    flowcache.set_exporter(&flowwriter);
 
+   //HTTPPlugin http(options);
+   //flowcache.add_plugin(&http);
+
    if (options.statsout) {
       StatsPlugin stats(options.statstime, cout);
       flowcache.add_plugin(&stats);
@@ -177,15 +181,17 @@ int main(int argc, char *argv[])
    flowcache.init();
    Packet packet;
    int ret;
-   uint32_t pkt_total = 0;
+   uint32_t pkt_total = 0, pkt_parsed = 0;
+   packet.transportPayloadPacketSection = new char[MAXPCKTPAYLOADSIZE + 1];
 
    while ((ret = packetloader.get_pkt(packet)) > 0) {
       if (packet.packetFieldIndicator & PCKT_VALID && ((rand() % 99) +1) <= sampling) {
          flowcache.put_pkt(packet);
-         ++pkt_total;
+         pkt_parsed++;
       }
+      pkt_total++;
 
-      if (pkt_limit != 0 && /*packetloader.cnt_parsed*/pkt_total >= pkt_limit) {
+      if (pkt_limit != 0 && pkt_parsed >= pkt_limit) {
          break;
       }
    }
@@ -193,17 +199,19 @@ int main(int argc, char *argv[])
    if (ret < 0) {
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       packetloader.close();
-      return error("Error during reading: "+packetloader.errmsg);
+      return error("Error during reading: " + packetloader.errmsg);
    }
-   /*
+
    if (!options.statsout) {
-      cout << "Total packets processed: "<< packetloader.cnt_total << endl;
-      cout << "Packet headers parsed: "<< packetloader.cnt_parsed << endl;
+      cout << "Total packets processed: "<< pkt_total << endl;
+      cout << "Packet headers parsed: "<< pkt_parsed << endl;
    }
-   */
+
    flowcache.finish();
    flowwriter.close();
+   //http.close();
    packetloader.close();
+   delete [] packet.transportPayloadPacketSection;
 
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 

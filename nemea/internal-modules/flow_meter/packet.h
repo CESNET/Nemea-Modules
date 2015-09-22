@@ -2,6 +2,7 @@
 #define PACKET_H
 
 #include <stdint.h>
+#include <stdlib.h>
 
 #define MAXPCKTPAYLOADSIZE 1600
 
@@ -76,6 +77,7 @@
 #define TCP_ACK    0x10
 #define TCP_URG    0x20
 
+#include <stdio.h>
 // Packet parsed up to transport layer (TCP/UDP)
 struct Packet {
    uint64_t    packetFieldIndicator;
@@ -96,7 +98,10 @@ struct Packet {
    uint8_t     tcpControlBits;
 
    uint16_t    transportPayloadPacketSectionSize;
-   const char  *transportPayloadPacketSection;
+   char        *transportPayloadPacketSection;
+   Packet() : transportPayloadPacketSection(NULL)
+   {
+   }
 };
 
 #endif

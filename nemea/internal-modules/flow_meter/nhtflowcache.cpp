@@ -172,16 +172,16 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       if (!found) {
          flowindex = lineindex + linesize - 1;
 
-// Export flow
+         // Export flow
          plugins_pre_export(flowarray[flowindex]->flowrecord);
          exporter->export_flow(flowarray[flowindex]->flowrecord);
 
          expired++;
          int flowindexstart = lineindex + insertpos;
-         Flow * ptrflow = flowarray[flowindex];
+         Flow *ptrflow = flowarray[flowindex];
          ptrflow->erase();
          for (int j = flowindex; j > flowindexstart; j--) {
-            flowarray[j] = flowarray[j-1];
+            flowarray[j] = flowarray[j - 1];
          }
          flowindex = flowindexstart;
          flowarray[flowindex] = ptrflow;
@@ -225,7 +225,7 @@ void NHTFlowCache::parsereplacementstring()
    size_t searchpos = 0;
    size_t searchposold = 0;
 
-   while ((searchpos = policy.find(',',searchpos)) != string::npos) {
+   while ((searchpos = policy.find(',', searchpos)) != string::npos) {
       rpl.push_back(atoi((char *) policy.substr(searchposold, searchpos-searchposold).c_str()));
       searchpos++;
       searchposold = searchpos;
@@ -238,8 +238,8 @@ long NHTFlowCache::calculatehash()
    // TODO tady se pouzivaji tridy z "locale" jen proto ze umi nejak hashovat stringy
    // vypadat to divne, asi by bylo lepsi pouzit neco jineho (vlatni hash nebo hash z nemea-common)
    locale loc;
-   const collate<char>& coll = use_facet<collate<char> >(loc);
-   return coll.hash(key,key + key_len);
+   const collate<char> &coll = use_facet<collate<char> >(loc);
+   return coll.hash(key, key + key_len);
 }
 
 void NHTFlowCache::createhashkey(Packet pkt)

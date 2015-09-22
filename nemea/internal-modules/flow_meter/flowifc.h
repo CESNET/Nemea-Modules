@@ -70,6 +70,11 @@
    FLW_FLOWPAYLOADSIZE \
 )
 
+enum extTypeEnum {
+   http_request = 0,
+   http_response
+};
+
 // Flow record extenstion base class (derived class should add their own fields)
 struct FlowRecordExt {
    FlowRecordExt *next;
@@ -105,8 +110,6 @@ struct FlowRecord {
    uint32_t packetTotalCount;
    uint64_t octetTotalLength;
    uint8_t  tcpControlBits;
-   //uint64_t flowPayloadStart;
-   //uint64_t flowPayloadSize;
    FlowRecordExt *exts; // List of extestions
 
    void addExtension(FlowRecordExt* ext)
@@ -126,22 +129,38 @@ struct FlowRecord {
       }
    }
 
+   FlowRecordExt *getExtension(uint16_t extType)
+   {
+      FlowRecordExt *ext = exts;
+      while (ext != NULL) {
+         if (ext->extType == extType) {
+            return ext;
+         }
+         ext = ext->next;
+      }
+      return NULL;
+   }
+
+   void removeExtensions()
+   {
+      if (exts != NULL) {
+         delete exts;
+         exts = NULL;
+      }
+   }
+
    FlowRecord() : exts(NULL)
    {
    }
 
    ~FlowRecord()
    {
-      if (exts != NULL) {
-         delete exts;
-      }
+      removeExtensions();
    }
 };
 
-
-// Example - HTTP extensions
 enum httpMethodEnum {
-   GET=0,
+   GET = 0,
    HEAD,
    POST,
    PUT,
@@ -149,8 +168,9 @@ enum httpMethodEnum {
    TRACE,
    OPTIONS,
    CONNECT,
-   PATCH
-}; // TODO vse podle sepcifikace
+   PATCH,
+   UNDEFINED
+};
 
 struct FlowRecordExtHTTPReq : FlowRecordExt {
    httpMethodEnum httpReqMethod;
@@ -159,11 +179,26 @@ struct FlowRecordExtHTTPReq : FlowRecordExt {
    char httpReqUserAgent[128];
    char httpReqReferer[128];
 
+   FlowRecordExtHTTPReq() : FlowRecordExt(http_request)
+   {
+      httpReqHost[0] = 0;
+      httpReqUrl[0] = 0;
+      httpReqUserAgent[0] = 0;
+      httpReqReferer[0] = 0;
+   }
 };
+
 struct FlowRecordExtHTTPResp : FlowRecordExt {
    uint16_t httpRespCode;
    char httpRespContentType[32];
+
+   FlowRecordExtHTTPResp() : FlowRecordExt(http_response)
+   {
+      httpRespCode = 0;
+      httpRespContentType[0] = 0;
+   }
 };
+
 
 //Base class FlowExporter
 class FlowExporter

@@ -30,7 +30,7 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
    Packet &pkt = *(Packet *)arg;
    struct ethhdr *eth = (struct ethhdr *) data;
    uint8_t transport_proto = 0x0;
-   int payload_len = 0x0;
+   uint16_t payload_len = 0x0;
 
    uint16_t ethertype = ntohs(eth->h_proto);
    if (ethertype == ETH_P_8021Q) {
@@ -40,7 +40,7 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
       data += 14;
    }
 
-   pkt.packetFieldIndicator = 0x0;
+   pkt.packetFieldIndicator = PCKT_TIMESTAMP;
    pkt.timestamp = h->ts.tv_sec + h->ts.tv_usec/1000000.0;
 
    if (ethertype == ETH_P_IP) {
@@ -78,10 +78,8 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
       data += 40;
 
    } else {
-      fprintf(stderr, "Unknown ethernet type, %04X, skipping...\n", ethertype);
       return;
    }
-
 
    if (transport_proto == IPPROTO_TCP) {
       struct tcphdr *tcp = (struct tcphdr *) (data);
@@ -122,24 +120,25 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
       data += 8;
       payload_len -= 8;
 
-   } else if (transport_proto == IPPROTO_ICMP) {
+   } /*else if (transport_proto == IPPROTO_ICMP) {
       struct icmphdr *icmp = (struct icmphdr *) (data);
 
    } else if (transport_proto == IPPROTO_ICMPV6) {
       struct icmp6_hdr *icmp6 = (struct icmp6_hdr *) (data);
 
-   } else {
-      fprintf(stderr, "Unknown protocol\n");
+   }*/ else {
       return;
    }
 
    if (((pkt.packetFieldIndicator & PCKT_TCP_MASK) == PCKT_TCP_MASK) ||
        ((pkt.packetFieldIndicator & PCKT_UDP_MASK) == PCKT_UDP_MASK)) {
-      pkt.transportPayloadPacketSectionSize = payload_len;
-      pkt.transportPayloadPacketSection = (const char*)data;
-      pkt.packetFieldIndicator |= PCKT_PAYLOAD_MASK;
+      if (payload_len <= MAXPCKTPAYLOADSIZE) {
+         pkt.transportPayloadPacketSectionSize = payload_len;
+         memcpy(pkt.transportPayloadPacketSection, data, payload_len);
+         pkt.transportPayloadPacketSection[payload_len] = 0;
+         pkt.packetFieldIndicator |= PCKT_PAYLOAD_MASK;
+      }
    }
-
    pkt.packetFieldIndicator |= PCKT_VALID;
 }
 
