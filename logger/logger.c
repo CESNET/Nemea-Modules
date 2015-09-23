@@ -106,8 +106,8 @@ static int stop = 0;
 
 int verbose;
 static int n_inputs = 1; // Number of input interfaces
-static ur_template_t **templates; // UniRec templates of input interfaces (array of length n_inputs)
-static ur_template_t *out_template; // UniRec template with union of fields of all inputs
+static ur_template_t **templates = NULL; // UniRec templates of input interfaces (array of length n_inputs)
+static ur_template_t *out_template = NULL; // UniRec template with union of fields of all inputs
 int print_ifc_num = 0;
 int print_time = 0;
 
@@ -574,10 +574,13 @@ exit:
    // Do all necessary cleanup before exiting
    TRAP_DEFAULT_FINALIZATION();
 
-   for (int i = 0; i < n_inputs; i++) {
-      ur_free_template(templates[i]);
-   }
+   if (templates) {
+      for (int i = 0; i < n_inputs; i++) {
+         ur_free_template(templates[i]);
+      }
    free(templates);
+   }
+
    ur_free_template(out_template);
    ur_finalize();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
