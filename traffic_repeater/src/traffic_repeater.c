@@ -79,39 +79,43 @@ void traffic_repeater(void)
    //main loop
    while (stop == 0) {
       ret = trap_recv(0, &data, &data_size);
-      if (ret == TRAP_E_OK) {
-         cnt_r++;
-         if (data_size <= 1) {
-            if (verb) {
-               fprintf(stderr, "Info: Final record received, terminating repeater...\n");
+      if (ret == TRAP_E_OK || ret == TRAP_E_FORMAT_CHANGED) {
+         if (ret == TRAP_E_OK) {
+            cnt_r++;
+            if (data_size <= 1) {
+               if (verb) {
+                  fprintf(stderr, "Info: Final record received, terminating repeater...\n");
+               }
+               stop = 1;
             }
-            stop = 1;
+         } else {
+            //receive data format and set it to output IFC
+            const char *spec = NULL;
+            char *spec2 = NULL;
+            uint8_t data_fmt;
+            if (trap_get_data_fmt(TRAPIFC_INPUT, 0, &data_fmt, &spec) != TRAP_E_OK) {
+               fprintf(stderr, "Data format was not loaded.");
+               return;
+            }
+            //set the data format to output interface
+            spec2 = malloc (sizeof(char) * (strlen(spec) + 1));
+            if (spec2 == NULL) {
+               fprintf(stderr, "Memory allocation problem");
+               return;
+            }
+            strcpy(spec2, spec);
+            trap_set_data_fmt(0, TRAP_FMT_UNIREC, spec2);
+            ret = trap_send(0, data, data_size);
          }
+
          ret = trap_send(0, data, data_size);
          if (ret == TRAP_E_OK) {
             cnt_s++;
             continue;
          }
          TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, cnt_t++; continue, break);
-      } else if (ret == TRAP_E_FORMAT_CHANGED) {
-         //receive data format and set it to output IFC
-         const char *spec = NULL;
-         char *spec2 = NULL;
-         uint8_t data_fmt;
-         if (trap_get_data_fmt(TRAPIFC_INPUT, 0, &data_fmt, &spec) != TRAP_E_OK) {
-            fprintf(stderr, "Data format was not loaded.");
-            return;
-         }
-         //set the data format to output interface
-         spec2 = malloc (sizeof(char) * (strlen(spec) + 1));
-         if (spec2 == NULL) {
-            fprintf(stderr, "Memory allocation problem");
-            return;
-         }
-         strcpy(spec2, spec);
-         trap_set_data_fmt(0, TRAP_FMT_UNIREC, spec2);
       } else {
-         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, cnt_t++; continue, break);
+         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, cnt_t++; do {puts("unexpected ret value"); continue;} while (0);, break);
       }
    }
 
