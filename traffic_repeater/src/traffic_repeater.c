@@ -80,8 +80,8 @@ void traffic_repeater(void)
    while (stop == 0) {
       ret = trap_recv(0, &data, &data_size);
       if (ret == TRAP_E_OK || ret == TRAP_E_FORMAT_CHANGED) {
+         cnt_r++;
          if (ret == TRAP_E_OK) {
-            cnt_r++;
             if (data_size <= 1) {
                if (verb) {
                   fprintf(stderr, "Info: Final record received, terminating repeater...\n");
@@ -89,23 +89,15 @@ void traffic_repeater(void)
                stop = 1;
             }
          } else {
-            //receive data format and set it to output IFC
+            // Get the data format of senders output interface (the data format of the output interface it is connected to)
             const char *spec = NULL;
-            char *spec2 = NULL;
-            uint8_t data_fmt;
+            uint8_t data_fmt = TRAP_FMT_UNKNOWN;
             if (trap_get_data_fmt(TRAPIFC_INPUT, 0, &data_fmt, &spec) != TRAP_E_OK) {
                fprintf(stderr, "Data format was not loaded.");
                return;
             }
-            //set the data format to output interface
-            spec2 = malloc (sizeof(char) * (strlen(spec) + 1));
-            if (spec2 == NULL) {
-               fprintf(stderr, "Memory allocation problem");
-               return;
-            }
-            strcpy(spec2, spec);
-            trap_set_data_fmt(0, TRAP_FMT_UNIREC, spec2);
-            ret = trap_send(0, data, data_size);
+            // Set the same data format to repeaters output interface
+            trap_set_data_fmt(0, TRAP_FMT_UNIREC, spec);
          }
 
          ret = trap_send(0, data, data_size);
