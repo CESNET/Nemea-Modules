@@ -6,8 +6,12 @@
 #include "flowifc.h"
 #include "httpplugin.h"
 
+//#define DEBUG_HTTP
+//#define DEBUG_HTTP_PAYLOAD_PREVIEW
 using namespace std;
 
+#define HTTP_LINE_DELIMITER "\r\n"
+#define HTTP_HEADER_DELIMITER ':'
 
 HTTPPlugin::HTTPPlugin(options_t options) : statsout(options.statsout), requests(0), responses(0), total(0)
 {
@@ -78,44 +82,90 @@ void HTTPPlugin::close()
    strncpy(destination, source + begin, len);\
    destination[len] = 0;
 
+#ifdef DEBUG_HTTP
+static uint32_t s_requests = 0, s_responses = 0;
+#endif /* DEBUG_HTTP */
+
 bool HTTPPlugin::parse_http_request(const char *data, int payload_len, FlowRecordExtHTTPReq *rec)
 {
    total++;
+#ifdef DEBUG_HTTP
+   printf("---------- http parser #%u ----------\n", total);
+   printf("Parsing request number: %u\n\n", ++s_requests);
+   printf("Payload length: %u\n", payload_len);
+#ifdef DEBUG_HTTP_PAYLOAD_PREVIEW
+   printf("##################\n");
+   for(int l = 0; l < payload_len; l++) {
+      printf("%c", data[l]);
+   }
+   printf("\n##################\n");
+#endif /* DEBUG_HTTP_PAYLOAD_PREVIEW */
+#endif /* DEBUG_HTTP */
 
    if (payload_len == 0) {
+#ifdef DEBUG_HTTP
+      printf("Parser quits:\tpayload length = 0\n");
+#endif /* DEBUG_HTTP */
       return false;
    }
 
    char buf[64];
    int i = strchr(data, ' ') - data, j, len = 0;
    if (i < 0 || i > 10) {
+#ifdef DEBUG_HTTP
+      fprintf(stderr, "Parser quits:\tnot a http request header\n");
+#endif /* DEBUG_HTTP */
       return false;
    }
    j = strchr(data + i + 1, ' ') - data;
+   if (j < 0) {
+#ifdef DEBUG_HTTP
+      fprintf(stderr, "Parser quits:\trequest is fragmented\n");
+#endif /* DEBUG_HTTP */
+      return false;
+   }
 
    STRCPY(buf, data, 0, i)
    httpMethodEnum method = process_http_method(buf);
    if (method == UNDEFINED) {
+#ifdef DEBUG_HTTP
+      fprintf(stderr, "Parser quits:\tundefined http method: %s\n", buf);
+#endif /* DEBUG_HTTP */
       return false;
    }
    rec->httpReqMethod = method;
    STRCPY(rec->httpReqUrl, data, i + 1, j)
+#ifdef DEBUG_HTTP
+   printf("Method: %s\n", buf);
+   printf("Url: %s\n", rec->httpReqUrl);
+#endif /* DEBUG_HTTP */
 
-   i = strstr(data + j, "\r\n") - data + 2;
+   i = strstr(data + j, HTTP_LINE_DELIMITER) - data + 2;
    while (i < payload_len) {
-      j = strstr(data + i, "\r\n") - data;
+      j = strstr(data + i, HTTP_LINE_DELIMITER) - data;
       if (j < 0) {
+#ifdef DEBUG_HTTP
+         fprintf(stderr, "Parser quits:\theader is fragmented\n");
+#endif /* DEBUG_HTTP */
          return  false;
       } else if (j == i) {
          break;
       }
 
-      int k = strchr(data + i, ':') - data;
+      int k = strchr(data + i, HTTP_HEADER_DELIMITER) - data;
       if (k < 0) {
+#ifdef DEBUG_HTTP
+         fprintf(stderr, "Parser quits:\theader is fragmented\n");
+#endif /* DEBUG_HTTP */
          return false;
       }
       STRCPY(buf, data, i, k)
 
+#ifdef DEBUG_HTTP
+      char debug_buff[4096];
+      STRCPY(debug_buff, data, k + 2, j)
+      printf("\t%s: %s\n", buf, debug_buff);
+#endif /* DEBUG_HTTP */
       if (strcmp(buf, "Host") == 0) {
          STRCPY(rec->httpReqHost, data, k + 2, j)
       } else if (strcmp(buf, "User-Agent") == 0) {
@@ -126,6 +176,9 @@ bool HTTPPlugin::parse_http_request(const char *data, int payload_len, FlowRecor
       i = j + 2;
    }
 
+#ifdef DEBUG_HTTP
+      printf("Parser quits:\tend of header section\n");
+#endif /* DEBUG_HTTP */
    requests++;
    return true;
 }
@@ -134,8 +187,23 @@ bool HTTPPlugin::parse_http_request(const char *data, int payload_len, FlowRecor
 bool HTTPPlugin::parse_http_response(const char *data, int payload_len, FlowRecordExtHTTPResp *rec)
 {
    total++;
+#ifdef DEBUG_HTTP
+   printf("---------- http parser #%u ----------\n", total);
+   printf("Parsing response number: %u\n\n", ++s_responses);
+   printf("Payload length: %u\n", payload_len);
+#ifdef DEBUG_HTTP_PAYLOAD_PREVIEW
+   printf("##################\n");
+   for(int l = 0; l < payload_len; l++) {
+      printf("%c", data[l]);
+   }
+   printf("\n##################\n");
+#endif /* DEBUG_HTTP_PAYLOAD_PREVIEW */
+#endif /* DEBUG_HTTP */
 
    if (payload_len == 0) {
+#ifdef DEBUG_HTTP
+      printf("Parser quits:\tpayload length = 0\n");
+#endif /* DEBUG_HTTP */
       return false;
    }
 
@@ -144,37 +212,67 @@ bool HTTPPlugin::parse_http_response(const char *data, int payload_len, FlowReco
 
    STRCPY(buf, data, 0, 4)
    if (strcmp(buf, "HTTP") != 0) {
+#ifdef DEBUG_HTTP
+      //fprintf(stderr, "Parser quits:\tpacket contains http response data\n");
+#endif /* DEBUG_HTTP */
       return false;
    }
 
    i = strchr(data, ' ') - data;
    if (i < 0 || i > 10) {
+#ifdef DEBUG_HTTP
+      fprintf(stderr, "Parser quits:\tnot a http response header\n");
+#endif /* DEBUG_HTTP */
       return false;
    }
    j = strchr(data + i + 1, ' ') - data;
+   if (j < 0) {
+#ifdef DEBUG_HTTP
+      fprintf(stderr, "Parser quits:\tresponse is fragmented\n");
+#endif /* DEBUG_HTTP */
+      return false;
+   }
 
    STRCPY(buf, data, i + 1, j)
    int code = atoi(buf);
    if (code <= 0 || code > 1000) {
+#ifdef DEBUG_HTTP
+      fprintf(stderr, "Parser quits:\twrong response code: %d\n", code);
+#endif /* DEBUG_HTTP */
       return false;
    }
    rec->httpRespCode = code;
+#ifdef DEBUG_HTTP
+   printf("Code: %d\n", code);
+#endif /* DEBUG_HTTP */
 
-   i = strstr(data + j, "\r\n") - data + 2;
+   i = strstr(data + j, HTTP_LINE_DELIMITER) - data + 2;
    while (i < payload_len) {
-      j = strstr(data + i, "\r\n") - data;
+      j = strstr(data + i, HTTP_LINE_DELIMITER) - data;
       if (j < 0) {
+#ifdef DEBUG_HTTP
+         fprintf(stderr, "Parser quits:\theader is fragmented\n");
+#endif /* DEBUG_HTTP */
          return  false;
       } else if (j == i) {
          break;
       }
 
-      int k = strchr(data + i, ':') - data;
+      int k = strchr(data + i, HTTP_HEADER_DELIMITER) - data;
       if (k < 0) {
+#ifdef DEBUG_HTTP
+         fprintf(stderr, "Parser quits:\theader is fragmented\n");
+#endif /* DEBUG_HTTP */
          return false;
       }
 
       STRCPY(buf, data, i, k)
+
+#ifdef DEBUG_HTTP
+      char debug_buff[4096];
+      STRCPY(debug_buff, data, k + 2, j)
+      printf("\t%s: %s\n", buf, debug_buff);
+#endif /* DEBUG_HTTP */
 
       if (strcmp(buf, "Content-Type") == 0) {
          STRCPY(rec->httpRespContentType, data, k + 2, j)
@@ -183,6 +281,9 @@ bool HTTPPlugin::parse_http_response(const char *data, int payload_len, FlowReco
       i = j + 2;
    }
 
+#ifdef DEBUG_HTTP
+      printf("Parser quits:\tend of header section\n");
+#endif /* DEBUG_HTTP */
    responses++;
    return true;
 }
