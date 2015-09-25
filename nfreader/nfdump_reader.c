@@ -68,7 +68,7 @@
 #include <nemea-common.h>
 
 #include <real_time_sending.h>
-#include "fields.c"
+#include "fields.h"
 
 // ***** Defaults and parameters *****
 #define DEFAULT_DIR_BIT_FIELD 0

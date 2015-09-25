@@ -59,7 +59,7 @@
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
-#include "fields.c"
+#include "fields.h"
 
 #define INTERVAL_LIMIT 1000   /* send interval limit */
 

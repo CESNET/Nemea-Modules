@@ -60,7 +60,7 @@
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 #include <map>
-#include "fields.c"
+#include "fields.h"
 
 UR_FIELDS(
 )

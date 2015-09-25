@@ -56,7 +56,7 @@
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
-#include "fields.c"
+#include "fields.h"
 
 #define TS_LAST   0
 #define TS_FIRST  1

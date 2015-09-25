@@ -68,7 +68,7 @@ extern "C" {
 #  endif
 #endif /* HAVE_LIBNFDUMP */
 
-#include "fields.c"
+#include "fields.h"
 
 using namespace std;
 

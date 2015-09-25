@@ -60,7 +60,7 @@
 #include <unirec/unirec.h>
 #include <omp.h>
 #include <ctype.h>
-#include "fields.c"
+#include "fields.h"
 
 UR_FIELDS()
 
