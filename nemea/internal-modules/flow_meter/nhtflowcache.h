@@ -82,10 +82,10 @@ class NHTFlowCache : public FlowCache
    std::string policy;
    replacementvector_t rpl;
    ptrflowvector_t flowexportqueue;
-   Flow ** flowarray;
+   Flow **flowarray;
 
 public:
-   NHTFlowCache(options_t options)
+   NHTFlowCache(const options_t &options)
    {
       this->linesize = options.flowlinesize;
       this->empty = 0;
@@ -97,9 +97,10 @@ public:
       this->lookups2 = 0;
       this->policy = options.replacementstring;
       this->statsout = options.statsout;
-      flowarray = new Flow* [size];
-      for (int i = 0; i < size; i++)
-         flowarray[i] = new Flow(/*options.payloadlimit,*/ options.inactivetimeout, options.activetimeout);
+      flowarray = new Flow*[size];
+      for (int i = 0; i < size; i++) {
+         flowarray[i] = new Flow(options.inactivetimeout, options.activetimeout);
+      }
    };
    ~NHTFlowCache()
    {

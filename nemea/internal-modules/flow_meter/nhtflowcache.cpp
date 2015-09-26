@@ -124,19 +124,17 @@ void NHTFlowCache::finish()
 
 int NHTFlowCache::put_pkt(Packet &pkt)
 {
-// Support check
    if (((pkt.packetFieldIndicator & PCKT_TCP_MASK) != PCKT_TCP_MASK) &&
        ((pkt.packetFieldIndicator & PCKT_UDP_MASK) != PCKT_UDP_MASK)) {
-      return 2; // Only TCP/UDP packets are supported
+      pkt.sourceTransportPort = 0;
+      pkt.destinationTransportPort = 0;
    }
-   // TODO mely by byt podporovany i jine protokoly (jako treba ICMP, ale obecne vsechny)
-   // pokud to nebude TCP/UDP, porty proste nebudou vyplneny (pro ucely klice se nastavi na nulu)
 
    createhashkey(pkt); // saves key value and key length into attributes NHTFlowCache::key and NHTFlowCache::key_len
    uint64_t hashval = calculatehash(); // calculates hash value from key created before
 
 // Find place for packet
-   int lineindex = ((hashval%size)/linesize) * linesize;
+   int lineindex = ((hashval % size) / linesize) * linesize;
 
    bool found = false;
    int flowindex = 0;
