@@ -44,7 +44,7 @@
 
 #include "anonymizer.h"
 #include "panonymizer.h"
-#include "fields.c"
+#include "fields.h"
 #include <nemea-common.h>
 
 
