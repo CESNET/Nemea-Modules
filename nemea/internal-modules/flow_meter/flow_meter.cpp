@@ -22,7 +22,7 @@
 #include "mapflowcache.h"
 #include "unirecexporter.h"
 #include "stats.h"
-#include "fields.c"
+#include "fields.h"
 #include "httpplugin.h"
 
 using namespace std;

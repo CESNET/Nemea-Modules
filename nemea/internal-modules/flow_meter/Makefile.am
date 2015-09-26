@@ -17,7 +17,9 @@ flow_meter_SOURCES=flow_meter.cpp \
 		    stats.h \
 		    flowcacheplugin.h \
 		    httpplugin.cpp \
-		    httpplugin.h
+		    httpplugin.h \
+		    fields.c \
+		    fields.h
 
 
 flow_meter_LDADD=-ltrap -lunirec -lpcap
