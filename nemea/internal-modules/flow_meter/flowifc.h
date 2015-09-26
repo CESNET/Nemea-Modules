@@ -131,12 +131,12 @@ struct FlowRecord {
 
    FlowRecordExt *getExtension(uint16_t extType)
    {
-      FlowRecordExt *ext = exts;
-      while (ext != NULL) {
-         if (ext->extType == extType) {
-            return ext;
+      FlowRecordExt *ext_ptr = exts;
+      while (ext_ptr != NULL) {
+         if (ext_ptr->extType == extType) {
+            return ext_ptr;
          }
-         ext = ext->next;
+         ext_ptr = ext_ptr->next;
       }
       return NULL;
    }

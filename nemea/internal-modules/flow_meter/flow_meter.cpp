@@ -55,16 +55,39 @@ UR_FIELDS (
   BASIC("Flow meter module", "Convert packets from PCAP file into flow records.", 0, 1)
 
 #define MODULE_PARAMS(PARAM) \
+  PARAM('p', "protocols", "Process specified application protocols. Format: protocol_name1,protocol_name2,... Supported protocols: http", required_argument, "string")\
   PARAM('c', "count", "Quit after n packets are captured.", required_argument, "uint32")\
   PARAM('I', "interface", "Name of capture interface. (eth0 for example)", required_argument, "string")\
   PARAM('r', "file", "Pcap file to read.", required_argument, "string") \
   PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: FLOAT:FLOAT. (DEFAULT: 300.0:30.0)", required_argument, "string") \
-  PARAM('p', "payload", "Collect payload of each flow. NUMBER specifies a limit to collect first NUMBER of bytes. By default do not collect payload.", required_argument, "uint64") \
+  PARAM('P', "payload", "Collect payload of each flow. NUMBER specifies a limit to collect first NUMBER of bytes. By default do not collect payload.", required_argument, "uint64") \
   PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 232 bytes. (DEFAULT: 65536)", required_argument, "uint32") \
   PARAM('S', "statistic", "Print statistics. NUMBER specifies interval between prints.", required_argument, "float") \
   PARAM('m', "sample", "Sampling probability. NUMBER in 100 (DEFAULT: 100)", required_argument, "int32") \
   PARAM('v', "vector", "Replacement vector. 1+32 NUMBERS.", required_argument, "string") \
   PARAM('V', "verbose", "Set verbose mode on.", no_argument, "none")
+
+bool parse_plugin_settings(const std::string &settings, uint32_t &plugin_settings)
+{
+   std::string proto;
+   size_t begin = 0, end = 0;
+   plugin_settings = 0;
+
+   while (end != std::string::npos) {
+      end = settings.find(",", begin);
+      proto = settings.substr(begin, (end == std::string::npos ? (settings.length() - begin) : (end - begin)));
+
+      if (proto == "http") {
+         plugin_settings |= PLUGIN_HTTP;
+      } else {
+         fprintf(stderr, "Unsupported protocol: \"%s\"\n", proto.c_str());
+         return false;
+      }
+      begin = end + 1;
+   }
+
+   return true;
+}
 
 int main(int argc, char *argv[])
 {
@@ -77,6 +100,7 @@ int main(int argc, char *argv[])
    options.replacementstring = DEFAULT_REPLACEMENT_STRING;
    options.statsout = false;
    options.verbose = false;
+   options.activeplugins = 0;
    options.interface = "";
 
    uint32_t pkt_limit = 0;
@@ -92,6 +116,12 @@ int main(int argc, char *argv[])
    char *cptr;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
+      case 'p':
+         if (!parse_plugin_settings(string(optarg), options.activeplugins)) {
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+            return error("Unable to parse input settings.");
+         }
+         break;
       case 'c':
          pkt_limit = strtoul(optarg, NULL, 10);
          break;
@@ -108,7 +138,7 @@ int main(int argc, char *argv[])
          options.activetimeout = atof(optarg);
          options.inactivetimeout = atof(cptr + 1);
          break;
-      case 'p':
+      case 'P':
          options.payloadlimit = atoi(optarg);
          break;
       case 'r':
@@ -166,8 +196,10 @@ int main(int argc, char *argv[])
    NHTFlowCache flowcache(options);
    flowcache.set_exporter(&flowwriter);
 
-   //HTTPPlugin http(options);
-   //flowcache.add_plugin(&http);
+   HTTPPlugin http(options);
+   if (options.activeplugins & PLUGIN_HTTP) {
+      flowcache.add_plugin(&http);
+   }
 
    if (options.statsout) {
       StatsPlugin stats(options.statstime, cout);
@@ -205,7 +237,7 @@ int main(int argc, char *argv[])
 
    flowcache.finish();
    flowwriter.close();
-   //http.close();
+   http.close();
    packetloader.close();
    delete [] packet.transportPayloadPacketSection;
 

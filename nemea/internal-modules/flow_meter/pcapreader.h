@@ -11,7 +11,7 @@ class PcapReader : public PacketReceiver
 {
 public:
    PcapReader();
-   PcapReader(options_t &options);
+   PcapReader(const options_t &options);
    ~PcapReader();
 
    int open_file(const std::string &file);

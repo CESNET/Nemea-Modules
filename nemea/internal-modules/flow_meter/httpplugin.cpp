@@ -13,7 +13,7 @@ using namespace std;
 #define HTTP_LINE_DELIMITER "\r\n"
 #define HTTP_HEADER_DELIMITER ':'
 
-HTTPPlugin::HTTPPlugin(options_t options) : statsout(options.statsout), requests(0), responses(0), total(0)
+HTTPPlugin::HTTPPlugin(const options_t &options) : statsout(options.statsout), requests(0), responses(0), total(0)
 {
 }
 

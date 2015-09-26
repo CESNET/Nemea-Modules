@@ -15,7 +15,7 @@ using namespace std;
 class HTTPPlugin : public FlowCachePlugin
 {
 public:
-   HTTPPlugin(options_t options);
+   HTTPPlugin(const options_t &options);
    void init();
    void post_create(FlowRecord &rec, const Packet &pkt);
    void pre_update(FlowRecord &rec, Packet &pkt);

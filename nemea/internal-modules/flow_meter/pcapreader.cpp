@@ -21,8 +21,8 @@ inline void swapbytes128(char *x)
    char tmp;
    for (int i = 0; i < 8; i++) {
       tmp = x[i];
-      x[i] = x[15-i];
-      x[15-i] = tmp;
+      x[i] = x[15 - i];
+      x[15 - i] = tmp;
    }
 }
 
@@ -244,7 +244,7 @@ PcapReader::PcapReader() : handle(NULL)
 {
 }
 
-PcapReader::PcapReader(options_t &options) : handle(NULL)
+PcapReader::PcapReader(const options_t &options) : handle(NULL)
 {
 }
 
