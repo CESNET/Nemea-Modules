@@ -44,11 +44,8 @@ void UnirecExporter::printinfo()
    flowos->write(hdr, hdr_len);
 }
 
-int UnirecExporter::open(const std::string &infilename)
+int UnirecExporter::init()
 {
-   // TRAP INITIALIZE
-   // Moved to main.cpp
-
    // Create template <COLLECTOR_FLOW>
    tmplt = ur_create_output_template(0, "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL", NULL);
 
@@ -124,12 +121,12 @@ int UnirecExporter::export_flow(FlowRecord &flow)
 
    if (flow.ipVersion == 4) {
       // IPv4
-      ur_set(tmplt, data, F_SRC_IP, ip_from_4_bytes_le((char*)&flow.sourceIPv4Address));
-      ur_set(tmplt, data, F_DST_IP, ip_from_4_bytes_le((char*)&flow.destinationIPv4Address));
+      ur_set(tmplt, data, F_SRC_IP, ip_from_4_bytes_le((char *)&flow.sourceIPv4Address));
+      ur_set(tmplt, data, F_DST_IP, ip_from_4_bytes_le((char *)&flow.destinationIPv4Address));
    } else {
       // IPv6
-      ur_set(tmplt, data, F_SRC_IP, ip_from_16_bytes_le((char*)&flow.sourceIPv6Address));
-      ur_set(tmplt, data, F_DST_IP, ip_from_16_bytes_le((char*)&flow.destinationIPv6Address));
+      ur_set(tmplt, data, F_SRC_IP, ip_from_16_bytes_le((char *)&flow.sourceIPv6Address));
+      ur_set(tmplt, data, F_DST_IP, ip_from_16_bytes_le((char *)&flow.destinationIPv6Address));
    }
 
    // Timestamp is double where integral is in seconds and fraction is microseconds/10^6

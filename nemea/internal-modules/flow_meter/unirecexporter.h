@@ -14,8 +14,8 @@ class UnirecExporter : public FlowExporter
    std::string outfileprefix;
    uint32_t flowlinesize;
 
-   std::ostream * flowos;
-   std::ostream * dataos;
+   std::ostream *flowos;
+   std::ostream *dataos;
 
    std::filebuf flowoutputfile;
    std::filebuf dataoutputfile;
@@ -29,9 +29,8 @@ class UnirecExporter : public FlowExporter
    ur_template_t *tmplt;
    void *data;
 
-
 public:
-   UnirecExporter(options_t options)
+   UnirecExporter(const options_t &options)
    {
       this->plimit = options.payloadlimit;
       this->outfileprefix = options.outfilename;
@@ -45,7 +44,7 @@ public:
       }
    }
 
-   int open(const std::string &outfilename);
+   int init();
    int close();
    int export_flow(FlowRecord &flow);
 };

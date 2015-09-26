@@ -52,7 +52,7 @@ UR_FIELDS (
 )
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Flow meter module","Convert packets from PCAP file into flow records.",0,1)
+  BASIC("Flow meter module", "Convert packets from PCAP file into flow records.", 0, 1)
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('c', "count", "Quit after n packets are captured.", required_argument, "uint32")\
@@ -65,7 +65,6 @@ UR_FIELDS (
   PARAM('m', "sample", "Sampling probability. NUMBER in 100 (DEFAULT: 100)", required_argument, "int32") \
   PARAM('v', "vector", "Replacement vector. 1+32 NUMBERS.", required_argument, "string") \
   PARAM('V', "verbose", "Set verbose mode on.", no_argument, "none")
-
 
 int main(int argc, char *argv[])
 {
@@ -90,7 +89,7 @@ int main(int argc, char *argv[])
    trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
 
    int opt;
-   char* cptr;
+   char *cptr;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
       case 'c':
@@ -102,6 +101,7 @@ int main(int argc, char *argv[])
       case 't':
          cptr = strchr(optarg, ':');
          if (cptr == NULL) {
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
             return error("Invalid argument for option -t");
          }
          *cptr = '\0';
@@ -161,11 +161,7 @@ int main(int argc, char *argv[])
    }
 
    UnirecExporter flowwriter(options);
-   if (flowwriter.open(options.infilename) != 0) {
-      packetloader.close();
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-      return error("Couldn't open output file: "+options.infilename+".flow/.data.");
-   }
+   flowwriter.init();
 
    NHTFlowCache flowcache(options);
    flowcache.set_exporter(&flowwriter);
