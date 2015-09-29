@@ -134,6 +134,7 @@ AC_CONFIG_FILES([Makefile
                  nemea-modules.spec
                  nfreader/Makefile
                  traffic_repeater/Makefile
+                 unirecfilter/Makefile
                ])
 
 

@@ -54,18 +54,24 @@
 #define DYN_FIELD_MAX_SIZE 1024 // Maximal size of dynamic field, longer fields will be cutted to this size
 
 #define SET_NULL(field_id, tmpl, data) \
-memset(ur_get_ptr_by_id(tmpl, data, field_id), 0, ur_get_size_by_id(field_id));
+memset(ur_get_ptr_by_id(tmpl, data, field_id), 0, ur_get_size(field_id));
 
 /* Used for types of expression nodes in abstract syntax tree */
-typedef enum { NODE_T_AST, NODE_T_EXPRESSION, NODE_T_PROTOCOL, NODE_T_IP, NODE_T_STRING, NODE_T_BRACKET } node_type;
+typedef enum { NODE_T_AST, NODE_T_EXPRESSION, NODE_T_EXPRESSION_FP,
+               NODE_T_PROTOCOL, NODE_T_IP, NODE_T_STRING,
+               NODE_T_BRACKET, NODE_T_NEGATION } node_type;
+
+/* Used for describing comparison operators */
+typedef enum { OP_EQ, OP_NE, OP_LT, OP_LE, OP_GT, OP_GE, OP_RE /* regex match */, OP_INVALID } cmp_op;
 
 /* Used for describing logical operators */
-typedef enum { OP_EQ, OP_NE, OP_LT, OP_LE, OP_GT, OP_GE, OP_RE /* regex match */ } cmp_op;
+typedef enum { OP_AND, OP_OR, OP_NOP } log_op;
+
 
 /* AST nodes */
 struct ast {
    node_type type;
-   int operator; /* 0 - NONE, 1 - OR, 2 - AND */
+   log_op operator;
    struct ast *l;
    struct ast *r;
 };
@@ -74,7 +80,16 @@ struct expression {
    node_type type;
    cmp_op cmp;
    char *column;
-   int number;
+   int64_t number;
+   ur_field_id_t id;
+   int is_signed;
+};
+
+struct expression_fp {
+   node_type type;
+   cmp_op cmp;
+   char *column;
+   double number;
    ur_field_id_t id;
 };
 
@@ -108,9 +123,11 @@ struct brack {
 
 int yylex();
 int yyparse();
+void printAST(struct ast *ast);
 int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec);
 void freeAST(struct ast *tree);
 struct ast *getTree(const char *str);
+void changeProtocol(struct ast **ast);
 
 extern char * str_buffer;
 

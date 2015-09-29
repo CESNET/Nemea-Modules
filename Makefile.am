@@ -16,6 +16,10 @@ SUBDIRS += nfreader
 endif
 endif
 
+if HAVE_BISON
+SUBDIRS += unirecfilter
+endif
+
 RPMDIR = RPMBUILD
 
 if MAKE_RPMS
