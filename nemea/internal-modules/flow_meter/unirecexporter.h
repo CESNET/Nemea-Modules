@@ -10,7 +10,6 @@
 
 class UnirecExporter : public FlowExporter
 {
-   uint64_t plimit;
    std::string outfileprefix;
    uint32_t flowlinesize;
 
@@ -32,16 +31,12 @@ class UnirecExporter : public FlowExporter
 public:
    UnirecExporter(const options_t &options)
    {
-      this->plimit = options.payloadlimit;
       this->outfileprefix = options.outfilename;
       this->flowlinesize = options.flowlinesize;
 
       this->flowfile_opened = false;
       this->datafile_opened = false;
       this->dataos_needed = false;
-      if (this->plimit > 0) {
-         this->dataos_needed=true;
-      }
    }
 
    int init();

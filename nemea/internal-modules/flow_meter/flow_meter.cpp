@@ -55,17 +55,16 @@ UR_FIELDS (
   BASIC("Flow meter module", "Convert packets from PCAP file into flow records.", 0, 1)
 
 #define MODULE_PARAMS(PARAM) \
-  PARAM('p', "protocols", "Process specified application protocols. Format: protocol_name1,protocol_name2,... Supported protocols: http", required_argument, "string")\
+  PARAM('p', "protocols", "Process specified application protocols. Format: protocol_name1[,...] Supported protocols: http", required_argument, "string")\
   PARAM('c', "count", "Quit after n packets are captured.", required_argument, "uint32")\
   PARAM('I', "interface", "Name of capture interface. (eth0 for example)", required_argument, "string")\
   PARAM('r', "file", "Pcap file to read.", required_argument, "string") \
   PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: FLOAT:FLOAT. (DEFAULT: 300.0:30.0)", required_argument, "string") \
-  PARAM('P', "payload", "Collect payload of each flow. NUMBER specifies a limit to collect first NUMBER of bytes. By default do not collect payload.", required_argument, "uint64") \
   PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 232 bytes. (DEFAULT: 65536)", required_argument, "uint32") \
   PARAM('S', "statistic", "Print statistics. NUMBER specifies interval between prints.", required_argument, "float") \
   PARAM('m', "sample", "Sampling probability. NUMBER in 100 (DEFAULT: 100)", required_argument, "int32") \
-  PARAM('v', "vector", "Replacement vector. 1+32 NUMBERS.", required_argument, "string") \
-  PARAM('V', "verbose", "Set verbose mode on.", no_argument, "none")
+  PARAM('V', "vector", "Replacement vector. 1+32 NUMBERS.", required_argument, "string") \
+  PARAM('v', "verbose", "Set verbose mode on.", no_argument, "none")
 
 bool parse_plugin_settings(const std::string &settings, uint32_t &plugin_settings)
 {
@@ -96,7 +95,6 @@ int main(int argc, char *argv[])
    options.flowlinesize = DEFAULT_FLOW_LINE_SIZE;
    options.inactivetimeout = DEFAULT_INACTIVE_TIMEOUT;
    options.activetimeout = DEFAULT_ACTIVE_TIMEOUT;
-   options.payloadlimit = DEFAULT_PAYLOAD_LIMIT;
    options.replacementstring = DEFAULT_REPLACEMENT_STRING;
    options.statsout = false;
    options.verbose = false;
@@ -119,7 +117,7 @@ int main(int argc, char *argv[])
       case 'p':
          if (!parse_plugin_settings(string(optarg), options.activeplugins)) {
             FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-            return error("Unable to parse input settings.");
+            return error("Invalid argument for option -p");
          }
          break;
       case 'c':
@@ -138,9 +136,6 @@ int main(int argc, char *argv[])
          options.activetimeout = atof(optarg);
          options.inactivetimeout = atof(cptr + 1);
          break;
-      case 'P':
-         options.payloadlimit = atoi(optarg);
-         break;
       case 'r':
          options.infilename = string(optarg);
          break;
@@ -153,11 +148,15 @@ int main(int argc, char *argv[])
          break;
       case 'm':
          sampling = atoi(optarg);
-         break;
-      case 'v':
-         options.replacementstring = optarg;
+         if (sampling < 0 || sampling > 100) {
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+            return error("Invalid argument for option -m: interval needs to be between 0-100");
+         }
          break;
       case 'V':
+         options.replacementstring = optarg;
+         break;
+      case 'v':
          options.verbose = true;
          break;
       default:
