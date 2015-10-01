@@ -159,47 +159,6 @@ struct FlowRecord {
    }
 };
 
-enum httpMethodEnum {
-   GET = 0,
-   HEAD,
-   POST,
-   PUT,
-   DELETE,
-   TRACE,
-   OPTIONS,
-   CONNECT,
-   PATCH,
-   UNDEFINED
-};
-
-struct FlowRecordExtHTTPReq : FlowRecordExt {
-   httpMethodEnum httpReqMethod;
-   char httpReqHost[64];
-   char httpReqUrl[128];
-   char httpReqUserAgent[128];
-   char httpReqReferer[128];
-
-   FlowRecordExtHTTPReq() : FlowRecordExt(http_request)
-   {
-      httpReqHost[0] = 0;
-      httpReqUrl[0] = 0;
-      httpReqUserAgent[0] = 0;
-      httpReqReferer[0] = 0;
-   }
-};
-
-struct FlowRecordExtHTTPResp : FlowRecordExt {
-   uint16_t httpRespCode;
-   char httpRespContentType[32];
-
-   FlowRecordExtHTTPResp() : FlowRecordExt(http_response)
-   {
-      httpRespCode = 0;
-      httpRespContentType[0] = 0;
-   }
-};
-
-
 //Base class FlowExporter
 class FlowExporter
 {
