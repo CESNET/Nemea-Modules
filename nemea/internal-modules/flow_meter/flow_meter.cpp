@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
    packet.transportPayloadPacketSection = new char[MAXPCKTPAYLOADSIZE + 1];
 
    while ((ret = packetloader.get_pkt(packet)) > 0) {
-      if (packet.packetFieldIndicator & PCKT_VALID && ((rand() % 99) +1) <= sampling) {
+      if (ret == 2 && (sampling == 100 || ((rand() % 99) +1) <= sampling)) {
          flowcache.put_pkt(packet);
          pkt_parsed++;
       }

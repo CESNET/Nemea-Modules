@@ -29,6 +29,7 @@ inline void swapbytes128(char *x)
 #ifdef DEBUG
 static uint32_t s_total_pkts = 0;
 #endif /* DEBUG */
+bool packet_valid = false;
 
 void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data)
 {
@@ -49,7 +50,7 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
    uint16_t ethertype = ntohs(eth->h_proto);
    if (ethertype == ETH_P_8021Q) {
 #ifdef DEBUG
-      printf("\t802.1Q field:\t%#06x\n", *(unsigned uint32_t*)(data + 12));
+      printf("\t802.1Q field:\t%#06x\n", *(unsigned uint32_t *)(data + 12));
 #endif /* DEBUG */
       data += 18;
       ethertype = ntohs(data[-2]);
@@ -234,7 +235,7 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
 #endif /* DEBUG */
    }
 
-   pkt.packetFieldIndicator |= PCKT_VALID;
+   packet_valid = true;
 #ifdef DEBUG
    printf("Packet parser exits: packet parsed\n");
 #endif /* DEBUG */
@@ -309,10 +310,14 @@ int PcapReader::get_pkt(Packet &packet)
       return -3;
    }
 
+   packet_valid = false;
    int ret = pcap_dispatch(handle, 1, packet_handler, (u_char *)(&packet));
+
+   if (ret == 1 && packet_valid) {
+      return 2;
+   }
    if (ret < 0) {
       errmsg = pcap_geterr(handle);
    }
-
    return ret;
 }
