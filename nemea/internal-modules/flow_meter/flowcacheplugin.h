@@ -4,6 +4,8 @@
 #include "packet.h"
 #include "flowifc.h"
 
+#define FLOW_FLUSH (0x1 << 0)
+
 class FlowCachePlugin
 {
 public:
@@ -12,12 +14,14 @@ public:
    {
    }
    // Called after a new flow record is created
-   virtual void post_create(FlowRecord &rec, const Packet &pkt)
+   virtual int post_create(FlowRecord &rec, const Packet &pkt)
    {
+      return 0;
    }
    // Called before an existing record is updated
-   virtual void pre_update(FlowRecord &rec, Packet &pkt)
+   virtual int pre_update(FlowRecord &rec, Packet &pkt)
    {
+      return 0;
    }
    // Called after an existing record is updated
    virtual void post_update(FlowRecord &rec, const Packet &pkt)

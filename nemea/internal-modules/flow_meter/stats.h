@@ -27,7 +27,7 @@ public:
    StatsPlugin(double interval, std::ostream &out);
 
    void init();
-   void post_create(FlowRecord &rec, const Packet &pkt);
+   int post_create(FlowRecord &rec, const Packet &pkt);
    void post_update(FlowRecord &rec, const Packet &pkt);
    void pre_export(FlowRecord &rec);
    void finish();

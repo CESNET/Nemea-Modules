@@ -21,27 +21,24 @@ void HTTPPlugin::init()
 {
 }
 
-void HTTPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
+int HTTPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 {
    if (pkt.sourceTransportPort == 80) {
       add_ext_http_response(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
    } else if (pkt.destinationTransportPort == 80) {
       add_ext_http_request(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
    }
+   return 0;
 }
 
-void HTTPPlugin::pre_update(FlowRecord &rec, Packet &pkt)
-{
-}
-
-void HTTPPlugin::post_update(FlowRecord &rec, const Packet &pkt)
+int HTTPPlugin::pre_update(FlowRecord &rec, Packet &pkt)
 {
    FlowRecordExt *ext = NULL;
    if (pkt.sourceTransportPort == 80) {
       ext = rec.getExtension(http_response);
       if(ext == NULL) {
          add_ext_http_response(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
-         return;
+         return 0;
       }
 
       parse_http_response(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, dynamic_cast<FlowRecordExtHTTPResp *>(ext));
@@ -49,11 +46,16 @@ void HTTPPlugin::post_update(FlowRecord &rec, const Packet &pkt)
       ext = rec.getExtension(http_request);
       if(ext == NULL) {
          add_ext_http_request(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
-         return;
+         return 0;
       }
 
       parse_http_request(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, dynamic_cast<FlowRecordExtHTTPReq *>(ext));
    }
+   return 0;
+}
+
+void HTTPPlugin::post_update(FlowRecord &rec, const Packet &pkt)
+{
 }
 
 void HTTPPlugin::pre_export(FlowRecord &rec)

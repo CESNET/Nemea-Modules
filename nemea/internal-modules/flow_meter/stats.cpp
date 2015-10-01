@@ -18,12 +18,13 @@ void StatsPlugin::init()
    print_header();
 }
 
-void StatsPlugin::post_create(FlowRecord &rec, const Packet &pkt)
+int StatsPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 {
    packets += 1;
    new_flows += 1;
    flows_in_cache += 1;
    check_timestamp(pkt);
+   return 0;
 }
 
 void StatsPlugin::post_update(FlowRecord &rec, const Packet &pkt)

@@ -17,8 +17,8 @@ class HTTPPlugin : public FlowCachePlugin
 public:
    HTTPPlugin(const options_t &options);
    void init();
-   void post_create(FlowRecord &rec, const Packet &pkt);
-   void pre_update(FlowRecord &rec, Packet &pkt);
+   int post_create(FlowRecord &rec, const Packet &pkt);
+   int pre_update(FlowRecord &rec, Packet &pkt);
    void post_update(FlowRecord &rec, const Packet &pkt);
    void pre_export(FlowRecord &rec);
    void finish();
@@ -32,6 +32,7 @@ private:
    httpMethodEnum process_http_method(const char *method) const;
 
    bool statsout;
+   bool keep_alive;
    uint32_t requests, responses, total;
 };
 
