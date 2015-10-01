@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-# Copyright (C) 2013,2014 CESNET
+# Copyright (C) 2013-2015 CESNET
 #
 # LICENSE TERMS
 #
@@ -255,6 +255,7 @@ record_metadata = dict() # To save send-time rules
 
 # Inititalize module
 init_trap()
+trap.set_data_fmt(0, trap.TRAP_FMT_UNIREC, sys.argv[1])
 
 # Main loop
 print "Current record:"
