@@ -57,6 +57,8 @@ Usage:
    num_ifc_out = 1
 )
 
+fieldOrder = []
+
 # ----------------------------------------------------------------------------
 
 def init_trap():
@@ -81,14 +83,15 @@ Available commands:
 """
 
 def print_record():
-   global record, record_metadata
-   for name,value in record:
+   global record, record_metadata, fieldOrder
+   for name in fieldOrder:
+      value = getattr(record, name)
       print "%s = %s%s" % (name, value if not isinstance(value, str) else '"'+value+'"', " {"+record_metadata[name]+"}" if name in record_metadata else "")
 
 
 def edit_record():
-   global record, record_metadata
-   for name in record.fields():
+   global record, record_metadata, fieldOrder
+   for name in fieldOrder:
       val = getattr(record, name)
       while True:
          valstr = raw_input("%s [%s]%s: " % (name, val if not isinstance(val, str) else '"'+val+'"', " {"+record_metadata[name]+"}" if name in record_metadata else ""))
@@ -248,10 +251,10 @@ URTmplt = unirec.CreateTemplate("URTmplt", sys.argv[1])
 record = URTmplt()
 record_metadata = dict() # To save send-time rules
 
-# TODO zaridit, aby si UniRec pamatoval poradi polozek tak, jak je mu predano
-#  razeni podle velikosti a abecedy by mela byt jen interni zalezitost
-#  (UniRec objekt si bude pamatovat dva seznamy polozek)
-
+# UniRec specifier was parsed and template created successfuly,
+# remember field order from the specifier, we expect ',' as a field delimiter
+# and ' ' as type and name delimiter
+fieldOrder = [ f.split(' ')[1] for f in sys.argv[1].split(',') ]
 
 # Inititalize module
 init_trap()
