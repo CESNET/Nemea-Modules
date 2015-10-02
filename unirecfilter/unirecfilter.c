@@ -68,19 +68,12 @@ UR_FIELDS ()
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Unirecfilter module",  "This NEMEA module selects records according to parameters in filter and sends"  \
+  BASIC("Unirecfilter module",  "This NEMEA module selects records according to parameters in filter and sends "  \
    "only fields specified in output template. " \
    "Unirecfilter expects unirec format of messages on input. Output format is " \
    "specified with -O flag, filter is specified with -F flag and contains expressions (<=, ==, &&, ...). " \
    "You can also specify output format and filter in a FILE, which allows sending " \
-   "output to multiple interfaces. " \
-   "Format of the file is [TEMPLATE_1]:FILTER_1; ...; [TEMPLATE_N]:FILTER_N; where each " \
-   "semicolon separated item corresponds with one output interface. One-line comments starting with " \
-   "'#' are allowed. When is -O flag missing, template from input is used on output. " \
-   "You can use syntax FIELD=value in the template to specify default value used if field " \
-   "is not present on the input (f.e. uint32 FOO=1)" \
-   "To reload filter while unirecfilter is running, save changes in filter file and send signal " \
-   "SIGUSR1 (10) to the running process." \
+   "output to multiple interfaces. \n" \
    ,1,-1)
 
 #define MODULE_PARAMS(PARAM) \
