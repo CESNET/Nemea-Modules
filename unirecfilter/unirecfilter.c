@@ -355,11 +355,8 @@ float, double, ipaddr, string, bytes*\n");
          fprintf(stderr, "ERROR: output data format is not set.\n");
       }
 
-      // Print output interface port number
-      printf("[%s] ", port_numbers[i]);
-
       // Get Abstract syntax tree from filter
-      output_specifiers[i]->tree = getTree(output_specifiers[i]->filter);
+      output_specifiers[i]->tree = getTree(output_specifiers[i]->filter, port_numbers[i]);
 
       // Calculate maximum needed memory for dynamic fields
       ur_field_id_t field_id = UR_ITER_BEGIN;
@@ -460,7 +457,7 @@ int main(int argc, char **argv)
 
    // No output interfaces
    if (n_outputs < 1) {
-      fprintf(stderr, "Error: You must specify at least one UniRec template.\n");
+      fprintf(stderr, "Error: You must specify at least one output interface.\n");
       TRAP_DEFAULT_FINALIZATION();
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 1;

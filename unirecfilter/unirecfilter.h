@@ -126,7 +126,7 @@ int yyparse();
 void printAST(struct ast *ast);
 int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec);
 void freeAST(struct ast *tree);
-struct ast *getTree(const char *str);
+struct ast *getTree(const char *str, const char *port_number);
 void changeProtocol(struct ast **ast);
 
 extern char * str_buffer;

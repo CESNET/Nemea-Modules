@@ -121,7 +121,7 @@ struct ast *newExpression(char *column, char *cmp, int64_t number, int is_signed
    free(cmp);
 
    if (id == UR_E_INVALID_NAME) {
-      printf("Warning: %s is not a valid UniRec field.\n", column);
+      printf("Warning: %s is not present in input format.\n", column);
       newast->id = UR_INVALID_FIELD;
    }
    else {
@@ -142,7 +142,7 @@ struct ast *newExpressionFP(char *column, char *cmp, double number)
    free(cmp);
 
    if (id == UR_E_INVALID_NAME) {
-      printf("Warning: %s is not a valid UniRec field.\n", column);
+      printf("Warning: %s is not present in input format.\n", column);
       newast->id = UR_INVALID_FIELD;
    }
    else {
@@ -175,7 +175,7 @@ struct ast *newIP(char *column, char *cmp, char *ipAddr)
 
    int id = ur_get_id_by_name(column);
    if (id == UR_E_INVALID_NAME) {
-      printf("Warning: %s is not a valid UniRec field.\n", column);
+      printf("Warning: %s is not present in input format.\n", column);
       newast->id = UR_INVALID_FIELD;
    } else {
       newast->id = id;
@@ -211,7 +211,7 @@ struct ast *newString(char *column, char *cmp, char *s)
    }
    int id = ur_get_id_by_name(column);
    if (id == UR_E_INVALID_NAME) {
-      printf("Warning: %s is not a valid UniRec field.\n", column);
+      printf("Warning: %s is not present in input format.\n", column);
       newast->id = UR_INVALID_FIELD;
    } else {
       newast->id = id;
@@ -650,11 +650,11 @@ void changeProtocol(struct ast **ast)
  * \return pointer to abstract syntax tree
  */
 
-struct ast *getTree(const char *str)
+struct ast *getTree(const char *str, const char *port_number)
 {
    struct ast *result;
    if (str == NULL || str[0] == '\0') {
-      printf("No Filter.\n");
+      printf("[%s] No Filter.\n", port_number);
       return NULL;
    }
    yy_scan_string(str);
@@ -666,7 +666,7 @@ struct ast *getTree(const char *str)
    }
    yy_delete_buffer(get_buf());
 
-   printf("Filter: ");
+   printf("[%s] Filter: ", port_number);
    printAST(result);
    printf("\n");
 
