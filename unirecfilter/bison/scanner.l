@@ -28,7 +28,7 @@ IPv6    ({h16}:){6}{ls32}|::({h16}:){5}{ls32}|({h16})?::({h16}:){4}{ls32}|(({h16
 %%
 
 ">"|"<"|"=<"|"<="|">="|"=>"                              { yylval.string = copyString(yytext, yyleng); return CMP; }
-"="|"=="|"!="|"<>"|"=~"                                  { yylval.string = copyString(yytext, yyleng); return EQ; }
+"="|"=="|"!="|"<>"|"=~"|"~="                             { yylval.string = copyString(yytext, yyleng); return EQ; }
 "!"|"NOT"                                                { return NOT; }
 "||"|"OR"                                                { return OR; }
 "&&"|"AND"                                               { return AND; }

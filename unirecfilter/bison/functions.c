@@ -79,7 +79,8 @@ op_pair cmp_op_table[] = {
    { "<=", OP_LE },
    { ">",  OP_GT },
    { ">=", OP_GE },
-   { "=~", OP_RE }
+   { "=~", OP_RE },
+   { "~=", OP_RE }
 };
 
 cmp_op get_op_type( char* cmp ) {
