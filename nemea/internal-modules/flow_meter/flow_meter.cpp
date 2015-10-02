@@ -29,9 +29,10 @@ using namespace std;
 
 inline bool error(const string &e)
 {
-   cerr << "flowgen: " << e << endl;
+   cerr << "flow_meter: " << e << endl;
    return EXIT_FAILURE;
 }
+
 trap_module_info_t *module_info = NULL;
 
 UR_FIELDS (
@@ -52,10 +53,10 @@ UR_FIELDS (
 )
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Flow meter module", "Convert packets from PCAP file into flow records.", 0, 1)
+  BASIC("Flow meter module", "Convert packets from PCAP file or live capture into flow records.", 0, 1)
 
 #define MODULE_PARAMS(PARAM) \
-  PARAM('p', "protocols", "Process specified application protocols. Format: protocol_name1[,...] Supported protocols: http", required_argument, "string")\
+  PARAM('p', "plugins", "Process specified application protocols. Format: protocol_name1[,...] Supported protocols: http", required_argument, "string")\
   PARAM('c', "count", "Quit after n packets are captured.", required_argument, "uint32")\
   PARAM('I', "interface", "Name of capture interface. (eth0 for example)", required_argument, "string")\
   PARAM('r', "file", "Pcap file to read.", required_argument, "string") \

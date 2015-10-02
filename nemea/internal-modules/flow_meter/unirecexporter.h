@@ -7,6 +7,7 @@
 
 #include "flow_meter.h"
 #include "flowifc.h"
+#include "flowexporter.h"
 
 class UnirecExporter : public FlowExporter
 {

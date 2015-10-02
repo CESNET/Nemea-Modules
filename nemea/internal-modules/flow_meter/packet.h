@@ -76,7 +76,6 @@
 #define TCP_ACK    0x10
 #define TCP_URG    0x20
 
-#include <stdio.h>
 // Packet parsed up to transport layer (TCP/UDP)
 struct Packet {
    uint64_t    packetFieldIndicator;

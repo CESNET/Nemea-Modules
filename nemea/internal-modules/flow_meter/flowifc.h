@@ -159,11 +159,4 @@ struct FlowRecord {
    }
 };
 
-//Base class FlowExporter
-class FlowExporter
-{
-public:
-   virtual int export_flow(FlowRecord &flow) = 0;
-};
-
 #endif

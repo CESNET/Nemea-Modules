@@ -4,6 +4,7 @@
 #include "flow_meter.h"
 #include "flowcache.h"
 #include "flowifc.h"
+#include "flowexporter.h"
 #include <string>
 
 #define MAX_KEYLENGTH 76

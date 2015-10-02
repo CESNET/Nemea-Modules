@@ -4,6 +4,7 @@
 #include "packet.h"
 #include "flowifc.h"
 #include "flowcacheplugin.h"
+#include "flowexporter.h"
 
 #include <vector>
 #include <cstring>
