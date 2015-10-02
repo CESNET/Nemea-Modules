@@ -654,7 +654,7 @@ int main(int argc, char **argv)
             ret = trap_send(i, output_specifiers[i]->out_rec, ur_rec_size(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec));
             trap_send_flush(i);
             // Handle possible errors
-            TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, continue, break);
+            TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, continue, {stop=1; break;});
          } else {
             if (verbose >= 1) {
                   printf("ADVANCED VERBOSE: Record %d declined on interface %d\n", num_records, i);
