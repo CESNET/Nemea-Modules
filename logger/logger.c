@@ -497,6 +497,10 @@ Available types are: int8, int16, int32, int64, uint8, uint16, uint32, uint64, c
                goto exit;
             }
          }
+      } else if (stop == 1) {
+        // SIGINT or SIGTERM received
+        ret = 2;
+        goto exit;
       } else {
          fprintf(stderr, "Error: Data format was not received. Trap error: %d, IFC state: %d\n", ret,  trap_get_in_ifc_state(0));
          ret = 2;
