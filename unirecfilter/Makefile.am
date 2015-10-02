@@ -13,7 +13,7 @@ unirecfilter_SOURCES=unirecfilter.c \
 BUILT_SOURCES=parser.tab.c parser.tab.h lex.yy.c fields.c fields.h
 unirecfilter_LDADD=-ltrap -lunirec
 pkgdocdir=${docdir}/unirecfilter
-pkgdoc_DATA=README
+pkgdoc_DATA=README.md
 
 EXTRA_DIST=bison/functions.c bison/parser.y bison/scanner.l
 
