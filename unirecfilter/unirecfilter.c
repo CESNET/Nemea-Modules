@@ -493,6 +493,7 @@ int main(int argc, char **argv)
 
    // Initialize TRAP library (create and init all interfaces)
    ret = trap_init(module_info, ifc_spec);
+
    if (ret != TRAP_E_OK) {
       fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
       trap_free_ifc_spec(ifc_spec);
@@ -504,10 +505,10 @@ int main(int argc, char **argv)
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 1;
    }
-
    // Create input template
    trap_set_required_fmt(0, TRAP_FMT_UNIREC, "");
    ret = trap_recv(0, &in_rec, &in_rec_size);
+
    if (ret == TRAP_E_FORMAT_CHANGED) {
       const char *spec = NULL;
       uint8_t data_fmt;
@@ -596,6 +597,13 @@ int main(int argc, char **argv)
 
    // Free ifc_spec structure
    trap_free_ifc_spec(ifc_spec);
+
+   // Send empty record to output interfaces to set data format
+   for (i = 0; i < n_outputs; i++) {
+      ret = trap_send(i, output_specifiers[i]->out_rec, i);
+      trap_send_flush(i);
+      TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, continue, break);
+   }
 
    if (verbose >= 0) {
          printf("VERBOSE: Main loop started\n");
