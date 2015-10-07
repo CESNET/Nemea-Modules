@@ -75,6 +75,7 @@ class NHTFlowCache : public FlowCache
    long notempty;
    long hits;
    long expired;
+   long flushed;
    long lookups;
    long lookups2;
    double currtimestamp;
@@ -93,6 +94,7 @@ public:
       this->notempty = 0;
       this->hits = 0;
       this->expired = 0;
+      this->flushed = 0;
       this->size = options.flowcachesize;
       this->lookups = 0;
       this->lookups2 = 0;
@@ -105,7 +107,11 @@ public:
    };
    ~NHTFlowCache()
    {
+      for (int i = 0; i < size; i++) {
+         delete flowarray[i];
+      }
       delete [] flowarray;
+
       while (!flowexportqueue.empty()) {
          delete flowexportqueue.back();
          flowexportqueue.pop_back();
