@@ -1,48 +1,28 @@
-#ifndef FLOWWRITER_H
-#define FLOWWRITER_H
+#ifndef UNIREC_EXPORTER_H
+#define UNIREC_EXPORTER_H
 
 #include <string>
-#include <fstream>
-#include <map>
+#include <libtrap/trap.h>
+#include <unirec/unirec.h>
 
-#include "flow_meter.h"
-#include "flowifc.h"
 #include "flowexporter.h"
+
+using namespace std;
 
 class UnirecExporter : public FlowExporter
 {
-   std::string outfileprefix;
-   uint32_t flowlinesize;
+public:
+   UnirecExporter();
+   int init(const uint32_t &plugins);
+   void close();
+   int export_flow(FlowRecord &flow);
 
-   std::ostream *flowos;
-   std::ostream *dataos;
-
-   std::filebuf flowoutputfile;
-   std::filebuf dataoutputfile;
-
-   bool flowfile_opened;
-   bool datafile_opened;
-   bool dataos_needed;
-
-   void printinfo();
+private:
+   std::string generate_ext_template(const uint32_t &plugins);
 
    ur_template_t *tmplt;
-   void *data;
+   void *record;
 
-public:
-   UnirecExporter(const options_t &options)
-   {
-      this->outfileprefix = options.outfilename;
-      this->flowlinesize = options.flowlinesize;
-
-      this->flowfile_opened = false;
-      this->datafile_opened = false;
-      this->dataos_needed = false;
-   }
-
-   int init();
-   int close();
-   int export_flow(FlowRecord &flow);
 };
 
 #endif

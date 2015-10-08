@@ -100,6 +100,7 @@ public:
       this->lookups2 = 0;
       this->policy = options.replacementstring;
       this->statsout = options.statsout;
+
       flowarray = new Flow*[size];
       for (int i = 0; i < size; i++) {
          flowarray[i] = new Flow(options.inactivetimeout, options.activetimeout);

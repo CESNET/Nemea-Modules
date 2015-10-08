@@ -53,17 +53,27 @@ protected:
          plugins[i]->init();
       }
    }
-   void plugins_post_create(FlowRecord &rec, const Packet &pkt)
+   int plugins_post_create(FlowRecord &rec, const Packet &pkt)
    {
+      int retval = 0;
       for (unsigned int i = 0; i < plugins.size(); i++) {
-         plugins[i]->post_create(rec, pkt);
+         int tmp = plugins[i]->post_create(rec, pkt);
+         if (tmp != 0) {
+            retval = tmp;
+         }
       }
+      return retval;
    }
-   void plugins_pre_update(FlowRecord &rec, Packet &pkt)
+   int plugins_pre_update(FlowRecord &rec, Packet &pkt)
    {
+      int retval = 0;
       for (unsigned int i = 0; i < plugins.size(); i++) {
-         plugins[i]->pre_update(rec, pkt);
+         int tmp = plugins[i]->pre_update(rec, pkt);
+         if (tmp != 0) {
+            retval = tmp;
+         }
       }
+      return retval;
    }
    void plugins_post_update(FlowRecord &rec, const Packet &pkt)
    {

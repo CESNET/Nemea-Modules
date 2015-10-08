@@ -13,6 +13,7 @@ const std::string DEFAULT_REPLACEMENT_STRING = \
 
 #define PLUGIN_HTTP  (0x1 << 0)
 #define PLUGIN_DNS   (0x1 << 1)
+#define PLUGIN_SIP   (0x1 << 2)
 
 struct options_t {
    bool statsout;

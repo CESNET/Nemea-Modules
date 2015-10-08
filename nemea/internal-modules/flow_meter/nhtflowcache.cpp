@@ -157,6 +157,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       for (int j = flowindex; j > flowindexstart; j--) {
          flowarray[j] = flowarray[j - 1];
       }
+
       flowarray[flowindexstart] = ptrflow;
       flowindex = flowindexstart;
       hits++;
@@ -190,12 +191,22 @@ int NHTFlowCache::put_pkt(Packet &pkt)
    }
 
    currtimestamp = pkt.timestamp;
-
    if (flowarray[flowindex]->isempty()) {
       flowarray[flowindex]->create(pkt, hashval, key, key_len);
-      plugins_post_create(flowarray[flowindex]->flowrecord, pkt);
+
+      if (plugins_post_create(flowarray[flowindex]->flowrecord, pkt) & FLOW_FLUSH) {
+         exporter->export_flow(flowarray[flowindex]->flowrecord);
+         flushed++;
+         flowarray[flowindex]->erase();
+      }
    } else {
-      plugins_pre_update(flowarray[flowindex]->flowrecord, pkt);
+      if (plugins_pre_update(flowarray[flowindex]->flowrecord, pkt) & FLOW_FLUSH) {
+         exporter->export_flow(flowarray[flowindex]->flowrecord);
+         flushed++;
+         flowarray[flowindex]->erase();
+         plugins_pre_update(flowarray[flowindex]->flowrecord, pkt);
+      }
+
       flowarray[flowindex]->update(pkt);
       plugins_post_update(flowarray[flowindex]->flowrecord, pkt);
    }
@@ -310,6 +321,7 @@ void NHTFlowCache::endreport()
    cout << "Empty: " << empty << endl;
    cout << "Not empty: " << notempty << endl;
    cout << "Expired: " << expired << endl;
+   cout << "Flushed: " << flushed << endl;
    cout << "Average Lookup:  " << a << endl;
    cout << "Variance Lookup: " << float(lookups2) / hits - a * a << endl;
 }

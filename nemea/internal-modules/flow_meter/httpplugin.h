@@ -12,28 +12,16 @@
 
 using namespace std;
 
-enum httpMethodEnum {
-   UNDEFINED = 0,
-   GET,
-   HEAD,
-   POST,
-   PUT,
-   DELETE,
-   TRACE,
-   OPTIONS,
-   CONNECT,
-   PATCH
-};
-
 struct FlowRecordExtHTTPReq : FlowRecordExt {
-   httpMethodEnum httpReqMethod;
+   char httpReqMethod[10];
    char httpReqHost[64];
    char httpReqUrl[128];
    char httpReqUserAgent[128];
    char httpReqReferer[128];
 
-   FlowRecordExtHTTPReq() : FlowRecordExt(http_request), httpReqMethod(UNDEFINED)
+   FlowRecordExtHTTPReq() : FlowRecordExt(http_request)
    {
+      httpReqMethod[0] = 0;
       httpReqHost[0] = 0;
       httpReqUrl[0] = 0;
       httpReqUserAgent[0] = 0;
@@ -63,16 +51,16 @@ public:
    void pre_export(FlowRecord &rec);
    void finish();
 
-   void close();
 private:
-   bool parse_http_request(const char *data, int payload_len, FlowRecordExtHTTPReq *rec);
-   bool parse_http_response(const char *data, int payload_len, FlowRecordExtHTTPResp *rec);
-   void add_ext_http_request(const char *data, int payload_len, FlowRecord &rec);
-   void add_ext_http_response(const char *data, int payload_len, FlowRecord &rec);
-   httpMethodEnum process_http_method(const char *method) const;
+   bool parse_http_request(const char *data, int payload_len, FlowRecordExtHTTPReq *rec, bool create);
+   bool parse_http_response(const char *data, int payload_len, FlowRecordExtHTTPResp *rec, bool create);
+   int add_ext_http_request(const char *data, int payload_len, FlowRecord &rec);
+   int add_ext_http_response(const char *data, int payload_len, FlowRecord &rec);
+   int process_http_method(const char *method) const;
 
    bool statsout;
-   bool keep_alive;
+   bool ignore_keep_alive;
+   bool flush_flow;
    uint32_t requests, responses, total;
 };
 

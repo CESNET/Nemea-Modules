@@ -25,6 +25,8 @@
 #include "fields.h"
 #include "httpplugin.h"
 
+//#include "dnsplugin.h"
+
 using namespace std;
 
 inline bool error(const string &e)
@@ -49,14 +51,27 @@ UR_FIELDS (
    uint8 PROTOCOL,
    uint8 TCP_FLAGS,
    uint8 TOS,
-   uint8 TTL
+   uint8 TTL,
+
+   string HTTP_METHOD,
+   string HTTP_HOST,
+   string HTTP_URL,
+   string HTTP_USER_AGENT,
+   string HTTP_REFERER,
+
+   uint16 HTTP_RESPONSE_CODE,
+   string HTTP_CONTENT_TYPE,
+
+   uint16 DNS_QTYPE,
+   bytes *DNS_NAME,
+   bytes *DNS_RDATA
 )
 
 #define MODULE_BASIC_INFO(BASIC) \
   BASIC("Flow meter module", "Convert packets from PCAP file or live capture into flow records.", 0, 1)
 
 #define MODULE_PARAMS(PARAM) \
-  PARAM('p', "plugins", "Process specified application protocols. Format: protocol_name1[,...] Supported protocols: http", required_argument, "string")\
+  PARAM('p', "plugins", "Activate specified parsing plugins.. Format: plugin_name[,...] Supported plugins: http", required_argument, "string")\
   PARAM('c', "count", "Quit after n packets are captured.", required_argument, "uint32")\
   PARAM('I', "interface", "Name of capture interface. (eth0 for example)", required_argument, "string")\
   PARAM('r', "file", "Pcap file to read.", required_argument, "string") \
@@ -79,7 +94,9 @@ bool parse_plugin_settings(const std::string &settings, uint32_t &plugin_setting
 
       if (proto == "http") {
          plugin_settings |= PLUGIN_HTTP;
-      } else {
+      } /*else if (proto == "dns"){
+         plugin_settings |= PLUGIN_DNS;
+      } */else {
          fprintf(stderr, "Unsupported protocol: \"%s\"\n", proto.c_str());
          return false;
       }
@@ -172,7 +189,7 @@ int main(int argc, char *argv[])
       return error("Neither capture interface nor input file specified.");
    }
 
-   if (options.flowcachesize%options.flowlinesize != 0) {
+   if (options.flowcachesize % options.flowlinesize != 0) {
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return error("Size of flow line (32 by default) must divide size of flow cache.");
    }
@@ -181,25 +198,32 @@ int main(int argc, char *argv[])
    if (options.interface == "") {
       if (packetloader.open_file(options.infilename) != 0) {
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-         return error("Can't open input file: "+options.infilename);
+         return error("Can't open input file: " + options.infilename);
       }
    } else {
       if (packetloader.init_interface(options.interface) != 0) {
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-         return error("Unable to initialize libpcap: "+packetloader.errmsg);
+         return error("Unable to initialize libpcap: " + packetloader.errmsg);
       }
    }
 
-   UnirecExporter flowwriter(options);
-   flowwriter.init();
-
    NHTFlowCache flowcache(options);
+   UnirecExporter flowwriter;
+
+   if (flowwriter.init(options.activeplugins) != 0) {
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      return error("Unable to initialize flow exporter");
+   }
    flowcache.set_exporter(&flowwriter);
 
    HTTPPlugin http(options);
+   //DNSPlugin dns(options);
+
    if (options.activeplugins & PLUGIN_HTTP) {
       flowcache.add_plugin(&http);
-   }
+   }/* else if (options.activeplugins & PLUGIN_DNS) {
+      flowcache.add_plugin(&dns);
+   }*/
 
    if (options.statsout) {
       StatsPlugin stats(options.statstime, cout);
@@ -237,7 +261,6 @@ int main(int argc, char *argv[])
 
    flowcache.finish();
    flowwriter.close();
-   http.close();
    packetloader.close();
    delete [] packet.transportPayloadPacketSection;
 

@@ -9,6 +9,10 @@
 class FlowCachePlugin
 {
 public:
+   virtual ~FlowCachePlugin()
+   {
+   }
+
    // Called before the start of processing
    virtual void init()
    {
@@ -35,6 +39,7 @@ public:
    virtual void finish()
    {
    }
+
 };
 
 #endif

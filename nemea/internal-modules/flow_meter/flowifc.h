@@ -72,7 +72,8 @@
 
 enum extTypeEnum {
    http_request = 0,
-   http_response
+   http_response,
+   dns
 };
 
 // Flow record extenstion base class (derived class should add their own fields)
