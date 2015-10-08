@@ -75,7 +75,7 @@
 #define DEFAULT_LINK_MASK "1"
 
 #define MINIMAL_SENDING_RATE  100
-int bloock = 0;
+
 UR_FIELDS (
    ipaddr DST_IP,
    ipaddr SRC_IP,
@@ -500,23 +500,13 @@ int main(int argc, char **argv)
          trap_send(0, rec_out, ur_rec_fixlen_size(tmplt));
          record_counter++;
 
-         // if (record_counter%1000000 == 0) {
-         //    trap_set_data_fmt(0, TRAP_FMT_UNIREC, "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,uint64 LINK_BIT_FIELD,time TIME_FIRST,time TIME_LAST,uint32 PACKETS,uint16 DST_PORT,uint16 SRC_PORT,uint8 DIR_BIT_FIELD,uint8 PROTOCOL,uint8 TCP_FLAGS,uint8 TOS,uint8 TTL");
-         // }
-
          if (sending_rate) {
             if ((record_counter % sending_rate) == 0) {
                delay_sending_rate(&sr_start);
                gettimeofday(&sr_start, NULL);
             }
          }
-         // if (bloock == 0) {
-         //    sleep(2);
-         //    printf("-------- GONNA CHANGE DATA FMT SPEC ------------\n");
-         //    sleep(2);
-         //    trap_set_data_fmt(0, TRAP_FMT_UNIREC, "uint64 BYTES,uint32 PACKETS");
-         //   bloock = 1; 
-         // }
+
          // Printing progress
          NMCM_PROGRESS_PRINT;
 
@@ -546,7 +536,6 @@ int main(int argc, char **argv)
       }
       trap_send(0, dummy, 1); // FIXME: zero-length messages doesn't work, send message of length 1
    }
-
 
 exit:
    if (rt_sending) {
