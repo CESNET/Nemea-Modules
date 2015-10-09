@@ -15,7 +15,7 @@ unirecfilter_LDADD=-ltrap -lunirec
 pkgdocdir=${docdir}/unirecfilter
 pkgdoc_DATA=README.md
 
-EXTRA_DIST=bison/functions.c bison/parser.y bison/scanner.l
+EXTRA_DIST=bison/functions.c bison/parser.y bison/scanner.l README.md
 
 all: parser.tab.c lex.yy.c
 
