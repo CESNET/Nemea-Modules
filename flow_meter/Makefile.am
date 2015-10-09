@@ -4,18 +4,23 @@ flow_meter_SOURCES=flow_meter.cpp \
 		    packet.h \
 		    packetreceiver.h \
 		    pcapreader.h \
+		    flowexporter.h \
 		    flowifc.h \
 		    flowcache.h \
-		    flowwriter.h \
+		    unirecexporter.h \
 		    pcapreader.cpp \
 		    mapflowcache.cpp \
 		    mapflowcache.h \
 		    nhtflowcache.cpp \
 		    nhtflowcache.h \
-		    flowwriter.cpp \
+		    unirecexporter.cpp \
 		    stats.cpp \
 		    stats.h \
-		    flowcacheplugin.h
+		    flowcacheplugin.h \
+		    httpplugin.cpp \
+		    httpplugin.h \
+		    fields.c \
+		    fields.h
 
 
 flow_meter_LDADD=-ltrap -lunirec -lpcap

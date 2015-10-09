@@ -20,6 +20,10 @@ if HAVE_BISON
 SUBDIRS += unirecfilter
 endif
 
+if HAVE_LIBPCAP
+SUBDIRS += flow_meter
+endif
+
 RPMDIR = RPMBUILD
 
 if MAKE_RPMS
