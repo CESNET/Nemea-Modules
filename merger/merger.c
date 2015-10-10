@@ -336,9 +336,11 @@ void ta_capture_thread(int index)
 void capture_thread(int index)
 {
    int private_stop = 0;
-   int ret;
+   int ret, fail = 0;
    const void *rec;
    uint16_t rec_size;
+   void *data_out = NULL;
+   uint8_t data_fmt = TRAP_FMT_UNKNOWN;
 //   int timeout = initial_timeout;
 
    if (verbose >= 1) {
@@ -348,47 +350,6 @@ void capture_thread(int index)
 //   trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, timeout);
    trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
 
-   ret = trap_recv(index, &rec, &rec_size);
-   if (ret == TRAP_E_FORMAT_CHANGED) {
-      const char *spec = NULL;
-      uint8_t data_fmt;
-      if (trap_get_data_fmt(TRAPIFC_INPUT, index, &data_fmt, &spec) != TRAP_E_OK) {
-         fprintf(stderr, "Data format was not loaded.");
-         return;
-      } else {
-         int fail = 0;
-         #pragma omp critical
-         {
-            in_template[index] = ur_define_fields_and_update_template(spec, in_template[index]);
-            if (in_template[index] == NULL) {
-               fprintf(stderr, "Template could not be edited");
-               fail = 1;
-            } else {
-               ur_expand_template(spec, out_template);
-               char * spec_cpy = ur_template_string(out_template);
-               if (spec_cpy == NULL) {
-                  fprintf(stderr, "Memory allocation problem.");
-                  fail = 1;
-
-               } else {
-                  trap_set_data_fmt(0, TRAP_FMT_UNIREC, spec_cpy);
-               }
-            }
-         }
-         if (fail == 1) {
-            return;
-         }
-      }
-   } else {
-      printf("ERROR on ifc %d: Negotiation was not succesfull\n", index);
-      return;
-   }
-
-   void *data_out = ur_create_record(out_template, UR_MAX_SIZE);
-   if (data_out == NULL) {
-      fprintf(stderr, "ERROR: Allocation of record\n");
-      return;
-   }
    // Read data from input and log them to a file
    while (!stop && !private_stop) {
       if (verbose >= 2) {
@@ -398,86 +359,89 @@ void capture_thread(int index)
 
       ret = trap_recv(index, &rec, &rec_size);
       //update output template
-      if (ret == TRAP_E_FORMAT_CHANGED) {
-         const char *spec = NULL;
-         uint8_t data_fmt;
-         if (trap_get_data_fmt(TRAPIFC_INPUT, index, &data_fmt, &spec) != TRAP_E_OK) {
-            fprintf(stderr, "Data format was not loaded.");
-            return;
-         } else {
-            int fail = 0;
-            #pragma omp critical
-            {
-               in_template[index] = ur_define_fields_and_update_template(spec, in_template[index]);
-               if (in_template[index] == NULL) {
-                  fprintf(stderr, "Template could not be edited");
-                  fail = 1;
-               } else {
-                  ur_expand_template(spec, out_template);
-                  char * spec_cpy = ur_template_string(out_template);
-                  if (spec_cpy == NULL) {
-                     fprintf(stderr, "Memory allocation problem.");
+      if (ret == TRAP_E_OK || ret == TRAP_E_FORMAT_CHANGED) {
+         if (ret == TRAP_E_FORMAT_CHANGED) {
+            const char *spec = NULL;
+            if (trap_get_data_fmt(TRAPIFC_INPUT, index, &data_fmt, &spec) != TRAP_E_OK) {
+               fprintf(stderr, "Data format was not loaded.");
+               return;
+            } else {
+               if (data_out != NULL) {
+                  free (data_out);
+                  data_out = NULL;
+               }
+               #pragma omp critical
+               {
+                  in_template[index] = ur_define_fields_and_update_template(spec, in_template[index]);
+                  if (in_template[index] == NULL) {
+                     fprintf(stderr, "Template could not be edited");
                      fail = 1;
+                  } else {
+                     out_template = ur_expand_template(spec, out_template);
+                     char * spec_cpy = ur_template_string(out_template);
+                     if (spec_cpy == NULL) {
+                        fprintf(stderr, "Memory allocation problem.");
+                        fail = 1;
+                     }
+                     trap_set_data_fmt(0, TRAP_FMT_UNIREC, spec_cpy);
                   }
-                  trap_set_data_fmt(0, TRAP_FMT_UNIREC, spec_cpy);
+
+                  data_out = ur_create_record(out_template, UR_MAX_SIZE);
+                  if (data_out == NULL) {
+                     fprintf(stderr, "ERROR: Allocation of record\n");
+                     fail = 1;
+                  }               
+               }
+               if (fail == 1) {
+                  break;
+               }
+               memset(data_out, 0, UR_MAX_SIZE);
+            }
+         }
+
+         if (verbose >= 2) {
+            printf("Thread %i: received %hu bytes of data\n", index, rec_size);
+         }
+
+         // Check size of received data
+         if (rec_size < ur_rec_fixlen_size(in_template[index])) {
+            if (rec_size <= 1) {
+               if (verbose >= 0) {
+                  printf("Interface %i received ending record, the interface will be closed.\n", index);
+               }
+               private_stop = 1;
+               if (--active_interfaces > 0){// Only last thread send terminating message.
+                  break;
+               } else {
+                  char dummy[1] = {0};
+                  trap_send(0, dummy, 1); // FIXME: zero-length messages doesn't work, send message of length 1
+                  break;
+               }
+            } else {
+               fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
+                       ur_rec_fixlen_size(in_template[index]), rec_size);
+               break;
+            }
+         }
+      
+         ur_copy_fields(out_template, data_out, in_template[index], rec);
+
+         #pragma omp critical
+         {
+            ret = trap_send(0, data_out, ur_rec_size(out_template, data_out));
+            if (ret != TRAP_E_OK) {
+               if (ret == TRAP_E_TERMINATED) {
+                  private_stop = 1; // Module was terminated while waiting for new data (e.g. by Ctrl-C)
+               } else {
+                  // Some error has occured
+                  fprintf(stderr, "Error: trap_send() returned %i (%s)\n", ret, trap_last_error_msg);
+                  private_stop = 1;
                }
             }
-            if (fail == 1) {
-               break;
-            }
-            ret = trap_recv(index, &rec, &rec_size);
-            memset(data_out, 0, UR_MAX_SIZE);
-         }
+         } // end critical section
+      } else {
+         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
       }
-
-      TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
-
-      if (verbose >= 2) {
-         printf("Thread %i: received %hu bytes of data\n", index, rec_size);
-      }
-
-      // Check size of received data
-      if (rec_size < ur_rec_fixlen_size(in_template[index])) {
-         if (rec_size <= 1) {
-            if (verbose >= 0) {
-               printf("Interface %i received ending record, the interface will be closed.\n", index);
-            }
-            private_stop = 1;
-            if (--active_interfaces > 0){// Only last thread send terminating message.
-               break;
-            }
-         } else {
-            fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
-                    ur_rec_fixlen_size(in_template[index]), rec_size);
-            break;
-         }
-      }
-
-      if ((rec_size < ur_rec_fixlen_size(in_template[index]))) {
-         if (rec_size <= 1) { // end of data
-            break;
-         } else { // data corrupted
-            fprintf(stderr,"Error: Wrong data size. Expected: %i", ur_rec_fixlen_size(in_template[index]));
-            fprintf(stderr," Recieved: %i.\n", rec_size);
-            continue;
-         }
-      }
-      ur_copy_fields(out_template, data_out, in_template[index], rec);
-
-      #pragma omp critical
-      {
-
-         ret = trap_send(0, data_out, ur_rec_size(out_template, data_out));
-         if (ret != TRAP_E_OK) {
-            if (ret == TRAP_E_TERMINATED) {
-               private_stop = 1; // Module was terminated while waiting for new data (e.g. by Ctrl-C)
-            } else {
-               // Some error has occured
-               fprintf(stderr, "Error: trap_send() returned %i (%s)\n", ret, trap_last_error_msg);
-               private_stop = 1;
-            }
-         }
-      } // end critical section
    } // end while(!stop && !private_stop)
 
    if (verbose >= 1) {

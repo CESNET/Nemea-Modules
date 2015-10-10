@@ -85,6 +85,11 @@ AC_CHECK_PROG(FLEX, flex, yes, [""])
 
 AM_CONDITIONAL(HAVE_BISON, test xyes = x${BISON} -a xyes = x${FLEX})
 
+AC_CHECK_HEADER(pcap.h,
+        AC_CHECK_LIB(pcap, pcap_open_live, [libpcap=yes], AC_MSG_WARN([libpcap not found. The flow_meter and portscan_detector modules will not be compiled.])), AC_MSG_WARN([pcap.h not found. The flow_meter and portscan_detector modules will not be compiled.]))
+
+AM_CONDITIONAL(HAVE_LIBPCAP, test x${libpcap} = xyes)
+
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h locale.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/socket.h sys/time.h syslog.h unistd.h])
 
@@ -128,6 +133,7 @@ AM_CONDITIONAL(MAKE_RPMS, test x$RPMBUILD != x)
 # list of all *.in (and Makefile.am) files to process by configure script
 AC_CONFIG_FILES([Makefile
                  flowcounter/Makefile
+                 flow_meter/Makefile
                  logger/Makefile
                  logreplay/Makefile
                  merger/Makefile

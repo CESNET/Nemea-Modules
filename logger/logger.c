@@ -110,6 +110,8 @@ static ur_template_t **templates = NULL; // UniRec templates of input interfaces
 static ur_template_t *out_template = NULL; // UniRec template with union of fields of all inputs
 int print_ifc_num = 0;
 int print_time = 0;
+int print_title = 0;
+uint8_t out_template_defined = 0;
 
 unsigned int num_records = 0; // Number of records received (total of all inputs)
 unsigned int max_num_records = 0; // Exit after this number of records is received
@@ -122,7 +124,10 @@ TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
 void capture_thread(int index, char delimiter)
 {
+   int fail = 0;
    int ret;
+   uint16_t rec_size;
+   uint8_t data_fmt = TRAP_FMT_UNKNOWN;
 
    if (verbose >= 1) {
       printf("Thread %i started.\n", index);
@@ -138,8 +143,58 @@ void capture_thread(int index, char delimiter)
       }
 
       // Receive data from index-th input interface, wait until data are available
-      ret = TRAP_RECEIVE(index, rec, rec_size, templates[index]);
-      TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
+      ret = trap_recv(index, &rec, &rec_size);
+      if (ret == TRAP_E_FORMAT_CHANGED) {
+         const char *spec = NULL;
+         if (trap_get_data_fmt(TRAPIFC_INPUT, index, &data_fmt, &spec) != TRAP_E_OK) {
+            fprintf(stderr, "Error: Data format was not loaded.");
+            break;
+         } else {
+            templates[index] = ur_define_fields_and_update_template(spec, templates[index]);
+            if (templates[index] == NULL) {
+               fprintf(stderr, "Error: Template could not be created");
+               break;
+            }
+            #pragma omp critical
+            {
+               if (out_template_defined == 0) { // Check whether it is first thread trying to define output ifc template
+                  out_template = ur_define_fields_and_update_template(spec, out_template);
+                  if (out_template == NULL) {
+                    fprintf(stderr, "Error: Output interface template couldn't be created.\n");
+                    fflush(stderr);
+                    fail = 1;
+                  } else {
+                     out_template_defined = 1;
+                  }
+               }
+
+               if (print_title == 1 && out_template_defined == 1) {
+                  print_title = 0;
+                  // Print a header - names of output UniRec fields
+                  if (print_time) {
+                     fprintf(file, "time,");
+                  }
+                  if (print_ifc_num) {
+                     fprintf(file, "ifc,");
+                  }
+                  char *data_format = ur_template_string_delimiter(out_template, delimiter);
+                  if (data_format == NULL) {
+                     fprintf(stderr, "Memory allocation error\n");
+                     fail = 1;
+                  } else {
+                     fprintf(file, "%s\n", data_format);
+                     free(data_format);
+                     fflush(file);
+                  }
+               }
+            } // End of critical section
+            if (fail == 1) {
+               break;
+            }
+         }
+      } else {
+        TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
+      }
 
       if (verbose >= 2) {
          printf("Thread %i: received %hu bytes of data\n", index, rec_size);
@@ -310,8 +365,8 @@ int main(int argc, char **argv)
    char *out_template_str = NULL;
    char *out_filename = NULL;
    int append = 0;
-   int print_title = 0;
    char delimiter = ',';
+   out_template_defined = 0;
 
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    // ***** Process parameters *****
@@ -470,42 +525,7 @@ Available types are: int8, int16, int32, int64, uint8, uint16, uint32, uint64, c
          ret = -1;
          goto exit;
       }
-   } else {
-      //receive data format for input and output template
-      const void *rec;
-      uint16_t rec_size;
-      //trap_set_required_fmt(0, TRAP_FMT_UNIREC, "");
-      int ret = trap_recv(0, &rec, &rec_size);
-      if (ret == TRAP_E_FORMAT_CHANGED) {
-         const char *spec = NULL;
-         uint8_t data_fmt;
-         if (trap_get_data_fmt(TRAPIFC_INPUT, 0, &data_fmt, &spec) != TRAP_E_OK) {
-            fprintf(stderr, "Error: Data format was not loaded.");
-            ret = 2;
-            goto exit;
-         } else {
-            templates[0] = ur_define_fields_and_update_template(spec, templates[0]);
-            if (templates[0] == NULL) {
-               fprintf(stderr, "Error: Template could not be created");
-               ret = 2;
-               goto exit;
-            }
-            out_template = ur_define_fields_and_update_template(spec, out_template);
-            if (out_template == NULL) {
-               fprintf(stderr, "Error: Template could not be created");
-               ret = 2;
-               goto exit;
-            }
-         }
-      } else if (stop == 1) {
-        // SIGINT or SIGTERM received
-        ret = 2;
-        goto exit;
-      } else {
-         fprintf(stderr, "Error: Data format was not received. Trap error: %d, IFC state: %d\n", ret,  trap_get_in_ifc_state(0));
-         ret = 2;
-         goto exit;
-      }
+      out_template_defined = 1;
    }
 
    // ***** Open output file *****
@@ -531,25 +551,6 @@ Available types are: int8, int16, int32, int64, uint8, uint16, uint32, uint64, c
 
    if (verbose >= 0) {
       printf("Initialization done.\n");
-   }
-
-   // Print a header - names of output UniRec fields
-   if (print_title) {
-      if (print_time) {
-         fprintf(file, "time,");
-      }
-      if (print_ifc_num) {
-         fprintf(file, "ifc,");
-      }
-      char *data_format = ur_template_string_delimiter(out_template, delimiter);
-      if (data_format == NULL) {
-         fprintf(stderr, "Memory allocation error\n");
-         ret = -1;
-         goto exit;
-      }
-      fprintf(file, "%s\n", data_format);
-      free(data_format);
-      fflush(file);
    }
 
    if ((enabled_max_num_records != 0) && (max_num_records == 0)) {
