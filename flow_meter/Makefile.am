@@ -26,5 +26,5 @@ flow_meter_SOURCES=flow_meter.cpp \
 flow_meter_LDADD=-ltrap -lunirec -lpcap
 flow_meter_CXXFLAGS=-O2 -std=c++98 -Wno-write-strings
 pkgdocdir=${docdir}/flow_meter
-pkgdoc_DATA=README
+pkgdoc_DATA=README.md
 include ../aminclude.am
