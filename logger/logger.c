@@ -126,7 +126,6 @@ void capture_thread(int index, char delimiter)
 {
    int fail = 0;
    int ret;
-   uint16_t rec_size;
    uint8_t data_fmt = TRAP_FMT_UNKNOWN;
 
    if (verbose >= 1) {
