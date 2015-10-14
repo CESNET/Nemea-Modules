@@ -36,7 +36,7 @@
 
 import sys
 import os.path
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "python"))
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "nemea-framework", "python"))
 import trap
 import unirec
 from unirec import Timestamp, IPAddr
@@ -142,7 +142,10 @@ def trap_terminated():
    print "** TRAP interface was terminated (probably by pressing Ctrl-C). **"
    print "You can [R]einitialize TRAP or E[x]it"
    while True:
-      cmd = raw_input("> ")
+      try:
+         cmd = raw_input("> ")
+      except EOFError:
+         cmd = "x"
       cmd = cmd.strip().lower()
       if cmd == "":
          continue
@@ -267,7 +270,10 @@ print
 print_commands()
 
 while True:
-   cmd = raw_input("> ")
+   try:
+      cmd = raw_input("> ")
+   except EOFError:
+      cmd = "x"
    cmd, _, param = cmd.partition(' ')
    cmd = cmd.strip().lower()
    param = param.strip()
