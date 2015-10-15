@@ -19,7 +19,6 @@
 #include "flowifc.h"
 #include "pcapreader.h"
 #include "nhtflowcache.h"
-#include "mapflowcache.h"
 #include "unirecexporter.h"
 #include "stats.h"
 #include "fields.h"
