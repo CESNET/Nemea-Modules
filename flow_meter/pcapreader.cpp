@@ -1,3 +1,7 @@
+/**
+ * \file pcapreader.cpp
+ */
+
 #include "pcapreader.h"
 #include <cstdio>
 #include <cstring>
@@ -16,6 +20,9 @@
 //#define DEBUG
 using namespace std;
 
+/**
+ * \brief Swap an IPv6 address bytes.
+ */
 inline void swapbytes128(char *x)
 {
    char tmp;
@@ -29,8 +36,18 @@ inline void swapbytes128(char *x)
 #ifdef DEBUG
 static uint32_t s_total_pkts = 0;
 #endif /* DEBUG */
+
+/**
+ * \brief Serves to distinguish between valid (parsed) and non-valid packet.
+ */
 bool packet_valid = false;
 
+/**
+ * \brief Parsing callback function for pcap_dispatch() call. Parse packets up to tranport layer.
+ * \param [in,out] arg Serves for passing pointer into callback function.
+ * \param [in] h Contains timestamp and packet size.
+ * \param [in] data Pointer to the captured packet data.
+ */
 void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data)
 {
    Packet &pkt = *(Packet *)arg;
@@ -252,19 +269,34 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
 #endif /* DEBUG */
 }
 
+/**
+ * \brief Constructor.
+ */
 PcapReader::PcapReader() : handle(NULL)
 {
 }
 
+/**
+ * \brief Constructor.
+ * \param [in] options Module options.
+ */
 PcapReader::PcapReader(const options_t &options) : handle(NULL)
 {
 }
 
+/**
+ * \brief Destructor.
+ */
 PcapReader::~PcapReader()
 {
    this->close();
 }
 
+/**
+ * \brief Open pcap file for reading.
+ * \param [in] file Input file name.
+ * \return 0 on success, non 0 on failure + errmsg is filled with error message
+ */
 int PcapReader::open_file(const std::string &file)
 {
    if (handle != NULL) {
@@ -283,6 +315,11 @@ int PcapReader::open_file(const std::string &file)
    return 0;
 }
 
+/**
+ * \brief Initialize network interface for reading.
+ * \param [in] interface Interface name.
+ * \return 0 on success, non 0 on failure + errmsg is filled with error message
+ */
 int PcapReader::init_interface(const std::string &interface)
 {
    if (handle != NULL) {
@@ -306,6 +343,9 @@ int PcapReader::init_interface(const std::string &interface)
    return 0;
 }
 
+/**
+ * \brief Close opened file or interface.
+ */
 void PcapReader::close()
 {
    if (handle != NULL) {

@@ -1,3 +1,7 @@
+/**
+ * \file httpplugin.h
+ */
+
 #ifndef HTTPPLUGIN_H
 #define HTTPPLUGIN_H
 
@@ -12,6 +16,9 @@
 
 using namespace std;
 
+/**
+ * \brief Flow record extension header for storing HTTP requests.
+ */
 struct FlowRecordExtHTTPReq : FlowRecordExt {
    char httpReqMethod[10];
    char httpReqHost[64];
@@ -19,6 +26,9 @@ struct FlowRecordExtHTTPReq : FlowRecordExt {
    char httpReqUserAgent[128];
    char httpReqReferer[128];
 
+   /**
+    * \brief Constructor.
+    */
    FlowRecordExtHTTPReq() : FlowRecordExt(http_request)
    {
       httpReqMethod[0] = 0;
@@ -29,10 +39,16 @@ struct FlowRecordExtHTTPReq : FlowRecordExt {
    }
 };
 
+/**
+ * \brief Flow record extension header for storing HTTP responses.
+ */
 struct FlowRecordExtHTTPResp : FlowRecordExt {
    uint16_t httpRespCode;
    char httpRespContentType[32];
 
+   /**
+    * \brief Constructor.
+    */
    FlowRecordExtHTTPResp() : FlowRecordExt(http_response)
    {
       httpRespCode = 0;
@@ -40,6 +56,9 @@ struct FlowRecordExtHTTPResp : FlowRecordExt {
    }
 };
 
+/**
+ * \brief Flow cache plugin used to parse HTTP requests / responses.
+ */
 class HTTPPlugin : public FlowCachePlugin
 {
 public:
@@ -58,10 +77,12 @@ private:
    int add_ext_http_response(const char *data, int payload_len, FlowRecord &rec);
    int process_http_method(const char *method) const;
 
-   bool statsout;
-   bool ignore_keep_alive;
-   bool flush_flow;
-   uint32_t requests, responses, total;
+   bool statsout;          /**< Indicator whether to print stats when flow cache is finishing or not. */
+   bool ignore_keep_alive; /**< Indicator whether to ignore HTTP keep-alive requests / responses or not. */
+   bool flush_flow;        /**< Indicator whether to flush current flow or not. */
+   uint32_t requests;      /**< Total number of parsed HTTP requests. */
+   uint32_t responses;     /**< Total number of parsed HTTP responses. */
+   uint32_t total;         /**< Total number of parsed HTTP packets. */
 };
 
 #endif

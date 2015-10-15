@@ -1,3 +1,7 @@
+/**
+ * \file flow_meter.h
+ */
+
 #ifndef MAIN_H
 #define MAIN_H
 
@@ -15,6 +19,9 @@ const std::string DEFAULT_REPLACEMENT_STRING = \
 #define PLUGIN_DNS   (0x1 << 1)
 #define PLUGIN_SIP   (0x1 << 2)
 
+/**
+ * \brief Struct containing module settings.
+ */
 struct options_t {
    bool statsout;
    bool verbose;

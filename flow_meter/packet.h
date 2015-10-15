@@ -1,3 +1,7 @@
+/**
+ * \file packet.h
+ */
+
 #ifndef PACKET_H
 #define PACKET_H
 
@@ -76,7 +80,9 @@
 #define TCP_ACK    0x10
 #define TCP_URG    0x20
 
-// Packet parsed up to transport layer (TCP/UDP)
+/**
+ * \brief Structure for storing parsed packets up to transport layer.
+ */
 struct Packet {
    uint64_t    packetFieldIndicator;
    double      timestamp; // TODO: jak ukladat timestamp?
@@ -96,7 +102,11 @@ struct Packet {
    uint8_t     tcpControlBits;
 
    uint16_t    transportPayloadPacketSectionSize;
-   char        *transportPayloadPacketSection;
+   char        *transportPayloadPacketSection; /**< Array containing packet payload. */
+
+   /**
+    * \brief Constructor.
+    */
    Packet() : transportPayloadPacketSection(NULL)
    {
    }

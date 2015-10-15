@@ -1,3 +1,7 @@
+/**
+ * \file unirecexporter.cpp
+ */
+
 #include <string>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
@@ -13,10 +17,18 @@
 
 using namespace std;
 
+/**
+ * \brief Constructor.
+ */
 UnirecExporter::UnirecExporter() : tmplt(NULL), record(NULL)
 {
 }
 
+/**
+ * \brief Initialize exporter.
+ * \param [in] plugins Active plugins.
+ * \return 0 on success, non 0 when error occur.
+ */
 int UnirecExporter::init(const uint32_t &plugins)
 {
    std::string template_str("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL");
@@ -40,6 +52,9 @@ int UnirecExporter::init(const uint32_t &plugins)
    return 0;
 }
 
+/**
+ * \brief Close connection and free resources.
+ */
 void UnirecExporter::close()
 {
    trap_send(0, "", 1);
@@ -122,6 +137,11 @@ int UnirecExporter::export_flow(FlowRecord &flow)
    return 0;
 }
 
+/**
+ * \brief Create extension template.
+ * \param [in] plugins Active plugins.
+ * \return String with generated template.
+ */
 std::string UnirecExporter::generate_ext_template(const uint32_t &plugins)
 {
    std::string template_str("");

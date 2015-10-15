@@ -1,3 +1,7 @@
+/**
+ * \file unirecexporter.h
+ */
+
 #ifndef UNIREC_EXPORTER_H
 #define UNIREC_EXPORTER_H
 
@@ -9,6 +13,9 @@
 
 using namespace std;
 
+/**
+ * \brief Class for exporting flow records.
+ */
 class UnirecExporter : public FlowExporter
 {
 public:
@@ -20,9 +27,8 @@ public:
 private:
    std::string generate_ext_template(const uint32_t &plugins);
 
-   ur_template_t *tmplt;
-   void *record;
-
+   ur_template_t *tmplt; /**< Pointer to unirec template. */
+   void *record;         /**< Pointer to unirec record. */
 };
 
 #endif

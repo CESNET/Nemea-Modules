@@ -1,3 +1,7 @@
+/**
+ * \file flowcacheplugin.h
+ */
+
 #ifndef FLOWCACHEPLUGIN_H
 #define FLOWCACHEPLUGIN_H
 
@@ -6,36 +10,69 @@
 
 #define FLOW_FLUSH (0x1 << 0)
 
+/**
+ * \brief Class template for flow cache plugins.
+ */
 class FlowCachePlugin
 {
 public:
+
+   /**
+    * \brief Virtual destructor.
+    */
    virtual ~FlowCachePlugin()
    {
    }
 
-   // Called before the start of processing
+   /**
+    * \brief Called before the start of processing.
+    */
    virtual void init()
    {
    }
-   // Called after a new flow record is created
+
+   /**
+    * \brief Called after a new flow record is created.
+    * \param [in,out] rec Reference to flow record.
+    * \param [in] pkt Parsed packet.
+    * \return 0 on success or FLOW_FLUSH option.
+    */
    virtual int post_create(FlowRecord &rec, const Packet &pkt)
    {
       return 0;
    }
-   // Called before an existing record is updated
+
+   /**
+    * \brief Called before an existing record is update.
+    * \param [in,out] rec Reference to flow record.
+    * \param [in,out] pkt Parsed packet.
+    * \return 0 on success or FLOW_FLUSH option.
+    */
    virtual int pre_update(FlowRecord &rec, Packet &pkt)
    {
       return 0;
    }
-   // Called after an existing record is updated
+
+   /**
+    * \brief Called after an existing record is updated.
+    * \param [in,out] rec Reference to flow record.
+    * \param [in,out] pkt Parsed packet.
+    */
    virtual void post_update(FlowRecord &rec, const Packet &pkt)
    {
    }
-   // Called before a flow record is exported from the cache
+
+   /**
+    * \brief Called before a flow record is exported from the cache.
+    * \param [in,out] rec Reference to flow record.
+    */
    virtual void pre_export(FlowRecord &rec)
    {
    }
-   // Called when everything is processed
+
+   /**
+    * \brief Called when everything is processed.
+    */
    virtual void finish()
    {
    }

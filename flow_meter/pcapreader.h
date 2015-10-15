@@ -1,3 +1,7 @@
+/**
+ * \file pcapreader.h
+ */
+
 #ifndef PCAPREADER_H
 #define PCAPREADER_H
 
@@ -7,6 +11,9 @@
 #include "packet.h"
 #include "packetreceiver.h"
 
+/**
+ * \brief Class for reading packets from file or network interface.
+ */
 class PcapReader : public PacketReceiver
 {
 public:
@@ -18,9 +25,8 @@ public:
    int init_interface(const std::string &interface);
    void close();
    int get_pkt(Packet &packet);
-   //int cnt_parsed, cnt_total;
 private:
-   pcap_t *handle;
+   pcap_t *handle; /**< pcap file handler */
 };
 
 void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data);

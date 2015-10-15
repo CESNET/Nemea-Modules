@@ -1,3 +1,7 @@
+/**
+ * \file flowifc.h
+ */
+
 #ifndef FLOWRECORD_H
 #define FLOWRECORD_H
 
@@ -70,22 +74,33 @@
    FLW_FLOWPAYLOADSIZE \
 )
 
+/**
+ * \brief Extension header type enum.
+ */
 enum extTypeEnum {
    http_request = 0,
    http_response,
    dns
 };
 
-// Flow record extenstion base class (derived class should add their own fields)
+/**
+ * \brief Flow record extension base struct.
+ */
 struct FlowRecordExt {
-   FlowRecordExt *next;
-   uint16_t extType; // Type of extension (given by some enum)
+   FlowRecordExt *next; /**< Pointer to next extension */
+   uint16_t extType; /**< Type of extension. */
 
-   // Constructor
+   /**
+    * \brief Constructor.
+    * \param [in] type Type of extension.
+    */
    FlowRecordExt(uint16_t type) : next(NULL), extType(type)
    {
    }
-   // Virutal destructor, needed if some fields in derived classes are dynamically allocated
+
+   /**
+    * \brief Virtual destructor.
+    */
    virtual ~FlowRecordExt()
    {
       if (next != NULL) {
@@ -94,6 +109,9 @@ struct FlowRecordExt {
    }
 };
 
+/**
+ * \brief Flow record struct constaining basic flow record data and extension headers.
+ */
 struct FlowRecord {
    uint64_t flowFieldIndicator;
    double   flowStartTimestamp;
@@ -111,16 +129,18 @@ struct FlowRecord {
    uint32_t packetTotalCount;
    uint64_t octetTotalLength;
    uint8_t  tcpControlBits;
-   FlowRecordExt *exts; // List of extestions
+   FlowRecordExt *exts; /**< Extension headers. */
 
+   /**
+    * \brief Add new extension header.
+    * \param [in] ext Pointer to the extension header.
+    */
    void addExtension(FlowRecordExt* ext)
    {
       if (exts == NULL) {
-         // first extenstion - just set the new one
          exts = ext;
          exts->next = NULL;
       } else {
-         // there already are some extensions - find the last one and append the new one after it
          FlowRecordExt *ext_ptr = exts;
          while (ext_ptr->next != NULL) {
             ext_ptr = ext_ptr->next;
@@ -130,6 +150,11 @@ struct FlowRecord {
       }
    }
 
+   /**
+    * \brief Get given extension.
+    * \param [in] extType Type of extension.
+    * \return Pointer to the requested extension or NULL if extension is not present.
+    */
    FlowRecordExt *getExtension(uint16_t extType)
    {
       FlowRecordExt *ext_ptr = exts;
@@ -142,6 +167,9 @@ struct FlowRecord {
       return NULL;
    }
 
+   /**
+    * \brief Remove extension headers.
+    */
    void removeExtensions()
    {
       if (exts != NULL) {
@@ -150,10 +178,16 @@ struct FlowRecord {
       }
    }
 
+   /**
+    * \brief Constructor.
+    */
    FlowRecord() : exts(NULL)
    {
    }
 
+   /**
+    * \brief Destructor.
+    */
    ~FlowRecord()
    {
       removeExtensions();

@@ -1,3 +1,7 @@
+/**
+ * \file httpplugin.cpp
+ */
+
 #include <iostream>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +18,10 @@ using namespace std;
 #define HTTP_LINE_DELIMITER   "\r\n"
 #define HTTP_HEADER_DELIMITER ':'
 
+/**
+ * \brief Constructor.
+ * \param [in] options Module options.
+ */
 HTTPPlugin::HTTPPlugin(const options_t &options) : statsout(options.statsout), requests(0), responses(0), total(0)
 {
    ignore_keep_alive = false;
@@ -81,6 +89,9 @@ void HTTPPlugin::finish()
    }
 }
 
+/**
+ * \brief Copy string and append \0 character.
+ */
 #define STRCPY(destination, source, begin, end)\
    len = end - (begin);\
    if (len >= (int)sizeof(destination)) {\
@@ -93,6 +104,14 @@ void HTTPPlugin::finish()
 static uint32_t s_requests = 0, s_responses = 0;
 #endif /* DEBUG_HTTP */
 
+/**
+ * \brief Parse and store http request.
+ * \param [in] data Packet payload data.
+ * \param [in] payload_len Length of packet payload.
+ * \param [out] rec Variable where http request will be stored.
+ * \param [in] create Indicates if plugin is creating new http request or just updates old one.
+ * \return True if request was parsed, false if error occured.
+ */
 bool HTTPPlugin::parse_http_request(const char *data, int payload_len, FlowRecordExtHTTPReq *rec, bool create)
 {
    total++;
@@ -211,6 +230,14 @@ bool HTTPPlugin::parse_http_request(const char *data, int payload_len, FlowRecor
 }
 
 
+/**
+ * \brief Parse and store http response.
+ * \param [in] data Packet payload data.
+ * \param [in] payload_len Length of packet payload.
+ * \param [out] rec Variable where http response will be stored.
+ * \param [in] create Indicates if plugin is creating new http response or just updates old one.
+ * \return True if request was parsed, false if error occured.
+ */
 bool HTTPPlugin::parse_http_response(const char *data, int payload_len, FlowRecordExtHTTPResp *rec, bool create)
 {
    total++;
@@ -336,6 +363,11 @@ bool HTTPPlugin::parse_http_response(const char *data, int payload_len, FlowReco
    return true;
 }
 
+/**
+ * \brief Check http method.
+ * \param [in] method C string with http method.
+ * \return 0 if http method is valid or -1 if not.
+ */
 int HTTPPlugin::process_http_method(const char *method) const
 {
    if (strcmp(method, "GET") == 0) {
@@ -360,6 +392,13 @@ int HTTPPlugin::process_http_method(const char *method) const
    return -1;
 }
 
+/**
+ * \brief Add new extension http request header into flow record.
+ * \param [in] data Packet payload data.
+ * \param [in] payload_len Length of packet payload.
+ * \param [out] rec Flow record where to store created extension header.
+ * \return 0 on success, FLOW_FLUSH option if flow needs to be flushed.
+ */
 int HTTPPlugin::add_ext_http_request(const char *data, int payload_len, FlowRecord &rec)
 {
    FlowRecordExtHTTPReq *req = new FlowRecordExtHTTPReq();
@@ -374,6 +413,13 @@ int HTTPPlugin::add_ext_http_request(const char *data, int payload_len, FlowReco
    return 0;
 }
 
+/**
+ * \brief Add new extension http response header into flow record.
+ * \param [in] data Packet payload data.
+ * \param [in] payload_len Length of packet payload.
+ * \param [out] rec Flow record where to store created extension header.
+ * \return 0 on success, FLOW_FLUSH option if flow needs to be flushed.
+ */
 int HTTPPlugin::add_ext_http_response(const char *data, int payload_len, FlowRecord &rec)
 {
    FlowRecordExtHTTPResp *resp = new FlowRecordExtHTTPResp();

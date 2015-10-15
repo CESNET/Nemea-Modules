@@ -1,3 +1,7 @@
+/**
+ * \file flow_meter.cpp
+ */
+
 #include <config.h>
 #include <getopt.h>
 #include <string>
@@ -28,6 +32,11 @@
 
 using namespace std;
 
+/**
+ * \brief Print an error message.
+ * \param [in] e String containing an error message
+ * \return EXIT_FAILURE
+ */
 inline bool error(const string &e)
 {
    cerr << "flow_meter: " << e << endl;
@@ -81,6 +90,12 @@ UR_FIELDS (
   PARAM('V', "vector", "Replacement vector. 1+32 NUMBERS.", required_argument, "string") \
   PARAM('v', "verbose", "Set verbose mode on.", no_argument, "none")
 
+/**
+ * \brief Parse input plugin settings.
+ * \param [in] settings String containing input plugin settings.
+ * \param [out] plugin_settings Variable where to store parsed plugin settings.
+ * \return True if setting was parsed, false if error occured.
+ */
 bool parse_plugin_settings(const std::string &settings, uint32_t &plugin_settings)
 {
    std::string proto;
