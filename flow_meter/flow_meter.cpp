@@ -211,7 +211,7 @@ int main(int argc, char *argv[])
 
    if (flowwriter.init(options.activeplugins) != 0) {
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-      return error("Unable to initialize flow exporter");
+      return error("Unable to initialize UnirecExporter.");
    }
    flowcache.set_exporter(&flowwriter);
 

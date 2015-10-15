@@ -23,8 +23,11 @@ int UnirecExporter::init(const uint32_t &plugins)
 
    template_str += generate_ext_template(plugins);
 
-   tmplt = ur_create_output_template(0, template_str.c_str(), NULL);
+   char *error = NULL;
+   tmplt = ur_create_output_template(0, template_str.c_str(), &error);
    if (tmplt == NULL) {
+      fprintf(stderr, "UnirecExporter: %s\n", error);
+      free(error);
       return -2;
    }
 
