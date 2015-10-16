@@ -153,7 +153,7 @@ bool HTTPPlugin::parse_http_request(const char *data, int payload_len, FlowRecor
    }
 
    STRCPY(buf, data, 0, i)
-   if (process_http_method(buf) != 0) {
+   if (!valid_http_method(buf)) {
 #ifdef DEBUG_HTTP
       fprintf(stderr, "Parser quits:\tundefined http method: %s\n", buf);
 #endif /* DEBUG_HTTP */
@@ -366,30 +366,30 @@ bool HTTPPlugin::parse_http_response(const char *data, int payload_len, FlowReco
 /**
  * \brief Check http method.
  * \param [in] method C string with http method.
- * \return 0 if http method is valid or -1 if not.
+ * \return True if http method is valid.
  */
-int HTTPPlugin::process_http_method(const char *method) const
+bool HTTPPlugin::valid_http_method(const char *method) const
 {
    if (strcmp(method, "GET") == 0) {
-      return 0;
+      return true;
    } else if (strcmp(method, "HEAD") == 0) {
-      return 0;
+      return true;
    } else if (strcmp(method, "POST") == 0) {
-      return 0;
+      return true;
    } else if (strcmp(method, "PUT") == 0) {
-      return 0;
+      return true;
    } else if (strcmp(method, "DELETE") == 0) {
-      return 0;
+      return true;
    } else if (strcmp(method, "TRACE") == 0) {
-      return 0;
+      return true;
    } else if (strcmp(method, "OPTIONS") == 0) {
-      return 0;
+      return true;
    } else if (strcmp(method, "CONNECT") == 0) {
-      return 0;
+      return true;
    } else if (strcmp(method, "PATCH") == 0) {
-      return 0;
+      return true;
    }
-   return -1;
+   return false;
 }
 
 /**

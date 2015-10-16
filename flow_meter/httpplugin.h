@@ -75,7 +75,7 @@ private:
    bool parse_http_response(const char *data, int payload_len, FlowRecordExtHTTPResp *rec, bool create);
    int add_ext_http_request(const char *data, int payload_len, FlowRecord &rec);
    int add_ext_http_response(const char *data, int payload_len, FlowRecord &rec);
-   int process_http_method(const char *method) const;
+   bool valid_http_method(const char *method) const;
 
    bool statsout;          /**< Indicator whether to print stats when flow cache is finishing or not. */
    bool ignore_keep_alive; /**< Indicator whether to ignore HTTP keep-alive requests / responses or not. */
