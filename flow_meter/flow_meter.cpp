@@ -59,20 +59,7 @@ UR_FIELDS (
    uint8 PROTOCOL,
    uint8 TCP_FLAGS,
    uint8 TOS,
-   uint8 TTL,
-
-   string HTTP_METHOD,
-   string HTTP_HOST,
-   string HTTP_URL,
-   string HTTP_USER_AGENT,
-   string HTTP_REFERER,
-
-   uint16 HTTP_RESPONSE_CODE,
-   string HTTP_CONTENT_TYPE,
-
-   uint16 DNS_QTYPE,
-   bytes *DNS_NAME,
-   bytes *DNS_RDATA
+   uint8 TTL
 )
 
 #define MODULE_BASIC_INFO(BASIC) \

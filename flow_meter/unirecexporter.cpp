@@ -66,7 +66,6 @@ void UnirecExporter::close()
 
 int UnirecExporter::export_flow(FlowRecord &flow)
 {
-
    FlowRecordExt *ext = flow.exts;
    do {
       ur_clear_varlen(tmplt, record);

@@ -5,6 +5,7 @@
 #include <iostream>
 #include <stdlib.h>
 #include <string.h>
+#include <unirec/unirec.h>
 
 #include "packet.h"
 #include "flowifc.h"
@@ -17,6 +18,17 @@ using namespace std;
 
 #define HTTP_LINE_DELIMITER   "\r\n"
 #define HTTP_HEADER_DELIMITER ':'
+
+UR_FIELDS (
+   string HTTP_METHOD,
+   string HTTP_HOST,
+   string HTTP_URL,
+   string HTTP_USER_AGENT,
+   string HTTP_REFERER,
+
+   uint16 HTTP_RESPONSE_CODE,
+   string HTTP_CONTENT_TYPE
+)
 
 /**
  * \brief Constructor.
