@@ -719,6 +719,7 @@ int main(int argc, char **argv)
    }
    free(port_numbers);
    free(output_specifiers);
+   ur_finalize();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    return 0;
 }

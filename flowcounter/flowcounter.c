@@ -178,7 +178,6 @@ void get_o_param(int argc, char **argv, const char *module_getopt_string, const 
 int main(int argc, char **argv)
 {
 	int ret;
-
 	INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
 	// Declare progress structure, pointer to this struct, initialize progress limit
@@ -261,7 +260,6 @@ int main(int argc, char **argv)
       uint16_t data_size;
       ret = TRAP_RECEIVE(0, data, data_size, tmplt);
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
-
       // Check size of received data
       if (data_size < ur_rec_fixlen_size(tmplt)) {
          if (data_size <= 1) {
@@ -308,7 +306,7 @@ int main(int argc, char **argv)
 		ur_free_record(out_rec);
 		alarm(0);
 	}
-
+   ur_finalize();
 	ur_free_template(tmplt);
 	FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 	return EXIT_SUCCESS;

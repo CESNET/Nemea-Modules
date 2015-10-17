@@ -616,6 +616,7 @@ Available types are: int8, int16, int32, int64, uint8, uint16, uint32, uint64, c
 
 exit:
    // Do all necessary cleanup before exiting
+   ur_finalize();
    TRAP_DEFAULT_FINALIZATION();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 

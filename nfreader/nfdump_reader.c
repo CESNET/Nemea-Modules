@@ -545,6 +545,7 @@ exit:
    ur_free_record(rec_out);
    ur_free_template(tmplt);
    ur_free_links(links);
+   ur_finalize();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    return module_state;
