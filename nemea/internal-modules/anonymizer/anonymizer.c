@@ -377,6 +377,7 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
    // ***** Do all necessary cleanup before exiting *****
    TRAP_DEFAULT_FINALIZATION();
    ur_free_template(tmplt);
+   ur_finalize();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    return 0;
