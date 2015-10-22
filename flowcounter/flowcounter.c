@@ -136,8 +136,19 @@ void get_o_param(int argc, char **argv, const char *module_getopt_string, const 
    char *bck_optarg = optarg;
    char opt;
 
+   // Add "i:" to getopt_string
+   /* This is necessary because getopt rearragnes arguments in such a way that
+      all positional agruments (i.e. not options) are put at the end of argv.
+      If it wouldn't know about "-i" and that it requires argument, it would
+      move the argument (ifc specifier) to the end of argv (but doesn't move 
+      the "-i").
+      trap_parse_params (within TRAP_DEFAULT_INITIALIZATION) would than fail.
+   */
+   char *getopt_string_with_i = malloc(strlen(module_getopt_string) + 3);
+   sprintf(getopt_string_with_i, "%s%s", module_getopt_string, "i:");
+
    opterr = 0;                  /* disable getopt error output */
-   while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
+   while ((opt = TRAP_GETOPT(argc, argv, getopt_string_with_i, long_options)) != -1) {
       switch (opt) {
       case 'o':
          {
@@ -165,6 +176,8 @@ void get_o_param(int argc, char **argv, const char *module_getopt_string, const 
          break;
       }
    }
+
+   free(getopt_string_with_i);
 
    /* restore global variables */
    optind = bck_optind;
