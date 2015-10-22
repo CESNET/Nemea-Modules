@@ -1,3 +1,49 @@
+/**
+ * \file flow_meter.cpp
+ * \brief Main file of the flow_meter module.
+ * \author Vaclav Bartos <bartos@cesnet.cz>
+ * \author Jiri Havranek <havraji6@fit.cvut.cz>
+ * \date 2014
+ * \date 2015
+ */
+/*
+ * Copyright (C) 2014-2015 CESNET
+ *
+ * LICENSE TERMS
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is'', and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
+
+
 #include <config.h>
 #include <getopt.h>
 #include <string>
@@ -19,7 +65,6 @@
 #include "flowifc.h"
 #include "pcapreader.h"
 #include "nhtflowcache.h"
-#include "mapflowcache.h"
 #include "unirecexporter.h"
 #include "stats.h"
 #include "fields.h"
@@ -29,6 +74,11 @@
 
 using namespace std;
 
+/**
+ * \brief Print an error message.
+ * \param [in] e String containing an error message
+ * \return EXIT_FAILURE
+ */
 inline bool error(const string &e)
 {
    cerr << "flow_meter: " << e << endl;
@@ -51,20 +101,7 @@ UR_FIELDS (
    uint8 PROTOCOL,
    uint8 TCP_FLAGS,
    uint8 TOS,
-   uint8 TTL,
-
-   string HTTP_METHOD,
-   string HTTP_HOST,
-   string HTTP_URL,
-   string HTTP_USER_AGENT,
-   string HTTP_REFERER,
-
-   uint16 HTTP_RESPONSE_CODE,
-   string HTTP_CONTENT_TYPE,
-
-   uint16 DNS_QTYPE,
-   bytes *DNS_NAME,
-   bytes *DNS_RDATA
+   uint8 TTL
 )
 
 #define MODULE_BASIC_INFO(BASIC) \
@@ -82,6 +119,12 @@ UR_FIELDS (
   PARAM('V', "vector", "Replacement vector. 1+32 NUMBERS.", required_argument, "string") \
   PARAM('v', "verbose", "Set verbose mode on.", no_argument, "none")
 
+/**
+ * \brief Parse input plugin settings.
+ * \param [in] settings String containing input plugin settings.
+ * \param [out] plugin_settings Variable where to store parsed plugin settings.
+ * \return True if setting was parsed, false if error occured.
+ */
 bool parse_plugin_settings(const std::string &settings, uint32_t &plugin_settings)
 {
    std::string proto;
@@ -212,7 +255,7 @@ int main(int argc, char *argv[])
 
    if (flowwriter.init(options.activeplugins) != 0) {
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-      return error("Unable to initialize flow exporter");
+      return error("Unable to initialize UnirecExporter.");
    }
    flowcache.set_exporter(&flowwriter);
 

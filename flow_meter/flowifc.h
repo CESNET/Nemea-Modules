@@ -1,3 +1,48 @@
+/**
+ * \file flowifc.h
+ * \brief Structs/classes for communication between flow cache and exporter
+ * \author Vaclav Bartos <bartos@cesnet.cz>
+ * \author Jiri Havranek <havraji6@fit.cvut.cz>
+ * \date 2014
+ * \date 2015
+ */
+/*
+ * Copyright (C) 2014-2015 CESNET
+ *
+ * LICENSE TERMS
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is'', and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
+
 #ifndef FLOWRECORD_H
 #define FLOWRECORD_H
 
@@ -70,22 +115,33 @@
    FLW_FLOWPAYLOADSIZE \
 )
 
+/**
+ * \brief Extension header type enum.
+ */
 enum extTypeEnum {
    http_request = 0,
    http_response,
    dns
 };
 
-// Flow record extenstion base class (derived class should add their own fields)
+/**
+ * \brief Flow record extension base struct.
+ */
 struct FlowRecordExt {
-   FlowRecordExt *next;
-   uint16_t extType; // Type of extension (given by some enum)
+   FlowRecordExt *next; /**< Pointer to next extension */
+   uint16_t extType; /**< Type of extension. */
 
-   // Constructor
+   /**
+    * \brief Constructor.
+    * \param [in] type Type of extension.
+    */
    FlowRecordExt(uint16_t type) : next(NULL), extType(type)
    {
    }
-   // Virutal destructor, needed if some fields in derived classes are dynamically allocated
+
+   /**
+    * \brief Virtual destructor.
+    */
    virtual ~FlowRecordExt()
    {
       if (next != NULL) {
@@ -94,6 +150,9 @@ struct FlowRecordExt {
    }
 };
 
+/**
+ * \brief Flow record struct constaining basic flow record data and extension headers.
+ */
 struct FlowRecord {
    uint64_t flowFieldIndicator;
    double   flowStartTimestamp;
@@ -111,16 +170,18 @@ struct FlowRecord {
    uint32_t packetTotalCount;
    uint64_t octetTotalLength;
    uint8_t  tcpControlBits;
-   FlowRecordExt *exts; // List of extestions
+   FlowRecordExt *exts; /**< Extension headers. */
 
+   /**
+    * \brief Add new extension header.
+    * \param [in] ext Pointer to the extension header.
+    */
    void addExtension(FlowRecordExt* ext)
    {
       if (exts == NULL) {
-         // first extenstion - just set the new one
          exts = ext;
          exts->next = NULL;
       } else {
-         // there already are some extensions - find the last one and append the new one after it
          FlowRecordExt *ext_ptr = exts;
          while (ext_ptr->next != NULL) {
             ext_ptr = ext_ptr->next;
@@ -130,6 +191,11 @@ struct FlowRecord {
       }
    }
 
+   /**
+    * \brief Get given extension.
+    * \param [in] extType Type of extension.
+    * \return Pointer to the requested extension or NULL if extension is not present.
+    */
    FlowRecordExt *getExtension(uint16_t extType)
    {
       FlowRecordExt *ext_ptr = exts;
@@ -142,6 +208,9 @@ struct FlowRecord {
       return NULL;
    }
 
+   /**
+    * \brief Remove extension headers.
+    */
    void removeExtensions()
    {
       if (exts != NULL) {
@@ -150,10 +219,16 @@ struct FlowRecord {
       }
    }
 
+   /**
+    * \brief Constructor.
+    */
    FlowRecord() : exts(NULL)
    {
    }
 
+   /**
+    * \brief Destructor.
+    */
    ~FlowRecord()
    {
       removeExtensions();

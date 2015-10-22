@@ -1,3 +1,48 @@
+/**
+ * \file unirecexporter.cpp
+ * \brief Flow exporter converting flows to UniRec and sending them to TRAP ifc
+ * \author Vaclav Bartos <bartos@cesnet.cz>
+ * \author Jiri Havranek <havraji6@fit.cvut.cz>
+ * \date 2014
+ * \date 2015
+ */
+/*
+ * Copyright (C) 2014-2015 CESNET
+ *
+ * LICENSE TERMS
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is'', and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
+
 #include <string>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
@@ -13,18 +58,29 @@
 
 using namespace std;
 
+/**
+ * \brief Constructor.
+ */
 UnirecExporter::UnirecExporter() : tmplt(NULL), record(NULL)
 {
 }
 
+/**
+ * \brief Initialize exporter.
+ * \param [in] plugins Active plugins.
+ * \return 0 on success, non 0 when error occur.
+ */
 int UnirecExporter::init(const uint32_t &plugins)
 {
    std::string template_str("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL");
 
    template_str += generate_ext_template(plugins);
 
-   tmplt = ur_create_output_template(0, template_str.c_str(), NULL);
+   char *error = NULL;
+   tmplt = ur_create_output_template(0, template_str.c_str(), &error);
    if (tmplt == NULL) {
+      fprintf(stderr, "UnirecExporter: %s\n", error);
+      free(error);
       return -2;
    }
 
@@ -37,6 +93,9 @@ int UnirecExporter::init(const uint32_t &plugins)
    return 0;
 }
 
+/**
+ * \brief Close connection and free resources.
+ */
 void UnirecExporter::close()
 {
    trap_send(0, "", 1);
@@ -48,7 +107,6 @@ void UnirecExporter::close()
 
 int UnirecExporter::export_flow(FlowRecord &flow)
 {
-
    FlowRecordExt *ext = flow.exts;
    do {
       ur_clear_varlen(tmplt, record);
@@ -119,6 +177,11 @@ int UnirecExporter::export_flow(FlowRecord &flow)
    return 0;
 }
 
+/**
+ * \brief Create extension template.
+ * \param [in] plugins Active plugins.
+ * \return String with generated template.
+ */
 std::string UnirecExporter::generate_ext_template(const uint32_t &plugins)
 {
    std::string template_str("");

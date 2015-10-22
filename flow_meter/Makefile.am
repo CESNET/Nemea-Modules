@@ -9,8 +9,6 @@ flow_meter_SOURCES=flow_meter.cpp \
 		    flowcache.h \
 		    unirecexporter.h \
 		    pcapreader.cpp \
-		    mapflowcache.cpp \
-		    mapflowcache.h \
 		    nhtflowcache.cpp \
 		    nhtflowcache.h \
 		    unirecexporter.cpp \
