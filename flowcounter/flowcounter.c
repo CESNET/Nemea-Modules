@@ -125,7 +125,7 @@ void send_handler(int signal)
    ur_set(out_tmplt, out_rec, F_PACKETS, cnt_packets);
    ur_set(out_tmplt, out_rec, F_BYTES, cnt_bytes);
    ret = trap_send(0, out_rec, ur_rec_fixlen_size(out_tmplt));
-   TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, exit(EXIT_FAILURE), exit(EXIT_FAILURE));
+   TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, 0, exit(EXIT_FAILURE));
    alarm(send_interval);
 }
 
@@ -133,7 +133,8 @@ void get_o_param(int argc, char **argv, const char *module_getopt_string, const 
 {
    /* backup global variables */
    int bck_optind = optind, bck_optopt = optopt, bck_opterr = opterr;
-   char *bck_optarg = optarg, opt;
+   char *bck_optarg = optarg;
+   char opt;
 
    opterr = 0;                  /* disable getopt error output */
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
@@ -186,14 +187,13 @@ int main(int argc, char **argv)
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
 
    // Register signal handler.
-   TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
-   //signal(SIGTERM, signal_handler);
-   //signal(SIGINT, signal_handler);
+   TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER(); // Handles SIGTERM and SIGINT
    signal(SIGUSR1, signal_handler);
    signal(SIGALRM, send_handler);
 
    // ***** Create UniRec template *****
-   char *unirec_specifier = "PACKETS,BYTES", opt;
+   char *unirec_specifier = "PACKETS,BYTES";
+   char opt;
 
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
@@ -208,7 +208,8 @@ int main(int argc, char **argv)
          break;
       default:
          fprintf(stderr, "Invalid arguments.\n");
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+         TRAP_DEFAULT_FINALIZATION();
          return 3;
       }
    }
@@ -216,7 +217,7 @@ int main(int argc, char **argv)
    ur_template_t *tmplt = ur_create_input_template(0, unirec_specifier, NULL);
    if (tmplt == NULL) {
       fprintf(stderr, "Error: Invalid UniRec specifier.\n");
-      trap_finalize();
+      TRAP_DEFAULT_FINALIZATION();
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return 4;
    }
@@ -225,9 +226,10 @@ int main(int argc, char **argv)
       /* create new output tempate */
       out_tmplt = ur_create_output_template(0,"FLOWS,PACKETS,BYTES", NULL);
       if (!out_tmplt) {
-         fprintf(stderr, "Error: Invalid UniRec specifier.\n");
+         fprintf(stderr, "Error: Invalid UniRec specifier (this is implementation error, contact author of the module).\n");
          trap_finalize();
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+         ur_free_template(tmplt);
          return 4;
       }
       /* allocate space for output record with no dynamic part */
@@ -235,11 +237,15 @@ int main(int argc, char **argv)
       if (!out_rec) {
          ur_free_template(out_tmplt);
          TRAP_DEFAULT_FINALIZATION();
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+         ur_free_template(tmplt);
+         ur_free_template(out_tmplt);
          return 4;
       }
+      /* Set NO_WAIT to output interface */
       ret = trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
       if (ret != TRAP_E_OK) {
+         ur_free_template(tmplt);
          ur_free_template(out_tmplt);
          ur_free_record(out_rec);
          fprintf(stderr, "Error: trap_ifcctl.\n");
@@ -258,16 +264,9 @@ int main(int argc, char **argv)
       ret = TRAP_RECEIVE(0, data, data_size, tmplt);
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
 
-      // Check size of received data
-      if (data_size < ur_rec_fixlen_size(tmplt)) {
-         if (data_size <= 1) {
-            break;                // End of data (used for testing purposes)
-         } else {
-            fprintf(stderr,
-            "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
-            ur_rec_fixlen_size(tmplt), data_size);
-            break;
-         }
+      // Check for end-of-stream message
+      if (data_size <= 1) {
+         break;
       }
 
       // Printing progress
@@ -296,13 +295,14 @@ int main(int argc, char **argv)
 
    // ***** Cleanup *****
 
+   alarm(0); // Potential pending alarm have to be cancelled before cleanup
+
    // Do all necessary cleanup before exiting
    TRAP_DEFAULT_FINALIZATION();
 
    if (send_interval) {         /* in case of -o option */
       ur_free_template(out_tmplt);
       ur_free_record(out_rec);
-      alarm(0);
    }
 
    ur_finalize();
