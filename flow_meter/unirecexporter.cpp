@@ -3,6 +3,7 @@
  */
 
 #include <string>
+#include <vector>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 
@@ -12,10 +13,9 @@
 #include "flowifc.h"
 #include "flow_meter.h"
 
-#include "httpplugin.h"
-//#include "dnsplugin.h"
-
 using namespace std;
+
+#define BASIC_UNIREC_TEMPLATE "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL"
 
 /**
  * \brief Constructor.
@@ -29,9 +29,9 @@ UnirecExporter::UnirecExporter() : tmplt(NULL), record(NULL)
  * \param [in] plugins Active plugins.
  * \return 0 on success, non 0 when error occur.
  */
-int UnirecExporter::init(const uint32_t &plugins)
+int UnirecExporter::init(const std::vector<FlowCachePlugin *> &plugins)
 {
-   std::string template_str("SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL");
+   std::string template_str(BASIC_UNIREC_TEMPLATE);
 
    template_str += generate_ext_template(plugins);
 
@@ -43,7 +43,7 @@ int UnirecExporter::init(const uint32_t &plugins)
       return -2;
    }
 
-   record = ur_create_record(tmplt, plugins & 0xFF ? UR_MAX_SIZE : 0);
+   record = ur_create_record(tmplt, plugins.size() != 0 ? UR_MAX_SIZE : 0);
    if (record == NULL) {
       ur_free_template(tmplt);
       return -3;
@@ -70,7 +70,7 @@ int UnirecExporter::export_flow(FlowRecord &flow)
    ur_clear_varlen(tmplt, record);
 
    while (ext != NULL) {
-      ext->fillUnirec(tmplt, record); /* Fill each extension header into unirec record. */
+      ext->fillUnirec(tmplt, record); /* Add each extension header into unirec record. */
       ext = ext->next;
    }
 
@@ -112,19 +112,18 @@ int UnirecExporter::export_flow(FlowRecord &flow)
 }
 
 /**
- * \brief Create extension template.
+ * \brief Create extension template from active plugins.
  * \param [in] plugins Active plugins.
  * \return String with generated template.
  */
-std::string UnirecExporter::generate_ext_template(const uint32_t &plugins)
+std::string UnirecExporter::generate_ext_template(const std::vector<FlowCachePlugin *> &plugins) const
 {
    std::string template_str("");
-   if (plugins & PLUGIN_HTTP) {
-      template_str += ",HTTP_METHOD,HTTP_HOST,HTTP_URL,HTTP_USER_AGENT,HTTP_REFERER,HTTP_RESPONSE_CODE,HTTP_CONTENT_TYPE";
+   for (unsigned int i = 0; i < plugins.size(); i++) {
+      std::string tmp = plugins[i]->get_unirec_field_string();
+      if (tmp != "") {
+         template_str += "," + tmp;
+      }
    }
-   if (plugins & PLUGIN_DNS) {
-      template_str += ",DNS_QTYPE,DNS_NAME,DNS_RDATA";
-   }
-
    return template_str;
 }

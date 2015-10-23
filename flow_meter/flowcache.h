@@ -21,7 +21,7 @@ class FlowCache
 protected:
    FlowExporter *exporter; /**< Instance of FlowExporter used to export flows. */
 private:
-   std::vector<FlowCachePlugin*> plugins; /**< Array of plugins. */
+   std::vector<FlowCachePlugin *> plugins; /**< Array of plugins. */
 
 public:
    /**

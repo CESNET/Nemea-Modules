@@ -19,6 +19,8 @@ using namespace std;
 #define HTTP_LINE_DELIMITER   "\r\n"
 #define HTTP_HEADER_DELIMITER ':'
 
+#define HTTP_UNIREC_TEMPLATE "HTTP_METHOD,HTTP_HOST,HTTP_URL,HTTP_USER_AGENT,HTTP_REFERER,HTTP_RESPONSE_CODE,HTTP_CONTENT_TYPE"
+
 UR_FIELDS (
    string HTTP_METHOD,
    string HTTP_HOST,
@@ -83,14 +85,6 @@ int HTTPPlugin::pre_update(FlowRecord &rec, Packet &pkt)
    return 0;
 }
 
-void HTTPPlugin::post_update(FlowRecord &rec, const Packet &pkt)
-{
-}
-
-void HTTPPlugin::pre_export(FlowRecord &rec)
-{
-}
-
 void HTTPPlugin::finish()
 {
    if (!statsout) {
@@ -99,6 +93,11 @@ void HTTPPlugin::finish()
       cout << "Parsed http responses: " << responses << endl;
       cout << "Total http packets processed: " << total << endl;
    }
+}
+
+std::string HTTPPlugin::get_unirec_field_string()
+{
+   return HTTP_UNIREC_TEMPLATE;
 }
 
 /**

@@ -82,9 +82,8 @@ public:
    void init();
    int post_create(FlowRecord &rec, const Packet &pkt);
    int pre_update(FlowRecord &rec, Packet &pkt);
-   void post_update(FlowRecord &rec, const Packet &pkt);
-   void pre_export(FlowRecord &rec);
    void finish();
+   std::string get_unirec_field_string();
 
 private:
    bool parse_http_request(const char *data, int payload_len, FlowRecordExtHTTPReq *rec, bool create);

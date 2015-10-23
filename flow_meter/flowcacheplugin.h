@@ -5,10 +5,14 @@
 #ifndef FLOWCACHEPLUGIN_H
 #define FLOWCACHEPLUGIN_H
 
+#include <string>
+
 #include "packet.h"
 #include "flowifc.h"
 
 #define FLOW_FLUSH (0x1 << 0)
+
+using namespace std;
 
 /**
  * \brief Class template for flow cache plugins.
@@ -77,6 +81,14 @@ public:
    {
    }
 
+   /**
+    * \brief Get unirec template string from plugin.
+    * \return Unirec template string.
+    */
+   virtual std::string get_unirec_field_string()
+   {
+      return "";
+   }
 };
 
 #endif
