@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
+#include <fields.h>
 
 #include "flowifc.h"
 #include "flowcacheplugin.h"
@@ -37,6 +38,15 @@ struct FlowRecordExtHTTPReq : FlowRecordExt {
       httpReqUserAgent[0] = 0;
       httpReqReferer[0] = 0;
    }
+
+   virtual void fillUnirec(ur_template_t *tmplt, void *record)
+   {
+      ur_set_string(tmplt, record, F_HTTP_METHOD, httpReqMethod);
+      ur_set_string(tmplt, record, F_HTTP_HOST, httpReqHost);
+      ur_set_string(tmplt, record, F_HTTP_URL, httpReqUrl);
+      ur_set_string(tmplt, record, F_HTTP_USER_AGENT, httpReqUserAgent);
+      ur_set_string(tmplt, record, F_HTTP_REFERER, httpReqReferer);
+   }
 };
 
 /**
@@ -53,6 +63,12 @@ struct FlowRecordExtHTTPResp : FlowRecordExt {
    {
       httpRespCode = 0;
       httpRespContentType[0] = 0;
+   }
+
+   virtual void fillUnirec(ur_template_t *tmplt, void *record)
+   {
+      ur_set(tmplt, record, F_HTTP_RESPONSE_CODE, httpRespCode);
+      ur_set_string(tmplt, record, F_HTTP_CONTENT_TYPE, httpRespContentType);
    }
 };
 
