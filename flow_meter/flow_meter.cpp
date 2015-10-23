@@ -232,7 +232,7 @@ int main(int argc, char *argv[])
    Packet packet;
    int ret;
    uint32_t pkt_total = 0, pkt_parsed = 0;
-   packet.transportPayloadPacketSection = new char[MAXPCKTPAYLOADSIZE + 1];
+   packet.packet = new char[MAXPCKTSIZE + 1];
 
    while ((ret = packetloader.get_pkt(packet)) > 0) {
       if (ret == 2 && (sampling == 100 || ((rand() % 99) +1) <= sampling)) {
@@ -261,7 +261,7 @@ int main(int argc, char *argv[])
    flowwriter.close();
    packetloader.close();
 
-   delete [] packet.transportPayloadPacketSection;
+   delete [] packet.packet;
 
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 

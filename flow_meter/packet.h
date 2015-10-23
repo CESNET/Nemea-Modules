@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define MAXPCKTPAYLOADSIZE 1600
+#define MAXPCKTSIZE 1600
 
 // Values of field presence indicator flags (packetFieldIndicator)
 // (Names of the fields are inspired by IPFIX specification)
@@ -101,13 +101,15 @@ struct Packet {
    uint16_t    destinationTransportPort;
    uint8_t     tcpControlBits;
 
+   uint16_t    packetTotalLength;
+   char        *packet; /**< Array containing whole packet. */
    uint16_t    transportPayloadPacketSectionSize;
-   char        *transportPayloadPacketSection; /**< Array containing packet payload. */
+   char        *transportPayloadPacketSection; /**< Pointer to packet payload section. */
 
    /**
     * \brief Constructor.
     */
-   Packet() : transportPayloadPacketSection(NULL)
+   Packet() : packet(NULL), transportPayloadPacketSection(NULL)
    {
    }
 };

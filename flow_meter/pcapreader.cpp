@@ -51,7 +51,8 @@ bool packet_valid = false;
 void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data)
 {
    Packet &pkt = *(Packet *)arg;
-   struct ethhdr *eth = (struct ethhdr *)data;
+   const u_char *data_ptr = data;
+   struct ethhdr *eth = (struct ethhdr *)data_ptr;
    uint8_t transport_proto = 0;
    uint16_t payload_len = 0;
 #ifdef DEBUG
@@ -71,26 +72,26 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
 
    if (ethertype == ETH_P_8021Q) {
 #ifdef DEBUG
-      uint16_t vlan = ntohs(*(unsigned uint32_t *)(data + 14));
+      uint16_t vlan = ntohs(*(unsigned uint32_t *)(data_ptr + 14));
       printf("\t802.1Q field:\n");
       printf("\t\tPriority:\t%u\n",    ((vlan & 0xE000) >> 12));
       printf("\t\tCFI:\t\t%u\n",       ((vlan & 0x1000) >> 11));
       printf("\t\tVLAN:\t\t%u\n",      (vlan & 0x0FFF));
 #endif /* DEBUG */
-      data += 18;
-      ethertype = ntohs(*(uint16_t *)&data[-2]);
+      data_ptr += 18;
+      ethertype = ntohs(*(uint16_t *)&data_ptr[-2]);
 #ifdef DEBUG
       printf("\t\tEthertype:\t%#06x\n",     ethertype);
 #endif /* DEBUG */
    } else {
-      data += 14;
+      data_ptr += 14;
    }
 
    pkt.packetFieldIndicator = PCKT_TIMESTAMP;
    pkt.timestamp = h->ts.tv_sec + h->ts.tv_usec / 1000000.0;
 
    if (ethertype == ETH_P_IP) {
-      struct iphdr *ip = (struct iphdr *)(data);
+      struct iphdr *ip = (struct iphdr *)(data_ptr);
 
       pkt.ipVersion = ip->version;
       pkt.protocolIdentifier = ip->protocol;
@@ -103,7 +104,7 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
 
       transport_proto = ip->protocol;
       payload_len = ntohs(ip->tot_len) - ip->ihl * 4;
-      data += ip->ihl * 4;
+      data_ptr += ip->ihl * 4;
 
 #ifdef DEBUG
       printf("IPv4 header:\n");
@@ -122,7 +123,7 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
 #endif /* DEBUG */
 
    } else if (ethertype == ETH_P_IPV6) {
-      struct ip6_hdr *ip6 = (struct ip6_hdr *)(data);
+      struct ip6_hdr *ip6 = (struct ip6_hdr *)(data_ptr);
 
       pkt.ipVersion = (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0xf0000000) >> 28;
       pkt.ipClassOfService = (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0x0ff00000) >> 20;
@@ -137,7 +138,7 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
 
       transport_proto = ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;
       payload_len = ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);   //TODO: IPv6 Extension header
-      data += 40;
+      data_ptr += 40;
 
 #ifdef DEBUG
       char buffer[INET6_ADDRSTRLEN];
@@ -162,7 +163,7 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
    }
 
    if (transport_proto == IPPROTO_TCP) {
-      struct tcphdr *tcp = (struct tcphdr *)(data);
+      struct tcphdr *tcp = (struct tcphdr *)(data_ptr);
 
       pkt.sourceTransportPort = ntohs(tcp->source);
       pkt.destinationTransportPort = ntohs(tcp->dest);
@@ -187,7 +188,7 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
       }
       pkt.packetFieldIndicator |= PCKT_TCP_MASK;
 
-      data += tcp->doff * 4;
+      data_ptr += tcp->doff * 4;
       payload_len -= tcp->doff * 4;
 
 #ifdef DEBUG
@@ -206,13 +207,13 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
 #endif /* DEBUG */
 
    } else if (transport_proto == IPPROTO_UDP) {
-      struct udphdr *udp = (struct udphdr *)(data);
+      struct udphdr *udp = (struct udphdr *)(data_ptr);
 
       pkt.sourceTransportPort = ntohs(udp->source);
       pkt.destinationTransportPort = ntohs(udp->dest);
       pkt.packetFieldIndicator |= PCKT_UDP_MASK;
 
-      data += 8;
+      data_ptr += 8;
       payload_len -= 8;
 
 #ifdef DEBUG
@@ -225,7 +226,7 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
 
    } else if (transport_proto == IPPROTO_ICMP) {
 #ifdef DEBUG
-      struct icmphdr *icmp = (struct icmphdr *)(data);
+      struct icmphdr *icmp = (struct icmphdr *)(data_ptr);
       printf("ICMP header:\n");
       printf("\tType:\t\t%u\n",     icmp->type);
       printf("\tCode:\t\t%u\n",     icmp->code);
@@ -235,7 +236,7 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
 
    } else if (transport_proto == IPPROTO_ICMPV6) {
 #ifdef DEBUG
-      struct icmp6_hdr *icmp6 = (struct icmp6_hdr *)(data);
+      struct icmp6_hdr *icmp6 = (struct icmp6_hdr *)(data_ptr);
       printf("ICMPv6 header:\n");
       printf("\tType:\t\t%u\n",     icmp6->icmp6_type);
       printf("\tCode:\t\t%u\n",     icmp6->icmp6_code);
@@ -249,24 +250,30 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
       return;
    }
 
-   if (((pkt.packetFieldIndicator & PCKT_TCP_MASK) == PCKT_TCP_MASK) ||
-       ((pkt.packetFieldIndicator & PCKT_UDP_MASK) == PCKT_UDP_MASK)) {
-      if (payload_len <= MAXPCKTPAYLOADSIZE) {
-         pkt.transportPayloadPacketSectionSize = payload_len;
-         memcpy(pkt.transportPayloadPacketSection, data, payload_len);
-         pkt.transportPayloadPacketSection[payload_len] = 0;
-         pkt.packetFieldIndicator |= PCKT_PAYLOAD_MASK;
-      }
-
+   int len = (data_ptr - data) + payload_len;
+   if (len > MAXPCKTSIZE) {
+      len = MAXPCKTSIZE;
 #ifdef DEBUG
-      printf("Payload length:\t%u\n", payload_len);
+      printf("Packet size too long, truncating to %u.", len);
 #endif /* DEBUG */
    }
+   memcpy(pkt.packet, data, len);
+   pkt.packet[len] = 0;
+   pkt.packetTotalLength = len;
 
-   packet_valid = true;
+   pkt.transportPayloadPacketSectionSize = len - (data_ptr - data);
+   pkt.transportPayloadPacketSection = pkt.packet + (data_ptr - data);
+
+   if ((pkt.packetFieldIndicator & PCKT_TCP_MASK) == PCKT_TCP_MASK ||
+       (pkt.packetFieldIndicator & PCKT_UDP_MASK) == PCKT_UDP_MASK) {
+      pkt.packetFieldIndicator |= PCKT_PAYLOAD_MASK;
+   }
+
 #ifdef DEBUG
+   printf("Payload length:\t%u\n", payload_len);
    printf("Packet parser exits: packet parsed\n");
 #endif /* DEBUG */
+   packet_valid = true;
 }
 
 /**
