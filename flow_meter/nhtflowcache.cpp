@@ -190,21 +190,27 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       }
    }
 
+   int ret = 0;
    currtimestamp = pkt.timestamp;
    if (flowarray[flowindex]->isempty()) {
       flowarray[flowindex]->create(pkt, hashval, key, key_len);
 
-      if (plugins_post_create(flowarray[flowindex]->flowrecord, pkt) & FLOW_FLUSH) {
+      ret = plugins_post_create(flowarray[flowindex]->flowrecord, pkt);
+      if (ret & (FLOW_FLUSH | FLOW_FLUSH_2)) {
          exporter->export_flow(flowarray[flowindex]->flowrecord);
          flushed++;
          flowarray[flowindex]->erase();
       }
    } else {
-      if (plugins_pre_update(flowarray[flowindex]->flowrecord, pkt) & FLOW_FLUSH) {
+      ret = plugins_pre_update(flowarray[flowindex]->flowrecord, pkt);
+      if (ret & (FLOW_FLUSH | FLOW_FLUSH_2)) {
          exporter->export_flow(flowarray[flowindex]->flowrecord);
          flushed++;
          flowarray[flowindex]->erase();
-         plugins_pre_update(flowarray[flowindex]->flowrecord, pkt);
+
+         if (!(ret & FLOW_FLUSH_2)) {
+            plugins_pre_update(flowarray[flowindex]->flowrecord, pkt);
+         }
       }
 
       flowarray[flowindex]->update(pkt);

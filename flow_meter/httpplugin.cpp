@@ -16,10 +16,9 @@
 
 using namespace std;
 
+#define HTTP_UNIREC_TEMPLATE  "HTTP_METHOD,HTTP_HOST,HTTP_URL,HTTP_USER_AGENT,HTTP_REFERER,HTTP_RESPONSE_CODE,HTTP_CONTENT_TYPE"
 #define HTTP_LINE_DELIMITER   "\r\n"
 #define HTTP_HEADER_DELIMITER ':'
-
-#define HTTP_UNIREC_TEMPLATE "HTTP_METHOD,HTTP_HOST,HTTP_URL,HTTP_USER_AGENT,HTTP_REFERER,HTTP_RESPONSE_CODE,HTTP_CONTENT_TYPE"
 
 UR_FIELDS (
    string HTTP_METHOD,
@@ -48,6 +47,10 @@ void HTTPPlugin::init()
 
 int HTTPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 {
+   if (!(pkt.packetFieldIndicator & PCKT_PAYLOAD_MASK)) { // If payload is not present, return.
+      return 0;
+   }
+
    if (pkt.sourceTransportPort == 80) {
       return add_ext_http_response(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
    } else if (pkt.destinationTransportPort == 80) {
@@ -59,10 +62,14 @@ int HTTPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 
 int HTTPPlugin::pre_update(FlowRecord &rec, Packet &pkt)
 {
+   if (!(pkt.packetFieldIndicator & PCKT_PAYLOAD_MASK)) { // If payload is not present, return.
+      return 0;
+   }
+
    FlowRecordExt *ext = NULL;
    if (pkt.sourceTransportPort == 80) {
       ext = rec.getExtension(http_response);
-      if(ext == NULL) {
+      if (ext == NULL) {
          return add_ext_http_response(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
       }
 
@@ -133,7 +140,7 @@ bool HTTPPlugin::parse_http_request(const char *data, int payload_len, FlowRecor
    printf("Payload length: %u\n\n", payload_len);
 #ifdef DEBUG_HTTP_PAYLOAD_PREVIEW
    printf("##################\n");
-   for(int l = 0; l < payload_len; l++) {
+   for (int l = 0; l < payload_len; l++) {
       printf("%c", data[l]);
    }
    printf("\n##################\n");
@@ -236,7 +243,6 @@ bool HTTPPlugin::parse_http_request(const char *data, int payload_len, FlowRecor
       printf("Parser quits:\tend of header section\n");
 #endif /* DEBUG_HTTP */
    requests++;
-
    return true;
 }
 
@@ -418,7 +424,7 @@ int HTTPPlugin::add_ext_http_request(const char *data, int payload_len, FlowReco
    } else {
       rec.addExtension(req);
       if (flush_flow) {
-         return FLOW_FLUSH;
+         return FLOW_FLUSH_2;
       }
    }
    return 0;
@@ -439,7 +445,7 @@ int HTTPPlugin::add_ext_http_response(const char *data, int payload_len, FlowRec
    } else {
       rec.addExtension(resp);
       if (flush_flow) {
-         return FLOW_FLUSH;
+         return FLOW_FLUSH_2;
       }
    }
    return 0;

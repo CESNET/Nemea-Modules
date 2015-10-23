@@ -10,7 +10,19 @@
 #include "packet.h"
 #include "flowifc.h"
 
-#define FLOW_FLUSH (0x1 << 0)
+/**
+ * \brief Tell FlowCache to flush current flow.
+ * Behavior when called from post_create: flush current Flow and erase FlowRecord.
+ * Behavior when called from pre_update: flush current Flow, erase FlowRecord and call pre_update()
+ */
+#define FLOW_FLUSH   (0x1 << 0)
+
+/**
+ *  \brief Tell FlowCache to flush current flow (version 2). This option is usually used when new extension header is created and added to Flow in pre_update() method instead of post_create().
+ *  Behavior when called from post_create: flush current Flow and erase FlowRecord.
+ *  Behavior when called from pre_update: flush current Flow and erase FlowRecord
+ */
+#define FLOW_FLUSH_2 (0x1 << 1)
 
 using namespace std;
 
@@ -39,7 +51,7 @@ public:
     * \brief Called after a new flow record is created.
     * \param [in,out] rec Reference to flow record.
     * \param [in] pkt Parsed packet.
-    * \return 0 on success or FLOW_FLUSH option.
+    * \return 0 on success or FLOW_FLUSH, FLOW_FLUSH_2 options.
     */
    virtual int post_create(FlowRecord &rec, const Packet &pkt)
    {
@@ -50,7 +62,7 @@ public:
     * \brief Called before an existing record is update.
     * \param [in,out] rec Reference to flow record.
     * \param [in,out] pkt Parsed packet.
-    * \return 0 on success or FLOW_FLUSH option.
+    * \return 0 on success or FLOW_FLUSH, FLOW_FLUSH_2 options.
     */
    virtual int pre_update(FlowRecord &rec, Packet &pkt)
    {
