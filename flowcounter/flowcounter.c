@@ -65,9 +65,9 @@
 
 /* error handling macros */
 #define HANDLE_PERROR(msg) \
-	do { perror(msg); exit(EXIT_FAILURE); } while(0)
+   do { perror(msg); exit(EXIT_FAILURE); } while(0)
 #define HANDLE_ERROR(msg) \
-    do { fprintf(stderr, "%s\n", msg); exit(EXIT_FAILURE); } while (0)
+   do { fprintf(stderr, "%s\n", msg); exit(EXIT_FAILURE); } while (0)
 
 UR_FIELDS(
    uint32 PACKETS,     //Number of packets in a flow or in an interval
@@ -95,9 +95,9 @@ static int stop = 0;
 static int stats = 0;
 static unsigned long cnt_flows = 0, cnt_packets = 0, cnt_bytes = 0;
 
-static unsigned long send_interval;	/* data sending interval */
-ur_template_t *out_tmplt;		  /* output template */
-void *out_rec;						  /* output record */
+static unsigned long send_interval; /* data sending interval */
+ur_template_t *out_tmplt;           /* output template */
+void *out_rec;                      /* output record */
 
 
 // Function to handle SIGTERM and SIGINT signals (used to stop the module)
@@ -108,151 +108,167 @@ NMCM_PROGRESS_DECL
 
 void signal_handler(int signal)
 {
-	/*if (signal == SIGTERM || signal == SIGINT) {
-		stop = 1;
-		trap_terminate();
-	} else*/ if (signal == SIGUSR1) {
-		stats = 1;
-	}
+   if (signal == SIGUSR1) {
+      stats = 1;
+   }
 }
 
 void send_handler(int signal)
 {
-	int ret;
+   int ret;
 
-	if (signal != SIGALRM) {
-		return;
-	}
+   if (signal != SIGALRM) {
+      return;
+   }
 
    ur_set(out_tmplt, out_rec, F_FLOWS, cnt_flows);
    ur_set(out_tmplt, out_rec, F_PACKETS, cnt_packets);
    ur_set(out_tmplt, out_rec, F_BYTES, cnt_bytes);
    ret = trap_send(0, out_rec, ur_rec_fixlen_size(out_tmplt));
-   TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, exit(EXIT_FAILURE), exit(EXIT_FAILURE));
+   TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, 0, exit(EXIT_FAILURE));
    alarm(send_interval);
 }
 
 void get_o_param(int argc, char **argv, const char *module_getopt_string, const struct option *long_options)
 {
-	/* backup global variables */
-	int bck_optind = optind, bck_optopt = optopt, bck_opterr = opterr;
-	char *bck_optarg = optarg, opt;
+   /* backup global variables */
+   int bck_optind = optind, bck_optopt = optopt, bck_opterr = opterr;
+   char *bck_optarg = optarg;
+   char opt;
 
-	opterr = 0;						  /* disable getopt error output */
-	while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
-		switch (opt) {
-		case 'o':
-			{
-				char *endptr;
-				long int tmp_interval;
+   // Add "i:" to getopt_string
+   /* This is necessary because getopt rearragnes arguments in such a way that
+      all positional agruments (i.e. not options) are put at the end of argv.
+      If it wouldn't know about "-i" and that it requires argument, it would
+      move the argument (ifc specifier) to the end of argv (but doesn't move 
+      the "-i").
+      trap_parse_params (within TRAP_DEFAULT_INITIALIZATION) would than fail.
+   */
+   char *getopt_string_with_i = malloc(strlen(module_getopt_string) + 3);
+   sprintf(getopt_string_with_i, "%s%s", module_getopt_string, "i:");
 
-				errno = 0;
-				tmp_interval = strtol(optarg, &endptr, 0);
-				if (errno) {
-					HANDLE_PERROR("-o");
-				} else if (*optarg == '\0') {
-					HANDLE_ERROR("-o: missing argument");
-				} else if (*endptr != '\0') {
-					HANDLE_ERROR("-o: bad argument");
-				} else if (tmp_interval <= 0 || tmp_interval >= INTERVAL_LIMIT) {
-					HANDLE_ERROR("-o: bad interval range");
-				}
-				send_interval = tmp_interval;
-				break;
-			}
-		default:
-			if (optopt == 'o') {
-				HANDLE_ERROR("-o: missing argument");
-			}
-			break;
-		}
-	}
+   opterr = 0;                  /* disable getopt error output */
+   while ((opt = TRAP_GETOPT(argc, argv, getopt_string_with_i, long_options)) != -1) {
+      switch (opt) {
+      case 'o':
+         {
+            char *endptr;
+            long int tmp_interval;
 
-	/* restore global variables */
-	optind = bck_optind;
-	optopt = bck_optopt;
-	opterr = bck_opterr;
-	optarg = bck_optarg;
+            errno = 0;
+            tmp_interval = strtol(optarg, &endptr, 0);
+            if (errno) {
+               HANDLE_PERROR("-o");
+            } else if (*optarg == '\0') {
+               HANDLE_ERROR("-o: missing argument");
+            } else if (*endptr != '\0') {
+               HANDLE_ERROR("-o: bad argument");
+            } else if (tmp_interval <= 0 || tmp_interval >= INTERVAL_LIMIT) {
+               HANDLE_ERROR("-o: bad interval range");
+            }
+            send_interval = tmp_interval;
+            break;
+         }
+      default:
+         if (optopt == 'o') {
+            HANDLE_ERROR("-o: missing argument");
+         }
+         break;
+      }
+   }
+
+   free(getopt_string_with_i);
+
+   /* restore global variables */
+   optind = bck_optind;
+   optopt = bck_optopt;
+   opterr = bck_opterr;
+   optarg = bck_optarg;
 }
 
 int main(int argc, char **argv)
 {
 	int ret;
 
-	INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
-	// Declare progress structure, pointer to this struct, initialize progress limit
-	NMCM_PROGRESS_DEF;
+   // Declare progress structure, pointer to this struct, initialize progress limit
+   NMCM_PROGRESS_DEF;
 
-	get_o_param(argc, argv, module_getopt_string, long_options);	  /* output have to be known before TRAP init */
+   get_o_param(argc, argv, module_getopt_string, long_options);     /* output have to be known before TRAP init */
 
-	// ***** TRAP initialization *****
-	TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
+   // ***** TRAP initialization *****
+   TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
 
-	// Register signal handler.
-	TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
-	//signal(SIGTERM, signal_handler);
-	//signal(SIGINT, signal_handler);
-	signal(SIGUSR1, signal_handler);
-	signal(SIGALRM, send_handler);
+   // Register signal handler.
+   TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER(); // Handles SIGTERM and SIGINT
+   signal(SIGUSR1, signal_handler);
+   signal(SIGALRM, send_handler);
 
    // ***** Create UniRec template *****
-   char *unirec_specifier = "PACKETS,BYTES", opt;
+   char *unirec_specifier = "PACKETS,BYTES";
+   char opt;
 
-	while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
-		switch (opt) {
-		case 'p':
-			NMCM_PROGRESS_INIT(atoi(optarg), return 1);
-			break;
-		case 'P':
-			nmcm_progress_ptr->print_char = optarg[0];
-			break;
-		case 'o':
-			/* proccessed earlier */
-			break;
-		default:
-			fprintf(stderr, "Invalid arguments.\n");
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-			return 3;
-		}
-	}
+   while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
+      switch (opt) {
+      case 'p':
+         NMCM_PROGRESS_INIT(atoi(optarg), return 1);
+         break;
+      case 'P':
+         nmcm_progress_ptr->print_char = optarg[0];
+         break;
+      case 'o':
+         /* proccessed earlier */
+         break;
+      default:
+         fprintf(stderr, "Invalid arguments.\n");
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+         TRAP_DEFAULT_FINALIZATION();
+         return 3;
+      }
+   }
 
    ur_template_t *tmplt = ur_create_input_template(0, unirec_specifier, NULL);
    if (tmplt == NULL) {
       fprintf(stderr, "Error: Invalid UniRec specifier.\n");
-      trap_finalize();
+      TRAP_DEFAULT_FINALIZATION();
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return 4;
    }
 
-	if (send_interval) {			  /* in case of -o option */
-		/* create new output tempate */
-		out_tmplt = ur_create_output_template(0,"FLOWS,PACKETS,BYTES", NULL);
-		if (!out_tmplt) {
-			fprintf(stderr, "Error: Invalid UniRec specifier.\n");
-			trap_finalize();
-			FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-			return 4;
-		}
-		/* allocate space for output record with no dynamic part */
-		out_rec = ur_create_record(out_tmplt, 0);
-		if (!out_rec) {
-			ur_free_template(out_tmplt);
-			TRAP_DEFAULT_FINALIZATION();
-			FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-			return 4;
-		}
-		ret = trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
-		if (ret != TRAP_E_OK) {
-			ur_free_template(out_tmplt);
-			ur_free_record(out_rec);
-			fprintf(stderr, "Error: trap_ifcctl.\n");
-			trap_finalize();
-			FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-			return 4;
-		}
-		alarm(send_interval);	  /* arrange SIGARLM in send_interval seconds */
-	}
+   if (send_interval) {           /* in case of -o option */
+      /* create new output tempate */
+      out_tmplt = ur_create_output_template(0,"FLOWS,PACKETS,BYTES", NULL);
+      if (!out_tmplt) {
+         fprintf(stderr, "Error: Invalid UniRec specifier (this is implementation error, contact author of the module).\n");
+         trap_finalize();
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+         ur_free_template(tmplt);
+         return 4;
+      }
+      /* allocate space for output record with no dynamic part */
+      out_rec = ur_create_record(out_tmplt, 0);
+      if (!out_rec) {
+         ur_free_template(out_tmplt);
+         TRAP_DEFAULT_FINALIZATION();
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+         ur_free_template(tmplt);
+         ur_free_template(out_tmplt);
+         return 4;
+      }
+      /* Set NO_WAIT to output interface */
+      ret = trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
+      if (ret != TRAP_E_OK) {
+         ur_free_template(tmplt);
+         ur_free_template(out_tmplt);
+         ur_free_record(out_rec);
+         fprintf(stderr, "Error: trap_ifcctl.\n");
+         trap_finalize();
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+         return 4;
+      }
+      alarm(send_interval);     /* arrange SIGARLM in send_interval seconds */
+   }
 
    // ***** Main processing loop *****
    while (!stop) {
@@ -262,16 +278,9 @@ int main(int argc, char **argv)
       ret = TRAP_RECEIVE(0, data, data_size, tmplt);
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
 
-      // Check size of received data
-      if (data_size < ur_rec_fixlen_size(tmplt)) {
-         if (data_size <= 1) {
-            break;                // End of data (used for testing purposes)
-         } else {
-            fprintf(stderr,
-            "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
-            ur_rec_fixlen_size(tmplt), data_size);
-            break;
-         }
+      // Check for end-of-stream message
+      if (data_size <= 1) {
+         break;
       }
 
       // Printing progress
@@ -291,25 +300,26 @@ int main(int argc, char **argv)
       }
    }
 
-	// ***** Print results *****
+   // ***** Print results *****
 
-	NMCM_PROGRESS_NEWLINE;
-	printf("Flows:   %20lu\n", cnt_flows);
-	printf("Packets: %20lu\n", cnt_packets);
-	printf("Bytes:   %20lu\n", cnt_bytes);
+   NMCM_PROGRESS_NEWLINE;
+   printf("Flows:   %20lu\n", cnt_flows);
+   printf("Packets: %20lu\n", cnt_packets);
+   printf("Bytes:   %20lu\n", cnt_bytes);
 
-	// ***** Cleanup *****
+   // ***** Cleanup *****
 
-	// Do all necessary cleanup before exiting
-	TRAP_DEFAULT_FINALIZATION();
+   alarm(0); // Potential pending alarm have to be cancelled before cleanup
 
-	if (send_interval) {			  /* in case of -o option */
-		ur_free_template(out_tmplt);
-		ur_free_record(out_rec);
-		alarm(0);
-	}
+   // Do all necessary cleanup before exiting
+   TRAP_DEFAULT_FINALIZATION();
 
-	ur_free_template(tmplt);
-	FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-	return EXIT_SUCCESS;
+   if (send_interval) {         /* in case of -o option */
+      ur_free_template(out_tmplt);
+      ur_free_record(out_rec);
+   }
+
+   ur_free_template(tmplt);
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+   return EXIT_SUCCESS;
 }
