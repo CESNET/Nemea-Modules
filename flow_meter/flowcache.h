@@ -91,7 +91,7 @@ protected:
       for (unsigned int i = 0; i < plugins.size(); i++) {
          int tmp = plugins[i]->post_create(rec, pkt);
          if (tmp != 0) {
-            retval = tmp;
+            retval |= tmp;
          }
       }
       return retval;
@@ -109,7 +109,7 @@ protected:
       for (unsigned int i = 0; i < plugins.size(); i++) {
          int tmp = plugins[i]->pre_update(rec, pkt);
          if (tmp != 0) {
-            retval = tmp;
+            retval |= tmp;
          }
       }
       return retval;
