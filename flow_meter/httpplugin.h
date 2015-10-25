@@ -118,7 +118,6 @@ class HTTPPlugin : public FlowCachePlugin
 {
 public:
    HTTPPlugin(const options_t &options);
-   void init();
    int post_create(FlowRecord &rec, const Packet &pkt);
    int pre_update(FlowRecord &rec, Packet &pkt);
    void finish();
