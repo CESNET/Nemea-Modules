@@ -18,11 +18,13 @@ flow_meter_SOURCES=flow_meter.cpp \
 		    httpplugin.cpp \
 		    httpplugin.h \
 		    fields.c \
-		    fields.h
+		    fields.h \
+		    dnsplugin.cpp \
+		    dnsplugin.h
 
 
 flow_meter_LDADD=-ltrap -lunirec -lpcap
-flow_meter_CXXFLAGS=-O2 -std=c++98 -Wno-write-strings
+flow_meter_CXXFLAGS=-O2 -std=c++11 -Wno-write-strings
 pkgdocdir=${docdir}/flow_meter
 pkgdoc_DATA=README.md
 include ../aminclude.am

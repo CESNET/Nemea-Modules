@@ -70,7 +70,7 @@
 #include "fields.h"
 
 #include "httpplugin.h"
-//#include "dnsplugin.h"
+#include "dnsplugin.h"
 
 using namespace std;
 
@@ -108,7 +108,7 @@ UR_FIELDS (
   BASIC("Flow meter module", "Convert packets from PCAP file or live capture into flow records.", 0, 1)
 
 #define MODULE_PARAMS(PARAM) \
-  PARAM('p', "plugins", "Activate specified parsing plugins.. Format: plugin_name[,...] Supported plugins: http", required_argument, "string")\
+  PARAM('p', "plugins", "Activate specified parsing plugins.. Format: plugin_name[,...] Supported plugins: http,dns", required_argument, "string")\
   PARAM('c', "count", "Quit after n packets are captured.", required_argument, "uint32")\
   PARAM('I', "interface", "Name of capture interface. (eth0 for example)", required_argument, "string")\
   PARAM('r', "file", "Pcap file to read.", required_argument, "string") \
@@ -122,8 +122,9 @@ UR_FIELDS (
 /**
  * \brief Parse input plugin settings.
  * \param [in] settings String containing input plugin settings.
- * \param [out] plugin_settings Variable where to store parsed plugin settings.
- * \return True if setting was parsed, false if error occured.
+ * \param [out] plugins Array for storing active plugins.
+ * \param [in] options Options for plugin initialization.
+ * \return True if setting was parsed, false if an error occured.
  */
 bool parse_plugin_settings(const std::string &settings, std::vector<FlowCachePlugin *> &plugins, const options_t &options)
 {
@@ -136,10 +137,10 @@ bool parse_plugin_settings(const std::string &settings, std::vector<FlowCachePlu
 
       if (proto == "http") {
          plugins.push_back(new HTTPPlugin(options));
-      }/* else if (proto == "dns"){
+      } else if (proto == "dns"){
          plugins.push_back(new DNSPlugin(options));
-      } */else {
-         fprintf(stderr, "Unsupported protocol: \"%s\"\n", proto.c_str());
+      } else {
+         fprintf(stderr, "Unsupported plugin: \"%s\"\n", proto.c_str());
          return false;
       }
       begin = end + 1;
@@ -147,7 +148,6 @@ bool parse_plugin_settings(const std::string &settings, std::vector<FlowCachePlu
 
    return true;
 }
-
 
 int main(int argc, char *argv[])
 {
