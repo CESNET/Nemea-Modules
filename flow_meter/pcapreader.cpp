@@ -346,6 +346,7 @@ int PcapReader::open_file(const std::string &file)
       return 2;
    }
 
+   live_capture = false;
    errmsg = "";
    return 0;
 }
@@ -374,6 +375,7 @@ int PcapReader::init_interface(const std::string &interface)
       fprintf(stderr, "%s\n", errbuf); // Print warning.
    }
 
+   live_capture = true;
    errmsg = "";
    return 0;
 }
@@ -397,7 +399,10 @@ int PcapReader::get_pkt(Packet &packet)
    }
 
    packet_valid = false;
-   int ret = pcap_dispatch(handle, 1, packet_handler, (u_char *)(&packet));
+   int ret;
+
+   while ((ret = pcap_dispatch(handle, 1, packet_handler, (u_char *)(&packet))) == 0 && live_capture) {
+   } // Wait until packet is read.
 
    if (ret == 1 && packet_valid) {
       return 2;

@@ -67,7 +67,8 @@ public:
    void close();
    int get_pkt(Packet &packet);
 private:
-   pcap_t *handle; /**< pcap file handler */
+   pcap_t *handle; /**< libpcap file handler. */
+   bool live_capture; /**< PcapReader is capturing from network interface. */
 };
 
 void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data);
