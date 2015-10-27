@@ -44,6 +44,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
+#include <sstream>
 #include <arpa/inet.h>
 #include <unirec/unirec.h>
 
@@ -79,7 +80,7 @@ using namespace std;
 /**
  * \brief Get offset from 2 byte pointer.
  */
-#define GET_OFFSET(data1, data2) ((((uint8_t)(data1) & 0x3F) << 8) | (uint8_t)(data2))
+#define GET_OFFSET(half1, half2) ((((uint8_t)(half1) & 0x3F) << 8) | (uint8_t)(half2))
 
 #define DNS_UNIREC_TEMPLATE "DNS_ID,DNS_ANSWERS,DNS_RCODE,DNS_NAME,DNS_QTYPE,DNS_CLASS,DNS_RR_TTL,DNS_RLENGTH,DNS_RDATA,DNS_PSIZE,DNS_DO"
 
@@ -255,50 +256,51 @@ void DNSPlugin::process_srv(std::string &str) const
  * \param [in] type Type of RDATA section.
  * \param [in] length Length of RDATA section.
  */
-inline void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, const char *data, std::string &rdata, uint16_t type, size_t length) const
+inline void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, const char *data, std::ostringstream &rdata, uint16_t type, size_t length) const
 {
-   rdata.erase();
+   rdata.str("");
+   rdata.clear();
 
    switch (type){
    case DNS_TYPE_A:
-      rdata = inet_ntoa(*(struct in_addr *)(data));
-      DEBUG_MSG("\tData A:\t\t\t%s\n",       rdata.c_str());
+      rdata << inet_ntoa(*(struct in_addr *)(data));
+      DEBUG_MSG("\tData A:\t\t\t%s\n",       rdata.str().c_str());
       break;
    case DNS_TYPE_AAAA:
       {
          char addr[INET6_ADDRSTRLEN];
          inet_ntop(AF_INET6, (const void *)data, addr, INET6_ADDRSTRLEN);
-         rdata = addr;
-         DEBUG_MSG("\tData AAAA:\t\t%s\n",   rdata.c_str());
+         rdata << addr;
+         DEBUG_MSG("\tData AAAA:\t\t%s\n",   rdata.str().c_str());
       }
       break;
    case DNS_TYPE_NS:
-      rdata = get_name(data_begin, data);
-      DEBUG_MSG("\tData NS:\t\t\t%s\n",      rdata.c_str());
+      rdata << get_name(data_begin, data);
+      DEBUG_MSG("\tData NS:\t\t\t%s\n",      rdata.str().c_str());
       break;
    case DNS_TYPE_CNAME:
-      rdata = get_name(data_begin, data);
-      DEBUG_MSG("\tData CNAME:\t\t%s\n",     rdata.c_str());
+      rdata << get_name(data_begin, data);
+      DEBUG_MSG("\tData CNAME:\t\t%s\n",     rdata.str().c_str());
       break;
    case DNS_TYPE_PTR:
-      rdata = get_name(data_begin, data);
-      DEBUG_MSG("\tData PTR:\t\t%s\n",       rdata.c_str());
+      rdata << get_name(data_begin, data);
+      DEBUG_MSG("\tData PTR:\t\t%s\n",       rdata.str().c_str());
       break;
    case DNS_TYPE_DNAME:
-      rdata = get_name(data_begin, data);
-      DEBUG_MSG("\tData DNAME:\t\t%s\n",     rdata.c_str());
+      rdata << get_name(data_begin, data);
+      DEBUG_MSG("\tData DNAME:\t\t%s\n",     rdata.str().c_str());
       break;
    case DNS_TYPE_SOA:
       {
-         rdata = get_name(data_begin, data);
+         rdata << get_name(data_begin, data);
          data += get_name_length(data, true);
          std::string tmp = get_name(data_begin, data);
          data += get_name_length(data, true);
 
-         DEBUG_MSG("\t\tMName:\t\t%s\n",     rdata.c_str());
+         DEBUG_MSG("\t\tMName:\t\t%s\n",     rdata.str().c_str());
          DEBUG_MSG("\t\tRName:\t\t%s\n",     tmp.c_str());
 
-         rdata += " " + tmp;
+         rdata << " " << tmp;
 
          struct dns_soa *soa = (struct dns_soa *)data;
          DEBUG_MSG("\t\tSerial:\t\t%u\n",    ntohl(soa->serial));
@@ -306,8 +308,8 @@ inline void DNSPlugin::process_rdata(const char *data_begin, const char *record_
          DEBUG_MSG("\t\tRetry:\t\t%u\n",     ntohl(soa->retry));
          DEBUG_MSG("\t\tExpiration:\t%u\n",  ntohl(soa->expiration));
          DEBUG_MSG("\t\tMin TTL:\t%u\n",     ntohl(soa->ttl));
-         rdata += " " + to_string(ntohl(soa->serial)) + " " + to_string(ntohl(soa->refresh)) + " " +
-                  to_string(ntohl(soa->retry)) + " " + to_string(ntohl(soa->expiration)) + " " + to_string(ntohl(soa->ttl));
+         rdata << " " << ntohl(soa->serial) << " " << ntohl(soa->refresh) << " "
+               << ntohl(soa->retry) << " " << ntohl(soa->expiration) << " " << ntohl(soa->ttl);
       }
       break;
    case DNS_TYPE_SRV:
@@ -321,17 +323,17 @@ inline void DNSPlugin::process_rdata(const char *data_begin, const char *record_
          DEBUG_MSG("\t\tWeight:\t\t%u\n",    ntohs(srv->weight));
          DEBUG_MSG("\t\tPort:\t\t%u\n",      ntohs(srv->port));
 
-         rdata = tmp + " ";
+         rdata << tmp << " ";
          tmp = get_name(data_begin, data + 6);
 
          DEBUG_MSG("\t\tTarget:\t\t%s\n", tmp.c_str());
-         rdata += tmp + " " + to_string(ntohs(srv->priority)) + " " +  to_string(ntohs(srv->weight)) + " " + to_string(ntohs(srv->port));
+         rdata << tmp << " " << ntohs(srv->priority) << " " <<  ntohs(srv->weight) << " " << ntohs(srv->port);
       }
       break;
    case DNS_TYPE_MX:
       {
          uint16_t preference = ntohs(*(uint16_t *)data);
-         rdata = to_string(preference) + " " + get_name(data_begin, data + 2);
+         rdata << preference << " " << get_name(data_begin, data + 2);
          DEBUG_MSG("\tData MX:\n");
          DEBUG_MSG("\t\tPreference:\t%u\n",     preference);
          DEBUG_MSG("\t\tMail exchanger:\t%s\n", get_name(data_begin, data + 2).c_str());
@@ -339,10 +341,10 @@ inline void DNSPlugin::process_rdata(const char *data_begin, const char *record_
       break;
    case DNS_TYPE_TXT:
       {
-         rdata.append(data + 1, 0, *data);
+         rdata << string().append(data + 1, 0, *data);
          DEBUG_MSG("\tData TXT:\n");
          DEBUG_MSG("\t\tTXT length:\t%u\n",     *data);
-         DEBUG_MSG("\t\tTXT data:\t%s\n",       rdata.c_str());
+         DEBUG_MSG("\t\tTXT data:\t%s\n",       rdata.str().c_str());
       }
       break;
    case DNS_TYPE_MINFO:
@@ -362,8 +364,8 @@ inline void DNSPlugin::process_rdata(const char *data_begin, const char *record_
          DEBUG_MSG("\t\tAlgorithm:\t%u\n",      ds->algorithm);
          DEBUG_MSG("\t\tDigest type:\t%u\n",    ds->digest_type);
          DEBUG_MSG("\t\tDigest:\t\t(binary)\n");
-         rdata = to_string(ntohs(ds->keytag)) + " " + to_string(ds->keytag) + " " + to_string(ds->digest_type) + " ";
-         rdata.append(data + 4, 0, length - 4);
+         rdata << ntohs(ds->keytag) << " " << (uint16_t)ds->keytag << " "
+               << (uint16_t)ds->digest_type << " " << string("").append(data + 4, 0, length - 4);
       }
       break;
    case DNS_TYPE_RRSIG:
@@ -378,14 +380,15 @@ inline void DNSPlugin::process_rdata(const char *data_begin, const char *record_
          DEBUG_MSG("\t\tSig expiration:\t%u\n", ntohl(rrsig->sig_expiration));
          DEBUG_MSG("\t\tSig inception:\t%u\n",  ntohl(rrsig->sig_inception));
          DEBUG_MSG("\t\tKey tag:\t%u\n",        ntohs(rrsig->keytag));
-         rdata = to_string(ntohs(rrsig->type)) + " " + to_string(rrsig->algorithm) + " " + to_string(rrsig->labels) + " " +
-                 to_string(ntohl(rrsig->ttl)) + " " + to_string(ntohl(rrsig->sig_expiration)) + " " + to_string(ntohl(rrsig->sig_inception)) +
-                 + " " + to_string(ntohs(rrsig->keytag)) + " ";
+         rdata << ntohs(rrsig->type) << " " << (uint16_t)rrsig->algorithm << " " // Conversion needed, otherwise uint8_t will be threated as a char.
+               << (uint16_t)rrsig->labels << " " << ntohl(rrsig->ttl) << " "
+               << ntohl(rrsig->sig_expiration) << " " << ntohl(rrsig->sig_inception)
+               << " " << ntohs(rrsig->keytag) << " ";
+
          tmp = get_name(data_begin, data + 18);
          DEBUG_MSG("\t\tSigner's name:\t%s\n",  tmp.c_str());
 
-         rdata += " ";
-         rdata.append(data + 18 + tmp.size(), length - (18 + tmp.size()));
+         rdata << " " << string("").append(data + 18 + tmp.size(), length - (18 + tmp.size()));
          DEBUG_MSG("\t\tSignature:\t(binary)\n");
       }
       break;
@@ -397,14 +400,13 @@ inline void DNSPlugin::process_rdata(const char *data_begin, const char *record_
          DEBUG_MSG("\t\tProtocol:\t%u\n",       dnskey->protocol);
          DEBUG_MSG("\t\tAlgorithm:\t%u\n",      dnskey->algorithm);
 
-         rdata = to_string(ntohs(dnskey->flags)) + " " + to_string(dnskey->protocol) + " " + to_string(dnskey->algorithm) + " ";
-         rdata.append(data + 4, 0, length - 4);
+         rdata << ntohs(dnskey->flags) << " " << (uint16_t)dnskey->protocol << " " << (uint16_t)dnskey->algorithm << " " << string("").append(data + 4, 0, length - 4);
          DEBUG_MSG("\t\tPublic key:\t(binary data)\n");
       }
       break;
    default:
       DEBUG_MSG("\tData:\t\t\t(format not supported yet)\n");
-      rdata.append(data, length);
+      rdata << string("").append(data, length);
       break;
    }
 }
@@ -489,7 +491,7 @@ bool DNSPlugin::parse_dns(const char *data, int payload_len, FlowRecordExtDNS *r
    ********************************************************************/
    const char *record_begin;
    size_t rdlength;
-   std::string rdata = "";
+   std::ostringstream rdata;
    for (int i = 0; i < answer_rr_cnt; i++) { // Process answers section.
       record_begin = data;
 
@@ -510,12 +512,12 @@ bool DNSPlugin::parse_dns(const char *data, int payload_len, FlowRecordExtDNS *r
       if (i == 0) { // Copy only first answer.
          rec->dns_rr_ttl = ntohl(answer->ttl);
 
-         size_t tmp = rdata.length();
+         size_t tmp = rdata.str().length();
          if (tmp >= sizeof(rec->dns_data)) {
             DEBUG_MSG("Truncating rdata (length = %lu) to %lu.\n", tmp, sizeof(rec->dns_data) - 1);
             tmp = sizeof(rec->dns_data) - 1;
          }
-         memcpy(rec->dns_data, rdata.c_str(), tmp); // Copy processed rdata.
+         memcpy(rec->dns_data, rdata.str().c_str(), tmp); // Copy processed rdata.
          rec->dns_data[tmp] = 0;
          rec->dns_rlength = tmp;
       }

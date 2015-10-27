@@ -45,6 +45,7 @@
 #define DNSPLUGIN_H
 
 #include <string>
+#include <sstream>
 
 #include "fields.h"
 #include "flowifc.h"
@@ -273,7 +274,7 @@ private:
    void add_ext_dns(const char *data, int payload_len, FlowRecord &rec);
    std::string get_name(const char *begin, const char *data) const;
    void process_srv(string &str) const;
-   inline void process_rdata(const char *data_begin, const char *record_begin, const char* data, std::string &rdata, uint16_t type, size_t length) const;
+   inline void process_rdata(const char *data_begin, const char *record_begin, const char* data, std::ostringstream &rdata, uint16_t type, size_t length) const;
    size_t get_name_length(const char *data, bool total_length) const;
 
    bool statsout;       /**< Indicator whether to print stats when flow cache is finishing or not. */
