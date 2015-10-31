@@ -104,18 +104,19 @@ UR_FIELDS (
  * \brief Constructor.
  * \param [in] options Module options.
  */
-DNSPlugin::DNSPlugin(const options_t &options) : statsout(options.statsout), queries(0), responses(0), total(0)
+DNSPlugin::DNSPlugin(const options_t &options) : flow_flush(false), statsout(options.statsout), queries(0), responses(0), total(0)
 {
 }
 
 int DNSPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 {
-   if (!(pkt.packetFieldIndicator & PCKT_PAYLOAD_MASK)) { // If payload is not present, return.
+   if ((pkt.packetFieldIndicator & PCKT_PAYLOAD_MASK) != PCKT_PAYLOAD_MASK) { // If payload is not present, return.
       return 0;
    }
 
    if (pkt.destinationTransportPort == 53 || pkt.sourceTransportPort == 53) {
       add_ext_dns(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
+      return FLOW_FLUSH;
    }
 
    return 0;
@@ -123,7 +124,7 @@ int DNSPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 
 int DNSPlugin::pre_update(FlowRecord &rec, Packet &pkt)
 {
-   if (!(pkt.packetFieldIndicator & PCKT_PAYLOAD_MASK)) { // If payload is not present, return.
+   if ((pkt.packetFieldIndicator & PCKT_PAYLOAD_MASK) != PCKT_PAYLOAD_MASK) { // If payload is not present, return.
       return 0;
    }
 
@@ -131,9 +132,10 @@ int DNSPlugin::pre_update(FlowRecord &rec, Packet &pkt)
       FlowRecordExt *ext = rec.getExtension(dns);
       if(ext == NULL) {
          add_ext_dns(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
-         return 0;
+      } else {
+         parse_dns(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, dynamic_cast<FlowRecordExtDNS *>(ext));
       }
-      parse_dns(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, dynamic_cast<FlowRecordExtDNS *>(ext));
+      return FLOW_FLUSH;
    }
 
    return 0;
@@ -256,7 +258,7 @@ void DNSPlugin::process_srv(std::string &str) const
  * \param [in] type Type of RDATA section.
  * \param [in] length Length of RDATA section.
  */
-inline void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, const char *data, std::ostringstream &rdata, uint16_t type, size_t length) const
+void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, const char *data, std::ostringstream &rdata, uint16_t type, size_t length) const
 {
    rdata.str("");
    rdata.clear();
@@ -426,6 +428,8 @@ uint32_t s_responses = 0;
 bool DNSPlugin::parse_dns(const char *data, int payload_len, FlowRecordExtDNS *rec)
 {
    total++;
+   flow_flush = false;
+
    const char *data_begin = data;
    DEBUG_MSG("---------- dns parser #%u ----------\n", total);
    DEBUG_MSG("Payload length: %u\n", payload_len);
@@ -588,6 +592,7 @@ bool DNSPlugin::parse_dns(const char *data, int payload_len, FlowRecordExtDNS *r
 
    if (DNS_HDR_GET_QR(flags)) {
       responses++;
+   flow_flush = true;
    } else {
       queries++;
    }
