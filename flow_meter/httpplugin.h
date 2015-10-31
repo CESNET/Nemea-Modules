@@ -130,9 +130,8 @@ private:
    int add_ext_http_response(const char *data, int payload_len, FlowRecord &rec);
    bool valid_http_method(const char *method) const;
 
-   bool statsout;          /**< Indicator whether to print stats when flow cache is finishing or not. */
-   bool ignore_keep_alive; /**< Indicator whether to ignore HTTP keep-alive requests / responses or not. */
-   bool flush_flow;        /**< Indicator whether to flush current flow or not. */
+   bool statsout;          /**< Print stats when flow cache is finishing. */
+   bool flush_flow;        /**< Tell FlowCache to flush current Flow. */
    uint32_t requests;      /**< Total number of parsed HTTP requests. */
    uint32_t responses;     /**< Total number of parsed HTTP responses. */
    uint32_t total;         /**< Total number of parsed HTTP packets. */

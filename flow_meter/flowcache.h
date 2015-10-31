@@ -161,11 +161,16 @@ protected:
     * \param [in,out] rec Stored flow record.
     * \param [in] pkt Input parsed packet.
     */
-   void plugins_post_update(FlowRecord &rec, const Packet &pkt)
+   int plugins_post_update(FlowRecord &rec, const Packet &pkt)
    {
+      int retval = 0;
       for (unsigned int i = 0; i < plugins.size(); i++) {
-         plugins[i]->post_update(rec, pkt);
+         int tmp = plugins[i]->post_update(rec, pkt);
+         if (tmp != 0) {
+            retval |= tmp;
+         }
       }
+      return retval;
    }
 
    /**

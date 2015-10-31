@@ -71,11 +71,12 @@ int StatsPlugin::post_create(FlowRecord &rec, const Packet &pkt)
    return 0;
 }
 
-void StatsPlugin::post_update(FlowRecord &rec, const Packet &pkt)
+int StatsPlugin::post_update(FlowRecord &rec, const Packet &pkt)
 {
    packets += 1;
    cache_hits += 1;
    check_timestamp(pkt);
+   return 0;
 }
 
 void StatsPlugin::pre_export(FlowRecord &rec)
