@@ -9,7 +9,7 @@ import argparse
 MODULE_NAME = "something2idea"
 MODULE_DESC = "Converts output of SOME_MODULE module to IDEA."
 REQ_TYPE = trap.TRAP_FMT_UNIREC
-REQ_FORMAT = "uint8 EVENT_TYPE,time TIME_FIRST,time TIME_LAST,ipaddr SRC_IP,ipaddr DST_IP,uint16 SRC_PORT,uint16 DST_PORT,uint8 PROTOCOL,double EVENT_SCALE,string NOTE"
+REQ_FORMAT = "uint8 EVENT_TYPE,time TIME_FIRST,time TIME_LAST,ipaddr SRC_IP,ipaddr DST_IP,uint16 SRC_PORT,uint16 DST_PORT,uint8 PROTOCOL,uint32 EVENT_SCALE,string NOTE"
 
 # Main conversion function
 # rec - Record recevied on TRAP input interface (the report to convert). Its format satisfies what was defined by REQ_TYPE and REQ_FORMAT.
