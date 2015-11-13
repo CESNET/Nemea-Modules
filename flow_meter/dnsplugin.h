@@ -60,8 +60,8 @@ using namespace std;
 #define DNS_TYPE_CNAME  5
 #define DNS_TYPE_SOA    6
 #define DNS_TYPE_PTR    12
-#define DNS_TYPE_MINFO  13
-#define DNS_TYPE_HINFO  14
+#define DNS_TYPE_HINFO  13
+#define DNS_TYPE_MINFO  14
 #define DNS_TYPE_MX     15
 #define DNS_TYPE_TXT    16
 #define DNS_TYPE_ISDN   20
@@ -213,12 +213,12 @@ struct FlowRecordExtDNS : FlowRecordExt {
    uint16_t dns_id;
    uint16_t dns_answers;
    uint8_t dns_rcode;
-   char dns_qname[256];
+   char dns_qname[128];
    uint16_t dns_qtype;
    uint16_t dns_qclass;
    uint32_t dns_rr_ttl;
    uint16_t dns_rlength;
-   char dns_data[512];
+   char dns_data[160];
    uint16_t dns_psize;
    uint8_t dns_do;
 
@@ -272,12 +272,11 @@ public:
 private:
    bool parse_dns(const char *data, int payload_len, FlowRecordExtDNS *rec);
    void add_ext_dns(const char *data, int payload_len, FlowRecord &rec);
-   std::string get_name(const char *begin, const char *data) const;
+   std::string get_name(const char *begin, const char *data, int counter) const;
    void process_srv(string &str) const;
    void process_rdata(const char *data_begin, const char *record_begin, const char* data, std::ostringstream &rdata, uint16_t type, size_t length) const;
    size_t get_name_length(const char *data, bool total_length) const;
 
-   bool flow_flush;     /**< Tell FlowCache to flush current flow. */
    bool statsout;       /**< Indicator whether to print stats when flow cache is finishing or not. */
    uint32_t queries;    /**< Total number of parsed DNS queries. */
    uint32_t responses;  /**< Total number of parsed DNS responses. */
