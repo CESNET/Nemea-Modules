@@ -67,7 +67,7 @@ def init_trap():
    trap.ifcctl(trap.IFC_OUTPUT, 0, trap.CTL_BUFFERSWITCH, 0) # Disable output buffering
 
 def print_commands():
-   print "Commands: [P]rint record, [E]dit record, [S]end record, [H]elp, E[x]it"
+   print "Commands: [P]rint record, [E]dit record, [S]end record, [H]elp, E[x]it S[t]op"
 
 def print_help():
    print """\
@@ -77,6 +77,7 @@ Available commands:
   'send'  's'  Send the record to the output interface.
                To send multiple records, put an integer number after the
                command, e.g. 's 5' to send 5 records.
+  'stop'  't'  Send terminate message.
   'help'  'h'  Print this help.
   'exit'  'x'  Exit the Debug Sender
   'quit'  'q'  Exit the Debug Sender
@@ -115,6 +116,19 @@ def edit_record():
 
          break # Continue with next field
    print
+
+
+def send_stop_record():
+   try:
+      trap.send(0, "0")
+      print "done"
+   except trap.ETerminated:
+      print
+      trap_terminated()
+      return
+   except Exception, e:
+      print
+      print "ERROR:", e
 
 
 def send_record(count=1):
@@ -288,6 +302,8 @@ while True:
             print "ERROR: Parameter of 'send' command must be an integer."
             continue
       send_record(cnt)
+   elif cmd == "t" or cmd == "stop":
+      send_stop_record()
    elif cmd == "e" or cmd == "edit":
       edit_record()
    elif cmd == "p" or cmd == "print":
