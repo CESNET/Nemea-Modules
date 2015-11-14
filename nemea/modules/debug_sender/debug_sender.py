@@ -66,122 +66,135 @@ def init_trap():
    trap.registerDefaultSignalHandler()
    trap.ifcctl(trap.IFC_OUTPUT, 0, trap.CTL_BUFFERSWITCH, 0) # Disable output buffering
 
-def print_commands():
-   print "Commands: [P]rint record, [E]dit record, [S]end record, [H]elp, E[x]it S[t]op"
-
-def print_help():
-   print """\
-Available commands:
-  'print' 'p'  Print current contents of the record.
-  'edit'  'e'  Edit values of all fields of the record.
-  'send'  's'  Send the record to the output interface.
-               To send multiple records, put an integer number after the
-               command, e.g. 's 5' to send 5 records.
-  'stop'  't'  Send terminate message.
-  'help'  'h'  Print this help.
-  'exit'  'x'  Exit the Debug Sender
-  'quit'  'q'  Exit the Debug Sender
+import cmd
+class Commands(cmd.Cmd):
+   prompt = '> '
+   doc_leader = """This shows the list of commands.
+If you want to see help to a specific command, type help and 'command' (e.g. help print).
+Character in apostrophs is an abbreviation of the command (e.g. p for print).
 """
+   doc_header = 'Available commands:'
+   ruler = '-'
+   intro = """Type help to get list of commands."""
 
-def print_record():
-   global record, record_metadata, fieldOrder
-   for name in fieldOrder:
-      value = getattr(record, name)
-      print "%s = %s%s" % (name, value if not isinstance(value, str) else '"'+value+'"', " {"+record_metadata[name]+"}" if name in record_metadata else "")
+   # Commands are methods with name starting with "do_"
+   # Help string of a command is a docstring of the command method.
+   # The first 3 characters of docstring must be apostroph, character, apostroph
+   # The character is an abbreviation of a command.
 
+   def do_print(self, line = ""):
+      """'p'  Print current contents of the record."""
+      global record, record_metadata, fieldOrder
+      t = "Current record:\n"
+      for name in fieldOrder:
+         value = getattr(record, name)
+         t = t + "%s = %s%s\n" % (name, value if not isinstance(value, str) else '"'+value+'"', " {"+record_metadata[name]+"}" if name in record_metadata else "")
+      print(t)
 
-def edit_record():
-   global record, record_metadata, fieldOrder
-   for name in fieldOrder:
-      val = getattr(record, name)
-      while True:
-         valstr = raw_input("%s [%s]%s: " % (name, val if not isinstance(val, str) else '"'+val+'"', " {"+record_metadata[name]+"}" if name in record_metadata else ""))
-         if valstr == "":
+   def do_edit(self, line):
+      """'e'  Edit values of all fields of the record."""
+      global record, record_metadata, fieldOrder
+      for name in fieldOrder:
+         val = getattr(record, name)
+         while True:
+            valstr = raw_input("%s [%s]%s: " % (name, val if not isinstance(val, str) else '"'+val+'"', " {"+record_metadata[name]+"}" if name in record_metadata else ""))
+            if valstr == "":
+               break # Continue with next field
+
+            field_type = record._field_types[name]
+
+            # Try special cases first, then all other cases
+            if not edit_time_rules(name, valstr):
+               try:
+                  if hasattr(field_type, "fromString"):
+                     val = field_type.fromString(valstr)
+                  else:
+                     val = field_type(valstr)
+               except Exception, e:
+                  print "Unable to convert %r to %s:" % (valstr, field_type.__name__),
+                  print e
+                  continue # Try it again
+               setattr(record, name, val)
+
             break # Continue with next field
-
-         field_type = record._field_types[name]
-
-         # Try special cases first, then all other cases
-         if not edit_time_rules(name, valstr):
-            try:
-               if hasattr(field_type, "fromString"):
-                  val = field_type.fromString(valstr)
-               else:
-                  val = field_type(valstr)
-            except Exception, e:
-               print "Unable to convert %r to %s:" % (valstr, field_type.__name__),
-               print e
-               continue # Try it again
-            setattr(record, name, val)
-
-         break # Continue with next field
-   print
-
-
-def send_stop_record():
-   try:
-      trap.send(0, "0")
-      print "done"
-   except trap.ETerminated:
       print
-      trap_terminated()
-      return
-   except Exception, e:
-      print
-      print "ERROR:", e
 
-
-def send_record(count=1):
-   global record
-   if count == 1:
-      print "Sending the record ...",
-   else:
-      print "Sending %i records ..." % count,
-   sys.stdout.flush()
-   try:
-      for _ in range(count):
-         send_time_rules() # Edit record according to send-time rules
-         trap.send(0, record.serialize())
-      print "done"
-   except trap.ETerminated:
-      print
-      trap_terminated()
-      return
-   except Exception, e:
-      print
-      print "ERROR:", e
-
-
-def trap_terminated():
-   print "** TRAP interface was terminated (probably by pressing Ctrl-C). **"
-   print "You can [R]einitialize TRAP or E[x]it"
-   while True:
+   def do_stop(self, line):
+      """'t'  Send terminate message."""
       try:
-         cmd = raw_input("> ")
-      except EOFError:
-         cmd = "x"
-      cmd = cmd.strip().lower()
-      if cmd == "":
-         continue
-      elif cmd == "r":
-         # Reinitialize TRAP
-         try:
-            trap.finalize()
-         except trap.ENotInitialized:
-            pass
-         try:
-            init_trap()
-         except trap.TRAPException, e:
-            print e
-            continue
-         print "TRAP reinitialized."
-         print_commands()
-         return
-      elif cmd == "x" or cmd == "exit" or cmd == "q" or cmd == "quit":
-         exit(0)
-      else:
-         print "Unknown command. Enter 'r' or 'x'."
+         trap.send(0, "0")
+         print "done"
+      except trap.ETerminated:
+         print("Libtrap was terminated")
+         return True
+      except Exception, e:
+         print "\nERROR:", e
 
+   def do_send(self, line):
+      """'s'  Send the record to the output interface.
+                  To send multiple records, put an integer number after the
+                  command, e.g. 's 5' to send 5 records."""
+      global record
+      count = 1
+      if line:
+         try:
+            count = int(line)
+         except ValueError:
+            print "ERROR: Parameter of 'send' command must be an integer."
+      if count == 1:
+         print "Sending the record ...",
+      else:
+         print "Sending %i records ..." % count,
+      sys.stdout.flush()
+      try:
+         for _ in range(int(count)):
+            send_time_rules() # Edit record according to send-time rules
+            trap.send(0, record.serialize())
+         print "done"
+      except trap.ETerminated:
+         print("Libtrap was terminated")
+         return True
+      except Exception, e:
+         print "\nERROR:", e
+
+   def do_exit(self, line):
+      """'x'  Exit the Debug Sender"""
+      return True
+
+   def do_quit(self, line):
+      """'q'  Exit the Debug Sender"""
+      return True
+
+   def do_EOF(self, line):
+      return True
+
+   def __init__(self):
+      cmd.Cmd.__init__(self)
+      # add abbr_ attributes of the class, it is used to support "one-char synonym" for a command
+      # docstring of command method is used
+      names = self.get_names()
+      a = filter(lambda x: x.startswith("abbr_"), names)
+      for i in filter(lambda x: x.startswith("do_"), names):
+         abbrname = "abbr_" + i[3:]
+         if abbrname not in a:
+            fcn = getattr(Commands, i)
+            doc = getattr(fcn, "__doc__")
+            setattr(Commands, "abbr_"+i[3:], doc.__str__()[1])
+
+   def parseline(self, line):
+      # try to find abbreviation of command
+      words = line.split()
+      if words and words[0]:
+         for attr in self.get_names():
+            if attr.startswith("abbr_") and getattr(self, attr) == words[0]:
+               # found command, replace in line
+               words[0] = attr[5:]
+               line = " ".join(words)
+               break
+
+      # do the original Cmd parsing
+      return cmd.Cmd.parseline(self, line)
+# end of Commands class
 
 def edit_time_rules(name, valstr):
    global record, record_metadata
@@ -259,10 +272,6 @@ def apply_rules(wrapper, valstr):
 ifc_spec = trap.parseParams(sys.argv, module_info)
 
 
-if len(sys.argv) != 2:
-   print "Usage:\n      python debug_sender.py -i IFC_SPEC UNIREC_FORMAT"
-   exit(1)
-
 # Create UniRec template
 URTmplt = unirec.CreateTemplate("URTmplt", sys.argv[1])
 record = URTmplt()
@@ -278,40 +287,17 @@ init_trap()
 trap.set_data_fmt(0, trap.TRAP_FMT_UNIREC, sys.argv[1])
 
 # Main loop
-print "Current record:"
-print_record()
-print
-print_commands()
+if __name__ == '__main__':
+   if len(sys.argv) != 2:
+      print "Usage:\n      python debug_sender.py -i IFC_SPEC UNIREC_FORMAT"
+      exit(1)
 
-while True:
-   try:
-      cmd = raw_input("> ")
-   except EOFError:
-      cmd = "x"
-   cmd, _, param = cmd.partition(' ')
-   cmd = cmd.strip().lower()
-   param = param.strip()
-   if cmd == "":
-      continue
-   elif cmd == "s" or cmd == "send":
-      cnt = 1
-      if param:
-         try:
-            cnt = int(param)
-         except ValueError:
-            print "ERROR: Parameter of 'send' command must be an integer."
-            continue
-      send_record(cnt)
-   elif cmd == "t" or cmd == "stop":
-      send_stop_record()
-   elif cmd == "e" or cmd == "edit":
-      edit_record()
-   elif cmd == "p" or cmd == "print":
-      print_record()
-   elif cmd == "h" or cmd == "help":
-      print_help()
-   elif cmd == "x" or cmd == "exit" or cmd == "q" or cmd == "quit":
-      exit(0)
-   else:
-      print "Unknown command"
+   c = Commands()
+   print("""Interactive Debug Sender
+This module can be used to create UniRec messages and send them via TRAP.
+
+Empty line means repeating the previous command.
+""")
+   c.do_print()
+   c.cmdloop()
 
