@@ -100,7 +100,6 @@ trap_module_info_t *module_info = NULL;
   BASIC("Nfdump-reader module","This module reads a given nfdump file and outputs flow records in UniRec format. If more files are specified, all flows from the first file are read, then all flows from second file and so on.",0,1)
 
 #define MODULE_PARAMS(PARAM) \
-   PARAM('F', "file", "A file in nfdump format.", required_argument, "string") \
    PARAM('f', "filter", "A nfdump-like filter expression. Only records matching the filter will be sent to the output.", required_argument, "string") \
    PARAM('c', "first", "Read only the first N flow records.", required_argument, "uint64") \
    PARAM('n', "no_eof", "Don't send EOF message at the end.", no_argument, "none") \
