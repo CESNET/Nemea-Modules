@@ -58,8 +58,23 @@
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp6.h>
 
-//#define DEBUG
 using namespace std;
+
+//#define DEBUG
+
+// Print debug message if debugging is allowed.
+#ifdef DEBUG
+#define DEBUG_MSG(format, ...) fprintf(stderr, format, ##__VA_ARGS__)
+#else
+#define DEBUG_MSG(format, ...)
+#endif
+
+// Process code if debugging is allowed.
+#ifdef DEBUG
+#define DEBUG_CODE(code) code
+#else
+#define DEBUG_CODE(code)
+#endif
 
 /**
  * \brief Swap an IPv6 address bytes.
@@ -92,46 +107,42 @@ bool packet_valid = false;
 void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data)
 {
    Packet &pkt = *(Packet *)arg;
-   struct ethhdr *eth = (struct ethhdr *)data;
+   const u_char *data_ptr = data;
+   struct ethhdr *eth = (struct ethhdr *)data_ptr;
    uint8_t transport_proto = 0;
    uint16_t payload_len = 0;
-#ifdef DEBUG
-   printf("---------- packet parser  #%u -------------\n", ++s_total_pkts);
-   printf("Time:\t\t\t%ld.%ld\n",      h->ts.tv_sec, h->ts.tv_usec);
-   printf("Packet length:\t\tcaplen=%uB len=%uB\n\n", h->caplen, h->len);
 
-   printf("Ethernet header:\n");
-   printf("\tDest mac:\t%s\n",         ether_ntoa((struct ether_addr *)eth->h_dest));
-   printf("\tSrc mac:\t%s\n",          ether_ntoa((struct ether_addr *)eth->h_source));
-#endif /* DEBUG */
+   DEBUG_MSG("---------- packet parser  #%u -------------\n", ++s_total_pkts);
+   DEBUG_MSG("Time:\t\t\t%ld.%ld\n",      h->ts.tv_sec, h->ts.tv_usec);
+   DEBUG_MSG("Packet length:\t\tcaplen=%uB len=%uB\n\n", h->caplen, h->len);
+
+   DEBUG_MSG("Ethernet header:\n");
+   DEBUG_MSG("\tDest mac:\t%s\n",         ether_ntoa((struct ether_addr *)eth->h_dest));
+   DEBUG_MSG("\tSrc mac:\t%s\n",          ether_ntoa((struct ether_addr *)eth->h_source));
 
    uint16_t ethertype = ntohs(eth->h_proto);
-#ifdef DEBUG
-   printf("\tEthertype:\t%#06x\n",     ethertype);
-#endif /* DEBUG */
+
+   DEBUG_MSG("\tEthertype:\t%#06x\n",     ethertype);
 
    if (ethertype == ETH_P_8021Q) {
-#ifdef DEBUG
-      uint16_t vlan = ntohs(*(unsigned uint32_t *)(data + 14));
-      printf("\t802.1Q field:\n");
-      printf("\t\tPriority:\t%u\n",    ((vlan & 0xE000) >> 12));
-      printf("\t\tCFI:\t\t%u\n",       ((vlan & 0x1000) >> 11));
-      printf("\t\tVLAN:\t\t%u\n",      (vlan & 0x0FFF));
-#endif /* DEBUG */
-      data += 18;
-      ethertype = ntohs(*(uint16_t *)&data[-2]);
-#ifdef DEBUG
-      printf("\t\tEthertype:\t%#06x\n",     ethertype);
-#endif /* DEBUG */
+      DEBUG_CODE(uint16_t vlan = ntohs(*(unsigned uint32_t *)(data_ptr + 14)));
+      DEBUG_MSG("\t802.1Q field:\n");
+      DEBUG_MSG("\t\tPriority:\t%u\n",    ((vlan & 0xE000) >> 12));
+      DEBUG_MSG("\t\tCFI:\t\t%u\n",       ((vlan & 0x1000) >> 11));
+      DEBUG_MSG("\t\tVLAN:\t\t%u\n",      (vlan & 0x0FFF));
+
+      data_ptr += 18;
+      ethertype = ntohs(*(uint16_t *)&data_ptr[-2]);
+      DEBUG_MSG("\t\tEthertype:\t%#06x\n",     ethertype);
    } else {
-      data += 14;
+      data_ptr += 14;
    }
 
    pkt.packetFieldIndicator = PCKT_TIMESTAMP;
    pkt.timestamp = h->ts.tv_sec + h->ts.tv_usec / 1000000.0;
 
    if (ethertype == ETH_P_IP) {
-      struct iphdr *ip = (struct iphdr *)(data);
+      struct iphdr *ip = (struct iphdr *)data_ptr;
 
       pkt.ipVersion = ip->version;
       pkt.protocolIdentifier = ip->protocol;
@@ -144,26 +155,24 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
 
       transport_proto = ip->protocol;
       payload_len = ntohs(ip->tot_len) - ip->ihl * 4;
-      data += ip->ihl * 4;
+      data_ptr += ip->ihl * 4;
 
-#ifdef DEBUG
-      printf("IPv4 header:\n");
-      printf("\tHDR version:\t%u\n",   ip->version);
-      printf("\tHDR length:\t%u\n",    ip->ihl);
-      printf("\tTOS:\t\t%u\n",         ip->tos);
-      printf("\tTotal length:\t%u\n",  ntohs(ip->tot_len));
-      printf("\tID:\t\t%#x\n",         ntohs(ip->id));
-      printf("\tFlags:\t\t%#x\n",      ((ntohs(ip->frag_off) & 0xE000) >> 13));
-      printf("\tFrag off:\t%#x\n",     (ntohs(ip->frag_off) & 0x1FFF));
-      printf("\tTTL:\t\t%u\n",         ip->ttl);
-      printf("\tProtocol:\t%u\n",      ip->protocol);
-      printf("\tChecksum:\t%#06x\n",   ntohs(ip->check));
-      printf("\tSrc addr:\t%s\n",      inet_ntoa(*(struct in_addr *)(&ip->saddr)));
-      printf("\tDest addr:\t%s\n",     inet_ntoa(*(struct in_addr *)(&ip->daddr)));
-#endif /* DEBUG */
+      DEBUG_MSG("IPv4 header:\n");
+      DEBUG_MSG("\tHDR version:\t%u\n",   ip->version);
+      DEBUG_MSG("\tHDR length:\t%u\n",    ip->ihl);
+      DEBUG_MSG("\tTOS:\t\t%u\n",         ip->tos);
+      DEBUG_MSG("\tTotal length:\t%u\n",  ntohs(ip->tot_len));
+      DEBUG_MSG("\tID:\t\t%#x\n",         ntohs(ip->id));
+      DEBUG_MSG("\tFlags:\t\t%#x\n",      ((ntohs(ip->frag_off) & 0xE000) >> 13));
+      DEBUG_MSG("\tFrag off:\t%#x\n",     (ntohs(ip->frag_off) & 0x1FFF));
+      DEBUG_MSG("\tTTL:\t\t%u\n",         ip->ttl);
+      DEBUG_MSG("\tProtocol:\t%u\n",      ip->protocol);
+      DEBUG_MSG("\tChecksum:\t%#06x\n",   ntohs(ip->check));
+      DEBUG_MSG("\tSrc addr:\t%s\n",      inet_ntoa(*(struct in_addr *)(&ip->saddr)));
+      DEBUG_MSG("\tDest addr:\t%s\n",     inet_ntoa(*(struct in_addr *)(&ip->daddr)));
 
    } else if (ethertype == ETH_P_IPV6) {
-      struct ip6_hdr *ip6 = (struct ip6_hdr *)(data);
+      struct ip6_hdr *ip6 = (struct ip6_hdr *)data_ptr;
 
       pkt.ipVersion = (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0xf0000000) >> 28;
       pkt.ipClassOfService = (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0x0ff00000) >> 20;
@@ -178,32 +187,28 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
 
       transport_proto = ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;
       payload_len = ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);   //TODO: IPv6 Extension header
-      data += 40;
+      data_ptr += 40;
 
-#ifdef DEBUG
-      char buffer[INET6_ADDRSTRLEN];
-      printf("IPv6 header:\n");
-      printf("\tVersion:\t%u\n",       (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0xf0000000) >> 28);
-      printf("\tClass:\t\t%u\n",       (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0x0ff00000) >> 20);
-      printf("\tFlow:\t\t%#x\n",       (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0x000fffff));
-      printf("\tLength:\t\t%u\n",      ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen));
-      printf("\tProtocol:\t%u\n",      ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt);
-      printf("\tHop limit:\t%u\n",     ip6->ip6_ctlun.ip6_un1.ip6_un1_hlim);
+      DEBUG_CODE(char buffer[INET6_ADDRSTRLEN]);
+      DEBUG_MSG("IPv6 header:\n");
+      DEBUG_MSG("\tVersion:\t%u\n",       (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0xf0000000) >> 28);
+      DEBUG_MSG("\tClass:\t\t%u\n",       (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0x0ff00000) >> 20);
+      DEBUG_MSG("\tFlow:\t\t%#x\n",       (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0x000fffff));
+      DEBUG_MSG("\tLength:\t\t%u\n",      ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen));
+      DEBUG_MSG("\tProtocol:\t%u\n",      ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt);
+      DEBUG_MSG("\tHop limit:\t%u\n",     ip6->ip6_ctlun.ip6_un1.ip6_un1_hlim);
 
-      inet_ntop(AF_INET6, (const void *)&ip6->ip6_src, buffer, INET6_ADDRSTRLEN);
-      printf("\tSrc addr:\t%s\n",      buffer);
-      inet_ntop(AF_INET6, (const void *)&ip6->ip6_dst, buffer, INET6_ADDRSTRLEN);
-      printf("\tDest addr:\t%s\n",     buffer);
-#endif /* DEBUG */
+      DEBUG_CODE(inet_ntop(AF_INET6, (const void *)&ip6->ip6_src, buffer, INET6_ADDRSTRLEN));
+      DEBUG_MSG("\tSrc addr:\t%s\n",      buffer);
+      DEBUG_CODE(inet_ntop(AF_INET6, (const void *)&ip6->ip6_dst, buffer, INET6_ADDRSTRLEN));
+      DEBUG_MSG("\tDest addr:\t%s\n",     buffer);
    } else {
-#ifdef DEBUG
-      printf("Packet parser exits: unknown ethernet type: %#06x\n", ethertype);
-#endif /* DEBUG */
+      DEBUG_MSG("Packet parser exits: unknown ethernet type: %#06x\n", ethertype);
       return;
    }
 
    if (transport_proto == IPPROTO_TCP) {
-      struct tcphdr *tcp = (struct tcphdr *)(data);
+      struct tcphdr *tcp = (struct tcphdr *)data_ptr;
 
       pkt.sourceTransportPort = ntohs(tcp->source);
       pkt.destinationTransportPort = ntohs(tcp->dest);
@@ -228,86 +233,75 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
       }
       pkt.packetFieldIndicator |= PCKT_TCP_MASK;
 
-      data += tcp->doff * 4;
+      data_ptr += tcp->doff * 4;
       payload_len -= tcp->doff * 4;
 
-#ifdef DEBUG
-      printf("TCP header:\n");
-      printf("\tSrc port:\t%u\n",   ntohs(tcp->source));
-      printf("\tDest port:\t%u\n",  ntohs(tcp->dest));
-      printf("\tSEQ:\t\t%#x\n",     ntohl(tcp->seq));
-      printf("\tACK SEQ:\t%#x\n",   ntohl(tcp->ack_seq));
-      printf("\tData offset:\t%u\n",tcp->doff);
-      printf("\tFlags:\t\t%s%s%s%s%s%s\n", (tcp->fin ? "FIN " : ""), (tcp->syn ? "SYN " : ""), (tcp->rst ? "RST " : ""), (tcp->psh ? "PSH " : ""), (tcp->ack ? "ACK " : ""), (tcp->urg ? "URG" : ""));
-      printf("\tWindow:\t\t%u\n",   ntohs(tcp->window));
-      printf("\tChecksum:\t%#06x\n",ntohs(tcp->check));
-      printf("\tUrg ptr:\t%#x\n",   ntohs(tcp->urg_ptr));
-      printf("\tReserved1:\t%#x\n", tcp->res1);
-      printf("\tReserved2:\t%#x\n", tcp->res2);
-#endif /* DEBUG */
-
+      DEBUG_MSG("TCP header:\n");
+      DEBUG_MSG("\tSrc port:\t%u\n",   ntohs(tcp->source));
+      DEBUG_MSG("\tDest port:\t%u\n",  ntohs(tcp->dest));
+      DEBUG_MSG("\tSEQ:\t\t%#x\n",     ntohl(tcp->seq));
+      DEBUG_MSG("\tACK SEQ:\t%#x\n",   ntohl(tcp->ack_seq));
+      DEBUG_MSG("\tData offset:\t%u\n",tcp->doff);
+      DEBUG_MSG("\tFlags:\t\t%s%s%s%s%s%s\n", (tcp->fin ? "FIN " : ""), (tcp->syn ? "SYN " : ""), (tcp->rst ? "RST " : ""), (tcp->psh ? "PSH " : ""), (tcp->ack ? "ACK " : ""), (tcp->urg ? "URG" : ""));
+      DEBUG_MSG("\tWindow:\t\t%u\n",   ntohs(tcp->window));
+      DEBUG_MSG("\tChecksum:\t%#06x\n",ntohs(tcp->check));
+      DEBUG_MSG("\tUrg ptr:\t%#x\n",   ntohs(tcp->urg_ptr));
+      DEBUG_MSG("\tReserved1:\t%#x\n", tcp->res1);
+      DEBUG_MSG("\tReserved2:\t%#x\n", tcp->res2);
    } else if (transport_proto == IPPROTO_UDP) {
-      struct udphdr *udp = (struct udphdr *)(data);
+      struct udphdr *udp = (struct udphdr *)data_ptr;
 
       pkt.sourceTransportPort = ntohs(udp->source);
       pkt.destinationTransportPort = ntohs(udp->dest);
       pkt.packetFieldIndicator |= PCKT_UDP_MASK;
 
-      data += 8;
+      data_ptr += 8;
       payload_len -= 8;
 
-#ifdef DEBUG
-      printf("UDP header:\n");
-      printf("\tSrc port:\t%u\n",   ntohs(udp->source));
-      printf("\tDest port:\t%u\n",  ntohs(udp->dest));
-      printf("\tLength:\t\t%u\n",   ntohs(udp->len));
-      printf("\tChecksum:\t%#06x\n",ntohs(udp->check));
-#endif /* DEBUG */
-
+      DEBUG_MSG("UDP header:\n");
+      DEBUG_MSG("\tSrc port:\t%u\n",   ntohs(udp->source));
+      DEBUG_MSG("\tDest port:\t%u\n",  ntohs(udp->dest));
+      DEBUG_MSG("\tLength:\t\t%u\n",   ntohs(udp->len));
+      DEBUG_MSG("\tChecksum:\t%#06x\n",ntohs(udp->check));
    } else if (transport_proto == IPPROTO_ICMP) {
-#ifdef DEBUG
-      struct icmphdr *icmp = (struct icmphdr *)(data);
-      printf("ICMP header:\n");
-      printf("\tType:\t\t%u\n",     icmp->type);
-      printf("\tCode:\t\t%u\n",     icmp->code);
-      printf("\tChecksum:\t%#06x\n",ntohs(icmp->checksum));
-      printf("\tRest:\t\t%#06x\n",  ntohl(*(uint32_t *)&icmp->un));
-#endif /* DEBUG */
-
+      DEBUG_CODE(struct icmphdr *icmp = (struct icmphdr *)data_ptr);
+      DEBUG_MSG("ICMP header:\n");
+      DEBUG_MSG("\tType:\t\t%u\n",     icmp->type);
+      DEBUG_MSG("\tCode:\t\t%u\n",     icmp->code);
+      DEBUG_MSG("\tChecksum:\t%#06x\n",ntohs(icmp->checksum));
+      DEBUG_MSG("\tRest:\t\t%#06x\n",  ntohl(*(uint32_t *)&icmp->un));
    } else if (transport_proto == IPPROTO_ICMPV6) {
-#ifdef DEBUG
-      struct icmp6_hdr *icmp6 = (struct icmp6_hdr *)(data);
-      printf("ICMPv6 header:\n");
-      printf("\tType:\t\t%u\n",     icmp6->icmp6_type);
-      printf("\tCode:\t\t%u\n",     icmp6->icmp6_code);
-      printf("\tChecksum:\t%#x\n",  ntohs(icmp6->icmp6_cksum));
-      printf("\tBody:\t\t%#x\n",    ntohs(*(uint32_t *)&icmp6->icmp6_dataun));
-#endif /* DEBUG */
+      DEBUG_CODE(struct icmp6_hdr *icmp6 = (struct icmp6_hdr *)data_ptr);
+      DEBUG_MSG("ICMPv6 header:\n");
+      DEBUG_MSG("\tType:\t\t%u\n",     icmp6->icmp6_type);
+      DEBUG_MSG("\tCode:\t\t%u\n",     icmp6->icmp6_code);
+      DEBUG_MSG("\tChecksum:\t%#x\n",  ntohs(icmp6->icmp6_cksum));
+      DEBUG_MSG("\tBody:\t\t%#x\n",    ntohs(*(uint32_t *)&icmp6->icmp6_dataun));
    } else {
-#ifdef DEBUG
-      printf("Packet parser exits: unknown transport protocol: %#06x\n", transport_proto);
-#endif /* DEBUG */
+      DEBUG_MSG("Packet parser exits: unknown transport protocol: %#06x\n", transport_proto);
       return;
    }
 
-   if (((pkt.packetFieldIndicator & PCKT_TCP_MASK) == PCKT_TCP_MASK) ||
-       ((pkt.packetFieldIndicator & PCKT_UDP_MASK) == PCKT_UDP_MASK)) {
-      if (payload_len <= MAXPCKTPAYLOADSIZE) {
-         pkt.transportPayloadPacketSectionSize = payload_len;
-         memcpy(pkt.transportPayloadPacketSection, data, payload_len);
-         pkt.transportPayloadPacketSection[payload_len] = 0;
-         pkt.packetFieldIndicator |= PCKT_PAYLOAD_MASK;
-      }
+   int len = (data_ptr - data) + payload_len;
+   if (len > MAXPCKTSIZE) {
+      len = MAXPCKTSIZE;
+      DEBUG_MSG("Packet size too long, truncating to %u\n", len);
+   }
+   memcpy(pkt.packet, data, len);
+   pkt.packet[len] = 0;
+   pkt.packetTotalLength = len;
 
-#ifdef DEBUG
-      printf("Payload length:\t%u\n", payload_len);
-#endif /* DEBUG */
+   pkt.transportPayloadPacketSectionSize = len - (data_ptr - data);
+   pkt.transportPayloadPacketSection = pkt.packet + (data_ptr - data);
+
+   if ((pkt.packetFieldIndicator & PCKT_TCP_MASK) == PCKT_TCP_MASK ||
+       (pkt.packetFieldIndicator & PCKT_UDP_MASK) == PCKT_UDP_MASK) {
+      pkt.packetFieldIndicator |= PCKT_PAYLOAD_MASK;
    }
 
+   DEBUG_MSG("Payload length:\t%u\n", payload_len);
+   DEBUG_MSG("Packet parser exits: packet parsed\n");
    packet_valid = true;
-#ifdef DEBUG
-   printf("Packet parser exits: packet parsed\n");
-#endif /* DEBUG */
 }
 
 /**
@@ -352,6 +346,7 @@ int PcapReader::open_file(const std::string &file)
       return 2;
    }
 
+   live_capture = false;
    errmsg = "";
    return 0;
 }
@@ -380,6 +375,7 @@ int PcapReader::init_interface(const std::string &interface)
       fprintf(stderr, "%s\n", errbuf); // Print warning.
    }
 
+   live_capture = true;
    errmsg = "";
    return 0;
 }
@@ -403,7 +399,10 @@ int PcapReader::get_pkt(Packet &packet)
    }
 
    packet_valid = false;
-   int ret = pcap_dispatch(handle, 1, packet_handler, (u_char *)(&packet));
+   int ret;
+
+   while ((ret = pcap_dispatch(handle, 1, packet_handler, (u_char *)(&packet))) == 0 && live_capture) {
+   } // Wait until packet is read.
 
    if (ret == 1 && packet_valid) {
       return 2;

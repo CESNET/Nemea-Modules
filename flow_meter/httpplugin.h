@@ -47,6 +47,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
+#include <fields.h>
 
 #include "flowifc.h"
 #include "flowcacheplugin.h"
@@ -76,6 +77,15 @@ struct FlowRecordExtHTTPReq : FlowRecordExt {
       httpReqUserAgent[0] = 0;
       httpReqReferer[0] = 0;
    }
+
+   virtual void fillUnirec(ur_template_t *tmplt, void *record)
+   {
+      ur_set_string(tmplt, record, F_HTTP_METHOD, httpReqMethod);
+      ur_set_string(tmplt, record, F_HTTP_HOST, httpReqHost);
+      ur_set_string(tmplt, record, F_HTTP_URL, httpReqUrl);
+      ur_set_string(tmplt, record, F_HTTP_USER_AGENT, httpReqUserAgent);
+      ur_set_string(tmplt, record, F_HTTP_REFERER, httpReqReferer);
+   }
 };
 
 /**
@@ -93,6 +103,12 @@ struct FlowRecordExtHTTPResp : FlowRecordExt {
       httpRespCode = 0;
       httpRespContentType[0] = 0;
    }
+
+   virtual void fillUnirec(ur_template_t *tmplt, void *record)
+   {
+      ur_set(tmplt, record, F_HTTP_RESPONSE_CODE, httpRespCode);
+      ur_set_string(tmplt, record, F_HTTP_CONTENT_TYPE, httpRespContentType);
+   }
 };
 
 /**
@@ -102,12 +118,10 @@ class HTTPPlugin : public FlowCachePlugin
 {
 public:
    HTTPPlugin(const options_t &options);
-   void init();
    int post_create(FlowRecord &rec, const Packet &pkt);
    int pre_update(FlowRecord &rec, Packet &pkt);
-   void post_update(FlowRecord &rec, const Packet &pkt);
-   void pre_export(FlowRecord &rec);
    void finish();
+   std::string get_unirec_field_string();
 
 private:
    bool parse_http_request(const char *data, int payload_len, FlowRecordExtHTTPReq *rec, bool create);
@@ -116,9 +130,8 @@ private:
    int add_ext_http_response(const char *data, int payload_len, FlowRecord &rec);
    bool valid_http_method(const char *method) const;
 
-   bool statsout;          /**< Indicator whether to print stats when flow cache is finishing or not. */
-   bool ignore_keep_alive; /**< Indicator whether to ignore HTTP keep-alive requests / responses or not. */
-   bool flush_flow;        /**< Indicator whether to flush current flow or not. */
+   bool statsout;          /**< Print stats when flow cache is finishing. */
+   bool flush_flow;        /**< Tell FlowCache to flush current Flow. */
    uint32_t requests;      /**< Total number of parsed HTTP requests. */
    uint32_t responses;     /**< Total number of parsed HTTP responses. */
    uint32_t total;         /**< Total number of parsed HTTP packets. */

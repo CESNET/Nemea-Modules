@@ -46,10 +46,19 @@
 #ifndef FLOWCACHEPLUGIN_H
 #define FLOWCACHEPLUGIN_H
 
+#include <string>
+
 #include "packet.h"
 #include "flowifc.h"
 
-#define FLOW_FLUSH (0x1 << 0)
+/**
+ * \brief Tell FlowCache to flush current flow.
+ * Behavior when called from post_create: flush current Flow and erase FlowRecord.
+ * Behavior when called from pre_update and post_update: flush current Flow, erase FlowRecord and call post_create
+ */
+#define FLOW_FLUSH   (0x1 << 0)
+
+using namespace std;
 
 /**
  * \brief Class template for flow cache plugins.
@@ -98,9 +107,11 @@ public:
     * \brief Called after an existing record is updated.
     * \param [in,out] rec Reference to flow record.
     * \param [in,out] pkt Parsed packet.
+    * \return 0 on success or FLOW_FLUSH option.
     */
-   virtual void post_update(FlowRecord &rec, const Packet &pkt)
+   virtual int post_update(FlowRecord &rec, const Packet &pkt)
    {
+      return 0;
    }
 
    /**
@@ -118,6 +129,14 @@ public:
    {
    }
 
+   /**
+    * \brief Get unirec template string from plugin.
+    * \return Unirec template string.
+    */
+   virtual std::string get_unirec_field_string()
+   {
+      return "";
+   }
 };
 
 #endif

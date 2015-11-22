@@ -72,7 +72,7 @@ public:
 
    void init();
    int post_create(FlowRecord &rec, const Packet &pkt);
-   void post_update(FlowRecord &rec, const Packet &pkt);
+   int post_update(FlowRecord &rec, const Packet &pkt);
    void pre_export(FlowRecord &rec);
    void finish();
 };

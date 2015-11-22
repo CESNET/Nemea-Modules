@@ -50,6 +50,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <unirec/unirec.h>
 
 // Values of field presence indicator flags (flowFieldIndicator)
 // (Names of the fields are inspired by IPFIX specification)
@@ -129,13 +130,22 @@ enum extTypeEnum {
  */
 struct FlowRecordExt {
    FlowRecordExt *next; /**< Pointer to next extension */
-   uint16_t extType; /**< Type of extension. */
+   extTypeEnum extType; /**< Type of extension. */
 
    /**
     * \brief Constructor.
     * \param [in] type Type of extension.
     */
-   FlowRecordExt(uint16_t type) : next(NULL), extType(type)
+   FlowRecordExt(extTypeEnum type) : next(NULL), extType(type)
+   {
+   }
+
+   /**
+    * \brief Fill unirec record with stored extension data.
+    * \param [in] tmplt Unirec template.
+    * \param [out] record Pointer to the unirec record.
+    */
+   virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
    }
 
@@ -196,7 +206,7 @@ struct FlowRecord {
     * \param [in] extType Type of extension.
     * \return Pointer to the requested extension or NULL if extension is not present.
     */
-   FlowRecordExt *getExtension(uint16_t extType)
+   FlowRecordExt *getExtension(extTypeEnum extType)
    {
       FlowRecordExt *ext_ptr = exts;
       while (ext_ptr != NULL) {

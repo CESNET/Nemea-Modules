@@ -68,9 +68,9 @@
 #include "unirecexporter.h"
 #include "stats.h"
 #include "fields.h"
-#include "httpplugin.h"
 
-//#include "dnsplugin.h"
+#include "httpplugin.h"
+#include "dnsplugin.h"
 
 using namespace std;
 
@@ -108,7 +108,7 @@ UR_FIELDS (
   BASIC("Flow meter module", "Convert packets from PCAP file or live capture into flow records.", 0, 1)
 
 #define MODULE_PARAMS(PARAM) \
-  PARAM('p', "plugins", "Activate specified parsing plugins.. Format: plugin_name[,...] Supported plugins: http", required_argument, "string")\
+  PARAM('p', "plugins", "Activate specified parsing plugins.. Format: plugin_name[,...] Supported plugins: http,dns", required_argument, "string")\
   PARAM('c', "count", "Quit after n packets are captured.", required_argument, "uint32")\
   PARAM('I', "interface", "Name of capture interface. (eth0 for example)", required_argument, "string")\
   PARAM('r', "file", "Pcap file to read.", required_argument, "string") \
@@ -122,25 +122,25 @@ UR_FIELDS (
 /**
  * \brief Parse input plugin settings.
  * \param [in] settings String containing input plugin settings.
- * \param [out] plugin_settings Variable where to store parsed plugin settings.
- * \return True if setting was parsed, false if error occured.
+ * \param [out] plugins Array for storing active plugins.
+ * \param [in] options Options for plugin initialization.
+ * \return True if setting was parsed, false if an error occured.
  */
-bool parse_plugin_settings(const std::string &settings, uint32_t &plugin_settings)
+bool parse_plugin_settings(const std::string &settings, std::vector<FlowCachePlugin *> &plugins, const options_t &options)
 {
    std::string proto;
    size_t begin = 0, end = 0;
-   plugin_settings = 0;
 
    while (end != std::string::npos) {
       end = settings.find(",", begin);
       proto = settings.substr(begin, (end == std::string::npos ? (settings.length() - begin) : (end - begin)));
 
       if (proto == "http") {
-         plugin_settings |= PLUGIN_HTTP;
-      } /*else if (proto == "dns"){
-         plugin_settings |= PLUGIN_DNS;
-      } */else {
-         fprintf(stderr, "Unsupported protocol: \"%s\"\n", proto.c_str());
+         plugins.push_back(new HTTPPlugin(options));
+      } else if (proto == "dns"){
+         plugins.push_back(new DNSPlugin(options));
+      } else {
+         fprintf(stderr, "Unsupported plugin: \"%s\"\n", proto.c_str());
          return false;
       }
       begin = end + 1;
@@ -151,6 +151,7 @@ bool parse_plugin_settings(const std::string &settings, uint32_t &plugin_setting
 
 int main(int argc, char *argv[])
 {
+   plugins_t plugin_wrapper;
    options_t options;
    options.flowcachesize = DEFAULT_FLOW_CACHE_SIZE;
    options.flowlinesize = DEFAULT_FLOW_LINE_SIZE;
@@ -159,7 +160,6 @@ int main(int argc, char *argv[])
    options.replacementstring = DEFAULT_REPLACEMENT_STRING;
    options.statsout = false;
    options.verbose = false;
-   options.activeplugins = 0;
    options.interface = "";
 
    uint32_t pkt_limit = 0;
@@ -176,7 +176,7 @@ int main(int argc, char *argv[])
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
       case 'p':
-         if (!parse_plugin_settings(string(optarg), options.activeplugins)) {
+         if (!parse_plugin_settings(string(optarg), plugin_wrapper.plugins, options)) {
             FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
             return error("Invalid argument for option -p");
          }
@@ -227,8 +227,10 @@ int main(int argc, char *argv[])
    }
 
    if (options.interface != "" && options.infilename != "") {
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return error("Cannot capture from file and from interface at the same time.");
    } else if (options.interface == "" && options.infilename == "") {
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return error("Neither capture interface nor input file specified.");
    }
 
@@ -253,20 +255,15 @@ int main(int argc, char *argv[])
    NHTFlowCache flowcache(options);
    UnirecExporter flowwriter;
 
-   if (flowwriter.init(options.activeplugins) != 0) {
+   if (flowwriter.init(plugin_wrapper.plugins) != 0) {
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return error("Unable to initialize UnirecExporter.");
    }
    flowcache.set_exporter(&flowwriter);
 
-   HTTPPlugin http(options);
-   //DNSPlugin dns(options);
-
-   if (options.activeplugins & PLUGIN_HTTP) {
-      flowcache.add_plugin(&http);
-   }/* else if (options.activeplugins & PLUGIN_DNS) {
-      flowcache.add_plugin(&dns);
-   }*/
+   for (unsigned int i = 0; i < plugin_wrapper.plugins.size(); i++) {
+      flowcache.add_plugin(plugin_wrapper.plugins[i]);
+   }
 
    if (options.statsout) {
       StatsPlugin stats(options.statstime, cout);
@@ -277,7 +274,7 @@ int main(int argc, char *argv[])
    Packet packet;
    int ret;
    uint32_t pkt_total = 0, pkt_parsed = 0;
-   packet.transportPayloadPacketSection = new char[MAXPCKTPAYLOADSIZE + 1];
+   packet.packet = new char[MAXPCKTSIZE + 1];
 
    while ((ret = packetloader.get_pkt(packet)) > 0) {
       if (ret == 2 && (sampling == 100 || ((rand() % 99) +1) <= sampling)) {
@@ -305,8 +302,9 @@ int main(int argc, char *argv[])
    flowcache.finish();
    flowwriter.close();
    packetloader.close();
-   delete [] packet.transportPayloadPacketSection;
-   ur_finalize();
+
+   delete [] packet.packet;
+
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    return EXIT_SUCCESS;
