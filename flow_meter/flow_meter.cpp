@@ -71,6 +71,7 @@
 
 #include "httpplugin.h"
 #include "dnsplugin.h"
+#include "sipplugin.h"
 
 using namespace std;
 
@@ -108,7 +109,7 @@ UR_FIELDS (
   BASIC("Flow meter module", "Convert packets from PCAP file or live capture into flow records.", 0, 1)
 
 #define MODULE_PARAMS(PARAM) \
-  PARAM('p', "plugins", "Activate specified parsing plugins.. Format: plugin_name[,...] Supported plugins: http,dns", required_argument, "string")\
+  PARAM('p', "plugins", "Activate specified parsing plugins.. Format: plugin_name[,...] Supported plugins: http,dns,sip", required_argument, "string")\
   PARAM('c', "count", "Quit after n packets are captured.", required_argument, "uint32")\
   PARAM('I', "interface", "Name of capture interface. (eth0 for example)", required_argument, "string")\
   PARAM('r', "file", "Pcap file to read.", required_argument, "string") \
@@ -139,6 +140,8 @@ bool parse_plugin_settings(const std::string &settings, std::vector<FlowCachePlu
          plugins.push_back(new HTTPPlugin(options));
       } else if (proto == "dns"){
          plugins.push_back(new DNSPlugin(options));
+      } else if (proto == "sip"){
+         plugins.push_back(new SIPPlugin(options));
       } else {
          fprintf(stderr, "Unsupported plugin: \"%s\"\n", proto.c_str());
          return false;

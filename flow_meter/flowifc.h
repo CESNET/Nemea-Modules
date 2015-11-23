@@ -122,7 +122,8 @@
 enum extTypeEnum {
    http_request = 0,
    http_response,
-   dns
+   dns,
+   sip
 };
 
 /**

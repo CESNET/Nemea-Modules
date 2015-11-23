@@ -17,6 +17,8 @@ flow_meter_SOURCES=flow_meter.cpp \
 		    flowcacheplugin.h \
 		    httpplugin.cpp \
 		    httpplugin.h \
+		    sipplugin.cpp \
+		    sipplugin.h \
 		    fields.c \
 		    fields.h \
 		    dnsplugin.cpp \
