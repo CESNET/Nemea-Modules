@@ -27,8 +27,8 @@ parser.tab.h: parser.tab.c
 parser.tab.c: bison/parser.y
 	$(BISON) -d $<
 
-fields.h fields.c: $(UNIRECPROC)
-	$(PYTHON) $(UNIRECPROC)
+fields.h fields.c:
+	"${PYTHON}" "${UNIRECPROC}"
 
 clean-local:
 	rm -f lex.yy.c parser.tab.c parser.tab.h parser fiedls.c fields.h
