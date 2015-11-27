@@ -88,7 +88,7 @@ AC_CHECK_PROG(FLEX, flex, yes, [""])
 AM_CONDITIONAL(HAVE_BISON, test xyes = x${BISON} -a xyes = x${FLEX})
 
 AC_CHECK_HEADER(pcap.h,
-        AC_CHECK_LIB(pcap, pcap_open_live, [libpcap=yes], AC_MSG_WARN([libpcap not found. The flow_meter and portscan_detector modules will not be compiled.])), AC_MSG_WARN([pcap.h not found. The flow_meter and portscan_detector modules will not be compiled.]))
+        AC_CHECK_LIB(pcap, pcap_open_live, [libpcap=yes], AC_MSG_WARN([libpcap not found. The flow_meter module will not be compiled.])), AC_MSG_WARN([pcap.h not found. The flow_meter module will not be compiled.]))
 
 AM_CONDITIONAL(HAVE_LIBPCAP, test x${libpcap} = xyes)
 
