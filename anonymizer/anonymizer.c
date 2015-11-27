@@ -215,7 +215,7 @@ NMCM_PROGRESS_DEF
 
    uint8_t mode = ANONYMIZATION;          // Default mode
    ANONYMIZATION_ALGORITHM = RIJNDAEL_BC; // Default algorithm
-   
+
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    // ***** ONLY FOR DEBUGING ***** //
@@ -359,7 +359,7 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
 
       // Send anonymized data
       if(first == 1) {
-         //set output format for first output record. 
+         //set output format for first output record.
          ur_set_output_template(0,tmplt);
          first = 0;
       }

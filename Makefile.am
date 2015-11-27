@@ -1,6 +1,7 @@
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS=flowcounter \
+SUBDIRS=anonymizer \
+flowcounter \
 logger \
 logreplay \
 merger \
