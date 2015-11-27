@@ -2,6 +2,7 @@ DebugSender
 
 Author: Vaclav Bartos <ibartosv@fit.vutbr.cz>
 Modified: Jan Wrona <xwrona00@stud.fit.vutbr.cz>
+Modified: Tomas Cejka <cejkat@cesnet.cz>
 
 Goal: Provide a way to manually send UniRec records.
 
@@ -22,7 +23,7 @@ Then you can use simple command-line to write commands:
   'edit'  'e'  Edit values of all fields of the record.
   'send'  's'  Send the record to the output interface.
                To send multiple records, put an integer number after the
-               command, e.g. 's 5' to send 5 records. 
+               command, e.g. 's 5' to send 5 records.
   'help'  'h'  Print this help.
   'exit'  'x'  Exit the Debug Sender
 
@@ -35,8 +36,8 @@ If you press Ctrl-C, any pending send is interrupted and TRAP interface is termi
 Special edit values:
   In addition to regular values you can specify few special values. They can be
   divided into edit-time and send-time. Edit-time rules are executed only once,
-  rigth after you insert them. Send-time rules are stored and executed every 
-  time before record is sent. For instance "> s 5" causes send-time rule to be 
+  rigth after you insert them. Send-time rules are stored and executed every
+  time before record is sent. For instance "> s 5" causes send-time rule to be
   executed five times.
 
   Special symbols are "!", "now", "+" and "-" and have to be specified in following order:
