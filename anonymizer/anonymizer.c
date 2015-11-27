@@ -279,9 +279,6 @@ int main(int argc, char **argv)
       PAnonymizer_Init(init_key);
    }
 
-   trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_AUTOFLUSH_TIMEOUT, TRAP_NO_AUTO_FLUSH);
-   trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT);
-
    // ***** Create UniRec input template *****
    char *unirec_specifier = "SRC_IP,DST_IP";
    char *errstr = NULL;
