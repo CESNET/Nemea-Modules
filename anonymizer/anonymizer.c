@@ -281,8 +281,10 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
 
    // ***** Create UniRec input template *****
    char *unirec_specifier = "SRC_IP,DST_IP";
-   char * errstr = NULL;
+   char *errstr = NULL;
    ur_template_t *tmplt = ur_create_input_template(0, unirec_specifier, &errstr);
+   trap_set_required_fmt(0, TRAP_FMT_UNIREC, "ipaddr SRC_IP,ipaddr DST_IP");
+
    if (tmplt == NULL) {
       fprintf(stderr, "Error: Invalid UniRec specifier.\n");
       if(errstr != NULL){
@@ -300,19 +302,31 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
       const void *data;
       uint16_t data_size;
       ret = TRAP_RECEIVE(0, data, data_size, tmplt);
-      TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
-      // Check size of received data
-      if (data_size == 1) {
-        break;
+      if (ret == TRAP_E_FORMAT_CHANGED) {
+         // Get the data format of senders output interface (the data format of the output interface it is connected to)
+         const char *spec = NULL;
+         uint8_t data_fmt = TRAP_FMT_UNKNOWN;
+         if (trap_get_data_fmt(TRAPIFC_INPUT, 0, &data_fmt, &spec) != TRAP_E_OK) {
+            fprintf(stderr, "Data format was not loaded.");
+            break;
+         }
+         // Set the same data format to repeaters output interface
+         trap_set_data_fmt(0, TRAP_FMT_UNIREC, spec);
+      } else {
+         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
       }
-      if (data_size != 1 && (data_size < ur_rec_fixlen_size(tmplt) || data_size > 250)) {
-          #ifdef __cplusplus
-          extern "C" {
-          #endif
-          extern void *trap_glob_ctx;
-          #ifdef __cplusplus
-          }
-          #endif
+      if (data_size <= 1) {
+         printf("EOF received\n");
+         break; // End of data (used for testing purposes)
+      }
+      if (data_size < ur_rec_fixlen_size(tmplt) || data_size > 250) {
+#ifdef __cplusplus
+         extern "C" {
+#endif
+            extern void *trap_glob_ctx;
+#ifdef __cplusplus
+         }
+#endif
           extern void *trap_glob_ctx;
           printf("tmpl: %d\n", ur_rec_fixlen_size(tmplt));
           trap_ctx_create_ifc_dump(trap_glob_ctx, NULL);
@@ -329,15 +343,6 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
          fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
                  ur_rec_fixlen_size(tmplt), data_size);
          continue;
-         /*if (data_size <= 1) {
-            printf("EOF received\n");
-            break; // End of data (used for testing purposes)
-         }
-         else {
-            fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
-                    ur_rec_fixlen_size(tmplt), data_size);
-            break;
-         }*/
       }
 
 
