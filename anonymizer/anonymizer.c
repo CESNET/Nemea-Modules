@@ -2,10 +2,16 @@
  * \file anonymizer.c
  * \brief Module for anonymizing incoming flow records.
  * \author Erik Sabik <xsabik02@stud.fit.vutbr.cz>
+ * \author Zdenek Rosa <rosazden@fit.cvut.cz>
+ * \author Tomas Jansky <janskto1@fit.cvut.cz>
+ * \author Martin Zadnik <zadnik@cesnet.cz>
+ * \author Tomas Cejka <cejkat@cesnet.cz>
  * \date 2013
+ * \date 2014
+ * \date 2015
  */
 /*
- * Copyright (C) 2013 CESNET
+ * Copyright (C) 2013-2015 CESNET
  *
  * LICENSE TERMS
  *
@@ -207,7 +213,7 @@ NMCM_PROGRESS_DECL
 
 int main(int argc, char **argv)
 {
-NMCM_PROGRESS_DEF
+   NMCM_PROGRESS_DEF
    int ret;
    uint8_t init_key[32] = {0};
    char *secret_key = "01234567890123450123456789012345";
@@ -219,13 +225,13 @@ NMCM_PROGRESS_DEF
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    // ***** ONLY FOR DEBUGING ***** //
-   #ifdef DEBUG
-      char ip1_buff[100] = {0};
-      char ip2_buff[100] = {0};
-   #endif
+#ifdef DEBUG
+   char ip1_buff[100] = {0};
+   char ip2_buff[100] = {0};
+#endif
    // ***************************** //
 
-NMCM_PROGRESS_INIT(10000,puts("-"))
+   NMCM_PROGRESS_INIT(10000,puts("-"))
 
    // ***** TRAP initialization *****
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
@@ -234,28 +240,25 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
 
    //signal(SIGUSR1, signal_handler); //signal not used in previous commit
 
-
-
-
    char opt;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
-         case 'k':
-            secret_key = optarg;
-            break;
-         case 'f':
-            secret_file = optarg;
-            break;
-         case 'M':
-            ANONYMIZATION_ALGORITHM = MURMUR_HASH3;
-            break;
-         case 'd':
-            mode = DEANONYMIZATION;
-            break;
-         default:
-            fprintf(stderr, "Invalid arguments.\n");
-            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-            return 3;
+      case 'k':
+         secret_key = optarg;
+         break;
+      case 'f':
+         secret_file = optarg;
+         break;
+      case 'M':
+         ANONYMIZATION_ALGORITHM = MURMUR_HASH3;
+         break;
+      case 'd':
+         mode = DEANONYMIZATION;
+         break;
+      default:
+         fprintf(stderr, "Invalid arguments.\n");
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+         return 3;
       }
    }
 
@@ -295,6 +298,7 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 4;
    }
+
    int first = 1;
    // ***** Main processing loop *****
    while (!stop) {
@@ -330,40 +334,42 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
           extern void *trap_glob_ctx;
           printf("tmpl: %d\n", ur_rec_fixlen_size(tmplt));
           trap_ctx_create_ifc_dump(trap_glob_ctx, NULL);
-              printf("%u\n", data_size);
-              for (int i = -64; i < 256; i++) {
-                      printf("%02x ", (unsigned int)((unsigned char*)data)[i]);
-                      if (i % 16 == 15 || i % 16 == -1)
-                              printf("\n");
-		      if (i == -1)
-			      printf("\n--\n");
-              }
-              printf("\n");
-              exit(1);
-         fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
-                 ur_rec_fixlen_size(tmplt), data_size);
+          printf("%u\n", data_size);
+          for (int i = -64; i < 256; i++) {
+             printf("%02x ", (unsigned int)((unsigned char*)data)[i]);
+             if (i % 16 == 15 || i % 16 == -1) {
+                printf("\n");
+             }
+             if (i == -1) {
+                printf("\n--\n");
+             }
+          }
+          printf("\n");
+          exit(1);
+          fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
+                  ur_rec_fixlen_size(tmplt), data_size);
          continue;
       }
 
 
       // ***** ONLY FOR DEBUGING ***** //
-      #ifdef DEBUG
-         char ip1_buff[64], ip2_buff[64];
-         ip_to_str(ur_get_ptr(tmplt, data, F_SRC_IP), ip1_buff);
-         ip_to_str(ur_get_ptr(tmplt, data, F_DST_IP), ip2_buff);
-         fprintf(stderr, "ORIG: %15s   ->   %15s\n", ip1_buff, ip2_buff);
-         ip_anonymize(tmplt, data, mode);
-         ip_to_str(ur_get_ptr(tmplt, data, F_SRC_IP), ip1_buff);
-         ip_to_str(ur_get_ptr(tmplt, data, F_DST_IP), ip2_buff);
-         fprintf(stderr, "ANON: %15s   ->   %15s\n\n", ip1_buff, ip2_buff);
-      #endif
+#ifdef DEBUG
+      char ip1_buff[64], ip2_buff[64];
+      ip_to_str(ur_get_ptr(tmplt, data, F_SRC_IP), ip1_buff);
+      ip_to_str(ur_get_ptr(tmplt, data, F_DST_IP), ip2_buff);
+      fprintf(stderr, "ORIG: %15s   ->   %15s\n", ip1_buff, ip2_buff);
+      ip_anonymize(tmplt, data, mode);
+      ip_to_str(ur_get_ptr(tmplt, data, F_SRC_IP), ip1_buff);
+      ip_to_str(ur_get_ptr(tmplt, data, F_DST_IP), ip2_buff);
+      fprintf(stderr, "ANON: %15s   ->   %15s\n\n", ip1_buff, ip2_buff);
+#endif
       // ***************************** //
-      #ifndef DEBUG
-         ip_anonymize(tmplt, data, mode);
-      #endif
+#ifndef DEBUG
+      ip_anonymize(tmplt, data, mode);
+#endif
 
       // Send anonymized data
-      if(first == 1) {
+      if (first == 1) {
          //set output format for first output record.
          ur_set_output_template(0,tmplt);
          first = 0;
@@ -373,10 +379,10 @@ NMCM_PROGRESS_INIT(10000,puts("-"))
    }
 
    // ***** ONLY FOR DEBUGING ***** //
-   #ifdef DEBUG
-      char dummy[1] = {0};
-      trap_send(0, dummy, 1);
-   #endif
+#ifdef DEBUG
+   char dummy[1] = {0};
+   trap_send(0, dummy, 1);
+#endif
    // ***************************** //
 
    // ***** Do all necessary cleanup before exiting *****
