@@ -64,7 +64,12 @@ UR_FIELDS (
    string SIP_VIA
 )
 
-SIPPlugin::SIPPlugin(const options_t &options) : statsout(options.statsout), requests(0), responses(0), total(0)
+SIPPlugin::SIPPlugin(const options_t &module_options) : statsout(module_options.statsout), requests(0), responses(0), total(0)
+{
+   flush_flow = true;
+}
+
+SIPPlugin::SIPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options) : FlowCachePlugin(plugin_options), statsout(module_options.statsout), requests(0), responses(0), total(0)
 {
    flush_flow = true;
 }

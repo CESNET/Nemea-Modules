@@ -45,6 +45,7 @@
 
 #include <string>
 #include <vector>
+#include <algorithm>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 
@@ -61,33 +62,82 @@ using namespace std;
 /**
  * \brief Constructor.
  */
-UnirecExporter::UnirecExporter() : tmplt(NULL), record(NULL)
+UnirecExporter::UnirecExporter() : out_ifc_cnt(0), tmplt(NULL), record(NULL)
 {
 }
 
 /**
  * \brief Initialize exporter.
  * \param [in] plugins Active plugins.
- * \return 0 on success, non 0 when error occur.
+ * \param [in] ifc_cnt Output interface count.
+ * \param [in] basic_ifc_num Basic output interface number.
+ * \return 0 on success or negative value when error occur.
  */
-int UnirecExporter::init(const std::vector<FlowCachePlugin *> &plugins)
+int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, int basic_ifc_number)
 {
-   std::string template_str(BASIC_UNIREC_TEMPLATE);
+   string template_str(BASIC_UNIREC_TEMPLATE);
+   out_ifc_cnt = ifc_cnt;
+   basic_ifc_num = basic_ifc_number;
+   ifc_mapping.clear();
 
-   template_str += generate_ext_template(plugins);
+   tmplt = new ur_template_t*[out_ifc_cnt];
+   record = new void*[out_ifc_cnt];
 
-   char *error = NULL;
-   tmplt = ur_create_output_template(0, template_str.c_str(), &error);
-   if (tmplt == NULL) {
-      fprintf(stderr, "UnirecExporter: %s\n", error);
-      free(error);
-      return -2;
+   for (int i = 0; i < out_ifc_cnt; i++) {
+      tmplt[i] = NULL;
+      record[i] = NULL;
    }
 
-   record = ur_create_record(tmplt, plugins.size() != 0 ? UR_MAX_SIZE : 0);
-   if (record == NULL) {
-      ur_free_template(tmplt);
-      return -3;
+   char *error = NULL;
+   if (basic_ifc_num >= 0) {
+      tmplt[basic_ifc_num] = ur_create_output_template(basic_ifc_num, template_str.c_str(), &error);
+      if (tmplt[basic_ifc_num] == NULL) {
+         fprintf(stderr, "UnirecExporter: %s\n", error);
+         free(error);
+         free_unirec_resources();
+         return -2;
+      }
+
+      record[basic_ifc_num] = ur_create_record(tmplt[basic_ifc_num], UR_MAX_SIZE);
+      if (record[basic_ifc_num] == NULL) {
+         free_unirec_resources();
+         return -3;
+      }
+   }
+
+   for (unsigned int i = 0; i < plugins.size(); i++) {
+      FlowCachePlugin * const tmp = plugins[i];
+      vector<plugin_opt> &opts = tmp->get_options();
+      int ifc = -1;
+
+      for (unsigned int j = 0; j < opts.size(); j++) { // Create plugin extension id -> output interface mapping.
+         ifc_mapping[opts[j].ext_type] = opts[j].out_ifc_num;
+         ifc = opts[j].out_ifc_num;
+      }
+
+      if (opts.size() == 0 || ifc < 0) {
+         continue;
+      }
+
+      // Create unirec templates.
+      tmplt[ifc] = ur_create_output_template(ifc, (template_str + string(",") + tmp->get_unirec_field_string()).c_str(), &error);
+      if (tmplt == NULL) {
+         fprintf(stderr, "UnirecExporter: %s\n", error);
+         free(error);
+         free_unirec_resources();
+         return -2;
+      }
+   }
+
+   for (int i = 0; i < out_ifc_cnt; i++) { // Create unirec records.
+      if (tmplt[i] != NULL) {
+         record[i] = ur_create_record(tmplt[i], UR_MAX_SIZE);
+
+         if (record == NULL) {
+            free_unirec_resources();
+            return -3;
+         }
+      }
    }
 
    return 0;
@@ -98,73 +148,131 @@ int UnirecExporter::init(const std::vector<FlowCachePlugin *> &plugins)
  */
 void UnirecExporter::close()
 {
-   trap_send(0, "", 1);
+   for (int i = 0; i < out_ifc_cnt; i++) {
+      trap_send(i, "", 1);
+   }
    trap_finalize();
 
-   ur_free_template(tmplt);
-   ur_free_record(record);
+   free_unirec_resources();
+
+   basic_ifc_num = -1;
+   out_ifc_cnt = 0;
+}
+
+/**
+ * \brief Free unirec templates and unirec records.
+ */
+void UnirecExporter::free_unirec_resources()
+{
+   if (tmplt) {
+      for (int i = 0; i < out_ifc_cnt; i++) {
+         if (tmplt[i] != NULL) {
+            ur_free_template(tmplt[i]);
+         }
+      }
+      delete [] tmplt;
+      tmplt = NULL;
+   }
+   if (record) {
+      for (int i = 0; i < out_ifc_cnt; i++) {
+         if (record[i] != NULL) {
+            ur_free_record(record[i]);
+         }
+      }
+      delete [] record;
+      record = NULL;
+   }
 }
 
 int UnirecExporter::export_flow(FlowRecord &flow)
 {
    FlowRecordExt *ext = flow.exts;
-   ur_clear_varlen(tmplt, record);
+   vector<int> to_export; // Contains output ifc numbers.
+   ur_template_t *tmplt_ptr = NULL;
+   void *record_ptr = NULL;
+
+   for (int i = 0; i < out_ifc_cnt; i++) {
+      ur_clear_varlen(tmplt[i], record[i]);
+   }
+
+   if (basic_ifc_num >= 0 && ext == NULL) { // Process basic flow.
+      tmplt_ptr = tmplt[basic_ifc_num];
+      record_ptr = record[basic_ifc_num];
+
+      ur_clear_varlen(tmplt_ptr, record_ptr);
+      fill_basic_flow(flow, tmplt_ptr, record_ptr);
+      trap_send(basic_ifc_num, record_ptr, ur_rec_fixlen_size(tmplt_ptr) + ur_rec_varlen_size(tmplt_ptr, record_ptr));
+      return 0;
+   }
 
    while (ext != NULL) {
-      ext->fillUnirec(tmplt, record); /* Add each extension header into unirec record. */
+      map<int, int>::iterator it = ifc_mapping.find(ext->extType); // Find if mapping exists.
+      if (it != ifc_mapping.end()) {
+         int ifc_num = it->second;
+         if (ifc_num < 0) {
+            ext = ext->next;
+            continue;
+         }
+
+         tmplt_ptr = tmplt[ifc_num];
+         record_ptr = record[ifc_num];
+         if (find(to_export.begin(), to_export.end(), ifc_num) == to_export.end()) {
+            to_export.push_back(ifc_num);
+         }
+
+         fill_basic_flow(flow, tmplt_ptr, record_ptr);
+         ext->fillUnirec(tmplt_ptr, record_ptr); /* Add each extension header into unirec record. */
+      }
       ext = ext->next;
    }
 
-   uint64_t tmp_time;
-   uint32_t time_sec;
-   uint32_t time_msec;
-
-   if (flow.ipVersion == 4) {
-      ur_set(tmplt, record, F_SRC_IP, ip_from_4_bytes_le((char *)&flow.sourceIPv4Address));
-      ur_set(tmplt, record, F_DST_IP, ip_from_4_bytes_le((char *)&flow.destinationIPv4Address));
-   } else {
-      ur_set(tmplt, record, F_SRC_IP, ip_from_16_bytes_le((char *)&flow.sourceIPv6Address));
-      ur_set(tmplt, record, F_DST_IP, ip_from_16_bytes_le((char *)&flow.destinationIPv6Address));
+   for (unsigned int i = 0; i < to_export.size(); i++) {
+      tmplt_ptr = tmplt[to_export[i]];
+      record_ptr = record[to_export[i]];
+      trap_send(to_export[i], record_ptr, ur_rec_fixlen_size(tmplt_ptr) + ur_rec_varlen_size(tmplt_ptr, record_ptr));
    }
-
-   time_sec = (uint32_t)flow.flowStartTimestamp;
-   time_msec = (uint32_t)((flow.flowStartTimestamp - ((double)((uint32_t)flow.flowStartTimestamp))) * 1000);
-   tmp_time = ur_time_from_sec_msec(time_sec, time_msec);
-   ur_set(tmplt, record, F_TIME_FIRST, tmp_time);
-
-   time_sec = (uint32_t)flow.flowEndTimestamp;
-   time_msec = (uint32_t)((flow.flowEndTimestamp - ((double)((uint32_t)flow.flowEndTimestamp))) * 1000);
-   tmp_time = ur_time_from_sec_msec(time_sec, time_msec);
-   ur_set(tmplt, record, F_TIME_LAST, tmp_time);
-
-   ur_set(tmplt, record, F_PROTOCOL, flow.protocolIdentifier);
-   ur_set(tmplt, record, F_SRC_PORT, flow.sourceTransportPort);
-   ur_set(tmplt, record, F_DST_PORT, flow.destinationTransportPort);
-   ur_set(tmplt, record, F_PACKETS, flow.packetTotalCount);
-   ur_set(tmplt, record, F_BYTES, flow.octetTotalLength);
-   ur_set(tmplt, record, F_TCP_FLAGS, flow.tcpControlBits);
-
-   ur_set(tmplt, record, F_DIR_BIT_FIELD, 0);
-   ur_set(tmplt, record, F_LINK_BIT_FIELD, 0);
-
-   trap_send(0, record, ur_rec_fixlen_size(tmplt) + ur_rec_varlen_size(tmplt, record));
 
    return 0;
 }
 
 /**
- * \brief Create extension template from active plugins.
- * \param [in] plugins Active plugins.
- * \return String with generated template.
+ * \brief Fill record with basic flow fields.
+ * \param [in] flow Flow record.
+ * \param [in] tmplt_ptr Pointer to unirec template.
+ * \param [out] record_ptr Pointer to unirec record.
  */
-std::string UnirecExporter::generate_ext_template(const std::vector<FlowCachePlugin *> &plugins) const
+void UnirecExporter::fill_basic_flow(FlowRecord &flow, ur_template_t *tmplt_ptr, void *record_ptr)
 {
-   std::string template_str("");
-   for (unsigned int i = 0; i < plugins.size(); i++) {
-      std::string tmp = plugins[i]->get_unirec_field_string();
-      if (tmp != "") {
-         template_str += "," + tmp;
-      }
+   uint64_t tmp_time;
+   uint32_t time_sec;
+   uint32_t time_msec;
+
+   if (flow.ipVersion == 4) {
+      ur_set(tmplt_ptr, record_ptr, F_SRC_IP, ip_from_4_bytes_le((char *)&flow.sourceIPv4Address));
+      ur_set(tmplt_ptr, record_ptr, F_DST_IP, ip_from_4_bytes_le((char *)&flow.destinationIPv4Address));
+   } else {
+      ur_set(tmplt_ptr, record_ptr, F_SRC_IP, ip_from_16_bytes_le((char *)&flow.sourceIPv6Address));
+      ur_set(tmplt_ptr, record_ptr, F_DST_IP, ip_from_16_bytes_le((char *)&flow.destinationIPv6Address));
    }
-   return template_str;
+
+   time_sec = (uint32_t)flow.flowStartTimestamp;
+   time_msec = (uint32_t)((flow.flowStartTimestamp - ((double)((uint32_t)flow.flowStartTimestamp))) * 1000);
+   tmp_time = ur_time_from_sec_msec(time_sec, time_msec);
+   ur_set(tmplt_ptr, record_ptr, F_TIME_FIRST, tmp_time);
+
+   time_sec = (uint32_t)flow.flowEndTimestamp;
+   time_msec = (uint32_t)((flow.flowEndTimestamp - ((double)((uint32_t)flow.flowEndTimestamp))) * 1000);
+   tmp_time = ur_time_from_sec_msec(time_sec, time_msec);
+   ur_set(tmplt_ptr, record_ptr, F_TIME_LAST, tmp_time);
+
+   ur_set(tmplt_ptr, record_ptr, F_PROTOCOL, flow.protocolIdentifier);
+   ur_set(tmplt_ptr, record_ptr, F_SRC_PORT, flow.sourceTransportPort);
+   ur_set(tmplt_ptr, record_ptr, F_DST_PORT, flow.destinationTransportPort);
+   ur_set(tmplt_ptr, record_ptr, F_PACKETS, flow.packetTotalCount);
+   ur_set(tmplt_ptr, record_ptr, F_BYTES, flow.octetTotalLength);
+   ur_set(tmplt_ptr, record_ptr, F_TCP_FLAGS, flow.tcpControlBits);
+
+   ur_set(tmplt_ptr, record_ptr, F_DIR_BIT_FIELD, 0);
+   ur_set(tmplt_ptr, record_ptr, F_LINK_BIT_FIELD, 0);
 }
+

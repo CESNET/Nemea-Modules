@@ -106,12 +106,14 @@ UR_FIELDS (
 )
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Flow meter module", "Convert packets from PCAP file or live capture into flow records.", 0, 1)
+  BASIC("Flow meter module", "Convert packets from PCAP file or network interface into flow records.", 0, -1)
 
 #define MODULE_PARAMS(PARAM) \
-  PARAM('p', "plugins", "Activate specified parsing plugins.. Format: plugin_name[,...] Supported plugins: http,dns,sip", required_argument, "string")\
-  PARAM('c', "count", "Quit after n packets are captured.", required_argument, "uint32")\
-  PARAM('I', "interface", "Name of capture interface. (eth0 for example)", required_argument, "string")\
+  PARAM('p', "plugins", "Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. "\
+  "For example: \'-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter"\
+  "will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,dns,sip,basic", required_argument, "string")\
+  PARAM('c', "count", "Quit after number of packets are captured.", required_argument, "uint32")\
+  PARAM('I', "interface", "Capture from given network interface. Parameter require interface name (eth0 for example).", required_argument, "string")\
   PARAM('r', "file", "Pcap file to read.", required_argument, "string") \
   PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: FLOAT:FLOAT. (DEFAULT: 300.0:30.0)", required_argument, "string") \
   PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 232 bytes. (DEFAULT: 65536)", required_argument, "uint32") \
@@ -124,32 +126,73 @@ UR_FIELDS (
  * \brief Parse input plugin settings.
  * \param [in] settings String containing input plugin settings.
  * \param [out] plugins Array for storing active plugins.
- * \param [in] options Options for plugin initialization.
- * \return True if setting was parsed, false if an error occured.
+ * \param [in] module_options Options for plugin initialization.
+ * \return Number of items specified in input string.
  */
-bool parse_plugin_settings(const std::string &settings, std::vector<FlowCachePlugin *> &plugins, const options_t &options)
+int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plugins, options_t &module_options)
 {
-   std::string proto;
+   string proto;
    size_t begin = 0, end = 0;
 
-   while (end != std::string::npos) {
+   int ifc_num = 0;
+   while (end != string::npos) {
       end = settings.find(",", begin);
-      proto = settings.substr(begin, (end == std::string::npos ? (settings.length() - begin) : (end - begin)));
+      proto = settings.substr(begin, (end == string::npos ? (settings.length() - begin) : (end - begin)));
 
-      if (proto == "http") {
-         plugins.push_back(new HTTPPlugin(options));
+      if (proto == "basic") {
+         module_options.basic_ifc_num = ifc_num++;
+      } else if (proto == "http") {
+         vector<plugin_opt> tmp;
+         tmp.push_back(plugin_opt("http-req", http_request, ifc_num));
+         tmp.push_back(plugin_opt("http-resp", http_response, ifc_num++));
+
+         plugins.push_back(new HTTPPlugin(module_options, tmp));
       } else if (proto == "dns"){
-         plugins.push_back(new DNSPlugin(options));
+         vector<plugin_opt> tmp;
+         tmp.push_back(plugin_opt("dns", dns, ifc_num++));
+
+         plugins.push_back(new DNSPlugin(module_options, tmp));
       } else if (proto == "sip"){
-         plugins.push_back(new SIPPlugin(options));
+         vector<plugin_opt> tmp;
+         tmp.push_back(plugin_opt("sip", sip, ifc_num++));
+
+         plugins.push_back(new SIPPlugin(module_options, tmp));
       } else {
          fprintf(stderr, "Unsupported plugin: \"%s\"\n", proto.c_str());
-         return false;
+         return -1;
       }
       begin = end + 1;
    }
 
-   return true;
+   return ifc_num;
+}
+
+/**
+ * \brief Count ifc interfaces.
+ * \param [in] argc Number of parameters.
+ * \param [in] argv Pointer to parameters.
+ * \return Number of ifc interfaces.
+ */
+int count_ifc_interfaces(int argc, char *argv[])
+{
+   char *interfaces = NULL;
+   for (int i = 1; i < argc; i++) {
+      if (!strcmp(argv[i], "-i") && i + 1 < argc) {
+         interfaces = argv[i + 1];
+      }
+   }
+
+   int int_cnt = 1;
+   if (interfaces != NULL) {
+      while(*interfaces) {
+         if (*(interfaces++) == ',') {
+            int_cnt++;
+         }
+      }
+      return int_cnt;
+   }
+
+   return int_cnt;
 }
 
 int main(int argc, char *argv[])
@@ -164,6 +207,7 @@ int main(int argc, char *argv[])
    options.statsout = false;
    options.verbose = false;
    options.interface = "";
+   options.basic_ifc_num = 0;
 
    uint32_t pkt_limit = 0;
    int sampling = 100;
@@ -171,17 +215,29 @@ int main(int argc, char *argv[])
 
    // ***** TRAP initialization *****
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+   module_info->num_ifc_out = count_ifc_interfaces(argc, argv);
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
-   trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
+
+   for (int i = 0; i < module_info->num_ifc_out; i++) {
+      trap_ifcctl(TRAPIFC_OUTPUT, i, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
+   }
 
    int opt;
    char *cptr;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
       case 'p':
-         if (!parse_plugin_settings(string(optarg), plugin_wrapper.plugins, options)) {
-            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-            return error("Invalid argument for option -p");
+         {
+            options.basic_ifc_num = -1;
+            int ret = parse_plugin_settings(string(optarg), plugin_wrapper.plugins, options);
+            if (ret < 0) {
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+               return error("Invalid argument for option -p");
+            }
+            if (ret != module_info->num_ifc_out) {
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+               return error("Number of output ifc interfaces does not correspond number of items in -p parameter.");
+            }
          }
          break;
       case 'c':
@@ -234,7 +290,7 @@ int main(int argc, char *argv[])
       return error("Cannot capture from file and from interface at the same time.");
    } else if (options.interface == "" && options.infilename == "") {
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-      return error("Neither capture interface nor input file specified.");
+      return error("Specify capture interface (-I) or file for reading (-r). ");
    }
 
    if (options.flowcachesize % options.flowlinesize != 0) {
@@ -258,7 +314,7 @@ int main(int argc, char *argv[])
    NHTFlowCache flowcache(options);
    UnirecExporter flowwriter;
 
-   if (flowwriter.init(plugin_wrapper.plugins) != 0) {
+   if (flowwriter.init(plugin_wrapper.plugins, module_info->num_ifc_out, options.basic_ifc_num) != 0) {
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return error("Unable to initialize UnirecExporter.");
    }
@@ -274,6 +330,7 @@ int main(int argc, char *argv[])
    }
 
    flowcache.init();
+
    Packet packet;
    int ret;
    uint32_t pkt_total = 0, pkt_parsed = 0;

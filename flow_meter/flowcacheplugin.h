@@ -50,6 +50,7 @@
 
 #include "packet.h"
 #include "flowifc.h"
+#include <vector>
 
 /**
  * \brief Tell FlowCache to flush current flow.
@@ -61,11 +62,35 @@
 using namespace std;
 
 /**
+ * \brief Struct containing options for extension headers.
+ */
+struct plugin_opt {
+   string ext_name; /**< Extension name. */
+   uint16_t ext_type; /**< Extension type. */
+   int out_ifc_num; /** Output interface number. */
+
+   plugin_opt(string extension, uint16_t type, int ifc_num) : ext_name(extension), ext_type(type), out_ifc_num(ifc_num)
+   {
+   }
+   plugin_opt(string extension, uint16_t type) : ext_name(extension), ext_type(type), out_ifc_num(-1)
+   {
+   }
+};
+
+/**
  * \brief Class template for flow cache plugins.
  */
 class FlowCachePlugin
 {
 public:
+
+   FlowCachePlugin()
+   {
+   }
+
+   FlowCachePlugin(vector<plugin_opt> options) : options(options)
+   {
+   }
 
    /**
     * \brief Virtual destructor.
@@ -137,6 +162,17 @@ public:
    {
       return "";
    }
+
+   /**
+    * \brief Get plugin options.
+    * \return Plugin options.
+    */
+   vector<plugin_opt> &get_options()
+   {
+      return options;
+   }
+
+   vector<plugin_opt> options; /**< Plugin options. */
 };
 
 #endif

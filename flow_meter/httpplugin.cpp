@@ -87,7 +87,12 @@ UR_FIELDS (
  * \brief Constructor.
  * \param [in] options Module options.
  */
-HTTPPlugin::HTTPPlugin(const options_t &options) : statsout(options.statsout), requests(0), responses(0), total(0)
+HTTPPlugin::HTTPPlugin(const options_t &module_options) : statsout(module_options.statsout), requests(0), responses(0), total(0)
+{
+   flush_flow = false;
+}
+
+HTTPPlugin::HTTPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options) : FlowCachePlugin(plugin_options), statsout(module_options.statsout), requests(0), responses(0), total(0)
 {
    flush_flow = false;
 }

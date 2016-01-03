@@ -242,7 +242,8 @@ struct FlowRecordExtSIP : FlowRecordExt {
 
 class SIPPlugin : public FlowCachePlugin {
 public:
-   SIPPlugin(const options_t &options);
+   SIPPlugin(const options_t &module_options);
+   SIPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options);
    int post_create(FlowRecord &rec, const Packet &pkt);
    int pre_update(FlowRecord &rec, Packet &pkt);
    void finish();

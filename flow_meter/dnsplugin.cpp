@@ -104,7 +104,11 @@ UR_FIELDS (
  * \brief Constructor.
  * \param [in] options Module options.
  */
-DNSPlugin::DNSPlugin(const options_t &options) : statsout(options.statsout), queries(0), responses(0), total(0)
+DNSPlugin::DNSPlugin(const options_t &module_options) : statsout(module_options.statsout), queries(0), responses(0), total(0)
+{
+}
+
+DNSPlugin::DNSPlugin(const options_t &module_options, vector<plugin_opt> plugin_options) : FlowCachePlugin(plugin_options), statsout(module_options.statsout), queries(0), responses(0), total(0)
 {
 }
 
