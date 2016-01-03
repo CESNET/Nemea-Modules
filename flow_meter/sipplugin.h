@@ -207,6 +207,7 @@ struct parser_strtok_t {
 
 struct FlowRecordExtSIP : FlowRecordExt {
    uint16_t msg_type;                  /* SIP message code (register, invite) < 100 or SIP response status > 100 */
+   uint16_t status_code;
    char call_id[SIP_FIELD_LEN];	      /* Call id. For sevice SIP traffic call id = 0 */
    char calling_party[SIP_FIELD_LEN];	/* Calling party (ie. from) uri */
    char called_party[SIP_FIELD_LEN];	/* Called party (ie. to) uri */
@@ -218,6 +219,7 @@ struct FlowRecordExtSIP : FlowRecordExt {
    FlowRecordExtSIP() : FlowRecordExt(sip)
    {
       msg_type = 0;
+      status_code = 0;
       call_id[0] = 0;
       calling_party[0] = 0;
       called_party[0] = 0;
@@ -230,6 +232,7 @@ struct FlowRecordExtSIP : FlowRecordExt {
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
       ur_set(tmplt, record, F_SIP_MSG_TYPE, msg_type);
+      ur_set(tmplt, record, F_SIP_STATUS_CODE, status_code);
       ur_set_string(tmplt, record, F_SIP_CSEQ, cseq);
       ur_set_string(tmplt, record, F_SIP_CALLING_PARTY, calling_party);
       ur_set_string(tmplt, record, F_SIP_CALLED_PARTY, called_party);

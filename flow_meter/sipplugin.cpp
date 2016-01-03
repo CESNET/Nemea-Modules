@@ -51,10 +51,11 @@
 
 using namespace std;
 
-#define SIP_UNIREC_TEMPLATE  "SIP_MSG_TYPE,SIP_CSEQ,SIP_CALLING_PARTY,SIP_CALLED_PARTY,SIP_CALL_ID,SIP_USER_AGENT,SIP_REQUEST_URI,SIP_VIA"
+#define SIP_UNIREC_TEMPLATE  "SIP_MSG_TYPE,SIP_STATUS_CODE,SIP_CSEQ,SIP_CALLING_PARTY,SIP_CALLED_PARTY,SIP_CALL_ID,SIP_USER_AGENT,SIP_REQUEST_URI,SIP_VIA"
 
 UR_FIELDS (
    uint16 SIP_MSG_TYPE,
+   uint16 SIP_STATUS_CODE,
    string SIP_CSEQ,
    string SIP_CALLING_PARTY,
    string SIP_CALLED_PARTY,
@@ -453,6 +454,7 @@ int SIPPlugin::parser_process_sip(const Packet &pkt, FlowRecordExtSIP *sip_data)
    /* Grab the first line of the payload: */
    line = parser_strtok(payload, caplen, '\n', &line_len, &line_parser);
 
+
    /* Get Request-URI for SIP requests from first line of the payload: */
    if (sip_data->msg_type <= 10) {
       requests++;
@@ -475,6 +477,14 @@ int SIPPlugin::parser_process_sip(const Packet &pkt, FlowRecordExtSIP *sip_data)
       }
    } else {
       responses++;
+      if (sip_data->msg_type == 99) {
+         parser_strtok_t first_line_parser;
+         const unsigned char *line_token;
+         unsigned int line_token_len;
+         line_token = parser_strtok(line, line_len, ' ', &line_token_len, &first_line_parser);
+         line_token = parser_strtok(NULL, 0, ' ', &line_token_len, &first_line_parser);
+         sip_data->status_code = atoi((const char *)line_token);
+      }
    }
 
    total++;
