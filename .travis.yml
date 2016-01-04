@@ -37,7 +37,7 @@ addons:
     branch_pattern: coverity
 
 before_install:
-   - ( git clone https://github.com/CESNET/nemea-framework; cd nemea-framework; ./bootstrap.sh && ./configure -q --prefix=/usr && make -j10 && sudo make install; )
+   - ( git clone --depth 5 https://github.com/CESNET/nemea-framework; cd nemea-framework; ./bootstrap.sh && ./configure -q --prefix=/usr && make -j10 && sudo make install; )
 
 script:
   - ./bootstrap.sh && ./configure --disable-repobuild && make check
