@@ -72,15 +72,25 @@ AC_CHECK_HEADER(idna.h,
 
 AM_CONDITIONAL(HAVE_LIBIDN, test x${libidn} = xyes)
 
-# Checks for libraries.
-AC_CHECK_LIB(nf, lnf_open, [libnf=yes],
-  [AC_CHECK_LIB(nfdump, nfdump_init, [libnfdump=yes],
-    [AC_MSG_WARN([libnf and libnfdump not found. The nfreader module will not be compiled.])]
-  )]
-)
+AC_ARG_WITH([nfreader],
+	AC_HELP_STRING([--without-nfreader], [Skip nfreader module.]),
+        [if test "$withval" = "no"; then
+                withnfreader="no"
+        else
+                withnfreader="yes"
+        fi], [withnfreader="yes"])
 
-AM_CONDITIONAL(HAVE_LIBNFDUMP, test x${libnfdump} = xyes)
-AM_CONDITIONAL(HAVE_LIBNF, test x${libnf} = xyes)
+if test x${withnfreader} = xyes; then
+	# Checks for libraries.
+	AC_CHECK_LIB(nf, lnf_open, [libnf=yes],
+	  [AC_CHECK_LIB(nfdump, nfdump_init, [libnfdump=yes],
+	    [AC_MSG_WARN([libnf and libnfdump not found. The nfreader module will not be compiled.])]
+	  )]
+	)
+
+fi
+AM_CONDITIONAL(HAVE_LIBNFDUMP, test x${libnfdump} = xyes && test x${withnfreader} = xyes)
+AM_CONDITIONAL(HAVE_LIBNF, test x${libnf} = xyes && test x${withnfreader} = xyes)
 
 AC_CHECK_PROG(BISON, bison, yes, [""])
 AC_CHECK_PROG(FLEX, flex, yes, [""])
