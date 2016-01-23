@@ -1,6 +1,6 @@
 FLEX = flex
 BISON = bison
-
+include ../aminclude.am
 bin_PROGRAMS=unirecfilter
 unirecfilter_SOURCES=unirecfilter.c \
                      unirecfilter.h \
@@ -10,7 +10,7 @@ unirecfilter_SOURCES=unirecfilter.c \
                      ./bison/functions.c \
                      fields.c \
                      fields.h
-BUILT_SOURCES=parser.tab.c parser.tab.h lex.yy.c fields.c fields.h
+BUILT_SOURCES+=parser.tab.c parser.tab.h lex.yy.c fields.c fields.h
 unirecfilter_LDADD=-ltrap -lunirec
 pkgdocdir=${docdir}/unirecfilter
 pkgdoc_DATA=README.md
@@ -26,9 +26,6 @@ parser.tab.h: parser.tab.c
 
 parser.tab.c: bison/parser.y
 	$(BISON) -d $<
-
-fields.h fields.c:
-	"${PYTHON}" "${UNIRECPROC}"
 
 clean-local:
 	rm -f lex.yy.c parser.tab.c parser.tab.h parser fiedls.c fields.h

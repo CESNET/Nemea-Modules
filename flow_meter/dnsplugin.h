@@ -263,7 +263,8 @@ struct FlowRecordExtDNS : FlowRecordExt {
 class DNSPlugin : public FlowCachePlugin
 {
 public:
-   DNSPlugin(const options_t &options);
+   DNSPlugin(const options_t &module_options);
+   DNSPlugin(const options_t &module_options, vector<plugin_opt> plugin_options);
    int post_create(FlowRecord &rec, const Packet &pkt);
    int pre_update(FlowRecord &rec, Packet &pkt);
    void finish();

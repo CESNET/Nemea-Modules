@@ -61,6 +61,7 @@ const std::string DEFAULT_REPLACEMENT_STRING = \
  * \brief Struct containing module settings.
  */
 struct options_t {
+   int basic_ifc_num;
    bool statsout;
    bool verbose;
    uint32_t flowcachesize;

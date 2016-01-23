@@ -302,8 +302,6 @@ void NHTFlowCache::parsereplacementstring()
 
 long NHTFlowCache::calculatehash()
 {
-   // TODO tady se pouzivaji tridy z "locale" jen proto ze umi nejak hashovat stringy
-   // vypadat to divne, asi by bylo lepsi pouzit neco jineho (vlatni hash nebo hash z nemea-common)
    locale loc;
    const collate<char> &coll = use_facet<collate<char> >(loc);
    return coll.hash(key, key + key_len);
