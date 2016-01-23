@@ -93,8 +93,7 @@ UR_FIELDS (
    uint16 DNS_CLASS,
    uint32 DNS_RR_TTL,
    uint16 DNS_RLENGTH,
-   //string DNS_RDATA,
-   bytes *DNS_RDATA,
+   bytes* DNS_RDATA,
 
    uint16 DNS_PSIZE,
    uint8  DNS_DO
