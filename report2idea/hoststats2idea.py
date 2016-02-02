@@ -6,6 +6,7 @@ import unirec
 import argparse
 from uuid import uuid4
 from time import time, gmtime
+import datetime
 import re
 
 # Module parameters
@@ -34,7 +35,9 @@ proto_conv = {
 def get_isotime():
     t = time()
     g = gmtime(t)
+    #print(g)
     iso = '%04d-%02d-%02dT%02d:%02d:%02dZ' % g[0:6]
+    #print(iso)
     return iso
 
 def setaddr(idea_field, addr):
@@ -56,13 +59,17 @@ def convert_to_idea(rec, opts=None):
             print(MODULE_NAME+": "+msg)
     
     # Set fields which are always present
+    #print(datetime.datetime.strptime(rec.TIME_FIRST.toString('%Y-%m-%dT%H:%M:%SZ'), '%Y-%m-%dT%H:%M:%SZ'))
+    #print(datetime.datetime.utcfromtimestamp(rec.TIME_FIRST))
+    timestamp = datetime.datetime.utcnow()
+    #print(timestamp)
     idea = {
         'Format': 'IDEA0',
         'ID': str(uuid4()),
-        'DetectTime': get_isotime(),
-        'CreateTime': get_isotime(),
-        'EventTime': rec.TIME_FIRST.toString('%Y-%m-%dT%H:%M:%SZ'),
-        'CeaseTime': rec.TIME_LAST.toString('%Y-%m-%dT%H:%M:%SZ'),
+        'DetectTime': timestamp,#get_isotime(),
+        'CreateTime': timestamp,#get_isotime(),
+        'EventTime': datetime.datetime.utcfromtimestamp(rec.TIME_FIRST),
+        'CeaseTime': datetime.datetime.utcfromtimestamp(rec.TIME_LAST),
         'Node': [{
             'Name': 'undefined', # this will be filled by common part
             'SW': ['Nemea','HostStatsNemea'],
