@@ -8,7 +8,7 @@ logreplay \
 merger \
 traffic_repeater
 
-EXTRA_DIST = nfreader
+EXTRA_DIST = README.md nfreader
 
 if HAVE_LIBNF
 SUBDIRS += nfreader
