@@ -8,7 +8,7 @@ logreplay \
 merger \
 traffic_repeater
 
-EXTRA_DIST = README.md nfreader
+EXTRA_DIST = AUTHORS COPYING ChangeLog INSTALL NEWS README.md nfreader
 
 if HAVE_LIBNF
 SUBDIRS += nfreader
