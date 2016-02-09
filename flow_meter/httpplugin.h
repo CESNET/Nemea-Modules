@@ -117,7 +117,8 @@ struct FlowRecordExtHTTPResp : FlowRecordExt {
 class HTTPPlugin : public FlowCachePlugin
 {
 public:
-   HTTPPlugin(const options_t &options);
+   HTTPPlugin(const options_t &module_options);
+   HTTPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options);
    int post_create(FlowRecord &rec, const Packet &pkt);
    int pre_update(FlowRecord &rec, Packet &pkt);
    void finish();

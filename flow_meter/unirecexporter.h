@@ -48,6 +48,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 
@@ -63,15 +64,19 @@ class UnirecExporter : public FlowExporter
 {
 public:
    UnirecExporter();
-   int init(const std::vector<FlowCachePlugin *> &plugins);
+   int init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, int basic_ifc_num);
    void close();
    int export_flow(FlowRecord &flow);
 
 private:
-   std::string generate_ext_template(const std::vector<FlowCachePlugin *> &plugins) const;
+   void fill_basic_flow(FlowRecord &flow, ur_template_t *tmplt_ptr, void *record_ptr);
+   void free_unirec_resources();
 
-   ur_template_t *tmplt; /**< Pointer to unirec template. */
-   void *record;         /**< Pointer to unirec record. */
+   int out_ifc_cnt; /**< Number of output interfaces. */
+   int basic_ifc_num; /**< Basic output interface number. */
+   map<int, int> ifc_mapping; /**< Contain extension id -> output interface number mapping. */
+   ur_template_t **tmplt; /**< Pointer to unirec templates. */
+   void **record;         /**< Pointer to unirec records. */
 };
 
 #endif
