@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
-from common import Run
-import trap
-import unirec
+# In case we are in nemea/modules/report2idea/ and we want to import from repo:
+import os, sys
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "nemea-framework", "pycommon"))
+
+from report2idea import *
 import argparse
-from uuid import uuid4
-from time import time, gmtime
 import re
 
 # Module parameters
@@ -31,18 +31,6 @@ proto_conv = {
     17 : 'udp',
 }
 
-def get_isotime():
-    t = time()
-    g = gmtime(t)
-    iso = '%04d-%02d-%02dT%02d:%02d:%02dZ' % g[0:6]
-    return iso
-
-def setaddr(idea_field, addr):
-   if isinstance(addr, unirec.ur_ipaddr.IP6Addr):
-      idea_field['IP6'] = [str(addr)]
-   else:
-      idea_field['IP4'] = [str(addr)]
-
 # Main conversion function
 def convert_to_idea(rec, opts=None):
     """
@@ -56,13 +44,14 @@ def convert_to_idea(rec, opts=None):
             print(MODULE_NAME+": "+msg)
     
     # Set fields which are always present
+    createTime = getIDEAtime()
     idea = {
         'Format': 'IDEA0',
-        'ID': str(uuid4()),
-        'DetectTime': get_isotime(),
-        'CreateTime': get_isotime(),
-        'EventTime': rec.TIME_FIRST.toString('%Y-%m-%dT%H:%M:%SZ'),
-        'CeaseTime': rec.TIME_LAST.toString('%Y-%m-%dT%H:%M:%SZ'),
+        'ID': getDefaultId(),
+        'DetectTime': createTime,
+        'CreateTime': createTime,
+        'EventTime': getIDEAtime(rec.TIME_FIRST),
+        'CeaseTime': getIDEAtime(rec.TIME_LAST),
         'Node': [{
             'Name': 'undefined', # this will be filled by common part
             'SW': ['Nemea','HostStatsNemea'],
@@ -79,7 +68,7 @@ def convert_to_idea(rec, opts=None):
         idea['Description'] = 'Horizontal port scan'
         
         idea['Source'] = [{}]
-        setaddr(idea['Source'][0], rec.SRC_IP)
+        setAddr(idea['Source'][0], rec.SRC_IP)
         if rec.PROTOCOL in proto_conv:
             idea['Source'][0]['Proto'] = [proto_conv[rec.PROTOCOL]]
         
@@ -94,7 +83,7 @@ def convert_to_idea(rec, opts=None):
             idea['Target'] = [{
                 'Proto': ['udp', 'dns'],
             }]
-            setaddr(idea['Target'][0], rec.DST_IP)
+            setAddr(idea['Target'][0], rec.DST_IP)
             idea['Description'] = str(rec.DST_IP)+' received abnormally high number of large DNS replies - probably a victim of DNS amplification DoS attack'
         if rec.SRC_IP != 0:
             idea['Source'] = [{
@@ -102,7 +91,7 @@ def convert_to_idea(rec, opts=None):
                 'Port': [53],
                 'Proto': ['udp', 'dns'],
             }]
-            setaddr(idea['Source'][0], rec.SRC_IP)
+            setAddr(idea['Source'][0], rec.SRC_IP)
             idea['Description'] = str(rec.SRC_IP)+' sent abnormally high number of large DNS replies - it was probably misused for DNS amplification DoS attack'
         
         idea['FlowCount'] = rec.EVENT_SCALE  # number of incoming replies greater than limit (currently 1000B)
@@ -113,13 +102,13 @@ def convert_to_idea(rec, opts=None):
          
         if rec.DST_IP != 0:
             idea['Target'] = [{}]
-            setaddr(idea['Target'][0], rec.DST_IP)
+            setAddr(idea['Target'][0], rec.DST_IP)
             if rec.PROTOCOL in proto_conv:
                 idea['Target'][0]['Proto'] = [proto_conv[rec.PROTOCOL]]
          
         if rec.SRC_IP != 0:
             idea['Source'] = [{}]
-            setaddr(idea['Source'][0], rec.SRC_IP)
+            setAddr(idea['Source'][0], rec.SRC_IP)
             if rec.PROTOCOL in proto_conv:
                 idea['Source'][0]['Proto'] = [proto_conv[rec.PROTOCOL]]
          
@@ -137,7 +126,7 @@ def convert_to_idea(rec, opts=None):
             else:
                 idea['Description'] = 'Abnormally high number of packets emmited by '+str(rec.SRC_IP)+' (probably flooding DoS attack)'
          
-         # Parse information from NOTE (victim)
+        # Parse information from NOTE (victim)
         match = re.match(
             "in: (\d+) flows, (\d+) packets; out: (\d+) flows, (\d+) packets; approx. (\d+) source addresses.*",
             rec.NOTE
@@ -177,10 +166,10 @@ def convert_to_idea(rec, opts=None):
             'Proto': ['tcp','ssh'],
         }]
         if rec.DST_IP != 0:
-            setaddr(idea['Target'][0], rec.DST_IP)
+            setAddr(idea['Target'][0], rec.DST_IP)
         if rec.SRC_IP != 0:
             idea['Source'] = [{}]
-            setaddr(idea['Source'][0], rec.SRC_IP)
+            setAddr(idea['Source'][0], rec.SRC_IP)
          
         idea['FlowCount'] = 2 * rec.EVENT_SCALE  # number of flows (two flows per connection)
         idea['ConnCount'] = rec.EVENT_SCALE  # number of tries
@@ -203,3 +192,4 @@ if __name__ == "__main__":
         conv_func = convert_to_idea,
         arg_parser = None # (optional) Instance of argparse.ArgumentParser with some arguments defined can be passed - these arguments are then parsed from command line and passed to the conv_func)
     )
+

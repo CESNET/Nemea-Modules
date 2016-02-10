@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
-from common import Run
-import trap
-import unirec
+from report2idea import *
 import argparse
 
 # Module parameters
