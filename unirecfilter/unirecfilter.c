@@ -340,7 +340,7 @@ int create_templates(int n_outputs, char **port_numbers, struct unirec_output_t 
 It should be: \"type1 name1,type2 name2,...\".\n \
 Name of field may be any string matching the reqular expression [A-Za-z][A-Za-z0-9_]*\n\
 Available types are: int8, int16, int32, int64, uint8, uint16, uint32, uint64, char,\
-float, double, ipaddr, string, bytes*\n");
+float, double, ipaddr, string, bytes\n");
             return -2;
          }
          char *f_names = ur_ifc_data_fmt_to_field_names(output_specifiers[i]->unirec_output_specifier);
