@@ -6,9 +6,10 @@ flowcounter \
 logger \
 logreplay \
 merger \
+report2idea \
 traffic_repeater
 
-EXTRA_DIST = nfreader
+EXTRA_DIST = AUTHORS COPYING ChangeLog INSTALL NEWS README.md nfreader
 
 if HAVE_LIBNF
 SUBDIRS += nfreader

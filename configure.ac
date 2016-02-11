@@ -11,7 +11,7 @@ USERNAME=`git config --get user.name`
 USERMAIL=`git config --get user.email`
 AC_SUBST(USERNAME)
 AC_SUBST(USERMAIL)
-AM_INIT_AUTOMAKE([silent-rules subdir-objects])
+AM_INIT_AUTOMAKE([foreign silent-rules subdir-objects])
 AM_SILENT_RULES([yes])
 
 AC_CONFIG_MACRO_DIR([m4])
@@ -153,6 +153,7 @@ AC_CONFIG_FILES([Makefile
                  merger/Makefile
                  nemea-modules.spec
                  nfreader/Makefile
+                 report2idea/Makefile
                  traffic_repeater/Makefile
                  unirecfilter/Makefile
                ])
