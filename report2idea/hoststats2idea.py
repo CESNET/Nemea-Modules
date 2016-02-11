@@ -2,7 +2,7 @@
 
 # In case we are in nemea/modules/report2idea/ and we want to import from repo:
 import os, sys
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "nemea-framework", "pycommon"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "nemea-framework", "pycommon"))
 
 from report2idea import *
 import argparse
@@ -47,7 +47,7 @@ def convert_to_idea(rec, opts=None):
     createTime = getIDEAtime()
     idea = {
         'Format': 'IDEA0',
-        'ID': getDefaultId(),
+        'ID': getRandomId(),
         'DetectTime': createTime,
         'CreateTime': createTime,
         'EventTime': getIDEAtime(rec.TIME_FIRST),

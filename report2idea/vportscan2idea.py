@@ -2,7 +2,7 @@
 
 # In case we are in nemea/modules/report2idea/ and we want to import from repo:
 import os, sys
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "nemea-framework", "pycommon"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "nemea-framework", "pycommon"))
 
 from report2idea import *
 
@@ -17,13 +17,13 @@ def convert_to_idea(rec, opts=None):
     endTime = getIDEAtime(rec.TIME_LAST)
     idea={
        "Format": "IDEA0",
-       "ID": getDefaultId(),
+       "ID": getRandomId(),
        'CreateTime': getIDEAtime(),
        "EventTime": getIDEAtime(rec.TIME_FIRST),
        'CeaseTime': endTime,
        "DetectTime": endTime,
        "Category": ["Recon.Scanning"],
-       "ConnCount": long(rec.PORT_CNT),
+       "ConnCount": int(rec.PORT_CNT),
        "Description": "Vertical scan using TCP SYN",
        "Source": [{
              "Proto": ["tcp"]
@@ -33,7 +33,7 @@ def convert_to_idea(rec, opts=None):
        }],
        'Node': [{
           'Name': 'undefined',
-             'SW': ['Nemea','vportscan_detector'],
+          'SW': ['Nemea','vportscan_detector'],
           'Type': ['Flow', 'Statistical'],
           'AggrWin': '00:10:00',
        }],

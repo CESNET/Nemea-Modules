@@ -2,7 +2,7 @@
 
 # In case we are in nemea/modules/report2idea/ and we want to import from repo:
 import os, sys
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "nemea-framework", "pycommon"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "nemea-framework", "pycommon"))
 
 import argparse
 
@@ -18,16 +18,18 @@ REQ_FORMAT = "uint8 EVENT_TYPE,time TIME_FIRST,time TIME_LAST,ipaddr SRC_IP,ipad
 
 # Main conversion function
 def convert_to_idea(rec, opts=None):
-    """Get fields from UniRec message 'rec' and convert it into an IDEA message (Python dict()).
+    """
+    Get fields from UniRec message 'rec' and convert it into an IDEA message (Python dict()).
 
-rec - Record recevied on TRAP input interface (the report to convert).
-      Its format satisfies what was defined by REQ_TYPE and REQ_FORMAT.
-opts - options parsed from command line (as returned by argparse.ArgumentParser)
-
-Return report in IDEA format (as Python dict)
-"""
+    rec - Record received on TRAP input interface (the report to convert).
+          Its format satisfies what was defined by REQ_TYPE and REQ_FORMAT.
+    opts - options parsed from command line (as returned by argparse.ArgumentParser)
+    
+    Return report in IDEA format (as Python dict)
+    """
     idea={
             "Format": "IDEA0",
+            "CreateTime": getIDEAtime(), # Set current time
             "DetectTime": getIDEAtime(
                 # TODO Put here the right UniRec field or use without argument
             ),
