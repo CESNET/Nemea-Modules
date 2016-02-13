@@ -35,6 +35,8 @@ AC_SUBST(PKGDATADIR)
 AC_SUBST(pkgdatadir)
 AC_DEFINE_DIR(PKGDATADIR, [pkgdatadir], [Path to configuration files])
 AC_DEFINE_DIR(SYSCONFDIR, [sysconfdir], [Path to configuration files])
+RPM_REQUIRES=
+RPM_BUILDREQ=
 
 # Checks for programs.
 AC_PROG_CC_C99
@@ -71,6 +73,10 @@ AC_CHECK_HEADER(idna.h,
          AC_CHECK_LIB(idn, stringprep_check_version, [libidn=yes], AC_MSG_WARN([libidn not found. The ipdetect module from blacklistfilter will not be compiled.])), AC_MSG_WARN([libidn.h not found. Blacklistfilter modules will not be compiled.]))
 
 AM_CONDITIONAL(HAVE_LIBIDN, test x${libidn} = xyes)
+if [[ -z "$HAVE_LIBIDN_TRUE" ]]; then
+RPM_REQUIRES+=" libidn"
+RPM_BUILDREQ+=" libidn-devel"
+fi
 
 AC_ARG_WITH([nfreader],
 	AC_HELP_STRING([--without-nfreader], [Skip nfreader module.]),
@@ -90,17 +96,34 @@ if test x${withnfreader} = xyes; then
 
 fi
 AM_CONDITIONAL(HAVE_LIBNFDUMP, test x${libnfdump} = xyes && test x${withnfreader} = xyes)
+if [[ -z "$HAVE_LIBNFDUMP_TRUE" ]]; then
+RPM_REQUIRES+=" libnfdump"
+RPM_BUILDREQ+=" libnfdump-devel"
+fi
+
 AM_CONDITIONAL(HAVE_LIBNF, test x${libnf} = xyes && test x${withnfreader} = xyes)
+if [[ -z "$HAVE_LIBNF_TRUE" ]]; then
+RPM_REQUIRES+=" libnf"
+RPM_BUILDREQ+=" libnf-devel"
+fi
 
 AC_CHECK_PROG(BISON, bison, yes, [""])
 AC_CHECK_PROG(FLEX, flex, yes, [""])
 
 AM_CONDITIONAL(HAVE_BISON, test xyes = x${BISON} -a xyes = x${FLEX})
+if [[ -z "$HAVE_BISON_TRUE" ]]; then
+RPM_BUILDREQ+=" bison"
+RPM_BUILDREQ+=" flex"
+fi
 
 AC_CHECK_HEADER(pcap.h,
         AC_CHECK_LIB(pcap, pcap_open_live, [libpcap=yes], AC_MSG_WARN([libpcap not found. The flow_meter module will not be compiled.])), AC_MSG_WARN([pcap.h not found. The flow_meter module will not be compiled.]))
 
 AM_CONDITIONAL(HAVE_LIBPCAP, test x${libpcap} = xyes)
+if [[ -z "$HAVE_LIBPCAP_TRUE" ]]; then
+RPM_REQUIRES+=" libpcap"
+RPM_BUILDREQ+=" libpcap-devel"
+fi
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h locale.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/socket.h sys/time.h syslog.h unistd.h])
@@ -158,7 +181,8 @@ AC_CONFIG_FILES([Makefile
                  unirecfilter/Makefile
                ])
 
-
+AC_SUBST(RPM_REQUIRES)
+AC_SUBST(RPM_BUILDREQ)
 AC_OUTPUT
 
 echo
