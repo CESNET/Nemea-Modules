@@ -9,8 +9,8 @@ License: BSD
 Vendor: CESNET, z.s.p.o.
 Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
-Requires: libtrap nemea-common
-BuildRequires: gcc make doxygen pkgconfig unirec libtrap-devel nemea-common-devel
+Requires: libtrap nemea-pycommon nemea-python nemea-common@RPM_REQUIRES@
+BuildRequires: gcc make doxygen pkgconfig unirec libtrap-devel nemea-common-devel@RPM_BUILDREQ@
 Provides: nemea-modules
 
 %description
@@ -29,6 +29,6 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 
 %files
 %{_bindir}/nemea/*
-%{_docdir}/nemea-modules/*/README*
+%{_docdir}/nemea-modules/*/*
 
 

@@ -6,6 +6,7 @@ flowcounter \
 logger \
 logreplay \
 merger \
+report2idea \
 traffic_repeater
 
 EXTRA_DIST = AUTHORS COPYING ChangeLog INSTALL NEWS README.md nfreader
