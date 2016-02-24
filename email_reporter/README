@@ -1,6 +1,6 @@
 EmailReporter
 
-Author: Vaclav Bartos <ibartosv@fit.vutbr.cz>
+Author: Vaclav Bartos <bartos@cesnet.cz>
 
 Goal: Convert detection reports to email messages.
 
@@ -26,16 +26,16 @@ Parameters:
                      credentials, if specified) works. You can skip the test 
                      using this option.
  
-The config file has two sections. First, there is specification of UniRec
-template, SMTP server to be used, optionally login credentials and so on.
-Format of this section is given by example below.
-You can use comments (start them with '#') in this section. 
+The config file has two sections. First, there is specification of required 
+UniRec fields, SMTP server to be used, optionally login credentials and so on.
+Format of this section is given by example below. You can use comments (start 
+them with '#') in this section. 
 
 The second section starts after a blank line and it contains template of
 an email message in RFC2822 format. That is: headers (e.g. From, To, Subject),
 blank line and message body. The "Date:" header is added automatically.
-The template may contain references to fields of 
-UniRec record which will be substituted by corresponding values in each message.
-References are made using '$' followed by name of the field.
+The template may contain references to fields of UniRec record which will be
+substituted by corresponding values in each message. References are made using
+'$' followed by name of the field.
 
 An example of config file can be found in example.cfg.
