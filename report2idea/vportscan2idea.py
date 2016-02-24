@@ -23,7 +23,7 @@ def convert_to_idea(rec, opts=None):
        'CeaseTime': endTime,
        "DetectTime": endTime,
        "Category": ["Recon.Scanning"],
-       "ConnCount": int(rec.PORT_CNT),
+       "FlowCount": int(rec.PORT_CNT),
        "Description": "Vertical scan using TCP SYN",
        "Source": [{
              "Proto": ["tcp"]
