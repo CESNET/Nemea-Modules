@@ -1,6 +1,5 @@
 os: linux
 sudo: required
-dist: trusty
 language: c
 compiler:
   - clang
@@ -21,6 +20,7 @@ addons:
     sources:
       - ubuntu-toolchain-r-test
     packages:
+      - gcc-multilib
       - gcc-c++
       - autoconf
       - pkg-config
