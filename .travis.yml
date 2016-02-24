@@ -1,8 +1,9 @@
 os: linux
 sudo: required
+dist: trusty
 language: c
 compiler:
-  - clang
+  - gcc
 
 branches:
   only:

@@ -65,6 +65,9 @@ AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--disable-repobuild],
 	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-repobuild]) ;;
 esac], [repobuild=true])
 
+AX_OPENMP([], [AC_MSG_ERROR([OpenMP was not found. Some modules need it (e.g. logger and merger)])])
+AC_SUBST(OPENMP_CFLAGS)
+
 AX_LIBTRAP_CHECK
 AX_UNIREC_CHECK
 AX_NEMEACOMMON_CHECK
@@ -126,7 +129,7 @@ RPM_BUILDREQ+=" libpcap-devel"
 fi
 
 # Checks for header files.
-AC_CHECK_HEADERS([arpa/inet.h locale.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/socket.h sys/time.h syslog.h unistd.h])
+AC_CHECK_HEADERS([arpa/inet.h locale.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/socket.h sys/time.h syslog.h unistd.h omp.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
