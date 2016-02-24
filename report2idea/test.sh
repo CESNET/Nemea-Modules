@@ -98,12 +98,25 @@ SWOokQEGOgAAAAAAAAAAAAEICSf/////AAAAAAAAAABJCQ4+/////1G4HkVJi7tWLbKdz7mNu1bC
 AQAA2NNIUAEGAQAA"
 
 # output data:
-hsout="H4sIAKfBu1YAA9WVwWrDMAyG73uKoPMobZIt7W6jXWkvoSyDHUYPxjOdIbGCrTK60nefpe6yJ7BL
-Lo5+Rb/8IZHzfQEtfhp4Kj7O8HYa5QTrHr8hSh0psoGsVj3s+f1d5NYMRrG+wUCcE64RTmnVwDXg
-K0qBJbjEcBRWJmhvR7LoWN+gtz/oSPXFiJ6KoJXjkkt0bolHRzGprCv5dI1+UByA7erleSppiswB
-/Un6eTUa3aSLFZx1B7j6dXj0+u9i210tidOJPNLoziOhREmPsOcu5d7/zC9356wJPTzW6QiJee6E
-yqpJOENsnjuhqkm4ZWKeO6GymqecofktEJqlJDTLn1CzWKQjJOa5EyrrlFtW38SWJfzbi3n2hDKY
-oV+UmwscVAsAAA=="
+hsout="H4sIACLZzVYAA9WWTUvDQBCG7/6Ksme77FeyaW/SD9pLEVsQlB6WuNRAu1uSraKl/92d1YsgZIm1
+rJeQ7EwmMw8vb+Z43UML+6TRsPd4RKu3fbhD0619RT60dMpVjatKtUVreL4P4YXeaQXxmW0c5DSf
+J5CyUDuogZ59qIEQOsHx5EUbt6o+Y4zQvE9Yn5IVo0NWDBl5gHJj3ZR1tXeVNZA2s3X1bo1T297e
+1q7XlMpA2sgaM7IH43wSExxOtGr0z9W5/4AM1ae23il4B83HkxsSKimnN7Z+C1Pd6dIavPQfMZXZ
+wDAwsT3U5Ree+a0IiZRixjBl/hpGvq2tsyHiyj1ah3mB4LceT1fHBFh7GqToyjrLRStrys7MmmHJ
+A+siinXoMRHWZJixzrrmspU1yc7M2oMWmEosZJyuocc0WLPcA+nKmst2D+GDP/IQmkWxDj2mwdrr
+WvDuui4uruuiwEximvtrpK6LlFh3/zdyennWEucEFzxW16HHNFh7D+nOWg4GF/cQMJAB+DWlUaxD
+j2mwhn9jZ79m4vIeIjNMCbBmInLnS8lDfrOHtO98Z99DSGDtXZtEekhKO58Q/0nXNPOUcZ7FesiX
+rj8AD6TlLTgOAAA="
+
+vsout="H4sIAELZzVYAA92WzWrjMBCA730Ko3MrZmTZlnULaQu9hLAOW7pLKcIVxtBYQVa6lNB3X0k5FOqG
+ZSGpifHJM5rRaD7mZ0fmyunG2Dcik9/kh65NR6tadV3bNeTxMiEL86yDbkdmTWPv287/EACJIAGI
+P7B628QD5PbF/AmCyinX9q6t1Uv0UN1H9UKvtQr6142xrvd3PD1rp2tn7P4itQ5+PtTkPYhvXnXn
+Vu1exwDzK2BXCCssJeSSwa8Yg7KNdvsw75Y83scpoxllGJ0vrXEmil29IY/Rc2W2ttafjIpoQwU7
+ZBY+cq372rYb15qYjp/axucmIexk2/vcJav5MqkeFiG6W2PXKkRH7q5vZjFpc616/fWrGEoQ8VUh
+oXOz7YIpZnCZvF/szpmXD4GJg7x80mlJ0/K/eAnheWFBWTomLywGvDhMghfPjsurFJRTLqjIRuOF
+QqYwTV4o0yPXV17SgqKgrBizvrJhP2Q4DWD/LDAOZweMScDJAsNTdcRRN44sHQAT0+AF7ES88lE3
+RDbglU1hQzw+L+73eVp4w4N99Dt4pcMJlk+DF+Ynqi8+an0N+2E2kX545PlVpN4GOc1HnV+sHG70
++/r6C3eawvjiEAAA"
 
 vsout="H4sIAJjBu1YAA+2W32vCMBDH3/dXlDzLkdS0TX2TOsEXkVUmY8gINZSCJiWNGyL+70vi2EBQGCOw
 jT7mLt/78eG45IgKbkSt9AGNomf0IColoay4lI2s0XoQobnaCOc7onFd61Uj7QFhPCJ4hDGyF5aH
@@ -123,7 +136,7 @@ echo -n "$hs" | base64 -d > "$data"
 # generate output
 ./hoststats2idea.py -i "f:$data" -n hoststats --file /dev/stdout |
    # clean it from variable info
-   sed 's/"[^"]*Time": "[^"]*"//g; s/"ID": "[^"]*"//g' |
+   sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
    # compare it with prepared expected data (previously base64 encoded and gzipped)
    diff -u - <(echo -n "$hsout" | base64 -d | gunzip) ||
    # on error, print it and remember it
@@ -135,7 +148,7 @@ echo -n "$vp" | base64 -d > "$data"
 # generate output
 ./vportscan2idea.py -i "f:$data" -n vportscan --file /dev/stdout |
    # clean it from variable info
-   sed 's/"[^"]*Time": "[^"]*"//g; s/"ID": "[^"]*"//g' |
+   sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
    # compare it with prepared expected data (previously base64 encoded and gzipped)
    diff -u - <(echo -n "$vsout" | base64 -d | gunzip) ||
    { echo "vportscan2idea FAILED :-("; ((errors++)); }
