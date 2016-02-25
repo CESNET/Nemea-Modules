@@ -29,6 +29,7 @@ def convert_to_idea(rec, opts=None):
     """
     idea={
             "Format": "IDEA0",
+            "ID": getRandomId(),
             "CreateTime": getIDEAtime(), # Set current time
             "DetectTime": getIDEAtime(
                 # TODO Put here the right UniRec field or use without argument
