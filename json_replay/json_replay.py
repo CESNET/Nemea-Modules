@@ -60,7 +60,7 @@ while not trap.stop:
         break
     if line == "\n":
         continue
-    
+
     # Parse JSON
     try:
         rec = json.loads(line)

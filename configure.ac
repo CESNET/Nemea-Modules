@@ -171,6 +171,8 @@ AC_CONFIG_FILES([Makefile
                  debug_sender/Makefile
                  flowcounter/Makefile
                  flow_meter/Makefile
+                 json_dump/Makefile
+                 json_replay/Makefile
                  logger/Makefile
                  logreplay/Makefile
                  merger/Makefile
