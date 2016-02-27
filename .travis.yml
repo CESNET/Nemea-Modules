@@ -45,5 +45,5 @@ before_install:
 
 script:
   - ls -ld /usr/lib/python*/site-packages/*
-  - ./bootstrap.sh && ./configure --disable-repobuild && make check || { find . \( -name '*.log' -o -name '*.trs' \) -print -exec cat {} \;; exit 1; }
+  - ./bootstrap.sh && ./configure --disable-repobuild && make check || { find . \( -name '*.log' -o -name '*.trs' \) -print -exec cat {} \;; exit 1; } && make distcheck
 
