@@ -11,10 +11,11 @@ from report2idea import *
 
 
 # Moudle name, description and required input data format
-MODULE_NAME = "something2idea"
-MODULE_DESC = "Converts output of SOME_MODULE module to IDEA."
+MODULE_NAME = "something2idea" # TODO name of this reporter
+MODULE_DESC = "Converts output of SOME_MODULE module to IDEA." # TODO name of detection module
+
 REQ_TYPE = trap.TRAP_FMT_UNIREC
-REQ_FORMAT = "uint8 EVENT_TYPE,time TIME_FIRST,time TIME_LAST,ipaddr SRC_IP,ipaddr DST_IP,uint16 SRC_PORT,uint16 DST_PORT,uint8 PROTOCOL,uint32 EVENT_SCALE,string NOTE"
+REQ_FORMAT = "" # TODO Put the string of required fields or specifier
 
 # Main conversion function
 def convert_to_idea(rec, opts=None):
@@ -27,38 +28,37 @@ def convert_to_idea(rec, opts=None):
 
     Return report in IDEA format (as Python dict). If None is returned, the alert is skipped.
     """
-    idea={
-            "Format": "IDEA0",
-            "ID": getRandomId(),
-            "CreateTime": getIDEAtime(), # Set current time
+    idea = {
+        "Format": "IDEA0",
+        "ID": getRandomId(),
+        "CreateTime": getIDEAtime(), # Set current time
             "DetectTime": getIDEAtime(
-                # TODO Put here the right UniRec field or use without argument
-            ),
-            "Category": [
-                # TODO Choose category from https://idea.cesnet.cz/en/classifications#eventtagsecurity_event_types_classification
+                    # TODO Put here the right UniRec field or use without argument
+                    ),
+        "Category": [
+            # TODO Choose category from https://idea.cesnet.cz/en/classifications#eventtagsecurity_event_types_classification
+        ],
+        "Description": [
+            # TODO text description of the alert
+        ],
+        #"Source": [{
+        #      "Proto": ["tcp"]
+        # }],
+        #"Target": [{
+        #      "Proto": ["tcp"],
+        #}],
+        'Node': [{
+            'Name': 'undefined',
+            'SW': ['Nemea',
+            # TODO Put the name (string) of detector here.
             ],
-            "Description": [
-                # TODO text description of the alert
-            ],
-            #"Source": [{
-            #      "Proto": ["tcp"]
-            # }],
-            #"Target": [{
-            #      "Proto": ["tcp"],
-            #}],
-            'Node': [{
-                'Name': 'undefined',
-                'SW': ['Nemea',
-                    # TODO Put the name (string) of detector here.
-                ],
-                'Type': [ 'Flow', 'Statistical'
-                    # TODO if needed, change or extend
-                ]
-            }],
-            # TODO feel free to fill in any other fields from https://idea.cesnet.cz/en/definition
-        }
+            'Type': [ 'Flow', 'Statistical'
+                # TODO if needed, change or extend
+            ]
+        }],
+        # TODO feel free to fill in any other fields from https://idea.cesnet.cz/en/definition
+    }
     return idea
-
 
 
 # If conversion functionality needs to be parametrized, an ArgumentParser can be passed to Run function.
