@@ -44,7 +44,7 @@ else:
     file = sys.stdout
 
 # Set JSON as required data type on input
-trap.set_required_fmt(0, trap.TRAP_FMT_JSON, None)
+trap.set_required_fmt(0, trap.TRAP_FMT_JSON, "")
 
 # Main loop (trap.stop is set to True when SIGINT or SIGTERM is received)
 while not trap.stop:
