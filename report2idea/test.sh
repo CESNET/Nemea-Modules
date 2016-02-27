@@ -168,7 +168,7 @@ errors=0
 # prepare stored input
 echo -n "$hs" | base64 -d > "$data"
 # generate output
-./hoststats2idea.py -i "f:$data" -n hoststats --file /dev/stdout |
+./$srcdir/hoststats2idea.py -i "f:$data" -n hoststats --file /dev/stdout |
    # clean it from variable info
    sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
    # compare it with prepared expected data (previously base64 encoded and gzipped)
@@ -180,7 +180,7 @@ echo -n "$hs" | base64 -d > "$data"
 # prepare stored input
 echo -n "$vp" | base64 -d > "$data"
 # generate output
-./vportscan2idea.py -i "f:$data" -n vportscan --file /dev/stdout |
+./$srcdir/vportscan2idea.py -i "f:$data" -n vportscan --file /dev/stdout |
    # clean it from variable info
    sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
    # compare it with prepared expected data (previously base64 encoded and gzipped)
@@ -191,7 +191,7 @@ echo -n "$vp" | base64 -d > "$data"
 # prepare stored input
 echo -n "$ap" | base64 -d > "$data"
 # generate output
-./amplification2idea.py -i "f:$data" -n amplification --file /dev/stdout |
+./$srcdir/amplification2idea.py -i "f:$data" -n amplification --file /dev/stdout |
    # clean it from variable info
    sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
    # compare it with prepared expected data (previously base64 encoded and gzipped)
