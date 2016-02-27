@@ -24,8 +24,8 @@ def convert_to_idea(rec, opts=None):
     rec - Record received on TRAP input interface (the report to convert).
           Its format satisfies what was defined by REQ_TYPE and REQ_FORMAT.
     opts - options parsed from command line (as returned by argparse.ArgumentParser)
-    
-    Return report in IDEA format (as Python dict)
+
+    Return report in IDEA format (as Python dict). If None is returned, the alert is skipped.
     """
     idea={
             "Format": "IDEA0",
