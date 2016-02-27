@@ -37,6 +37,9 @@ def convert_to_idea(rec, opts=None):
             "Category": [
                 # TODO Choose category from https://idea.cesnet.cz/en/classifications#eventtagsecurity_event_types_classification
             ],
+            "Description": [
+                # TODO text description of the alert
+            ],
             #"Source": [{
             #      "Proto": ["tcp"]
             # }],
@@ -48,6 +51,9 @@ def convert_to_idea(rec, opts=None):
                 'SW': ['Nemea',
                     # TODO Put the name (string) of detector here.
                 ],
+                'Type': [ 'Flow', 'Statistical'
+                    # TODO if needed, change or extend
+                ]
             }],
             # TODO feel free to fill in any other fields from https://idea.cesnet.cz/en/definition
         }
