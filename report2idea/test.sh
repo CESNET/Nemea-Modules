@@ -97,21 +97,68 @@ cQEGOgAAAAAAAAAAAAEICSf/////AAAAAAAAAABiBDBU/////2ZmZkZUi7tWSQwCa5+Nu1b0AQAA
 SWOokQEGOgAAAAAAAAAAAAEICSf/////AAAAAAAAAABJCQ4+/////1G4HkVJi7tWLbKdz7mNu1bC
 AQAA2NNIUAEGAQAA"
 
-# output data:
-hsout="H4sIAKfBu1YAA9WVwWrDMAyG73uKoPMobZIt7W6jXWkvoSyDHUYPxjOdIbGCrTK60nefpe6yJ7BL
-Lo5+Rb/8IZHzfQEtfhp4Kj7O8HYa5QTrHr8hSh0psoGsVj3s+f1d5NYMRrG+wUCcE64RTmnVwDXg
-K0qBJbjEcBRWJmhvR7LoWN+gtz/oSPXFiJ6KoJXjkkt0bolHRzGprCv5dI1+UByA7erleSppiswB
-/Un6eTUa3aSLFZx1B7j6dXj0+u9i210tidOJPNLoziOhREmPsOcu5d7/zC9356wJPTzW6QiJee6E
-yqpJOENsnjuhqkm4ZWKeO6GymqecofktEJqlJDTLn1CzWKQjJOa5EyrrlFtW38SWJfzbi3n2hDKY
-oV+UmwscVAsAAA=="
+ap="AgAAAMQAAABpcGFkZHIgRFNUX0lQLGlwYWRkciBTUkNfSVAsdWludDY0IFJFUV9CWVRFUyx1aW50
+NjQgUlNQX0JZVEVTLHRpbWUgVElNRV9GSVJTVCx0aW1lIFRJTUVfTEFTVCx1aW50MzIgRVZFTlRf
+SUQsdWludDMyIFJFUV9GTE9XUyx1aW50MzIgUkVRX1BBQ0tFVFMsdWludDMyIFJTUF9GTE9XUyx1
+aW50MzIgUlNQX1BBQ0tFVFMsdWludDE2IFNSQ19QT1JUywMAAFYAAAAAAAAAAAAr5wZ7/////wAA
+AAAAAAAAw3FS9v////+OSAEAAAAAAKQ/OwAAAAAAxks3CbHeLVYv3STGO+ItVgEAAAAOBQAADgUA
+AKUDAADuCgAANQBWAAAAAAAAAAAAebgu/f////8AAAAAAAAAAMNxUvb/////3wsBAAAAAACkrTkA
+AAAAAE+Nl+683i1W2c73U0HiLVYCAAAAHwQAAB8EAACMAwAApAoAADUAVgAAAAAAAAAAAK8rc///
+////AAAAAAAAAADDcVL2/////45MAgAAAAAAMTd7AAAAAABuEoPAtt4tVsDKoaVD4i1WAwAAAA4J
+AAAOCQAAlAcAALsWAAA1AFYAAAAAAAAAAACt/hwR/////wAAAAAAAAAAk+UBU//////lLQIAAAAA
+AI77cAAAAAAAxks36b7eLVYSg8BqROItVgQAAADbCAAA2wgAACIHAABmFQAANQBWAAAAAAAAAAAA
+PbIwE/////8AAAAAAAAAAMNxUvb/////mRoBAAAAAAArmkAAAAAAAFg5tGi/3i1W+6nxkkTiLVYF
+AAAAWQQAAFkEAAD5AwAA6wsAADUAVgAAAAAAAAAAAHLXetr/////AAAAAAAAAADDcVL2/////1ze
+AQAAAAAAXQthAAAAAACd76cmwt4tVlpkOx9H4i1WBgAAAFwHAABcBwAA+AUAAOcRAAA1AFYAAAAA
+AAAAAACt/hwR/////wAAAAAAAAAAw3GQwv////96OAIAAAAAAEVjdQAAAAAAQWDlsMLeLVY9CtfD
+R+ItVgcAAAAGCQAABgkAAFMHAAD5FQAANQBWAAAAAAAAAAAArf4cEf////8AAAAAAAAAAJPlEKr/
+////PCgCAAAAAADfZ3IAAAAAAKwcWiTD3i1WCKwcOkriLVYIAAAAxAgAAMQIAAA5BwAAqxUAADUA
+VgAAAAAAAAAAAHko8Y//////AAAAAAAAAADDcVL2/////5gqAQAAAAAAR8Y7AAAAAACTGAR2v94t
+Vl66SWxL4i1WCQAAAJgEAACYBAAArQMAAAcLAAA1AFYAAAAAAAAAAAB86IRe/////wAAAAAAAAAA
+w3FS9v////+xXQAAAAAAAI76FQAAAAAA7Xw/NbTeLVYUrkfBO+ItVgoAAABxAQAAcQEAAFoBAAAO
+BAAANQBWAAAAAAAAAAAAovN/Vv////8AAAAAAAAAAMNxUvb/////LyABAAAAAABTYj4AAAAAAN9P
+jTfB3i1WQ4tsB07iLVYLAAAAbwQAAG8EAADXAwAAggsAADUAAQAA"
 
-vsout="H4sIAJjBu1YAA+2W32vCMBDH3/dXlDzLkdS0TX2TOsEXkVUmY8gINZSCJiWNGyL+70vi2EBQGCOw
-jT7mLt/78eG45IgKbkSt9AGNomf0IColoay4lI2s0XoQobnaCOc7onFd61Uj7QFhPCJ4hDGyF5aH
-1l9A0616c4bScNN0pqn41kcoV949FzvBnf+1Vdp0NsfLRhhRGaXPifjOxflyo5M1uwRc18Kca5gt
-qA9GIYYEYuKVC62M8mZTtWh98knVXlfiQpR5DbD4msznm4iu0k1rGuV7fRTa9xK5mqJ9Z8FEy2IR
-lU9z102hpCzUXroCSYKtZar0jrsjmk3ux47RIDrdHf8oaYsLchjm3yLNmCVNMoiHgUhT3JP23pwB
-BcqAJT3psKTTHDIgDOIsEOmY/FvUFPeof+dUf+6PUG8i60lfkE4DkU7638fHP8/+8iCzwqtb54ek
-0570xUzTUDPdb4+zKBtaDaGQhtrT9MZMvwN+rnx8Jg4AAA=="
+# output data:
+hsout="H4sIACLZzVYAA9WWTUvDQBCG7/6Ksme77FeyaW/SD9pLEVsQlB6WuNRAu1uSraKl/92d1YsgZIm1
+rJeQ7EwmMw8vb+Z43UML+6TRsPd4RKu3fbhD0619RT60dMpVjatKtUVreL4P4YXeaQXxmW0c5DSf
+J5CyUDuogZ59qIEQOsHx5EUbt6o+Y4zQvE9Yn5IVo0NWDBl5gHJj3ZR1tXeVNZA2s3X1bo1T297e
+1q7XlMpA2sgaM7IH43wSExxOtGr0z9W5/4AM1ae23il4B83HkxsSKimnN7Z+C1Pd6dIavPQfMZXZ
+wDAwsT3U5Ree+a0IiZRixjBl/hpGvq2tsyHiyj1ah3mB4LceT1fHBFh7GqToyjrLRStrys7MmmHJ
+A+siinXoMRHWZJixzrrmspU1yc7M2oMWmEosZJyuocc0WLPcA+nKmst2D+GDP/IQmkWxDj2mwdrr
+WvDuui4uruuiwEximvtrpK6LlFh3/zdyennWEucEFzxW16HHNFh7D+nOWg4GF/cQMJAB+DWlUaxD
+j2mwhn9jZ79m4vIeIjNMCbBmInLnS8lDfrOHtO98Z99DSGDtXZtEekhKO58Q/0nXNPOUcZ7FesiX
+rj8AD6TlLTgOAAA="
+
+vsout="H4sIAELZzVYAA92WzWrjMBCA730Ko3MrZmTZlnULaQu9hLAOW7pLKcIVxtBYQVa6lNB3X0k5FOqG
+ZSGpifHJM5rRaD7mZ0fmyunG2Dcik9/kh65NR6tadV3bNeTxMiEL86yDbkdmTWPv287/EACJIAGI
+P7B628QD5PbF/AmCyinX9q6t1Uv0UN1H9UKvtQr6142xrvd3PD1rp2tn7P4itQ5+PtTkPYhvXnXn
+Vu1exwDzK2BXCCssJeSSwa8Yg7KNdvsw75Y83scpoxllGJ0vrXEmil29IY/Rc2W2ttafjIpoQwU7
+ZBY+cq372rYb15qYjp/axucmIexk2/vcJav5MqkeFiG6W2PXKkRH7q5vZjFpc616/fWrGEoQ8VUh
+oXOz7YIpZnCZvF/szpmXD4GJg7x80mlJ0/K/eAnheWFBWTomLywGvDhMghfPjsurFJRTLqjIRuOF
+QqYwTV4o0yPXV17SgqKgrBizvrJhP2Q4DWD/LDAOZweMScDJAsNTdcRRN44sHQAT0+AF7ES88lE3
+RDbglU1hQzw+L+73eVp4w4N99Dt4pcMJlk+DF+Ynqi8+an0N+2E2kX545PlVpN4GOc1HnV+sHG70
++/r6C3eawvjiEAAA"
+
+aout="H4sIAG7azVYAA9WZ32vjOBDH3/evKH6+FZrR777tNbvQl14hhYVdlsOX+pZwbVxSd49S+r/fyFKa
+xFLi6ik+kkCRZc/oO5+ORuOX6qLump/t+rk6P/teffpVL++Wf9Gve2azWTuvfvx2Vl21t42//FLN
+v/bTrpr7pq7oSn3/cLf8e7mou2W7+vO26ZqF/yvcVd/7u/bnVK/+0udfzaq7WYbryEF9BP4R9Q23
+51zR95t/9k29/tl0we7l6rpe/NN0F+3Tyg+hcZamXK/bru09erp98Pfcrh5725erL3ftv5vZTgg/
+di37qVIwFMA0AxRx8u/PXbOZLKxFB7r3c94+rRfNxoXdRwI6ecyBP5661AMazFhKPLASgPej+4uO
+NjfrAKcYgGAWGUq9sZrq1K8kK9/N80O/uMq76r2fdxSkx45ideef5z/VrHlcrJcPffAoWrOr+dl+
+RGnOl3Z9X/sHV5ezz5+4H7po6scmH2Lk5wB9iPNqJMK9fniZIKag34EpHqVkgCm3u+FFYGAlk5qh
+yoJqLOdcjoHKlSoBtfdhCGqwlHigrTIqB2qwWQYqyiyovYAnBNWkoL6pkQg3UVD5KKjKgns/qOAk
+342vUYySKoAiUlWGVMuN4sqMkEpJ+WhOH5AanRigGk0lLoDi2uSSarRawqoXK8Nq1PCErLqE1a0c
+qXQThdWOwypNweYPFvUerLT9K8nQMjAZVo3kUgo+xipqU8Jq8GHAajSVsirRIuRYDVbfliINQ3QM
+mBUHSCWlcqQGAU9HKvKE1K0YqXATJdWNkiq4ggJSOeyGV9P+byyTBKrLgCpRCGNgbPunZFYCanBh
+AGo0lf6voJDZ/T8YLcmpXqkMqVHASZG6VSNVbpqkIo6SKpU9ysmAKoV7myZQPqXdH5AiDDYDqxbK
+OT4Kq7Ulh6roxQDWaCrNqkjwZY9VwWoJrV6tDK1RxBPSKhJat3Kk0v1vaVUajx5qhliZvePIWAWg
+nQBU49UqL6oAeh+GFUAwlakAlBIHqlWeYRWkpE1CHigCdFxMVsNJwbrVI9VuorCKcVip3CqBVbqi
+ctWRaKOwoixKrMGHpFztTWVgBWEwW67KvcS6KVc1LYUfYJW0yrEaJDwhqzpTsG7kSKWbJqvvKFjp
+4FFQBjgJu/FFYJLTpkl1q8w2rBzRHDfOYxWr0QWsBh+GDatgKZPapcyWAMFmUcOKlMo1rIKAJyQ1
+07B6UyMRbpqg8vEeAHBR0AMQci+8SPlUIAP6xU1zmNEkF7FxfhhUoY+2zAacBhcGnEZDiQNIg7mD
+VTBZgqnXKYNplG9SLwC2YiS6TRNThPF86uTRZDbIp3bv2Kx9XKm4Q8OsznUAOJ1c+Hg+FUUvAGzm
+TVW0lOZTOgjnGwCi+AUAKZXLp0HA04EqMg2ANzUS4V4//AcgAkTEUR0AAA=="
 
 # The Test:
 data=$(mktemp)
@@ -121,9 +168,9 @@ errors=0
 # prepare stored input
 echo -n "$hs" | base64 -d > "$data"
 # generate output
-./hoststats2idea.py -i "f:$data" -n hoststats --file /dev/stdout |
+./$srcdir/hoststats2idea.py -i "f:$data" -n hoststats --file /dev/stdout |
    # clean it from variable info
-   sed 's/"[^"]*Time": "[^"]*"//g; s/"ID": "[^"]*"//g' |
+   sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
    # compare it with prepared expected data (previously base64 encoded and gzipped)
    diff -u - <(echo -n "$hsout" | base64 -d | gunzip) ||
    # on error, print it and remember it
@@ -133,12 +180,23 @@ echo -n "$hs" | base64 -d > "$data"
 # prepare stored input
 echo -n "$vp" | base64 -d > "$data"
 # generate output
-./vportscan2idea.py -i "f:$data" -n vportscan --file /dev/stdout |
+./$srcdir/vportscan2idea.py -i "f:$data" -n vportscan --file /dev/stdout |
    # clean it from variable info
-   sed 's/"[^"]*Time": "[^"]*"//g; s/"ID": "[^"]*"//g' |
+   sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
    # compare it with prepared expected data (previously base64 encoded and gzipped)
    diff -u - <(echo -n "$vsout" | base64 -d | gunzip) ||
    { echo "vportscan2idea FAILED :-("; ((errors++)); }
+
+# TEST OF AMPLIFICATION2IDEA
+# prepare stored input
+echo -n "$ap" | base64 -d > "$data"
+# generate output
+./$srcdir/amplification2idea.py -i "f:$data" -n amplification --file /dev/stdout |
+   # clean it from variable info
+   sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
+   # compare it with prepared expected data (previously base64 encoded and gzipped)
+   diff -u - <(echo -n "$aout" | base64 -d | gunzip) ||
+   { echo "amplification2idea FAILED :-("; ((errors++)); }
 
 # cleanup
 rm "$data"

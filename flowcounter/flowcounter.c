@@ -125,7 +125,8 @@ void send_handler(int signal)
    ur_set(out_tmplt, out_rec, F_PACKETS, cnt_packets);
    ur_set(out_tmplt, out_rec, F_BYTES, cnt_bytes);
    ret = trap_send(0, out_rec, ur_rec_fixlen_size(out_tmplt));
-   TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, 0, exit(EXIT_FAILURE));
+   TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, goto set_alarm, exit(EXIT_FAILURE));
+set_alarm:
    alarm(send_interval);
 }
 

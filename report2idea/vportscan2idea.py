@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import absolute_import
+
 # In case we are in nemea/modules/report2idea/ and we want to import from repo:
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "nemea-framework", "pycommon"))
@@ -23,7 +25,7 @@ def convert_to_idea(rec, opts=None):
        'CeaseTime': endTime,
        "DetectTime": endTime,
        "Category": ["Recon.Scanning"],
-       "ConnCount": int(rec.PORT_CNT),
+       "FlowCount": int(rec.PORT_CNT),
        "Description": "Vertical scan using TCP SYN",
        "Source": [{
              "Proto": ["tcp"]

@@ -11,11 +11,17 @@ from report2idea import *
 
 
 # Moudle name, description and required input data format
-MODULE_NAME = "something2idea" # TODO name of this reporter
-MODULE_DESC = "Converts output of SOME_MODULE module to IDEA." # TODO name of detection module
-
+MODULE_NAME = "dnstunnel2idea"
+MODULE_DESC = "Converts output of dnstunnel_detection module to IDEA."
 REQ_TYPE = trap.TRAP_FMT_UNIREC
-REQ_FORMAT = "" # TODO Put the string of required fields or specifier
+REQ_FORMAT = "ipaddr SRC_IP,time TIME_FIRST,time TIME_LAST,uint32 EVENT_ID,uint32 TUNNEL_CNT_PACKET,float TUNNEL_PER_NEW_DOMAIN,float TUNNEL_PER_SUBDOMAIN,uint8 TUNNEL_TYPE,string TUNNEL_DOMAIN"
+
+dataLocation = {
+    5: " in TXT field",
+    6: " in CNAME field",
+    7: " in MX field",
+    8: " in NS field"
+}
 
 # Main conversion function
 def convert_to_idea(rec, opts=None):
@@ -28,37 +34,42 @@ def convert_to_idea(rec, opts=None):
 
     Return report in IDEA format (as Python dict). If None is returned, the alert is skipped.
     """
-    idea = {
+    endTime = getIDEAtime(rec.TIME_LAST)
+    idea={
         "Format": "IDEA0",
         "ID": getRandomId(),
         "CreateTime": getIDEAtime(), # Set current time
-            "DetectTime": getIDEAtime(
-                    # TODO Put here the right UniRec field or use without argument
-                    ),
-        "Category": [
-            # TODO Choose category from https://idea.cesnet.cz/en/classifications#eventtagsecurity_event_types_classification
-        ],
-        "Description": [
-            # TODO text description of the alert
-        ],
-        #"Source": [{
-        #      "Proto": ["tcp"]
-        # }],
-        #"Target": [{
-        #      "Proto": ["tcp"],
-        #}],
+        "EventTime": getIDEAtime(rec.TIME_FIRST),
+        'CeaseTime': endTime,
+        "DetectTime": endTime,
+        "Category": [ 'Anomaly.Connection' ],
+        "FlowCount": rec.TUNNEL_CNT_PACKET,
+        "Source": [{
+            "Proto": ["udp", "dns"]
+        }],
+        "Target": [{
+            "Proto": ["udp", "dns"]
+        }],
         'Node': [{
             'Name': 'undefined',
-            'SW': ['Nemea',
-            # TODO Put the name (string) of detector here.
-            ],
-            'Type': [ 'Flow', 'Statistical'
-                # TODO if needed, change or extend
-            ]
+            'SW': [ 'Nemea', 'dnstunnel_detection' ],
+            'Type': [ 'Flow', 'Statistical', 'Content' ]
         }],
-        # TODO feel free to fill in any other fields from https://idea.cesnet.cz/en/definition
     }
+    setAddr(idea['Source'][0], rec.SRC_IP)
+    if rec.TUNNEL_TYPE in (1, 4, 5, 6, 7, 8):
+        idea['Description'] = "Communication tunnel over DNS"
+        if rec.TUNNEL_TYPE == 1:
+            idea['Description'] = idea['Description'] + " observed in requests"
+        else:
+            idea['Description'] = idea['Description'] + " observed in responses"
+            if rec.TUNNEL_TYPE in dataLocation:
+                idea['Note'] = "Data in {}".format(dataLocation[rec.TUNNEL_TYPE])
+        idea["Note"] = "Example of used domain name: {}".format(rec.TUNNEL_DOMAIN)
+    else:
+        return None
     return idea
+
 
 
 # If conversion functionality needs to be parametrized, an ArgumentParser can be passed to Run function.
