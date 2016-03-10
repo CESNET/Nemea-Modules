@@ -125,6 +125,17 @@ SME1zNUvJN7TBcYPCfXzc/WJdwYKBjg6e7uG6KTl5CeWwMQDXIPi/VzD4138fR09/TDlgkOdoFIg
 zE1MDM0szUzNjVKNDU3TUizN01INjc2Tk1OS08xMDC30knPy9dLy80sKgNaWpOQV6yXn5wINAQDH
 G9mgLgEAAA=='
 
+voip='H4sIAB9y4VYAA51SzW7TQBDepCClohdE1V59RCharX8T50JcexMsJbZlr930gFYtTqhFG6okVaVK
+cOHInQPPwoU34BXyBDwCjH/Spsi2Kmbk/fHs7vfNN9NECJ01EEquTuN4IVgB47bXLnaBb6a7VXI5
+FSzKqMls1+HMHtP8X7riA9sPWPs6ma9kSaARdeAFa7OPXNvjA98ILW47kc0oN93QYSVhz6cDe8Lp
+xBjbjpEBVR0NQtOkQTAIR9w0RqOtc6JW8uSIOkP2Jot3C4LsxKPt5WqRzN9vX8ge8k9gtsrCQbZy
+xxUh5pYEwoD63BgC6NcdhD6hKmuA/QFL1563jtLZP1pHUBr0rPhS20Uv7y8dgO+jriKCEUL6Opaw
+isWeSjRiLFfTRbL8IHhHE0EUsSRi8aoGvnUH//04h/8yXEfNOvjn4HtIklL4rkL6XSxjBavbyN8e
+lfAvniMaxjoCldDbAvHgX8QX4ATJKaAOXz/+eHmazPG72+PpxYXAJCKc33QwAVcVYXajY0XGMAiE
+9ES1p6npqMu9WJpV8mo1ms0Nr/OznNdr4PUE5sOCV6uMFyqUgPGe1+e6/Hc2OLM4x/kBij+tU/wQ
+fB9JWqY45A8F79RWvK7hdu/0/x0/bLi9Kvy84fI89aLhxBr4x5X/5/Rh+V/VyQzl72QyK/9ZfqWn
+aJDkX/Id4En5BAAA'
+
 # output data:
 hsout="H4sIACLZzVYAA9WWTUvDQBCG7/6Ksme77FeyaW/SD9pLEVsQlB6WuNRAu1uSraKl/92d1YsgZIm1
 rJeQ7EwmMw8vb+Z43UML+6TRsPd4RKu3fbhD0619RT60dMpVjatKtUVreL4P4YXeaQXxmW0c5DSf
@@ -173,6 +184,18 @@ J0UyK/j82b9RCn0CO2bda7QYIgxVfw9Aj7dxIBts1p+i61sgWJPBQEUqN36jiHKJCpKnKc/m2SyP
 IeGzuprnNfAkl7KSdZbyRyZbZDWi7XWjrDNnErvABAct78C2+zRE4IyzmPEw8P/B/KIrMFI3feBT
 eKRdNygH2F+QkQjBM2iy2h0IvhnQZxfdxdbwPoCxxltuUHfCg6Db1XoRhb8BYeBvgCkvkiQA9P+6
 xEH51jiPJuT28A24wZJ3JAIAAA=='
+
+voipout='H4sIAFdz4VYAA+2WW2vbMBSA3/crjJ4TIclyYuspWdJAoCuBeHRslCJsxRWzLSPLTS/0v1eSM7aH
+kSyDjG5ZTITlc7X8cc55BjNuRKH0I2DBFzA1RlSNgZeqkDW4GQTgSuXCiZ5B+tj4O7Ao1RZY0dpw
+I1sjM1667UzVRtTGW62vveaVqAR3snslm9uN5l1+mwsjMiPVzj2vnFOQPcFMtLUwsHY20Bl4/e/q
+L07/4t6GSGVvRBAeDVE4xChFCaMRi+hnFy3luhCmz3q9XKXKJxNTbH8IoUkCCYwgZhEaIZ/FSivT
+K7WyATc+0rrLbEbtpitnvCxbK0XOtZYiX2mxkQ8z1dUuCMaDwF1gLtpMy8Yn63zZ0MFc8nLYlLwO
+is56k3XhA9qzqn+0BwulK+52YDm/mCJ/vKrT2e7sP7ZCTwvh9e1Xao3Qsv0arN5/suaQYIj7Y1+u
+FlpVXsk/WK6o31gF+E3pZy/7gT/0L3Up6sLcWWkyCF7ePf8jdGDEUMxQuIcOQhwdMUWTGIaQwuhv
+B+MwEPH5AuHKBWYE7wEidDwk9j/JVcVlDbOnI5Ag5DRMJOGxTFyLsgxSgoK77Rgie0U02GwTSENo
+lwAhhiM2ityahCwn/wvJQW5wcrCQ2PW3uIlPgw05Gpv9GNjSYXsoOVcMXD9JGEL7MBj5fmLLh502
+xmc5boTniscvDKN9lUh2wyh+O3SQP0NHcu49ZP/sMfY9hL6pHkKPRuOY0YMyOjrJ6PEK0+FaGuIO
+AAA='
 
 # The Test:
 data=$(mktemp)
@@ -223,6 +246,16 @@ echo -n "$dns" | base64 -d | gunzip > "$data"
    diff -u - <(echo -n "$dnsout" | base64 -d | gunzip) ||
    { echo "dnstunnel2idea FAILED :-("; ((errors++)); }
 
+# TEST OF VOIPFRAUDDETECTION
+# prepare stored input
+echo -n "$voip" | base64 -d | gunzip > "$data"
+# generate output
+./$srcdir/voipfraud2idea.py -i "f:$data" -n cz.cesnet.nemea.voipfrauddetection --file /dev/stdout |
+   # clean it from variable info
+   sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
+   # compare it with prepared expected data (previously base64 encoded and gzipped)
+   diff -u - <(echo -n "$voipout" | base64 -d | gunzip) ||
+   { echo "voipfraud2idea FAILED :-("; ((errors++)); }
 # cleanup
 rm "$data"
 
