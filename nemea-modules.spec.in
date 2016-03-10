@@ -26,6 +26,7 @@ make -j5
 make -j5 DESTDIR=$RPM_BUILD_ROOT install
 
 %post
+test -x %{_bindir}/nemea/flow_meter && setcap "CAP_NET_RAW+eip" %{_bindir}/nemea/flow_meter || true
 
 %files
 %{_bindir}/nemea/*
