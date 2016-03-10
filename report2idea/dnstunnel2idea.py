@@ -47,9 +47,6 @@ def convert_to_idea(rec, opts=None):
         "Source": [{
             "Proto": ["udp", "dns"]
         }],
-        "Target": [{
-            "Proto": ["udp", "dns"]
-        }],
         'Node': [{
             'Name': 'undefined',
             'SW': [ 'Nemea', 'dnstunnel_detection' ],
