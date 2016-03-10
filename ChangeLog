@@ -1,3 +1,10 @@
+2016-03-10 Nemea-modules-2.3
+        * Added modules:
+		reporter for ipblacklistfilter
+	* documentation for creating flow_meter plugins
+	* bugfixes
+
+
 2016-02-28 Nemea-modules-2.2
 	* Added modules:
 		reporters to idea
