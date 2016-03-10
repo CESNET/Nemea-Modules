@@ -2,6 +2,7 @@ ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS=anonymizer \
 debug_sender \
+email_reporter \
 flowcounter \
 json_dump \
 json_replay \
