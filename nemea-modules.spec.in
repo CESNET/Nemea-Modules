@@ -30,5 +30,8 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 %files
 %{_bindir}/nemea/*
 %{_docdir}/nemea-modules/*/*
+%config(noreplace) %{_sysconfdir}/nemea/email_reporter/example.cfg
+%config(noreplace) %{_sysconfdir}/nemea/email_reporter/generic.cfg
+
 
 
