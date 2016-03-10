@@ -66,9 +66,15 @@ def convert_to_idea(rec, opts=None):
     """
     global bl_conv, bl_scale_tholds
 
+    blacklist = rec.SRC_BLACKLIST | rec.DST_BLACKLIST
+
+    # report only: 'Malware domains', 'Zeus', 'Feodo'
+    if blacklist not in [1, 2, 16]:
+        return None
+
     export = False
     for i in range(0,8):
-        if ((1<<i) & (rec.SRC_BLACKLIST | rec.DST_BLACKLIST)):
+        if ((1<<i) & blacklist):
             if (rec.EVENT_SCALE >= int(bl_scale_tholds[1<<i])):
                 export = True
                 break
@@ -90,9 +96,6 @@ def convert_to_idea(rec, opts=None):
         "PacketCount": rec.PACKETS,
         "ByteCount": rec.BYTES,
 
-        "Description": [
-            "IP address is on {} blacklist.".format(bl_conv[rec.SRC_BLACKLIST | rec.DST_BLACKLIST])
-        ],
         "Source": [{
               "Proto": [ protocol ]
          }],
@@ -119,6 +122,14 @@ def convert_to_idea(rec, opts=None):
             idea['Note'] = 'Source IP {} was found on blacklist.'.format(rec.SRC_IP)
         else:
             setAddr(idea['Target'][0], rec.SRC_IP)
+
+    if rec.SRC_BLACKLIST:
+        descSRC = "{} which is on {} blacklist".format(rec.SRC_IP, bl_conv[rec.SRC_BLACKLIST])
+        descDST = "{}".format(rec.DST_IP)
+    else:
+        descDST = "{} which is on {} blacklist".format(rec.DST_IP, bl_conv[rec.DST_BLACKLIST])
+        descSRC = "{}".format(rec.SRC_IP)
+    idea['Description'] = ["{} connected to {}.".format(descSRC, descDST)]
     return idea
 
 
