@@ -29,3 +29,9 @@ This NEMEA module creates flows from input PCAP file / network interface and exp
 ## Algorithm
 Stores packets from input PCAP file / network interface in flow cache to create flows. After whole PCAP file is processed, flows from flow cache are exported to output interface.
 When capturing from network interface, flows are continuously send to output interfaces until N (or unlimited number of packets if the -c option is not specified) packets are captured and exported.
+
+## Extension
+`flow_meter` can be extended by new plugins for exporting various new information from flow.
+There are already some existing plugins that export e.g. `DNS`, `HTTP`, `SIP`.
+
+To learn how to write new plugin for `flow_meter`, see [writing-plugins.md](writing-plugins.md).
