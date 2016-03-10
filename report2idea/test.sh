@@ -119,6 +119,12 @@ w3FS9v////+xXQAAAAAAAI76FQAAAAAA7Xw/NbTeLVYUrkfBO+ItVgoAAABxAQAAcQEAAFoBAAAO
 BAAANQBWAAAAAAAAAAAAovN/Vv////8AAAAAAAAAAMNxUvb/////LyABAAAAAABTYj4AAAAAAN9P
 jTfB3i1WQ4tsB07iLVYLAAAAbwQAAG8EAADXAwAAggsAADUAAQAA"
 
+dns='H4sIAJma4FYAA2NiYGDYDMSZBYkpKUUKwUHO8Z4BOiWZuakKIZ6+rvFunkHBIUh8H0cgtzQzr8TY
+SME1zNUvJN7TBcYPCfXzc/WJdwYKBjg6e7uG6KTl5CeWwMQDXIPi/VzD4138fR09/TDlgkOdoFIg
+8yxgUiGRAa46xSVFmXnpMCGIsnygs7MYYICRkYnxPxCA2OLLLoaB6N7lEJqPEUQ22Hc9trAHMk0Z
+zE1MDM0szUzNjVKNDU3TUizN01INjc2Tk1OS08xMDC30knPy9dLy80sKgNaWpOQV6yXn5wINAQDH
+G9mgLgEAAA=='
+
 # output data:
 hsout="H4sIACLZzVYAA9WWTUvDQBCG7/6Ksme77FeyaW/SD9pLEVsQlB6WuNRAu1uSraKl/92d1YsgZIm1
 rJeQ7EwmMw8vb+Z43UML+6TRsPd4RKu3fbhD0619RT60dMpVjatKtUVreL4P4YXeaQXxmW0c5DSf
@@ -160,6 +166,14 @@ ctWRaKOwoixKrMGHpFztTWVgBWEwW67KvcS6KVc1LYUfYJW0yrEaJDwhqzpTsG7kSKWbJqvvKFjp
 VTBZgqnXKYNplG9SLwC2YiS6TRNThPF86uTRZDbIp3bv2Kx9XKm4Q8OsznUAOJ1c+Hg+FUUvAGzm
 TVW0lOZTOgjnGwCi+AUAKZXLp0HA04EqMg2ANzUS4V4//AcgAkTEUR0AAA=="
 
+dnsout='H4sIACaX4FYAA3WRX2vDIBTF3/cpxOdWYpIma95K/0BfSqGBwUYZztyUQOLN1HTrSr/71JSxhw1f
+1Hvu8dyfV7oUFk6oL7QgL3ShsBPthS1RKZC2QUWPE0J3WIGvX2l56cOOblr8oK50sMI2xjZStP7o
+Gi0oG7oOT0G5gw6Er1XK2MH5tq8V2N/uovOeVH4xCUaBZcq3sB89vXnZ+uyMy2bUxhHPplE8jfOS
+J0UyK/j82b9RCn0CO2bda7QYIgxVfw9Aj7dxIBts1p+i61sgWJPBQEUqN36jiHKJCpKnKc/m2SyP
+IeGzuprnNfAkl7KSdZbyRyZbZDWi7XWjrDNnErvABAct78C2+zRE4IyzmPEw8P/B/KIrMFI3feBT
+eKRdNygH2F+QkQjBM2iy2h0IvhnQZxfdxdbwPoCxxltuUHfCg6Db1XoRhb8BYeBvgCkvkiQA9P+6
+xEH51jiPJuT28A24wZJ3JAIAAA=='
+
 # The Test:
 data=$(mktemp)
 errors=0
@@ -197,6 +211,17 @@ echo -n "$ap" | base64 -d > "$data"
    # compare it with prepared expected data (previously base64 encoded and gzipped)
    diff -u - <(echo -n "$aout" | base64 -d | gunzip) ||
    { echo "amplification2idea FAILED :-("; ((errors++)); }
+
+# TEST OF DNSTUNNEL2IDEA
+# prepare stored input
+echo -n "$dns" | base64 -d | gunzip > "$data"
+# generate output
+./$srcdir/dnstunnel2idea.py -i "f:$data" -n cz.cesnet.nemea.dnstunnel --file /dev/stdout |
+   # clean it from variable info
+   sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
+   # compare it with prepared expected data (previously base64 encoded and gzipped)
+   diff -u - <(echo -n "$dnsout" | base64 -d | gunzip) ||
+   { echo "dnstunnel2idea FAILED :-("; ((errors++)); }
 
 # cleanup
 rm "$data"
