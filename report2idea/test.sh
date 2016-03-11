@@ -136,6 +136,16 @@ lfAvniMaxjoCldDbAvHgX8QX4ATJKaAOXz/+eHmazPG72+PpxYXAJCKc33QwAVcVYXajY0XGMAiE
 fB9JWqY45A8F79RWvK7hdu/0/x0/bLi9Kvy84fI89aLhxBr4x5X/5/Rh+V/VyQzl72QyK/9ZfqWn
 aJDkX/Id4En5BAAA'
 
+ipbl='
+H4sIAMYd4lYAA2NiYGAQYGRgyCxITEkpUnAJDon3DNCB8oKDnEG80sy8EjMTBafIENdgGAek0MnH
+0dnbxzM4BCbo4+nnHe/kGRLv5unq4wITBZmCUFqSmZuqEOLp6wpUFITC93GEmmRspOAa5uoXEh/s
+7OjjChMKAJrgGgJxgKEZ2AEB/kEhMD7IFjjfQsHFMwjNJRYKAUH+If7O/j5QbohzQLybj6N7MIzv
+D2eF+IQyMTAkMsAAFwMT/38ggPHnsq+yA/FDGLADJijtycP0ejrPozAYDQxoBkaYIhADYQXMSHQr
+zZhQjUQHzQdOOS4FGp0kELFzGZAGqeMA4gAG3ecMbNLE+GIFIxZzkaw8Ubbv/nyg0aZxuzIXQK1g
+BWKd5wEMaFbg8sUKNCPRQVpa2jJQAF2peLlsBjSg4GpRA2rR/TgLbFbYEAioPSWTK87wPgrbcqLs
+H4hmhAfU6esEAgpmZToH/oACxsFMdCs4gfj0dWhAAQMaAEbug3VxAwAA
+'
+
 # output data:
 hsout="H4sIACLZzVYAA9WWTUvDQBCG7/6Ksme77FeyaW/SD9pLEVsQlB6WuNRAu1uSraKl/92d1YsgZIm1
 rJeQ7EwmMw8vb+Z43UML+6TRsPd4RKu3fbhD0619RT60dMpVjatKtUVreL4P4YXeaQXxmW0c5DSf
@@ -197,6 +207,18 @@ lwAhhiM2ityahCwn/wvJQW5wcrCQ2PW3uIlPgw05Gpv9GNjSYXsoOVcMXD9JGEL7MBj5fmLLh502
 xmc5boTniscvDKN9lUh2wyh+O3SQP0NHcu49ZP/sMfY9hL6pHkKPRuOY0YMyOjrJ6PEK0+FaGuIO
 AAA='
 
+ipblout='
+H4sIAE4o4lYAA+2V30/CMBDH3/0rmj5D05Zt/HgTlIQXQiKJicaHWk5phJZsRYOE/912CyDMRTDD
+qDHbw9Lr3X17/exuiTvCwqOJF7iFbnFP23ieKKNJ21gNFt9VEO6bEXjrEg8Xs/QLdyfmBTtTeyLk
+00Ql2car69TYhykIb1Wz+7X9QU0sxFk4MfVBsHwlEhKXhGjvQPK7V3775TNoO1SZD6csqtJalbEh
+pS3aaIXhjc80FPGjU5uK7A2CVAajhBJOWJhmHcTGmnRdyekM362yk9k07JWZxxJQb4BYWCd1wuqU
+RBy9iAQ9mLkeIaPRRhzxCTOPvYTvfItzDlwYsB0X1utlFeQffAGJjNXMutJ7QbsyxkqOkUq8ihuY
+J1spSBqtQVoYIWvQ5sCpwq6Jp8KnwL2Ly3PqlzogEvislO2FhbW6RlBBq7Plr2ak6d6jGbFyHxF3
+QVZp4S/ohJxs8+5i0ijAZC1/D4TD6PkKJs0WozlMwij6E5zUSuDk5K2kCJHwp3QSV8ggh0jA/0Ar
+KWvcfE8vKZw5/Kc0E1fPKEcKixq/nhQWrP+BcodOxAnnNdIMSBgdTcp759OMnV15ZaKyLejO3Knz
+f1Tyc+e7KWkWUHIgDuWNno8p4SxkHpM3YavDNesMAAA=
+'
+
 # The Test:
 data=$(mktemp)
 errors=0
@@ -256,6 +278,18 @@ echo -n "$voip" | base64 -d | gunzip > "$data"
    # compare it with prepared expected data (previously base64 encoded and gzipped)
    diff -u - <(echo -n "$voipout" | base64 -d | gunzip) ||
    { echo "voipfraud2idea FAILED :-("; ((errors++)); }
+
+# TEST OF IPBLACKLISTFILTER
+# prepare stored input
+echo -n "$ipbl" | base64 -d | gunzip > "$data"
+# generate output
+./$srcdir/ipblacklist2idea.py -i "f:$data" -n cz.cesnet.nemea.ipblacklistfilter --file /dev/stdout |
+   # clean it from variable info
+   sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
+   # compare it with prepared expected data (previously base64 encoded and gzipped)
+   diff -u - <(echo -n "$ipblout" | base64 -d | gunzip) ||
+   { echo "ipblacklist2idea FAILED :-("; ((errors++)); }
+
 # cleanup
 rm "$data"
 
