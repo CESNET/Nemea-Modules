@@ -129,7 +129,7 @@ def convert_to_idea(rec, opts=None):
     else:
         descDST = "{} which is on {} blacklist".format(rec.DST_IP, bl_conv[rec.DST_BLACKLIST])
         descSRC = "{}".format(rec.SRC_IP)
-    idea['Description'] = ["{} connected to {}.".format(descSRC, descDST)]
+    idea['Description'] = "{} connected to {}.".format(descSRC, descDST)
     return idea
 
 

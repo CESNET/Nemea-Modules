@@ -39,7 +39,7 @@ def convert_to_idea(rec, opts=None):
         "DetectTime": getIDEAtime(rec.DETECTION_TIME),
         "EventTime": getIDEAtime(rec.TIME_FIRST),
         "Category": [ "Attempt.Login" ],
-        "Description": [ "SIP Dial-plan guessing" ],
+        "Description": "SIP Dial-plan guessing",
         "ConnCount": rec.VOIP_FRAUD_INVITE_COUNT,
         "MaxPrefixLength": rec.VOIP_FRAUD_PREFIX_LENGTH,
         "TriedPrefixCount": rec.VOIP_FRAUD_PREFIX_EXAMINATION_COUNT,
