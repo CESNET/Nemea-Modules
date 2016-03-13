@@ -220,7 +220,7 @@ errors=0
 # prepare stored input
 echo -n "$hs" | base64 -d | gunzip > "$data"
 # generate output
-./$srcdir/hoststats2idea.py -i "f:$data" -n hoststats --file /dev/stdout |
+./$srcdir/hoststats2idea.py -i "f:$data" -n hoststats --file /dev/stdout | tee hoststatsnemea.idea |
    # clean it from variable info
    sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
    # compare it with prepared expected data (previously base64 encoded and gzipped)
@@ -232,7 +232,7 @@ echo -n "$hs" | base64 -d | gunzip > "$data"
 # prepare stored input
 echo -n "$vp" | base64 -d | gunzip > "$data"
 # generate output
-./$srcdir/vportscan2idea.py -i "f:$data" -n vportscan --file /dev/stdout |
+./$srcdir/vportscan2idea.py -i "f:$data" -n vportscan --file /dev/stdout | tee vportscan.idea |
    # clean it from variable info
    sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
    # compare it with prepared expected data (previously base64 encoded and gzipped)
@@ -243,7 +243,7 @@ echo -n "$vp" | base64 -d | gunzip > "$data"
 # prepare stored input
 echo -n "$ap" | base64 -d | gunzip > "$data"
 # generate output
-./$srcdir/amplification2idea.py -i "f:$data" -n amplification --file /dev/stdout |
+./$srcdir/amplification2idea.py -i "f:$data" -n amplification --file /dev/stdout | tee amplification.idea |
    # clean it from variable info
    sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
    # compare it with prepared expected data (previously base64 encoded and gzipped)
@@ -254,7 +254,7 @@ echo -n "$ap" | base64 -d | gunzip > "$data"
 # prepare stored input
 echo -n "$dns" | base64 -d | gunzip > "$data"
 # generate output
-./$srcdir/dnstunnel2idea.py -i "f:$data" -n cz.cesnet.nemea.dnstunnel --file /dev/stdout |
+./$srcdir/dnstunnel2idea.py -i "f:$data" -n cz.cesnet.nemea.dnstunnel --file /dev/stdout | tee dnstunnel.idea |
    # clean it from variable info
    sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
    # compare it with prepared expected data (previously base64 encoded and gzipped)
@@ -265,7 +265,7 @@ echo -n "$dns" | base64 -d | gunzip > "$data"
 # prepare stored input
 echo -n "$voip" | base64 -d | gunzip > "$data"
 # generate output
-./$srcdir/voipfraud2idea.py -i "f:$data" -n cz.cesnet.nemea.voipfrauddetection --file /dev/stdout |
+./$srcdir/voipfraud2idea.py -i "f:$data" -n cz.cesnet.nemea.voipfrauddetection --file /dev/stdout | tee voipfraud.idea |
    # clean it from variable info
    sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
    # compare it with prepared expected data (previously base64 encoded and gzipped)

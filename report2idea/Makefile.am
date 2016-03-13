@@ -15,3 +15,6 @@ tmpldata_DATA=template.py
 
 TESTS = test.sh
 
+clean-local:
+	rm -f *.idea
+
