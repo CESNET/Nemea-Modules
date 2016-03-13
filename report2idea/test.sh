@@ -129,6 +129,14 @@ BWKd5wEMaFbg8sUKNCPRQVpa2jJQAF2peLlsBjSg4GpRA2rR/TgLbFbYEAioPSWTK87wPgrbcqLs
 H4hmhAfU6esEAgpmZToH/oACxsFMdCs4gfj0dWhAAQMaAEbug3VxAwAA
 '
 
+bf='
+H4sIAImN5VYAA2NiYGAoBOLMgsSUlCKF4CDneM8AnZLM3FQFF9cQV+cQT3+/+BBPX1ed0sy8EmMj
+BdcwV7+Q+GBnRx+IkKGZgktwSHyAf1AImG+hEBDkH+Lv7O8D5YY7Brm4As2IDHDVKS4pysxLV/Dz
+D3E1ZmRgCGCAAUYmZrb/QPD575UdUX75YXJAMTEGNiYGBh0GTytDE3M9I1NDPWM9Q0MjHWSeMRLP
+WMffCr+J4mSY6AI3kY2RiR1k4l0VtsSg5YVhVUCxZg6QiQpIJlrqGVoaAPWh8vGbwiNOnCnAIAMA
+Clfpy7ABAAA=
+'
+
 # output data:
 hsout="
 H4sIACLZzVYAA9WWTUvDQBCG7/6Ksme77FeyaW/SD9pLEVsQlB6WuNRAu1uSraKl/92d1YsgZIm1
@@ -212,6 +220,15 @@ KWvcfE8vKZw5/Kc0E1fPKEcKixq/nhQWrP+BcodOxAnnNdIMSBgdTcp759OMnV15ZaKyLejO3Knz
 f1Tyc+e7KWkWUHIgDuWNno8p4SxkHpM3YavDNesMAAA=
 '
 
+bfout='
+H4sIAGyO5VYAA+2QT2vCQBDF7/0Uy57LEmOr2Jv1DxU0BBPaQxHZrqMEkp2wmaVY8bs3s5Ze2kvF
+k/Q2vLfz5u3vcCvkSBPs0O3lg3iVQyKoalJz3BVWrlo7124HxOZBpuh4iuMjO9MS30foLUvdqBXG
+0BhX1FSgbSW58CUVdQnC28YbA02z9aUoOVno051GoBVZ9iQ5Dl2lOUvOxpNhxFKG3hk43Z6ld6Fh
+R8Wqq3qhW+qQMKhkarniVq2a4OZrJ9/XYQpVQyBpKhoqjC5DQPYS7AQq0Oy/OU+w3mJ7db0BAkPo
+wsNEV5wkzYdqP2KBlOUd9esC9zjeHM5j270o23wyTyb5P95vvJ3+4AfgThyfT/h5sRynfwDcU4y4
+f62A7wdRdFnAy+njNeL9BAYCpXx7BQAA
+'
+
 # The Test:
 data=$(mktemp)
 errors=0
@@ -282,6 +299,17 @@ echo -n "$ipbl" | base64 -d | gunzip > "$data"
    # compare it with prepared expected data (previously base64 encoded and gzipped)
    diff -u - <(echo -n "$ipblout" | base64 -d | gunzip) ||
    { echo "ipblacklist2idea FAILED :-("; ((errors++)); }
+
+# TEST OF BRUTEFORCE
+# prepare stored input
+echo -n "$bf" | base64 -d | gunzip > "$data"
+# generate output
+./$srcdir/bruteforce2idea.py -i "f:$data" -n cz.cesnet.nemea.brute_force_detector --file /dev/stdout | tee bruteforce.idea |
+   # clean it from variable info
+   sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
+   # compare it with prepared expected data (previously base64 encoded and gzipped)
+   diff -u - <(echo -n "$bfout" | base64 -d | gunzip) ||
+   { echo "bruteforce2idea FAILED :-("; ((errors++)); }
 
 # cleanup
 rm "$data"
