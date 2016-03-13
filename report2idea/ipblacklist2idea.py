@@ -113,8 +113,9 @@ def convert_to_idea(rec, opts=None):
     if rec.DST_IP != 0:
         addr = {
             "Proto": [ protocol ],
-            "Port": [ rec.DST_PORT ]
         }
+        if rec.PROTOCOL != 1:
+            addr["Port"] = [ rec.DST_PORT ]
         setAddr(addr, rec.DST_IP)
 
         if tor:
@@ -133,8 +134,9 @@ def convert_to_idea(rec, opts=None):
     if rec.SRC_IP != 0:
         addr = {
             "Proto": [ protocol ],
-            "Port": [ rec.SRC_PORT ]
         }
+        if rec.PROTOCOL != 1:
+            addr["Port"] = [ rec.SRC_PORT ]
         setAddr(addr, rec.SRC_IP)
 
         if tor:
