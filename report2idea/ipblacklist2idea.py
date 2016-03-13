@@ -96,12 +96,7 @@ def convert_to_idea(rec, opts=None):
         "PacketCount": rec.PACKETS,
         "ByteCount": rec.BYTES,
 
-        "Source": [{
-              "Proto": [ protocol ]
-         }],
-        "Target": [{
-              "Proto": [ protocol ]
-        }],
+        "Source": [],
         'Node': [{
             'Name': 'undefined',
             'SW': [ 'Nemea', 'ipblacklistfilter' ],
@@ -110,18 +105,30 @@ def convert_to_idea(rec, opts=None):
     }
 
     if rec.DST_IP != 0:
+        addr = {
+            "Proto": [ protocol ]
+        }
+        setAddr(addr, rec.DST_IP)
+
         if rec.DST_BLACKLIST:
-            setAddr(idea['Source'][0], rec.DST_IP)
+            addr["Type"] = "CC"
             idea['Note'] = 'Destination IP {} was found on blacklist.'.format(rec.DST_IP)
         else:
-            setAddr(idea['Target'][0], rec.DST_IP)
+            addr["Type"] = "Botnet"
+        idea['Source'].append(addr)
 
     if rec.SRC_IP != 0:
+        addr = {
+            "Proto": [ protocol ]
+        }
+        setAddr(addr, rec.SRC_IP)
+
         if rec.SRC_BLACKLIST:
-            setAddr(idea['Source'][0], rec.SRC_IP)
-            idea['Note'] = 'Source IP {} was found on blacklist.'.format(rec.SRC_IP)
+            addr["Type"] = "CC"
+            idea['Note'] = 'Destination IP {} was found on blacklist.'.format(rec.SRC_IP)
         else:
-            setAddr(idea['Target'][0], rec.SRC_IP)
+            addr["Type"] = "Botnet"
+        idea['Source'].append(addr)
 
     if rec.SRC_BLACKLIST:
         descSRC = "{} which is on {} blacklist".format(rec.SRC_IP, bl_conv[rec.SRC_BLACKLIST])
