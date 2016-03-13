@@ -30,6 +30,7 @@ addons:
       - automake
       - libxml2-devel
       - libxml2
+      - python
   coverity_scan:
     project:
       name: "CESNET/Nemea-Modules"
