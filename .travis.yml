@@ -44,7 +44,6 @@ before_install:
    - ( git clone --depth 1 -q https://github.com/CESNET/nemea-framework; cd nemea-framework; ./bootstrap.sh && ./configure -q --prefix=/usr --bindir=/usr/bin/nemea && make -j10 && sudo make install; (cd python && sudo python setup.py install --prefix=/usr;); (cd pycommon && sudo python setup.py install --prefix=/usr;); )
    - sudo rm -rf nemea-framework
    - python -c 'import sys; print(sys.path)'
-   - python -c 'import socket; print(socket.getservbyport(22)); print(socket.getservbyport(23)); print(socket.getservbyport(2179)); print(socket.getservbyport(5900))'
    - grep -e '\<22/tcp' -e '\<23/tcp' -e '\<2179/tcp' -e '\<5900/tcp' /etc/services
 
 

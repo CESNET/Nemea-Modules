@@ -25,6 +25,21 @@ proto_conv = {
     17 : 'udp',
 }
 
+def getServiceName(port):
+    service = ""
+    try:
+        service = " on {}".format(socket.getservbyport(port).upper())
+    except:
+        servName = { 22: "SSH",
+                    23: "TELNET",
+                    2179: "VMRDP",
+                    5900: "RFB" }
+        try:
+            service = " on {}".format(servName[port])
+        except:
+            pass
+    return service
+
 # Main conversion function
 def convert_to_idea(rec, opts=None):
     """
@@ -39,14 +54,14 @@ def convert_to_idea(rec, opts=None):
     if rec.WARDEN_TYPE != 2:
         # this alert is not bruteforce
         return None
-    service = socket.getservbyport(rec.DST_PORT)
+    service = getServiceName(rec.DST_PORT)
     idea = {
         "Format": "IDEA0",
         "ID": getRandomId(),
         "DetectTime": getIDEAtime(rec.DETECTION_TIME),
         "CreateTime": getIDEAtime(),
         "Category": [ "Attempt.Login" ],
-        "Description": "Multiple unsuccessful login attempts on {}".format(service.upper()),
+        "Description": "Multiple unsuccessful login attempts{}".format(service),
         "FlowCount": rec.EVENT_SCALE,
         "Source": [{
               "Proto": [ proto_conv[rec.PROTOCOL] ]
