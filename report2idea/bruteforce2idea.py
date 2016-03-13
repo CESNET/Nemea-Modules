@@ -46,10 +46,13 @@ def convert_to_idea(rec, opts=None):
         "DetectTime": getIDEAtime(rec.DETECTION_TIME),
         "CreateTime": getIDEAtime(),
         "Category": [ "Attempt.Login" ],
-        "Description": "Bruteforce attack using {}".format(service.upper()),
+        "Description": "Multiple unsuccessful login attempts on {}".format(service.upper()),
         "FlowCount": rec.EVENT_SCALE,
         "Source": [{
-              "Proto": [ proto_conv[rec.PROTOCOL], service ]
+              "Proto": [ proto_conv[rec.PROTOCOL] ]
+         }],
+        "Target": [{
+               "Port": rec.DST_PORT
          }],
         'Node': [{
             'Name': 'undefined',
