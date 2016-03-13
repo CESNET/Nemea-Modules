@@ -209,15 +209,15 @@ AAA=
 '
 
 ipblout='
-H4sIAE4o4lYAA+2V30/CMBDH3/0rmj5D05Zt/HgTlIQXQiKJicaHWk5phJZsRYOE/912CyDMRTDD
-qDHbw9Lr3X17/exuiTvCwqOJF7iFbnFP23ieKKNJ21gNFt9VEO6bEXjrEg8Xs/QLdyfmBTtTeyLk
-00Ql2car69TYhykIb1Wz+7X9QU0sxFk4MfVBsHwlEhKXhGjvQPK7V3775TNoO1SZD6csqtJalbEh
-pS3aaIXhjc80FPGjU5uK7A2CVAajhBJOWJhmHcTGmnRdyekM362yk9k07JWZxxJQb4BYWCd1wuqU
-RBy9iAQ9mLkeIaPRRhzxCTOPvYTvfItzDlwYsB0X1utlFeQffAGJjNXMutJ7QbsyxkqOkUq8ihuY
-J1spSBqtQVoYIWvQ5sCpwq6Jp8KnwL2Ly3PqlzogEvislO2FhbW6RlBBq7Plr2ak6d6jGbFyHxF3
-QVZp4S/ohJxs8+5i0ijAZC1/D4TD6PkKJs0WozlMwij6E5zUSuDk5K2kCJHwp3QSV8ggh0jA/0Ar
-KWvcfE8vKZw5/Kc0E1fPKEcKixq/nhQWrP+BcodOxAnnNdIMSBgdTcp759OMnV15ZaKyLejO3Knz
-f1Tyc+e7KWkWUHIgDuWNno8p4SxkHpM3YavDNesMAAA=
+H4sIAACT5VYAA+2VXU/CMBSG7/0VTa+hacs2Pu5kQMKNIYHEBMPFLFUaoSVb0SDhv9sW+RiDiAoK
+xrAL0rfn9Lxnz3pmMIw0f1TxFFbAHWxKHU8SoSSqKi25hr0cgDeqz606g53p2P2DjaF6gUaqDiP2
+NBTJYmP71ok3fMQjq4rx/VJ/EEPN40W6aGSTQPaKGE/MIUjaAJTdPbfb689c6o5YxFBMgjwu5Anp
+YFzBpYrvd6ErUTu9xhMtZKSNA9BsAeIXURGRIkYBBS9RAh7URPaBEVdHIRveVpOYpT3C9wYYtdny
+nC+CEUYUEd/ZaMVKK7cu2GgMe/McWAeHYSpwo4zdsW7RVMR1aCrURiI5YH/WEYvF2DqyidOOBoIN
+gEisoS6fJGtXgCkpOdO8D7QCq8Kd2YaKR5E9AjZr9Wtsl0IeJfyjHlenmi+rK3k5ML+aXTQ8ZfOc
+Cp6D379m2+gczt0iNotOaQ86yzRbcBxG1FfQKVcIzqDjB8GfYKfw+xdPFp5Pcpdlxz+Xa8d02Muw
+49E/cO+ccmh9du587eLZO7Toudw8psdBhh4SlC6eHuItv4t99AQUUVpAZQ/5wTfx2Ux1fnMrbfSY
++KybnBpcRfqPz09Nrg/Ry+JT3oPPgZwcb3btxocSn1h+3gB3+BmVcg0AAA==
 '
 
 bfout='
@@ -293,7 +293,7 @@ echo -n "$voip" | base64 -d | gunzip > "$data"
 # prepare stored input
 echo -n "$ipbl" | base64 -d | gunzip > "$data"
 # generate output
-./$srcdir/ipblacklist2idea.py -i "f:$data" -n cz.cesnet.nemea.ipblacklistfilter --file /dev/stdout |
+./$srcdir/ipblacklist2idea.py -i "f:$data" -n cz.cesnet.nemea.ipblacklistfilter --file /dev/stdout | tee ipblacklist.idea |
    # clean it from variable info
    sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
    # compare it with prepared expected data (previously base64 encoded and gzipped)
