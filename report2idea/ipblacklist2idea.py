@@ -125,7 +125,7 @@ def convert_to_idea(rec, opts=None):
 
         if rec.SRC_BLACKLIST:
             addr["Type"] = "CC"
-            idea['Note'] = 'Destination IP {} was found on blacklist.'.format(rec.SRC_IP)
+            idea['Note'] = 'Source IP {} was found on blacklist.'.format(rec.SRC_IP)
         else:
             addr["Type"] = "Botnet"
         idea['Source'].append(addr)
