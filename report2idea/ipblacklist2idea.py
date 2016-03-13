@@ -15,7 +15,7 @@ MODULE_NAME = "ipblacklist2idea"
 MODULE_DESC = "Converts output of ipblacklistfilter module to IDEA."
 
 REQ_TYPE = trap.TRAP_FMT_UNIREC
-REQ_FORMAT = "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,uint64 DST_BLACKLIST,uint64 SRC_BLACKLIST,time TIME_FIRST,time TIME_LAST,uint32 EVENT_SCALE,uint32 PACKETS,uint16 DST_PORT,uint16 SRC_PORT"
+REQ_FORMAT = "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,uint64 DST_BLACKLIST,uint64 SRC_BLACKLIST,time TIME_FIRST,time TIME_LAST,uint32 EVENT_SCALE,uint32 PACKETS"
 
 
 
@@ -112,7 +112,7 @@ def convert_to_idea(rec, opts=None):
 
     if rec.DST_IP != 0:
         addr = {
-            "Proto": [ protocol ],
+            "Proto": [ protocol ]
         }
         if rec.PROTOCOL != 1:
             addr["Port"] = [ rec.DST_PORT ]
@@ -133,7 +133,7 @@ def convert_to_idea(rec, opts=None):
 
     if rec.SRC_IP != 0:
         addr = {
-            "Proto": [ protocol ],
+            "Proto": [ protocol ]
         }
         if rec.PROTOCOL != 1:
             addr["Port"] = [ rec.SRC_PORT ]
