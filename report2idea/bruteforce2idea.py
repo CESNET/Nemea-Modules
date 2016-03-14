@@ -25,6 +25,21 @@ proto_conv = {
     17 : 'udp',
 }
 
+def getServiceName(port):
+    service = ""
+    try:
+        service = socket.getservbyport(port).upper()
+    except Exception:
+        servName = { 22: "SSH",
+                    23: "TELNET",
+                    2179: "VMRDP",
+                    5900: "RFB" }
+        try:
+            service = servName[port]
+        except Exception:
+            pass
+    return service
+
 # Main conversion function
 def convert_to_idea(rec, opts=None):
     """
@@ -39,26 +54,21 @@ def convert_to_idea(rec, opts=None):
     if rec.WARDEN_TYPE != 2:
         # this alert is not bruteforce
         return None
-    try:
-        service = socket.getservbyport(rec.DST_PORT, proto_conv[rec.PROTOCOL])
-    except socket.error:
-        sys.stderr.write("ERROR: unknown service on port {}/{}.\n".format(proto_conv[rec.PROTOCOL],rec.DST_PORT))
-        return None
-    
+    service = getServiceName(rec.DST_PORT)
     idea = {
         "Format": "IDEA0",
         "ID": getRandomId(),
         "DetectTime": getIDEAtime(rec.DETECTION_TIME),
         "CreateTime": getIDEAtime(),
         "Category": [ "Attempt.Login" ],
-        "Description": "Multiple unsuccessful login attempts on {}".format(service.upper()),
+        "Description": "Multiple unsuccessful login attempts" + (" on {}".format(service) if service else ""),
         "FlowCount": rec.EVENT_SCALE,
         "Source": [{
-            "Proto": [ proto_conv[rec.PROTOCOL], service ]
+            "Proto": [ proto_conv[rec.PROTOCOL], service.lower() ] if service else [ proto_conv[rec.PROTOCOL] ]
          }],
         "Target": [{
             "Port": rec.DST_PORT,
-            "Proto": [ proto_conv[rec.PROTOCOL], service ]
+            "Proto": [ proto_conv[rec.PROTOCOL], service.lower() ] if service else [ proto_conv[rec.PROTOCOL] ]
          }],
         'Node': [{
             'Name': 'undefined',
