@@ -16,7 +16,7 @@ MODULE_NAME = "bruteforce2idea"
 MODULE_DESC = "Converts output of brute_force_detector module to IDEA."
 
 REQ_TYPE = trap.TRAP_FMT_UNIREC
-REQ_FORMAT = "ipaddr SRC_IP,time DETECTION_TIME,uint32 EVENT_SCALE,uint16 DST_PORT,uint8 PROTOCOL,uint8 WARDEN_TYPE,string NOTE"
+REQ_FORMAT = "ipaddr SRC_IP,time DETECTION_TIME,uint32 EVENT_SCALE,uint16 DST_PORT,uint8 PROTOCOL,uint8 WARDEN_TYPE"
 
 # Auxiliary function
 proto_conv = {
@@ -39,7 +39,12 @@ def convert_to_idea(rec, opts=None):
     if rec.WARDEN_TYPE != 2:
         # this alert is not bruteforce
         return None
-    service = socket.getservbyport(rec.DST_PORT)
+    try:
+        service = socket.getservbyport(rec.DST_PORT, proto_conv[rec.PROTOCOL])
+    except socket.error:
+        sys.stderr.write("ERROR: unknown service on port {}/{}.\n".format(proto_conv[rec.PROTOCOL],rec.DST_PORT))
+        return None
+    
     idea = {
         "Format": "IDEA0",
         "ID": getRandomId(),
@@ -49,10 +54,11 @@ def convert_to_idea(rec, opts=None):
         "Description": "Multiple unsuccessful login attempts on {}".format(service.upper()),
         "FlowCount": rec.EVENT_SCALE,
         "Source": [{
-              "Proto": [ proto_conv[rec.PROTOCOL] ]
+            "Proto": [ proto_conv[rec.PROTOCOL], service ]
          }],
         "Target": [{
-               "Port": rec.DST_PORT
+            "Port": rec.DST_PORT,
+            "Proto": [ proto_conv[rec.PROTOCOL], service ]
          }],
         'Node': [{
             'Name': 'undefined',
