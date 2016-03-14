@@ -1,3 +1,8 @@
+2016-03-14 Nemea-modules-2.3.1
+        * Added modules:
+		reporter for brute_force_detecto
+        * bugfixes
+
 2016-03-10 Nemea-modules-2.3
         * Added modules:
 		reporter for ipblacklistfilter
