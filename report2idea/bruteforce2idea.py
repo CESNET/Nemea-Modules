@@ -27,16 +27,16 @@ proto_conv = {
 
 def getServiceName(port, proto):
     service = ""
+    servName = { 22: "SSH",
+                 23: "TELNET",
+                 2179: "VMRDP",
+                 5900: "VNC" }
     try:
-        service = socket.getservbyport(port, proto).upper()
-    except socket.error:
-        servName = { 22: "SSH",
-                    23: "TELNET",
-                    2179: "VMRDP",
-                    5900: "RFB" }
+        service = servName[port]
+    except KeyError:
         try:
-            service = servName[port]
-        except KeyError:
+            service = socket.getservbyport(port, proto).upper()
+        except socket.error:
             pass
     return service
 
