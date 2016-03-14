@@ -25,18 +25,18 @@ proto_conv = {
     17 : 'udp',
 }
 
-def getServiceName(port):
+def getServiceName(port, proto):
     service = ""
     try:
-        service = socket.getservbyport(port).upper()
-    except Exception:
+        service = socket.getservbyport(port, proto).upper()
+    except socket.error:
         servName = { 22: "SSH",
                     23: "TELNET",
                     2179: "VMRDP",
                     5900: "RFB" }
         try:
             service = servName[port]
-        except Exception:
+        except KeyError:
             pass
     return service
 
@@ -54,7 +54,7 @@ def convert_to_idea(rec, opts=None):
     if rec.WARDEN_TYPE != 2:
         # this alert is not bruteforce
         return None
-    service = getServiceName(rec.DST_PORT)
+    service = getServiceName(rec.DST_PORT, proto_conv[rec.PROTOCOL])
     idea = {
         "Format": "IDEA0",
         "ID": getRandomId(),
