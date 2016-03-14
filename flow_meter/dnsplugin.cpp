@@ -161,7 +161,7 @@ std::string DNSPlugin::get_unirec_field_string()
 
 /**
  * \brief Get name length.
- * Used to count number of characters in string, which is terminated by '\0' character or unterminated (ending with DNS label pointer address).
+ * Used to count number of characters in string, which is terminated by '\0' character or ending with DNS label pointer address.
  * \param [in] data Pointer to string.
  * \param [in] total_length Count terminating character.
  * \return Number of characters in string.
@@ -188,7 +188,7 @@ size_t DNSPlugin::get_name_length(const char *data, bool total_length) const
  */
 std::string DNSPlugin::get_name(const char *data_begin, const char *data, int counter) const
 {
-   if (counter > 127) {
+   if (counter > 127) { // Check for DNS exploits.
       throw "Error: Bad number of labels or DNS exploit detected.";
    }
 
@@ -196,7 +196,7 @@ std::string DNSPlugin::get_name(const char *data_begin, const char *data, int co
    size_t name_len = 0;
    std::string name("");
 
-   if (!IS_POINTER(label_len)) {
+   if (!IS_POINTER(label_len)) { // Check for pointers at the beginning of string.
       name_len = get_name_length(data, false);
       if (name_len == 0) {
          return "";
@@ -204,12 +204,12 @@ std::string DNSPlugin::get_name(const char *data_begin, const char *data, int co
       name_len -= 1;
 
       name.append(data + 1, name_len);
-   } else {
+   } else { // Label is pointer.
       return get_name(data_begin, data_begin + GET_OFFSET(data[0], data[1]), ++counter);
    }
 
-   for(unsigned int i = 0; name[i] && (name_len != i + 1); i++) {
-      if (label_len == 0) {
+   for(unsigned int i = 0; name[i] && (name_len != i + 1); i++) { // Iterate through labels.
+      if (label_len == 0) { // Replace label length indicators with dots.
          label_len = name[i];
          if (!IS_POINTER(label_len)) {
             name[i++] = '.';
@@ -549,8 +549,8 @@ bool DNSPlugin::parse_dns(const char *data, int payload_len, FlowRecordExtDNS *r
                tmp = sizeof(rec->dns_data) - 1;
             }
             memcpy(rec->dns_data, rdata.str().c_str(), tmp); // Copy processed rdata.
-            rec->dns_data[tmp] = 0;
-            rec->dns_rlength = tmp;
+            rec->dns_data[tmp] = 0; // Add terminating '\0' char.
+            rec->dns_rlength = tmp; // Report length.
          }
          data += rdlength;
       }

@@ -55,11 +55,6 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include <libtrap/trap.h>
-
-#include <unirec/unirec.h>
-#include <nemea-common.h>
-
 #include "flow_meter.h"
 #include "packet.h"
 #include "flowifc.h"
@@ -135,14 +130,18 @@ int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plu
    size_t begin = 0, end = 0;
 
    int ifc_num = 0;
-   while (end != string::npos) {
+   while (end != string::npos) { // Iterate through user specified settings.
       end = settings.find(",", begin);
       proto = settings.substr(begin, (end == string::npos ? (settings.length() - begin) : (end - begin)));
 
       if (proto == "basic") {
-         module_options.basic_ifc_num = ifc_num++;
+         module_options.basic_ifc_num = ifc_num++; // Enable parsing basic flow (flow without any plugin output).
       } else if (proto == "http") {
          vector<plugin_opt> tmp;
+         // Register extension header identifiers.
+         // New configuration support sending plugin output to specific libtrap interface (e.g. http to ifc 1, dns to ifc 2...)
+         // so it is necessary store extension-header -> output interface mapping within plugin.
+
          tmp.push_back(plugin_opt("http-req", http_request, ifc_num));
          tmp.push_back(plugin_opt("http-resp", http_response, ifc_num++));
 
@@ -176,7 +175,7 @@ int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plu
 int count_ifc_interfaces(int argc, char *argv[])
 {
    char *interfaces = NULL;
-   for (int i = 1; i < argc; i++) {
+   for (int i = 1; i < argc; i++) { // Find argument for param -i.
       if (!strcmp(argv[i], "-i") && i + 1 < argc) {
          interfaces = argv[i + 1];
       }
@@ -184,7 +183,7 @@ int count_ifc_interfaces(int argc, char *argv[])
 
    int int_cnt = 1;
    if (interfaces != NULL) {
-      while(*interfaces) {
+      while(*interfaces) { // Count number of specified interfaces.
          if (*(interfaces++) == ',') {
             int_cnt++;
          }
@@ -209,7 +208,7 @@ int main(int argc, char *argv[])
    options.interface = "";
    options.basic_ifc_num = 0;
 
-   uint32_t pkt_limit = 0;
+   uint32_t pkt_limit = 0; // Limit of packets for packet parser. 0 = no limit
    int sampling = 100;
    srand(time(NULL));
 
@@ -336,6 +335,7 @@ int main(int argc, char *argv[])
    uint32_t pkt_total = 0, pkt_parsed = 0;
    packet.packet = new char[MAXPCKTSIZE + 1];
 
+   // Main packet capture loop.
    while ((ret = packetloader.get_pkt(packet)) > 0) {
       if (ret == 2 && (sampling == 100 || ((rand() % 99) +1) <= sampling)) {
          flowcache.put_pkt(packet);
@@ -343,6 +343,7 @@ int main(int argc, char *argv[])
       }
       pkt_total++;
 
+      // Check if packet limit is reached.
       if (pkt_limit != 0 && pkt_parsed >= pkt_limit) {
          break;
       }
@@ -359,6 +360,7 @@ int main(int argc, char *argv[])
       cout << "Packet headers parsed: "<< pkt_parsed << endl;
    }
 
+   // Cleanup
    flowcache.finish();
    flowwriter.close();
    packetloader.close();

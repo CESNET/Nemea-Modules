@@ -124,6 +124,7 @@ enum extTypeEnum {
    http_response,
    dns,
    sip
+   /* Add extension header identifiers for your plugins here */
 };
 
 /**

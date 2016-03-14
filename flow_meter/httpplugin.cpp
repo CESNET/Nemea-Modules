@@ -121,7 +121,7 @@ int HTTPPlugin::pre_update(FlowRecord &rec, Packet &pkt)
    FlowRecordExt *ext = NULL;
    if (pkt.sourceTransportPort == 80) {
       ext = rec.getExtension(http_response);
-      if (ext == NULL) {
+      if (ext == NULL) { // Check if header is present in flow.
          return add_ext_http_response(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
       }
 
@@ -132,7 +132,7 @@ int HTTPPlugin::pre_update(FlowRecord &rec, Packet &pkt)
       }
    } else if (pkt.destinationTransportPort == 80) {
       ext = rec.getExtension(http_request);
-      if(ext == NULL) {
+      if(ext == NULL) { // Check if header is present in flow.
          return add_ext_http_request(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
       }
 
@@ -230,7 +230,7 @@ bool HTTPPlugin::parse_http_request(const char *data, int payload_len, FlowRecor
    DEBUG_MSG("\tUrl: %s\n", rec->httpReqUrl);
 
    line_begin = strstr(data + line_end, HTTP_LINE_DELIMITER) - data + 2;
-   while (line_begin < payload_len) {
+   while (line_begin < payload_len) { // Process http fields.
       line_end = strstr(data + line_begin, HTTP_LINE_DELIMITER) - data;
       keyval_delimiter = strchr(data + line_begin, HTTP_HEADER_DELIMITER) - data;
 
@@ -247,7 +247,7 @@ bool HTTPPlugin::parse_http_request(const char *data, int payload_len, FlowRecor
       DEBUG_CODE(STRCPY(debug_buff, data, keyval_delimiter + 2, line_end));
       DEBUG_MSG("\t%s: %s\n", buf, debug_buff);
 
-      if (strcmp(buf, "Host") == 0) {
+      if (strcmp(buf, "Host") == 0) { // Copy interesting field values.
          STRCPY(rec->httpReqHost, data, keyval_delimiter + 2, line_end);
       } else if (strcmp(buf, "User-Agent") == 0) {
          STRCPY(rec->httpReqUserAgent, data, keyval_delimiter + 2, line_end);
@@ -323,7 +323,7 @@ bool HTTPPlugin::parse_http_response(const char *data, int payload_len, FlowReco
    DEBUG_MSG("\tCode: %d\n", code);
 
    line_begin = strstr(data + line_end, HTTP_LINE_DELIMITER) - data + 2;
-   while (line_begin < payload_len) {
+   while (line_begin < payload_len) { // Process http header fields.
       line_end = strstr(data + line_begin, HTTP_LINE_DELIMITER) - data;
       keyval_delimiter = strchr(data + line_begin, HTTP_HEADER_DELIMITER) - data;
 
@@ -340,7 +340,7 @@ bool HTTPPlugin::parse_http_response(const char *data, int payload_len, FlowReco
       DEBUG_CODE(STRCPY(debug_buff, data, keyval_delimiter + 2, line_end));
       DEBUG_MSG("\t%s: %s\n", buf, debug_buff);
 
-      if (strcmp(buf, "Content-Type") == 0) {
+      if (strcmp(buf, "Content-Type") == 0) { // Copy interesting field values.
          STRCPY(rec->httpRespContentType, data, keyval_delimiter + 2, line_end);
       }
 
