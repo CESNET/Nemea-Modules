@@ -1,6 +1,14 @@
+2016-03-16 Nemea-modules-2.3.2
+        * debug_sender can now be installed properly
+	* added install README for:
+		nfreader
+		email_reporter
+		debug_sender
+		merger
+
 2016-03-14 Nemea-modules-2.3.1
         * Added modules:
-		reporter for brute_force_detecto
+		reporter for brute_force_detector
         * bugfixes
 
 2016-03-10 Nemea-modules-2.3
