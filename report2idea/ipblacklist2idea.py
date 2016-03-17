@@ -120,15 +120,15 @@ def convert_to_idea(rec, opts=None):
 
         if tor:
             if rec.DST_BLACKLIST:
-                addr["Type"] = "TOR"
+                addr["Type"] = [ "TOR" ]
             else:
                 pass # don't set Type for address contacted by TOR exit node
         else:
             if rec.DST_BLACKLIST:
-                addr["Type"] = "CC"
+                addr["Type"] = [ "Botnet", "CC" ]
                 idea['Note'] = 'Destination IP {} was found on blacklist.'.format(rec.DST_IP)
             else:
-                addr["Type"] = "Botnet"
+                addr["Type"] = [ "Botnet" ]
         idea['Source'].append(addr)
 
     if rec.SRC_IP != 0:
@@ -141,15 +141,15 @@ def convert_to_idea(rec, opts=None):
 
         if tor:
             if rec.SRC_BLACKLIST:
-                addr["Type"] = "TOR"
+                addr["Type"] = [ "TOR" ]
             else:
                 pass # don't set Type for address contacting TOR exit node
         else:
             if rec.SRC_BLACKLIST:
-                addr["Type"] = "CC"
+                addr["Type"] = [ "Botnet", "CC" ]
                 idea['Note'] = 'Source IP {} was found on blacklist.'.format(rec.SRC_IP)
             else:
-                addr["Type"] = "Botnet"
+                addr["Type"] = [ "Botnet" ]
         idea['Source'].append(addr)
 
     if rec.SRC_BLACKLIST:
