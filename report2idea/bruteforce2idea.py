@@ -16,7 +16,7 @@ MODULE_NAME = "bruteforce2idea"
 MODULE_DESC = "Converts output of brute_force_detector module to IDEA."
 
 REQ_TYPE = trap.TRAP_FMT_UNIREC
-REQ_FORMAT = "ipaddr SRC_IP,time DETECTION_TIME,uint32 EVENT_SCALE,uint16 DST_PORT,uint8 PROTOCOL,uint8 WARDEN_TYPE,string NOTE"
+REQ_FORMAT = "ipaddr SRC_IP,time DETECTION_TIME,uint32 EVENT_SCALE,uint16 DST_PORT,uint8 PROTOCOL,uint8 WARDEN_TYPE"
 
 # Auxiliary function
 proto_conv = {
@@ -24,6 +24,21 @@ proto_conv = {
     6 : 'tcp',
     17 : 'udp',
 }
+
+def getServiceName(port, proto):
+    service = ""
+    servName = { 22: "SSH",
+                 23: "TELNET",
+                 2179: "VMRDP",
+                 5900: "VNC" }
+    try:
+        service = servName[port]
+    except KeyError:
+        try:
+            service = socket.getservbyport(port, proto).upper()
+        except socket.error:
+            pass
+    return service
 
 # Main conversion function
 def convert_to_idea(rec, opts=None):
@@ -39,20 +54,21 @@ def convert_to_idea(rec, opts=None):
     if rec.WARDEN_TYPE != 2:
         # this alert is not bruteforce
         return None
-    service = socket.getservbyport(rec.DST_PORT)
+    service = getServiceName(rec.DST_PORT, proto_conv[rec.PROTOCOL])
     idea = {
         "Format": "IDEA0",
         "ID": getRandomId(),
         "DetectTime": getIDEAtime(rec.DETECTION_TIME),
         "CreateTime": getIDEAtime(),
         "Category": [ "Attempt.Login" ],
-        "Description": "Multiple unsuccessful login attempts on {}".format(service.upper()),
+        "Description": "Multiple unsuccessful login attempts" + (" on {}".format(service) if service else ""),
         "FlowCount": rec.EVENT_SCALE,
         "Source": [{
-              "Proto": [ proto_conv[rec.PROTOCOL] ]
+            "Proto": [ proto_conv[rec.PROTOCOL], service.lower() ] if service else [ proto_conv[rec.PROTOCOL] ]
          }],
         "Target": [{
-               "Port": rec.DST_PORT
+            "Port": rec.DST_PORT,
+            "Proto": [ proto_conv[rec.PROTOCOL], service.lower() ] if service else [ proto_conv[rec.PROTOCOL] ]
          }],
         'Node': [{
             'Name': 'undefined',

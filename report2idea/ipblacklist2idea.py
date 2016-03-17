@@ -15,7 +15,7 @@ MODULE_NAME = "ipblacklist2idea"
 MODULE_DESC = "Converts output of ipblacklistfilter module to IDEA."
 
 REQ_TYPE = trap.TRAP_FMT_UNIREC
-REQ_FORMAT = "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,uint64 DST_BLACKLIST,uint64 LINK_BIT_FIELD,uint64 SRC_BLACKLIST,time TIME_FIRST,time TIME_LAST,uint32 EVENT_SCALE,uint32 PACKETS,uint16 DST_PORT,uint16 SRC_PORT,uint8 DIR_BIT_FIELD,uint8 PROTOCOL,uint8 TCP_FLAGS,uint8 TOS,uint8 TTL"
+REQ_FORMAT = "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,uint64 DST_BLACKLIST,uint64 SRC_BLACKLIST,time TIME_FIRST,time TIME_LAST,uint32 EVENT_SCALE,uint32 PACKETS"
 
 
 
@@ -68,8 +68,12 @@ def convert_to_idea(rec, opts=None):
 
     blacklist = rec.SRC_BLACKLIST | rec.DST_BLACKLIST
 
-    # report only: 'Malware domains', 'Zeus', 'Feodo'
-    if blacklist not in [1, 2, 16]:
+    # report only: 'Malware domains', 'Zeus', 'Feodo', 'TOR'
+    if blacklist not in [1, 2, 16, 128]:
+        return None
+
+    # report TOR only if '--enable-tor' option was passed
+    if blacklist == 128 and not opts.enable_tor:
         return None
 
     export = False
@@ -80,6 +84,8 @@ def convert_to_idea(rec, opts=None):
                 break
     if not export:
         return None
+
+    tor = (blacklist == 128) # TOR is treated specially
 
     endTime = getIDEAtime(rec.TIME_LAST)
     protocol = ""
@@ -92,7 +98,7 @@ def convert_to_idea(rec, opts=None):
         "EventTime": getIDEAtime(rec.TIME_FIRST),
         "DetectTime": endTime,
         'CeaseTime': endTime,
-        "Category": [ "Intrusion.Botnet" ],
+        "Category": [ "Intrusion.Botnet" ] if not tor else [ "Suspicious.TOR" ],
         "PacketCount": rec.PACKETS,
         "ByteCount": rec.BYTES,
 
@@ -108,33 +114,55 @@ def convert_to_idea(rec, opts=None):
         addr = {
             "Proto": [ protocol ]
         }
+        if rec.PROTOCOL != 1:
+            addr["Port"] = [ rec.DST_PORT ]
         setAddr(addr, rec.DST_IP)
 
-        if rec.DST_BLACKLIST:
-            addr["Type"] = "CC"
-            idea['Note'] = 'Destination IP {} was found on blacklist.'.format(rec.DST_IP)
+        if tor:
+            if rec.DST_BLACKLIST:
+                addr["Type"] = "TOR"
+            else:
+                pass # don't set Type for address contacted by TOR exit node
         else:
-            addr["Type"] = "Botnet"
+            if rec.DST_BLACKLIST:
+                addr["Type"] = "CC"
+                idea['Note'] = 'Destination IP {} was found on blacklist.'.format(rec.DST_IP)
+            else:
+                addr["Type"] = "Botnet"
         idea['Source'].append(addr)
 
     if rec.SRC_IP != 0:
         addr = {
             "Proto": [ protocol ]
         }
+        if rec.PROTOCOL != 1:
+            addr["Port"] = [ rec.SRC_PORT ]
         setAddr(addr, rec.SRC_IP)
 
-        if rec.SRC_BLACKLIST:
-            addr["Type"] = "CC"
-            idea['Note'] = 'Destination IP {} was found on blacklist.'.format(rec.SRC_IP)
+        if tor:
+            if rec.SRC_BLACKLIST:
+                addr["Type"] = "TOR"
+            else:
+                pass # don't set Type for address contacting TOR exit node
         else:
-            addr["Type"] = "Botnet"
+            if rec.SRC_BLACKLIST:
+                addr["Type"] = "CC"
+                idea['Note'] = 'Source IP {} was found on blacklist.'.format(rec.SRC_IP)
+            else:
+                addr["Type"] = "Botnet"
         idea['Source'].append(addr)
 
     if rec.SRC_BLACKLIST:
-        descSRC = "{} which is on {} blacklist".format(rec.SRC_IP, bl_conv[rec.SRC_BLACKLIST])
+        if tor:
+            descSRC = "{} which is TOR exit node".format(rec.SRC_IP)
+        else:
+            descSRC = "{} which is on {} blacklist".format(rec.SRC_IP, bl_conv[rec.SRC_BLACKLIST])
         descDST = "{}".format(rec.DST_IP)
     else:
-        descDST = "{} which is on {} blacklist".format(rec.DST_IP, bl_conv[rec.DST_BLACKLIST])
+        if tor:
+            descDST = "{} which is TOR exit node".format(rec.DST_IP)
+        else:
+            descDST = "{} which is on {} blacklist".format(rec.DST_IP, bl_conv[rec.DST_BLACKLIST])
         descSRC = "{}".format(rec.SRC_IP)
     idea['Description'] = "{} connected to {}.".format(descSRC, descDST)
     return idea
@@ -142,7 +170,9 @@ def convert_to_idea(rec, opts=None):
 
 # If conversion functionality needs to be parametrized, an ArgumentParser can be passed to Run function.
 # These parameters are then parsed from command line and passed as "opts" parameter of the conversion function.
-#parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser()
+parser.add_argument('--enable-tor', action='store_true',
+                    help="Don't skip alerts about communication with TOR exit nodes (they are ignored by default)")
 
 # Run the module
 if __name__ == "__main__":
@@ -152,6 +182,6 @@ if __name__ == "__main__":
         req_type = REQ_TYPE,
         req_format = REQ_FORMAT,
         conv_func = convert_to_idea,
-        arg_parser = None
+        arg_parser = parser
     )
 
