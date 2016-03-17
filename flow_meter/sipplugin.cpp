@@ -40,6 +40,9 @@
  *
  */
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 #include <iostream>
 #include <stdlib.h>
 #include <string.h>
@@ -153,10 +156,10 @@ uint16_t SIPPlugin::parse_msg_type(const Packet &pkt)
       case SIP_OPTIONS:
                 /* OPTIONS message is also a request in HTTP - we must identify false positives here: */
          if (first_bytes[1] == SIP_NOT_OPTIONS1 && first_bytes[2] == SIP_NOT_OPTIONS2) {
-            return SIP_MSG_TYPE_INVALID;
+            return SIP_MSG_TYPE_OPTIONS;
          }
 
-         return SIP_MSG_TYPE_OPTIONS;
+         return SIP_MSG_TYPE_INVALID;
       case SIP_NOTIFY:	/* Notify message is a bit tricky because also Microsoft's SSDP protocol uses HTTP-like structure
                 * and NOTIFY message - we must identify false positives here: */
          if (first_bytes[1] == SIP_NOT_NOTIFY1 && first_bytes[2] == SIP_NOT_NOTIFY2) {

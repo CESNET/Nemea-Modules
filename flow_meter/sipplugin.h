@@ -126,7 +126,7 @@
 #define SIP_NOT_NOTIFY1 0x2a205946	/* * YF */
 #define SIP_NOT_NOTIFY2 0x54544820	/* TTH  */
 #define SIP_NOT_OPTIONS1 0x20534e4f	/*  SNO */
-#define SIP_NOT_OPTIONS2 0x5448202a	/* TH * */
+#define SIP_NOT_OPTIONS2 0x3a706973	/* TH * */
 /*
  * SIP fields table - these patterns are used to quickly
  * detect necessary SIP fields.
