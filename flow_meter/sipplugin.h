@@ -82,6 +82,7 @@
 #define SIP_MSG_TYPE_REQ_CANCELED   487
 #define SIP_MSG_TYPE_INTERNAL_ERR   500
 #define SIP_MSG_TYPE_DECLINE        603
+#define SIP_MSG_TYPE_UNDEFINED      999
 
 /* Mininum length of SIP message: */
 #define SIP_MIN_MSG_LEN     64

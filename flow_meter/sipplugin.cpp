@@ -489,7 +489,10 @@ int SIPPlugin::parser_process_sip(const Packet &pkt, FlowRecordExtSIP *sip_data)
          unsigned int line_token_len;
          line_token = parser_strtok(line, line_len, ' ', &line_token_len, &first_line_parser);
          line_token = parser_strtok(NULL, 0, ' ', &line_token_len, &first_line_parser);
-         sip_data->status_code = atoi((const char *)line_token);
+         sip_data->status_code = SIP_MSG_TYPE_UNDEFINED;
+         if (line_token) {
+            sip_data->status_code = atoi((const char *)line_token);
+         }
       }
    }
 
