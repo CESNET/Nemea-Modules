@@ -40,9 +40,6 @@
  *
  */
 
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
-
 #include <iostream>
 #include <stdlib.h>
 #include <string.h>
