@@ -1,3 +1,8 @@
+2016-03-20 Nemea-modules-2.3.3
+        * flow_meter sip plugin bugfixed - no longer causes segfault
+	* many smaller bugfixes
+
+
 2016-03-16 Nemea-modules-2.3.2
         * debug_sender can now be installed properly
 	* added install README for:
