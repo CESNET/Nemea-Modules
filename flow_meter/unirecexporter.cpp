@@ -97,12 +97,6 @@ int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, 
          free_unirec_resources();
          return -2;
       }
-
-      record[basic_ifc_num] = ur_create_record(tmplt[basic_ifc_num], UR_MAX_SIZE);
-      if (record[basic_ifc_num] == NULL) {
-         free_unirec_resources();
-         return -3;
-      }
    }
 
    for (unsigned int i = 0; i < plugins.size(); i++) {

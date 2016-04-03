@@ -213,7 +213,7 @@ int main(int argc, char *argv[])
    srand(time(NULL));
 
    // ***** TRAP initialization *****
-   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
    module_info->num_ifc_out = count_ifc_interfaces(argc, argv);
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
 
@@ -230,11 +230,13 @@ int main(int argc, char *argv[])
             options.basic_ifc_num = -1;
             int ret = parse_plugin_settings(string(optarg), plugin_wrapper.plugins, options);
             if (ret < 0) {
-               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               TRAP_DEFAULT_FINALIZATION();
                return error("Invalid argument for option -p");
             }
             if (ret != module_info->num_ifc_out) {
-               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               TRAP_DEFAULT_FINALIZATION();
                return error("Number of output ifc interfaces does not correspond number of items in -p parameter.");
             }
          }
@@ -248,7 +250,8 @@ int main(int argc, char *argv[])
       case 't':
          cptr = strchr(optarg, ':');
          if (cptr == NULL) {
-            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+            TRAP_DEFAULT_FINALIZATION();
             return error("Invalid argument for option -t");
          }
          *cptr = '\0';
@@ -268,7 +271,8 @@ int main(int argc, char *argv[])
       case 'm':
          sampling = atoi(optarg);
          if (sampling < 0 || sampling > 100) {
-            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+            TRAP_DEFAULT_FINALIZATION();
             return error("Invalid argument for option -m: interval needs to be between 0-100");
          }
          break;
@@ -279,33 +283,39 @@ int main(int argc, char *argv[])
          options.verbose = true;
          break;
       default:
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+         TRAP_DEFAULT_FINALIZATION();
          return error("Invalid arguments");
       }
    }
 
    if (options.interface != "" && options.infilename != "") {
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      TRAP_DEFAULT_FINALIZATION();
       return error("Cannot capture from file and from interface at the same time.");
    } else if (options.interface == "" && options.infilename == "") {
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      TRAP_DEFAULT_FINALIZATION();
       return error("Specify capture interface (-I) or file for reading (-r). ");
    }
 
    if (options.flowcachesize % options.flowlinesize != 0) {
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      TRAP_DEFAULT_FINALIZATION();
       return error("Size of flow line (32 by default) must divide size of flow cache.");
    }
 
    PcapReader packetloader(options);
    if (options.interface == "") {
       if (packetloader.open_file(options.infilename) != 0) {
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+         TRAP_DEFAULT_FINALIZATION();
          return error("Can't open input file: " + options.infilename);
       }
    } else {
       if (packetloader.init_interface(options.interface) != 0) {
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+         TRAP_DEFAULT_FINALIZATION();
          return error("Unable to initialize libpcap: " + packetloader.errmsg);
       }
    }
@@ -314,7 +324,8 @@ int main(int argc, char *argv[])
    UnirecExporter flowwriter;
 
    if (flowwriter.init(plugin_wrapper.plugins, module_info->num_ifc_out, options.basic_ifc_num) != 0) {
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      TRAP_DEFAULT_FINALIZATION();
       return error("Unable to initialize UnirecExporter.");
    }
    flowcache.set_exporter(&flowwriter);
@@ -350,8 +361,11 @@ int main(int argc, char *argv[])
    }
 
    if (ret < 0) {
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       packetloader.close();
+      flowwriter.close();
+      delete [] packet.packet;
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      TRAP_DEFAULT_FINALIZATION();
       return error("Error during reading: " + packetloader.errmsg);
    }
 
@@ -366,8 +380,8 @@ int main(int argc, char *argv[])
    packetloader.close();
 
    delete [] packet.packet;
-
-   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+   TRAP_DEFAULT_FINALIZATION();
 
    return EXIT_SUCCESS;
 }
