@@ -62,7 +62,7 @@ def convert_to_idea(rec, opts=None):
             idea['Description'] = idea['Description'] + " observed in responses"
             if rec.TUNNEL_TYPE in dataLocation:
                 idea['Note'] = "Data in {}".format(dataLocation[rec.TUNNEL_TYPE])
-        idea["Note"] = "Example of used domain name: {}".format(rec.TUNNEL_DOMAIN)
+        idea["Note"] = "Example of used domain name: {}".format(''.join([i if ord(i) < 128 else '?' for i in rec.TUNNEL_DOMAIN]))
     else:
         return None
     return idea
