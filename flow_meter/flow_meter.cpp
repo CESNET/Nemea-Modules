@@ -330,13 +330,12 @@ int main(int argc, char *argv[])
    }
    flowcache.set_exporter(&flowwriter);
 
-   for (unsigned int i = 0; i < plugin_wrapper.plugins.size(); i++) {
-      flowcache.add_plugin(plugin_wrapper.plugins[i]);
+   if (options.statsout) {
+      plugin_wrapper.plugins.push_back(new StatsPlugin(options.statstime, cout));
    }
 
-   if (options.statsout) {
-      StatsPlugin stats(options.statstime, cout);
-      flowcache.add_plugin(&stats);
+   for (unsigned int i = 0; i < plugin_wrapper.plugins.size(); i++) {
+      flowcache.add_plugin(plugin_wrapper.plugins[i]);
    }
 
    flowcache.init();
