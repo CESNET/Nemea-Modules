@@ -348,15 +348,20 @@ int main(int argc, char *argv[])
 
    // Main packet capture loop.
    while ((ret = packetloader.get_pkt(packet)) > 0) {
-      if (ret == 2 && (sampling == 100 || ((rand() % 99) +1) <= sampling)) {
+      if (ret == 3) { // Process timeout
+         flowcache.exportexpired(false);
+         continue;
+      }
+
+      pkt_total++;
+      if (ret == 2 && (sampling == 100 || ((rand() % 99) + 1) <= sampling)) {
          flowcache.put_pkt(packet);
          pkt_parsed++;
-      }
-      pkt_total++;
 
-      // Check if packet limit is reached.
-      if (pkt_limit != 0 && pkt_parsed >= pkt_limit) {
-         break;
+         // Check if packet limit is reached.
+         if (pkt_limit != 0 && pkt_parsed >= pkt_limit) {
+            break;
+         }
       }
    }
 

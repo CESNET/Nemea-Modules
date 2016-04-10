@@ -366,7 +366,7 @@ int PcapReader::init_interface(const std::string &interface)
    char errbuf[PCAP_ERRBUF_SIZE];
    errbuf[0] = 0;
 
-   handle = pcap_open_live(interface.c_str(), 1 << 15, 1, 0, errbuf);
+   handle = pcap_open_live(interface.c_str(), 1 << 16, 1, 1000, errbuf);
    if (handle == NULL) {
       errmsg = errbuf;
       return 2;
@@ -401,13 +401,19 @@ int PcapReader::get_pkt(Packet &packet)
    packet_valid = false;
    int ret;
 
-   while ((ret = pcap_dispatch(handle, 1, packet_handler, (u_char *)(&packet))) == 0 && live_capture) {
-   } // Wait until packet is read.
+   // Get pkt from network interface or file.
+   ret = pcap_dispatch(handle, 1, packet_handler, (u_char *)(&packet));
+   if (ret == 0) {
+      // Read timeout occured or no more packets in file...
+      return (live_capture ? 3 : 0);
+   }
 
    if (ret == 1 && packet_valid) {
+      // Packet is valid and ready to process by flow_cache.
       return 2;
    }
    if (ret < 0) {
+      // Error occured.
       errmsg = pcap_geterr(handle);
    }
    return ret;

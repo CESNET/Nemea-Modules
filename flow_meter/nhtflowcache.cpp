@@ -327,7 +327,6 @@ void NHTFlowCache::createhashkey(Packet pkt)
    }
 
    if ((pkt.packetFieldIndicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
-      // TODO: chybi protocolIdentifier?
       for (int i=0; i<16; i++) {
          *(char *) k = pkt.sourceIPv6Address[i];
          k += sizeof(pkt.sourceIPv6Address[i]);
