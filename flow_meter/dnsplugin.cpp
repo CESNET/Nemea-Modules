@@ -113,13 +113,8 @@ DNSPlugin::DNSPlugin(const options_t &module_options, vector<plugin_opt> plugin_
 
 int DNSPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 {
-   if ((pkt.packetFieldIndicator & PCKT_PAYLOAD_MASK) != PCKT_PAYLOAD_MASK) { // If payload is not present, return.
-      return 0;
-   }
-
    if (pkt.destinationTransportPort == 53 || pkt.sourceTransportPort == 53) {
-      add_ext_dns(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
-      return FLOW_FLUSH;
+      return add_ext_dns(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
    }
 
    return 0;
@@ -127,14 +122,10 @@ int DNSPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 
 int DNSPlugin::pre_update(FlowRecord &rec, Packet &pkt)
 {
-   if ((pkt.packetFieldIndicator & PCKT_PAYLOAD_MASK) != PCKT_PAYLOAD_MASK) { // If payload is not present, return.
-      return 0;
-   }
-
    if (pkt.destinationTransportPort == 53 || pkt.sourceTransportPort == 53) {
       FlowRecordExt *ext = rec.getExtension(dns);
       if(ext == NULL) {
-         add_ext_dns(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
+         return add_ext_dns(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
       } else {
          parse_dns(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, dynamic_cast<FlowRecordExtDNS *>(ext));
       }
@@ -452,7 +443,7 @@ uint32_t s_responses = 0;
  * \param [out] rec Output FlowRecord extension header.
  * \return True if DNS was parsed.
  */
-bool DNSPlugin::parse_dns(const char *data, int payload_len, FlowRecordExtDNS *rec)
+bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, FlowRecordExtDNS *rec)
 {
    try {
       total++;
@@ -460,6 +451,10 @@ bool DNSPlugin::parse_dns(const char *data, int payload_len, FlowRecordExtDNS *r
       const char *data_begin = data;
       DEBUG_MSG("---------- dns parser #%u ----------\n", total);
       DEBUG_MSG("Payload length: %u\n", payload_len);
+      if (payload_len < sizeof(struct dns_hdr)) {
+         DEBUG_MSG("payload length < %ld\n", sizeof(struct dns_hdr));
+         return false;
+      }
 
       struct dns_hdr *dns = (struct dns_hdr *)data;
       uint16_t flags = ntohs(dns->flags);
@@ -497,7 +492,7 @@ bool DNSPlugin::parse_dns(const char *data, int payload_len, FlowRecordExtDNS *r
       /********************************************************************
       *****                   DNS Question section                    *****
       ********************************************************************/
-      data += DNS_HDR_LENGTH;
+      data += sizeof(struct dns_hdr);
       for (int i = 0; i < question_cnt; i++) {
          DEBUG_MSG("\nDNS question #%d\n",            i + 1);
          std::string name = get_name(data_begin, data, 0);
@@ -514,7 +509,7 @@ bool DNSPlugin::parse_dns(const char *data, int payload_len, FlowRecordExtDNS *r
          }
          DEBUG_MSG("\tType:\t\t\t%u\n",               ntohs(question->qtype));
          DEBUG_MSG("\tClass:\t\t\t%u\n",              ntohs(question->qclass));
-         data += 4;
+         data += sizeof(struct dns_question);
       }
 
       /********************************************************************
@@ -536,7 +531,7 @@ bool DNSPlugin::parse_dns(const char *data, int payload_len, FlowRecordExtDNS *r
          DEBUG_MSG("\tTTL:\t\t\t%u\n",                ntohl(answer->ttl));
          DEBUG_MSG("\tRD length:\t\t%u\n",            ntohs(answer->rdlength));
 
-         data += 10;
+         data += sizeof(struct dns_answer);
          rdlength = ntohs(answer->rdlength);
          process_rdata(data_begin, record_begin, data, rdata, ntohs(answer->atype), rdlength);
 
@@ -571,7 +566,7 @@ bool DNSPlugin::parse_dns(const char *data, int payload_len, FlowRecordExtDNS *r
          DEBUG_MSG("\tTTL:\t\t\t%u\n",                ntohl(answer->ttl));
          DEBUG_MSG("\tRD length:\t\t%u\n",            ntohs(answer->rdlength));
 
-         data += 10;
+         data += sizeof(struct dns_answer);
          rdlength = ntohs(answer->rdlength);
          DEBUG_CODE(process_rdata(data_begin, record_begin, data, rdata, ntohs(answer->atype), rdlength));
 
@@ -596,7 +591,7 @@ bool DNSPlugin::parse_dns(const char *data, int payload_len, FlowRecordExtDNS *r
             DEBUG_MSG("\tTTL:\t\t\t%u\n",             ntohl(answer->ttl));
             DEBUG_MSG("\tRD length:\t\t%u\n",         ntohs(answer->rdlength));
 
-            data += 10;
+            data += sizeof(struct dns_answer);
             rdlength = ntohs(answer->rdlength);
             DEBUG_CODE(process_rdata(data_begin, record_begin, data, rdata, ntohs(answer->atype), rdlength));
          } else { // Process OPT record.
@@ -608,7 +603,7 @@ bool DNSPlugin::parse_dns(const char *data, int payload_len, FlowRecordExtDNS *r
             DEBUG_MSG("\tReserved:\t\t%u\n",          (ttl & 0x7FFF));
             DEBUG_MSG("\tRD length:\t\t%u\n",         ntohs(answer->rdlength));
 
-            data += 10;
+            data += sizeof(struct dns_answer);
             rdlength = ntohs(answer->rdlength);
             rec->dns_psize = ntohs(answer->aclass); // Copy requested UDP payload size. RFC 6891
             rec->dns_do = ((ntohl(answer->ttl) & 0x8000) >> 15); // Copy DO bit.
@@ -639,13 +634,15 @@ bool DNSPlugin::parse_dns(const char *data, int payload_len, FlowRecordExtDNS *r
  * \param [in] payload_len Payload length.
  * \param [out] rec Destination FlowRecord.
  */
-void DNSPlugin::add_ext_dns(const char *data, int payload_len, FlowRecord &rec)
+int DNSPlugin::add_ext_dns(const char *data, unsigned int payload_len, FlowRecord &rec)
 {
    FlowRecordExtDNS *ext = new FlowRecordExtDNS();
    if (!parse_dns(data, payload_len, ext)) {
       delete ext;
+      return 0;
    } else {
       rec.addExtension(ext);
    }
+   return FLOW_FLUSH;
 }
 

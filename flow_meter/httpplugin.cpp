@@ -99,10 +99,6 @@ HTTPPlugin::HTTPPlugin(const options_t &module_options, vector<plugin_opt> plugi
 
 int HTTPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 {
-   if ((pkt.packetFieldIndicator & PCKT_PAYLOAD_MASK) != PCKT_PAYLOAD_MASK) { // If payload is not present, return.
-      return 0;
-   }
-
    if (pkt.sourceTransportPort == 80) {
       return add_ext_http_response(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
    } else if (pkt.destinationTransportPort == 80) {
@@ -114,10 +110,6 @@ int HTTPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 
 int HTTPPlugin::pre_update(FlowRecord &rec, Packet &pkt)
 {
-   if ((pkt.packetFieldIndicator & PCKT_PAYLOAD_MASK) != PCKT_PAYLOAD_MASK) { // If payload is not present, return.
-      return 0;
-   }
-
    FlowRecordExt *ext = NULL;
    if (pkt.sourceTransportPort == 80) {
       ext = rec.getExtension(http_response);
@@ -307,7 +299,7 @@ bool HTTPPlugin::parse_http_response(const char *data, int payload_len, FlowReco
 
    STRCPY(buf, data, line_begin + 1, line_end);
    int code = atoi(buf);
-   if (code <= 0 || code > 1000) {
+   if (code <= 0) {
       DEBUG_MSG("Parser quits:\twrong response code: %d\n", code);
       return false;
    }
@@ -359,27 +351,11 @@ bool HTTPPlugin::parse_http_response(const char *data, int payload_len, FlowReco
  */
 bool HTTPPlugin::valid_http_method(const char *method) const
 {
-   if (strcmp(method, "GET") == 0) {
-      return true;
-   } else if (strcmp(method, "POST") == 0) {
-      return true;
-   } else if (strcmp(method, "PUT") == 0) {
-      return true;
-   } else if (strcmp(method, "HEAD") == 0) {
-      return true;
-   } else if (strcmp(method, "DELETE") == 0) {
-      return true;
-   } else if (strcmp(method, "TRACE") == 0) {
-      return true;
-   } else if (strcmp(method, "OPTIONS") == 0) {
-      return true;
-   } else if (strcmp(method, "CONNECT") == 0) {
-      return true;
-   } else if (strcmp(method, "PATCH") == 0) {
-      return true;
-   }
-
-   return false;
+   return (!strcmp(method, "GET") || !strcmp(method, "POST") ||
+         !strcmp(method, "PUT") || !strcmp(method, "HEAD") ||
+         !strcmp(method, "DELETE") || !strcmp(method, "TRACE") ||
+         !strcmp(method, "OPTIONS") || !strcmp(method, "CONNECT") ||
+         !strcmp(method, "PATCH"));
 }
 
 /**
