@@ -342,7 +342,7 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
       {
          DEBUG_MSG("\tData TXT:\n");
 
-         size_t len = *(data++);
+         size_t len = (uint8_t)*(data++);
          size_t total_len = len + 1;
 
          while (length != 0 && total_len <= length) {
@@ -350,7 +350,7 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
             rdata << string(data, len);
 
             data += len;
-            len = *(data++);
+            len = (uint8_t)*(data++);
             total_len += len + 1;
 
             if (total_len <= length) {
