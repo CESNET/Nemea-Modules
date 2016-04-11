@@ -147,8 +147,8 @@ void set_actual_timestamps(lnf_brec1_t *brec, void *out_rec, ur_template_t *tmpl
 
    time(&act_time);
 
-   first = ur_time_from_sec_msec(act_time - (brec->last - brec->first), 0);
-   last = ur_time_from_sec_msec(act_time, 0);
+   first = ur_time_from_sec_msec(act_time - (brec->last/1000 - brec->first/1000), brec->first%1000);
+   last = ur_time_from_sec_msec(act_time, brec->last%1000);
 
    ur_set(tmplt, out_rec, F_TIME_FIRST, first);
    ur_set(tmplt, out_rec, F_TIME_LAST, last);
@@ -484,8 +484,8 @@ int main(int argc, char **argv)
             ur_set(tmplt, rec_out, F_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
          }
 
-         ur_set(tmplt, rec_out, F_TIME_FIRST, ur_time_from_sec_msec(brec.first, 0));
-         ur_set(tmplt, rec_out, F_TIME_LAST, ur_time_from_sec_msec(brec.last, 0));
+         ur_set(tmplt, rec_out, F_TIME_FIRST, ur_time_from_sec_msec(brec.first/1000, brec.first%1000));
+         ur_set(tmplt, rec_out, F_TIME_LAST, ur_time_from_sec_msec(brec.last/1000, brec.last%1000));
 
          if (rt_sending) {
             RT_CHECK_DELAY(record_counter, brec.last, rt_sending_state);
