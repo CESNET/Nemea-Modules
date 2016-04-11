@@ -9,6 +9,8 @@ anonymizer_SOURCES=anonymizer.c \
                    panonymizer.h \
                    rijndael.c \
                    rijndael.h
+# There is lot of strict-aliasing warningis in rijndael.c, disable it
+anonymizer_CFLAGS=-fno-strict-aliasing
 anonymizer_LDADD=-ltrap -lunirec -lnemea-common
 pkgdocdir=${docdir}/anonymizer
 pkgdoc_DATA=README
