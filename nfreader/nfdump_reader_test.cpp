@@ -306,7 +306,7 @@ int main(int argc, char **argv)
    cout << "Sending (" << records.size() << ") records..." << endl;
 
    // Read a record from file, convert to UniRec and send to output ifc
-   for (int i = 0; i < records.size() && !stop; i++) {
+   for (unsigned int i = 0; i < records.size() && !stop; i++) {
       // Send data to output interface
       trap_send(0, &records[i], sizeof(records[i]));
       //usleep(100);

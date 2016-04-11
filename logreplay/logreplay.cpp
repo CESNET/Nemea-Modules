@@ -48,6 +48,8 @@
 #include <config.h>
 #endif
 
+#include <unirec/unirec.h>
+
 #include <inttypes.h>
 #include <iostream>
 #include <sstream>
@@ -58,7 +60,6 @@
 #include <signal.h>
 #include <getopt.h>
 #include <libtrap/trap.h>
-#include <unirec/unirec.h>
 #include <map>
 #include "fields.h"
 

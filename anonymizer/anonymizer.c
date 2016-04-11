@@ -208,12 +208,12 @@ void ip_anonymize(ur_template_t *tmplt, const void *data, uint8_t mode)
    }
 }
 
-NMCM_PROGRESS_DECL
+// NMCM_PROGRESS_DECL
 
 
 int main(int argc, char **argv)
 {
-   NMCM_PROGRESS_DEF
+//    NMCM_PROGRESS_DEF
    int ret;
    uint8_t init_key[32] = {0};
    char *secret_key = "01234567890123450123456789012345";
@@ -231,7 +231,7 @@ int main(int argc, char **argv)
 #endif
    // ***************************** //
 
-   NMCM_PROGRESS_INIT(10000,puts("-"))
+//    NMCM_PROGRESS_INIT(10000,puts("-"))
 
    // ***** TRAP initialization *****
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
@@ -372,7 +372,7 @@ int main(int argc, char **argv)
          first = 0;
       }
       trap_send(0, data, data_size);
-      NMCM_PROGRESS_PRINT
+//       NMCM_PROGRESS_PRINT
    }
 
    // ***** ONLY FOR DEBUGING ***** //

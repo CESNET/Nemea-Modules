@@ -193,6 +193,7 @@ int UnirecExporter::export_flow(FlowRecord &flow)
 
    for (int i = 0; i < out_ifc_cnt; i++) {
       ur_clear_varlen(tmplt[i], record[i]);
+      memset(record[i], 0, ur_rec_fixlen_size(tmplt[i]));
    }
 
    if (basic_ifc_num >= 0 && ext == NULL) { // Process basic flow.
