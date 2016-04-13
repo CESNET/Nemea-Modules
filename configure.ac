@@ -208,6 +208,8 @@ AC_CONFIG_FILES([Makefile
                  nfreader/Makefile
                  report2idea/Makefile
                  traffic_repeater/Makefile
+                 unirecfilter/lib/Makefile
+                 unirecfilter/lib/liburfilter.pc
                  unirecfilter/Makefile
                  endiverter/Makefile
                  nfwriter/Makefile

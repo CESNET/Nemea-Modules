@@ -1,6 +1,6 @@
 /**
- * \file unirecfilter.h
- * \brief NEMEA module selecting records and sending specified fields.
+ * \file libunirecfilter.h
+ * \brief NEMEA library for matching UniRec
  * \author Zdenek Kasner <kasnezde@fit.cvut.cz>
  * \author Tomas Cejka <cejkat@cesnet.cz>
  * \author Miroslav Kalina <kalinmi2@fit.cvut.cz>
@@ -45,19 +45,25 @@
  * if advised of the possibility of such damage.
  *
  */
-#ifndef UNIRECFILTER_H
-#define UNIRECFILTER_H
+
+#ifndef LIBUNIRECFILTER_H
+#define LIBUNIRECFILTER_H
 
 #include <unirec/unirec.h>
-#include <sys/types.h>
-#include <regex.h>
 
-#define DYN_FIELD_MAX_SIZE 1024 // Maximal size of dynamic field, longer fields will be cutted to this size
+typedef struct urfilter_t {
+   char * filter;
+   void * tree;
+} urfilter_t;
 
-#define SET_NULL(field_id, tmpl, data) \
-memset(ur_get_ptr_by_id(tmpl, data, field_id), 0, ur_get_size(field_id));
+urfilter_t * urfilter_prepare(const char * filter_str);
 
-extern char * str_buffer;
+int urfilter_compile_prepared(urfilter_t * unirec_filter);
 
-#endif
+urfilter_t * urfilter_compile(const char * filter_str);
 
+int urfilter_match(urfilter_t * unirec_filter, const ur_template_t * template, const void * record);
+
+void urfilter_destroy(urfilter_t * object);
+
+#endif /* LIBUNIRECFILTER_H */

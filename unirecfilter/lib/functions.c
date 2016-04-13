@@ -1,6 +1,6 @@
 /**
- * \file unirecfilter.c
- * \brief NEMEA module selecting records and sending specified fields.
+ * \file functions.c
+ * \brief NEMEA library for matching UniRec
  * \author Zdenek Kasner <kasnezde@fit.cvut.cz>
  * \author Klara Drhova <drhovkla@fit.cvut.cz>
  * \author Tomas Cejka <cejkat@cesnet.cz>
@@ -48,7 +48,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "../unirecfilter.h"
+#include "functions.h"
 
 // get numbers of protocols and services
 #include <netdb.h>
@@ -650,11 +650,11 @@ void changeProtocol(struct ast **ast)
  * \return pointer to abstract syntax tree
  */
 
-struct ast *getTree(const char *str, const char *port_number)
+struct ast *getTree(const char *str)
 {
    struct ast *result;
    if (str == NULL || str[0] == '\0') {
-      printf("[%s] No Filter.\n", port_number);
+      printf("No Filter.\n");
       return NULL;
    }
    yy_scan_string(str);
@@ -666,7 +666,7 @@ struct ast *getTree(const char *str, const char *port_number)
    }
    yy_delete_buffer(get_buf());
 
-   printf("[%s] Filter: ", port_number);
+   printf("Filter: ");
    printAST(result);
    printf("\n");
 
