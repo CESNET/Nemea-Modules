@@ -51,6 +51,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <signal.h>
 
 #include <stdlib.h>
 #include <time.h>
@@ -82,6 +83,7 @@ inline bool error(const string &e)
 }
 
 trap_module_info_t *module_info = NULL;
+static int stop = 0;
 
 UR_FIELDS (
    ipaddr DST_IP,
@@ -194,6 +196,8 @@ int count_ifc_interfaces(int argc, char *argv[])
    return int_cnt;
 }
 
+TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
+
 int main(int argc, char *argv[])
 {
    plugins_t plugin_wrapper;
@@ -213,6 +217,7 @@ int main(int argc, char *argv[])
    srand(time(NULL));
 
    // ***** TRAP initialization *****
+   TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
    module_info->num_ifc_out = count_ifc_interfaces(argc, argv);
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
@@ -341,12 +346,12 @@ int main(int argc, char *argv[])
    flowcache.init();
 
    Packet packet;
-   int ret;
+   int ret = 0;
    uint32_t pkt_total = 0, pkt_parsed = 0;
    packet.packet = new char[MAXPCKTSIZE + 1];
 
    // Main packet capture loop.
-   while ((ret = packetloader.get_pkt(packet)) > 0) {
+   while (!stop && (ret = packetloader.get_pkt(packet)) > 0) {
       if (ret == 3) { // Process timeout
          flowcache.exportexpired(false);
          continue;
