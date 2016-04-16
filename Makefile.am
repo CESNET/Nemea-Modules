@@ -22,7 +22,7 @@ SUBDIRS += nfwriter
 endif
 
 if HAVE_BISON
-SUBDIRS += unirecfilter
+SUBDIRS += unirecfilter aggregator
 endif
 
 if HAVE_LIBPCAP
