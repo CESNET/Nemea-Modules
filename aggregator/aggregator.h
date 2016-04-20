@@ -68,13 +68,14 @@ typedef struct rule_t {
    timedb_t *timedb;
 } rule_t;
 
-rule_t * create_aggregation_rule(const char * specifier, int step, int size);
+rule_t * create_aggregation_rule(const char * specifier, int step, int size, int inactive_timeout);
 void destroy_aggregation_rule(rule_t * object);
 
 // output interface structure
 typedef struct output_t {
    int interface;
    ur_template_t *tpl;
+   void *out_rec;
    rule_t **rules;
    int rules_count;
 } output_t;

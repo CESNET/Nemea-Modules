@@ -59,12 +59,13 @@
 
 #define rolling_data(timedb, i) (timedb)->data[((timedb)->data_begin + (i)) % (timedb)->size]
 
-timedb_t * timedb_create(int step, int delay)
+timedb_t * timedb_create(int step, int delay, int inactive_timeout)
 {
    timedb_t * timedb = (timedb_t *) calloc(1, sizeof(timedb_t));
    
    timedb->step = step;
    timedb->size = delay/step + 2;
+   timedb->inactive_timeout = inactive_timeout;
    timedb->data_begin = 0;
 
    timedb->data = (time_series_t **) calloc(timedb->size, sizeof(time_series_t *));
@@ -101,6 +102,11 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, uint
 
    time_t last_sec = ur_time_get_sec(urlast);
    int last_msec = ur_time_get_msec(urlast);
+   
+   // check inactive timeout
+   if (first_sec-timedb->begin > timedb->inactive_timeout) {
+      timedb_init(timedb, first_sec);
+   }
    
    // calculate unified value per 1 sec
    double value_per_sec = 1.0*value / (1.0*(last_sec-first_sec) + 1.0*(last_msec-first_msec)/1000 );

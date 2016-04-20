@@ -62,13 +62,14 @@ typedef struct time_series_t {
 typedef struct timedb_t {
    int step;
    int size;
+   int inactive_timeout;
    time_t begin;
    time_t end;
    time_series_t **data;
    int data_begin;
 } timedb_t;
 
-timedb_t * timedb_create(int step, int delay);
+timedb_t * timedb_create(int step, int delay, int inactive_timeout);
 
 void timedb_init(timedb_t *timedb, time_t first);
 
