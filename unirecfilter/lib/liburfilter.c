@@ -89,6 +89,10 @@ urfilter_t * urfilter_compile(const char * filter_str)
 
 int urfilter_match(urfilter_t * unirec_filter, const ur_template_t * template, const void * record)
 {
+   if(!unirec_filter->tree && unirec_filter->filter) {
+      urfilter_compile_prepared(unirec_filter);
+   }
+   
    if (unirec_filter->tree) {
       return evalAST((struct ast *) unirec_filter->tree, template, record);
    }

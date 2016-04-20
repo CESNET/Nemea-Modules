@@ -625,7 +625,7 @@ int main(int argc, char **argv)
       for (i = 0; i < n_outputs; i++) {
          if (!output_specifiers[i]->filter || urfilter_match(output_specifiers[i]->filter, in_tmplt, in_rec)) {
             if (verbose >= 1) {
-               printf("ADVANCED VERBOSE: Record %d accepted on interface %d\n", num_records, i);
+               printf("ADVANCED VERBOSE: Record %ud accepted on interface %d\n", num_records, i);
             }
             //Iterate over all output fields; if the field is present in input template, copy it to output record
             // If missing, set null
@@ -659,7 +659,7 @@ int main(int argc, char **argv)
             TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, continue, {stop=1; break;});
          } else {
             if (verbose >= 1) {
-                  printf("ADVANCED VERBOSE: Record %d declined on interface %d\n", num_records, i);
+                  printf("ADVANCED VERBOSE: Record %ud declined on interface %d\n", num_records, i);
             }
          }
       }
