@@ -141,7 +141,7 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, uint
    
    // check if record starts before database
    if (timedb->begin > first_sec) {
-      fprintf(stderr, "[timedb_save_data] Flow record truncated, because it starts earlier than database can handle now.\n");
+      //fprintf(stderr, "[timedb_save_data] Flow record truncated, because it starts earlier than database can handle now.\n");
       return TIMEDB_SAVE_FLOW_TRUNCATED;
    }
 

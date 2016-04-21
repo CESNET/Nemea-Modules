@@ -52,14 +52,14 @@
 #define TIMEDB_SAVE_NEED_ROLLOUT 1
 #define TIMEDB_SAVE_FLOW_TRUNCATED 2
 
-typedef struct time_series_t {
+typedef struct time_series_s {
     time_t begin;
     time_t end;
     uint64_t sum;
     uint32_t count;
 } time_series_t;
 
-typedef struct timedb_t {
+typedef struct timedb_s {
    int step;
    int size;
    int inactive_timeout;

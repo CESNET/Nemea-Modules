@@ -51,7 +51,7 @@
 
 #include <unirec/unirec.h>
 
-typedef struct urfilter_t {
+typedef struct urfilter_s {
    char * filter;
    void * tree;
 } urfilter_t;

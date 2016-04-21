@@ -60,7 +60,7 @@ typedef enum {
 } agg_arg;
 
 // aggregation rule structure
-typedef struct rule_t {
+typedef struct rule_s {
    char *name;
    urfilter_t *filter;
    agg_function agg;
@@ -72,7 +72,7 @@ rule_t * create_aggregation_rule(const char * specifier, int step, int size, int
 void destroy_aggregation_rule(rule_t * object);
 
 // output interface structure
-typedef struct output_t {
+typedef struct output_s {
    int interface;
    ur_template_t *tpl;
    void *out_rec;

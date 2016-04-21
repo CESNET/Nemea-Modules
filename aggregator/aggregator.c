@@ -99,13 +99,38 @@ trap_module_info_t *module_info = NULL;
 /* ************************************************************************* */
 
 static int stop = 0;
-
-static output_t ** outputs = NULL;
-static int outputs_count = 0;
-
 // Function to handle SIGTERM and SIGINT signals (used to stop the module)
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
+/* ************************************************************************* */
+
+static output_t **outputs = NULL;
+static int outputs_count = 0;
+
+output_t *create_output(int interface)
+{
+   output_t *object = calloc(1, sizeof (output_t));
+
+   object->interface = interface;
+   object->rules = (rule_t **) calloc(MAX_RULES_COUNT, sizeof (rule_t *));
+   if (!object->rules) {
+      free(object);
+      return NULL;
+   }
+   object->rules_count = 0;
+
+   return object;
+}
+
+void destroy_output(output_t *object)
+{
+   for (int i = 0; i < object->rules_count; i++) {
+      destroy_aggregation_rule(object->rules[i]);
+   }
+   free(object);
+}
+
+/* ************************************************************************* */
 
 int flush_aggregation_counters()
 {
@@ -208,14 +233,14 @@ int flush_aggregation_counters()
    return 0;
 }
 
-rule_t * create_aggregation_rule(const char * specifier, int step, int size, int inactive_timeout)
+rule_t *create_aggregation_rule(const char *specifier, int step, int size, int inactive_timeout)
 {
    // @TODO - NAME:AGGREGATION[:FILTER]
    int token_start = 0;
 
-   char * name = NULL;
-   char * agg = NULL;
-   char * filter = NULL;
+   char *name = NULL;
+   char *agg = NULL;
+   char *filter = NULL;
 
    // @TODO použít strtok()
 
@@ -238,20 +263,14 @@ rule_t * create_aggregation_rule(const char * specifier, int step, int size, int
          if (name == NULL) {
             name = (char *) calloc(i - token_start + 1, sizeof (char));
             strncpy(name, specifier + token_start, i - token_start);
-         }
-            // or we collected agg type
-         else if (agg == NULL) {
+         } else if (agg == NULL) { // or we collected agg type
             agg = (char *) calloc(i - token_start + 1, sizeof (char));
             strncpy(agg, specifier + token_start, i - token_start);
-            for (char * s = agg; *s; ++s) *s = toupper(*s);
-         }
-            // or filter
-         else if (filter == NULL) {
+            for (char *s = agg; *s; ++s) *s = toupper(*s);
+         } else if (filter == NULL) { // or filter
             filter = (char *) calloc(i - token_start + 1, sizeof (char));
             strncpy(filter, specifier + token_start, i - token_start);
-         }
-         // otherwise parsing error (extra colon found)
-         else {
+         } else { // otherwise parsing error (extra colon found)
             fprintf(stderr, "Syntax error at char %d: Aggregation rule contains unexpected colon\n", i + 1);
             fprintf(stderr, "Rule: :%s\n", specifier);
             for (int j = 0; j <= i + 5; j++)
@@ -264,48 +283,44 @@ rule_t * create_aggregation_rule(const char * specifier, int step, int size, int
       }
    }
 
-   rule_t * object = (rule_t *) calloc(1, sizeof (rule_t));
+   rule_t *object = (rule_t *) calloc(1, sizeof (rule_t));
    object->name = name;
    object->timedb = timedb_create(step, size, inactive_timeout);
 
    if (!strcmp(agg, "SUM")) {
       object->agg = AGG_SUM;
-   }
-   else if (!strcmp(agg, "COUNT")) {
+   } else if (!strcmp(agg, "COUNT")) {
       object->agg = AGG_COUNT;
-   }
-   else if (!strcmp(agg, "AVG")) {
+   } else if (!strcmp(agg, "AVG")) {
       object->agg = AGG_AVG;
-   }
-   else if (!strcmp(agg, "RATE")) {
+   } else if (!strcmp(agg, "RATE")) {
       object->agg = AGG_RATE;
-   }
-   else {
+   } else {
       fprintf(stderr, "Error: Unknown aggregation function '%s'\n", agg);
       fprintf(stderr, "Rule: :%s\n", specifier);
       return NULL;
    }
+   free(agg);
 
    // @TODO parse also aggregation argument
    object->agg_arg = AGG_ARG_BYTES;
 
-   object->filter = urfilter_prepare(filter);
-
-   //free(name);
-   free(agg);
-   free(filter);
+   if (filter) {
+      object->filter = urfilter_prepare(filter);
+      free(filter);
+   }
 
    return object;
 }
 
-void compile_aggregation_rule(rule_t * object)
+void compile_aggregation_rule(rule_t *object)
 {
    if (object && object->filter) {
       urfilter_compile_prepared(object->filter);
    }
 }
 
-void destroy_aggregation_rule(rule_t * object)
+void destroy_aggregation_rule(rule_t *object)
 {
    if (object) {
       free(object->name);
@@ -315,7 +330,7 @@ void destroy_aggregation_rule(rule_t * object)
 }
 
 // save data from record into time series
-int aggregation_rule_save_data(rule_t * rule, ur_template_t * tpl, const void * record)
+int aggregation_rule_save_data(rule_t *rule, ur_template_t *tpl, const void *record)
 {
    // get requested value from record
    uint64_t value;
@@ -323,69 +338,41 @@ int aggregation_rule_save_data(rule_t * rule, ur_template_t * tpl, const void * 
    // @TODO replace this for extracting any kind of value
    if (rule->agg_arg == AGG_ARG_BYTES) {
       value = ur_get(tpl, record, F_BYTES);
-   }
-   else if (rule->agg_arg == AGG_ARG_PACKETS) {
+   } else if (rule->agg_arg == AGG_ARG_PACKETS) {
       value = ur_get(tpl, record, F_PACKETS);
-   }
-   else {
+   } else {
       fprintf(stderr, "Error: This couldn't happen EVER!!! Unknown aggregation target durning main loop.\n");
       return 0;
    }
 
    // add flow to time series
    switch (rule->agg) {
-      // increse sum/count counters
-      case AGG_SUM:
-      case AGG_COUNT:
-      case AGG_AVG:
-      case AGG_RATE:
-         while(timedb_save_data(rule->timedb, ur_get(tpl, record, F_TIME_FIRST), ur_get(tpl, record, F_TIME_LAST), value) == TIMEDB_SAVE_NEED_ROLLOUT) {
-            flush_aggregation_counters();
-         }
-         break;
-      // set flag in hash map (or similar structure)
-//      case AGG_COUNT_UNIQ:
-//          break;
-      default:
-         fprintf(stderr, "Error: This couldn't happen EVER!!! Unknown aggregation type durning main loop.\n");
-         return 0;
+   // increse sum/count counters
+   case AGG_SUM:
+   case AGG_COUNT:
+   case AGG_AVG:
+   case AGG_RATE:
+      while (timedb_save_data(rule->timedb, ur_get(tpl, record, F_TIME_FIRST), ur_get(tpl, record, F_TIME_LAST), value) == TIMEDB_SAVE_NEED_ROLLOUT) {
+         flush_aggregation_counters();
+      }
+      break;
+   // set flag in hash map (or similar structure)
+//   case AGG_COUNT_UNIQ:
+//       break;
+   default:
+      fprintf(stderr, "Error: This couldn't happen EVER!!! Unknown aggregation type durning main loop.\n");
+      return 0;
    }
    
    return 1;
 }
 
-output_t * create_output(int interface)
-{
-   output_t * object = calloc(1, sizeof (output_t));
-
-   object->interface = interface;
-   object->rules = (rule_t **) calloc(MAX_RULES_COUNT, sizeof (rule_t *));
-   if (!object->rules) {
-      free(object);
-      return NULL;
-   }
-   object->rules_count = 0;
-
-   return object;
-}
-
-void destroy_output(output_t *object)
-{
-   for (int i = 0; i < object->rules_count; i++) {
-      destroy_aggregation_rule(object->rules[i]);
-   }
-   free(object);
-}
-
 int main(int argc, char **argv)
 {
    int ret;
-   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    // ***** TRAP initialization *****
-   // nelze pouzit default initialization, protoze pocet vystupu neni znamy pri
-   // kompilaci ... tzn. nelze ho napsat do MODULE_BASIC_INFO
-   //TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    // parse TRAP params
    trap_ifc_spec_t ifc_spec;
@@ -413,21 +400,19 @@ int main(int argc, char **argv)
    
    // parse parameters
    char opt;
-   rule_t * temp_rule = NULL;
+   rule_t *temp_rule = NULL;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
-            // output_interval
-         case 't':
+         case 't':  // output_interval = TimeDB step value
             param_output_interval = atoi(optarg);
             break;
-         case 'd':
+         case 'd':  // TimeDB delay interval
             param_delay_interval = atoi(optarg);
             break;
-         case 'I':
+         case 'I':  // Inactive timeout
             param_inactive_timeout = atoi(optarg);
             break;
-            // rule NAME:AGGREGATION[:FILTER]]
-         case 'r':
+         case 'r':  // rule syntax NAME:AGGREGATION[:FILTER]]
             temp_rule = create_aggregation_rule(optarg, param_output_interval, param_delay_interval, param_inactive_timeout);
             if (!temp_rule) {
                TRAP_DEFAULT_FINALIZATION();
@@ -438,9 +423,8 @@ int main(int argc, char **argv)
             outputs[outputs_count - 1]->rules[outputs[outputs_count - 1]->rules_count++] = temp_rule;
             temp_rule = NULL;
             break;
-            // switch to another output interface
+         case 'R':  // switch to another output interface
             // @TODO consider another way of multi interface definition
-         case 'R':
             outputs[outputs_count] = create_output(outputs_count);
             outputs_count++;
             break;
@@ -452,9 +436,6 @@ int main(int argc, char **argv)
       }
    }
 
-   // set number of output interfaces
-   module_info->num_ifc_out = outputs_count;
-   
    // Initialize TRAP library (create and init all interfaces)
    ret = trap_init(module_info, ifc_spec);
    if (ret != TRAP_E_OK) {
@@ -468,10 +449,9 @@ int main(int argc, char **argv)
    // Register signal handler.
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER(); // Handles SIGTERM and SIGINT
 
-   // ***** Create UniRec template *****
-   char * unirec_specifier = "PACKETS,BYTES";
-   
-   // initialize input templates
+   // ***** Create input UniRec template *****
+   char *unirec_specifier = "PACKETS,BYTES";
+
    ur_template_t *tpl = ur_create_input_template(0, unirec_specifier, NULL);
    if (tpl == NULL) {
       fprintf(stderr, "Error: Invalid UniRec specifier.\n");
@@ -480,8 +460,7 @@ int main(int argc, char **argv)
       return 4;
    }
    
-   // Initialize output interfaces and templates
-   printf("Output interfaces: %d\n", outputs_count);
+   // ***** Create output UniRec template *****
    for (int i=0; i<outputs_count; i++) {
       // count tpl_string length
       int tpl_string_len = strlen("time TIME,");
@@ -530,16 +509,14 @@ int main(int argc, char **argv)
          tpl_string_i += strlen(outputs[i]->rules[j]->name);
       }
       
-      printf("Defining fields (%d, %d) = %s\n", tpl_string_len, (int)strlen(tpl_string), tpl_string);
-      
+      // Define fields to output template
       if (ur_define_set_of_fields(tpl_string) != UR_OK) {
          fprintf(stderr, "Error with creating output template\n");
          return -2;
       }
       char *f_names = ur_ifc_data_fmt_to_field_names(tpl_string);
 
-      printf("Creating template(%d) = %s\n", (int)strlen(f_names), f_names);
-
+      // Create output template
       outputs[i]->tpl = ur_create_output_template(i, f_names, NULL);
       
       // Allocate memory for output record
@@ -572,7 +549,7 @@ int main(int argc, char **argv)
          // process every rule in output
          for (int i = 0; i < outputs[o]->rules_count; i++) {
             // match UniRec filter
-            if (urfilter_match(outputs[o]->rules[i]->filter, tpl, data)) {
+            if (!outputs[o]->rules[i]->filter || urfilter_match(outputs[o]->rules[i]->filter, tpl, data)) {
                // save record data
                if (!aggregation_rule_save_data(outputs[o]->rules[i], tpl, data)) {
                   fprintf(stderr, "Error when saving aggregationn data.\n");
