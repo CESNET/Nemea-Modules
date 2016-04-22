@@ -94,7 +94,7 @@ void timedb_init(timedb_t *timedb, time_t time) {
    timedb->end = time;
 }
 
-int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, uint64_t value)
+int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_field_type_t value_type, void * value_ptr)
 {
    // get first and last time seen
    time_t first_sec = ur_time_get_sec(urfirst);
@@ -108,8 +108,46 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, uint
       timedb_init(timedb, first_sec);
    }
    
-   // calculate unified value per 1 sec
-   double value_per_sec = 1.0*value / (1.0*(last_sec-first_sec) + 1.0*(last_msec-first_msec)/1000 );
+   // get value and convert it into double
+   double value;
+   switch (value_type) {
+   case UR_TYPE_INT8:
+      value = *((int8_t *)value_ptr);
+      break;
+   case UR_TYPE_INT16:
+      value = *((int16_t *)value_ptr);
+      break;
+   case UR_TYPE_INT32:
+      value = *((int32_t *)value_ptr);
+      break;
+   case UR_TYPE_INT64:
+      value = *((int64_t *)value_ptr);
+      break;
+   case UR_TYPE_UINT8:
+      value = *((uint8_t *)value_ptr);
+      break;
+   case UR_TYPE_UINT16:
+      value = *((uint16_t *)value_ptr);
+      break;
+   case UR_TYPE_UINT32:
+      value = *((uint32_t *)value_ptr);
+      break;
+   case UR_TYPE_UINT64:
+      value = *((uint64_t *)value_ptr);
+      break;
+   case UR_TYPE_FLOAT:
+      value = *((float *)value_ptr);
+      break;
+   case UR_TYPE_DOUBLE:
+      value = *((double *)value_ptr);
+      break;
+   default:
+      fprintf(stderr, "Error: Trying to save unsupported value into TimeDB.");
+      return TIMEDB_SAVE_ERROR;
+      break;
+   }
+   
+   double value_per_sec = 1.0 * value / (1.0*(last_sec-first_sec) + 1.0*(last_msec-first_msec)/1000 );
 
    // check initialized timedb
    if (!timedb->begin) {
@@ -133,7 +171,7 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, uint
             rolling_data(timedb, i)->sum += value;
          }
          else {
-            rolling_data(timedb, i)->sum += (long) (value_per_sec * time);
+            rolling_data(timedb, i)->sum += value_per_sec * time;
          }
          rolling_data(timedb, i)->count += 1;
       }
@@ -149,7 +187,7 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, uint
 }
 
 // get last value, roll database, fill variables *sum and *count
-void timedb_roll_db(timedb_t * timedb, time_t *time, uint64_t *sum, uint32_t *count)
+void timedb_roll_db(timedb_t * timedb, time_t *time, double *sum, uint32_t *count)
 {
    // get data
    *time = rolling_data(timedb, 0)->begin;

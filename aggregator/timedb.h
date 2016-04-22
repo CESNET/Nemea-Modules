@@ -48,6 +48,7 @@
 #include <inttypes.h>
 #include <unirec/unirec.h>
 
+#define TIMEDB_SAVE_ERROR -1
 #define TIMEDB_SAVE_OK 0
 #define TIMEDB_SAVE_NEED_ROLLOUT 1
 #define TIMEDB_SAVE_FLOW_TRUNCATED 2
@@ -55,7 +56,7 @@
 typedef struct time_series_s {
     time_t begin;
     time_t end;
-    uint64_t sum;
+    double sum;
     uint32_t count;
 } time_series_t;
 
@@ -73,9 +74,9 @@ timedb_t * timedb_create(int step, int delay, int inactive_timeout);
 
 void timedb_init(timedb_t *timedb, time_t first);
 
-int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, uint64_t value);
+int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_field_type_t value_type, void * value);
 
-void timedb_roll_db(timedb_t *timedb, time_t *time, uint64_t *sum, uint32_t *count);
+void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count);
 
 void timedb_free(timedb_t *timedb);
 

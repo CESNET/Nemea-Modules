@@ -55,21 +55,18 @@ typedef enum {
    AGG_SUM, AGG_AVG, AGG_COUNT, AGG_RATE, AGG_COUNT_UNIQ
 } agg_function;
 
-typedef enum {
-   AGG_ARG_BYTES, AGG_ARG_PACKETS
-} agg_arg;
-
 // aggregation rule structure
 typedef struct rule_s {
    char *name;
    urfilter_t *filter;
    agg_function agg;
-   agg_arg agg_arg;
+   char *agg_arg;
+   ur_field_type_t agg_arg_field;
    timedb_t *timedb;
 } rule_t;
 
-rule_t *rule_create(const char * specifier, int step, int size, int inactive_timeout);
-void rule_destroy(rule_t * object);
+rule_t *rule_create(const char *specifier, int step, int size, int inactive_timeout);
+void rule_destroy(rule_t *object);
 
 // output interface structure
 typedef struct output_s {
@@ -81,7 +78,7 @@ typedef struct output_s {
 } output_t;
 
 output_t *create_output(int interface);
-void destroy_output(output_t * object);
+void destroy_output(output_t *object);
 
 // internal functions
 int flush_aggregation_counters();
