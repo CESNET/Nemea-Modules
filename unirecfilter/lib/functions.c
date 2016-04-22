@@ -654,7 +654,6 @@ struct ast *getTree(const char *str)
 {
    struct ast *result;
    if (str == NULL || str[0] == '\0') {
-      printf("No Filter.\n");
       return NULL;
    }
    yy_scan_string(str);
@@ -665,10 +664,6 @@ struct ast *getTree(const char *str)
       result = main_tree;  // success
    }
    yy_delete_buffer(get_buf());
-
-   printf("Filter: ");
-   printAST(result);
-   printf("\n");
 
    return result;
 }

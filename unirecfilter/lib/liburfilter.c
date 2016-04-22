@@ -59,7 +59,9 @@ urfilter_t * urfilter_prepare(const char * filter_str)
    // allocate filter structure
    urfilter_t * unirec_filter = (urfilter_t *) calloc(1, sizeof (urfilter_t));
 
-   unirec_filter->filter = strdup(filter_str);
+   if(filter_str) {
+      unirec_filter->filter = strdup(filter_str);
+   }
 
    return unirec_filter;
 }
@@ -89,8 +91,13 @@ urfilter_t * urfilter_compile(const char * filter_str)
 
 int urfilter_match(urfilter_t * unirec_filter, const ur_template_t * template, const void * record)
 {
-   if(!unirec_filter->tree && unirec_filter->filter) {
+   if (!unirec_filter->tree && unirec_filter->filter) {
       urfilter_compile_prepared(unirec_filter);
+   }
+   
+   // empty filter means always TRUE
+   if (!unirec_filter->filter) {
+      return 1;
    }
    
    if (unirec_filter->tree) {
