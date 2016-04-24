@@ -68,6 +68,7 @@
 #include "httpplugin.h"
 #include "dnsplugin.h"
 #include "sipplugin.h"
+#include "ntpplugin.h"
 
 using namespace std;
 
@@ -158,6 +159,11 @@ int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plu
          tmp.push_back(plugin_opt("sip", sip, ifc_num++));
 
          plugins.push_back(new SIPPlugin(module_options, tmp));
+      } else if (proto == "ntp"){
+         vector<plugin_opt> tmp;
+         tmp.push_back(plugin_opt("ntp", ntp, ifc_num++));
+
+         plugins.push_back(new NTPPlugin(module_options, tmp));
       } else {
          fprintf(stderr, "Unsupported plugin: \"%s\"\n", proto.c_str());
          return -1;
