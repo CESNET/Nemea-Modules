@@ -47,6 +47,13 @@
 #include <time.h>
 #include <inttypes.h>
 #include <unirec/unirec.h>
+#include <b_plus_tree.h>
+
+// ------- CONFIGURATION -----------
+
+#define TIMEDB__B_PLUS_TREE__LEAF_ITEM_NUMBER 8
+
+// -------- DEFINITIONS ------------
 
 #define TIMEDB_SAVE_ERROR -1
 #define TIMEDB_SAVE_OK 0
@@ -58,6 +65,7 @@ typedef struct time_series_s {
     time_t end;
     double sum;
     uint32_t count;
+    void *b_plus_tree;
 } time_series_t;
 
 typedef struct timedb_s {
@@ -68,11 +76,18 @@ typedef struct timedb_s {
    time_t end;
    time_series_t **data;
    int data_begin;
+   ur_field_type_t value_type;
+   int count_uniq;
+   int (*b_tree_compare) (void *, void *);
+   int b_tree_key_size;
+   uint8_t initialized;
 } timedb_t;
 
-timedb_t * timedb_create(int step, int delay, int inactive_timeout);
+timedb_t * timedb_create(int step, int delay, int inactive_timeout, int count_uniq);
 
 void timedb_init(timedb_t *timedb, time_t first);
+
+void timedb_init_tree(timedb_t *timedb, ur_field_type_t value_type);
 
 int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_field_type_t value_type, void * value);
 

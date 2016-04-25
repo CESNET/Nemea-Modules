@@ -47,7 +47,10 @@
 #include <unirec/unirec.h>
 #include <stdio.h>
 #include <math.h>
+#include <b_plus_tree.h>
+#include <unirec/ipaddr.h>
 
+// -------- Useful definitions -------------
 
 #ifndef min
 #define min(a, b)  ((a) < (b) ? (a) : (b))
@@ -59,7 +62,63 @@
 
 #define rolling_data(timedb, i) (timedb)->data[((timedb)->data_begin + (i)) % (timedb)->size]
 
-timedb_t * timedb_create(int step, int delay, int inactive_timeout)
+// -------- B+ TREE comparators -------------
+
+#define COMPARATOR(type) \
+int compare_ ## type(void *a, void *b) { \
+   if (*(type*)a == *(type*)b) { \
+      return EQUAL; \
+   } \
+   else if (*(type*)a < *(type*)b) { \
+      return LESS; \
+   } \
+   else { \
+      return MORE; \
+   } \
+}
+
+COMPARATOR(int8_t)
+COMPARATOR(uint8_t)
+COMPARATOR(int16_t)
+COMPARATOR(uint16_t)
+COMPARATOR(int32_t)
+COMPARATOR(uint32_t)
+COMPARATOR(int64_t)
+COMPARATOR(uint64_t)
+COMPARATOR(float)
+COMPARATOR(double)
+COMPARATOR(ur_time_t)
+
+// or pass directly "(int(*)(void*,void*)) &ip_cmp" ??? it return strcmp instead of -1/0/1
+int compare_ip_addr_t(void * a, void * b) {
+   int cmp = ip_cmp((ip_addr_t*) a, (ip_addr_t*) b);
+   if (cmp == 0) {
+      return EQUAL;
+   }
+   else if (cmp < 0) {
+      return LESS;
+   }
+   else {
+      return MORE;
+   }
+}
+
+int compare_md5(void * a, void * b) {
+   int cmp = memcmp((ip_addr_t*) a, (ip_addr_t*) b, 16);
+   if (cmp == 0) {
+      return EQUAL;
+   }
+   else if (cmp < 0) {
+      return LESS;
+   }
+   else {
+      return MORE;
+   }
+}
+
+// -------- TimeDB main code -------------
+
+timedb_t * timedb_create(int step, int delay, int inactive_timeout, int count_uniq)
 {
    timedb_t * timedb = (timedb_t *) calloc(1, sizeof(timedb_t));
    
@@ -67,6 +126,8 @@ timedb_t * timedb_create(int step, int delay, int inactive_timeout)
    timedb->size = delay/step + 2;
    timedb->inactive_timeout = inactive_timeout;
    timedb->data_begin = 0;
+   timedb->initialized = 0;
+   timedb->count_uniq = count_uniq > 0 ? 1 : 0;
 
    timedb->data = (time_series_t **) calloc(timedb->size, sizeof(time_series_t *));
    for (int i=0; i<timedb->size; i++) {
@@ -94,6 +155,75 @@ void timedb_init(timedb_t *timedb, time_t time) {
    timedb->end = time;
 }
 
+// initialize timestamps by first inserted record
+void timedb_init_tree(timedb_t *timedb, ur_field_type_t value_type) {
+   if (timedb->count_uniq == 1 && !timedb->initialized) { // count will be counted as unique values
+      timedb->value_type = value_type;
+      for (int i=0; i<timedb->size; i++) {
+         switch (timedb->value_type) {
+         case UR_TYPE_CHAR:
+         case UR_TYPE_UINT8:
+            timedb->b_tree_compare = &compare_uint8_t;
+            timedb->b_tree_key_size = 1;
+            break;
+         case UR_TYPE_INT8:
+            timedb->b_tree_compare = &compare_uint8_t;
+            timedb->b_tree_key_size = 1;
+            break;
+         case UR_TYPE_UINT16:
+            timedb->b_tree_compare = &compare_uint16_t;
+            timedb->b_tree_key_size = 2;
+            break;
+         case UR_TYPE_INT16:
+            timedb->b_tree_compare = &compare_int16_t;
+            timedb->b_tree_key_size = 2;
+            break;
+         case UR_TYPE_UINT32:
+            timedb->b_tree_compare = &compare_uint32_t;
+            timedb->b_tree_key_size = 4;
+            break;
+         case UR_TYPE_INT32:
+            timedb->b_tree_compare = &compare_int32_t;
+            timedb->b_tree_key_size = 4;
+            break;
+         case UR_TYPE_FLOAT:
+            timedb->b_tree_compare = &compare_float;
+            timedb->b_tree_key_size = 4;
+            break;
+         case UR_TYPE_UINT64:
+            timedb->b_tree_compare = &compare_uint64_t;
+            timedb->b_tree_key_size = 8;
+            break;
+         case UR_TYPE_INT64:
+            timedb->b_tree_compare = &compare_int64_t;
+            timedb->b_tree_key_size = 8;
+            break;
+         case UR_TYPE_DOUBLE:
+            timedb->b_tree_compare = &compare_double;
+            timedb->b_tree_key_size = 8;
+            break;
+         case UR_TYPE_TIME:
+            timedb->b_tree_compare = &compare_ur_time_t;
+            timedb->b_tree_key_size = 8;
+            break;
+         case UR_TYPE_IP:
+            timedb->b_tree_compare = &compare_ip_addr_t;
+            timedb->b_tree_key_size = 16;
+            break;
+         case UR_TYPE_STRING:
+         case UR_TYPE_BYTES:
+            // @TODO compute md5 hash of value and insert it into B+ tree (16B long value)
+            //timedb->b_tree_compare = &compare_md5;
+            //timedb->b_tree_key_size = 16;
+            fprintf(stderr, "Implementation error: Handling UNIQ counts of UR_String or UR_Bytes is not yet supported.\n");
+            break;
+         }
+         timedb->data[i]->b_plus_tree = b_plus_tree_initialize(TIMEDB__B_PLUS_TREE__LEAF_ITEM_NUMBER, timedb->b_tree_compare, 0, timedb->b_tree_key_size);
+      }
+      timedb->initialized = 1;
+   }
+}
+
 int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_field_type_t value_type, void * value_ptr)
 {
    // get first and last time seen
@@ -103,6 +233,14 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
    time_t last_sec = ur_time_get_sec(urlast);
    int last_msec = ur_time_get_msec(urlast);
    
+   // check initialized timedb
+   if (!timedb->begin) {
+      timedb_init(timedb, first_sec);
+   }
+
+   // check initialized B+ tree
+   timedb_init_tree(timedb, value_type);
+
    // check inactive timeout
    if (first_sec-timedb->begin > timedb->inactive_timeout) {
       timedb_init(timedb, first_sec);
@@ -142,18 +280,17 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
       value = *((double *)value_ptr);
       break;
    default:
-      fprintf(stderr, "Error: Trying to save unsupported value into TimeDB.");
-      return TIMEDB_SAVE_ERROR;
-      break;
+      if (timedb->count_uniq) {
+         value = 0;
+      } else {
+         fprintf(stderr, "Error: Trying to save unsupported value into TimeDB.");
+         return TIMEDB_SAVE_ERROR;
+         break;
+      }
    }
    
    double value_per_sec = 1.0 * value / (1.0*(last_sec-first_sec) + 1.0*(last_msec-first_msec)/1000 );
 
-   // check initialized timedb
-   if (!timedb->begin) {
-      timedb_init(timedb, first_sec);
-   }
-   
    // check if records ends too late, we need to rollout
    if (timedb->end < last_sec) {
       return TIMEDB_SAVE_NEED_ROLLOUT;
@@ -169,11 +306,19 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
          // save portion of value in this time window
          if (value_per_sec == INFINITY) { // watchout zero length interval
             rolling_data(timedb, i)->sum += value;
-         }
-         else {
+         } else {
             rolling_data(timedb, i)->sum += value_per_sec * time;
          }
-         rolling_data(timedb, i)->count += 1;
+         
+         if (timedb->count_uniq) { // we want to count only unique values
+            void *item = b_plus_tree_insert_or_find_item(rolling_data(timedb, i)->b_plus_tree, value_ptr);
+            if (item == NULL) {
+               fprintf(stderr, "Error: Could not allocate leaf node of the B+ tree. Perhaps out of memory?\n");
+               return TIMEDB_SAVE_ERROR;
+            }
+         } else {
+            rolling_data(timedb, i)->count += 1;
+         }
       }
    }
    
@@ -192,13 +337,21 @@ void timedb_roll_db(timedb_t * timedb, time_t *time, double *sum, uint32_t *coun
    // get data
    *time = rolling_data(timedb, 0)->begin;
    *sum = rolling_data(timedb, 0)->sum;
-   *count = rolling_data(timedb, 0)->count;
+   if (timedb->count_uniq) {
+      *count = (uint32_t) b_plus_tree_get_count_of_values(rolling_data(timedb, 0)->b_plus_tree);
+   } else {
+      *count = rolling_data(timedb, 0)->count;
+   }
    
    // free time_serie before rolling
    rolling_data(timedb, 0)->begin = timedb->end;
    rolling_data(timedb, 0)->end = timedb->end + timedb->step;
    rolling_data(timedb, 0)->sum = 0;
    rolling_data(timedb, 0)->count = 0;
+   if (timedb->count_uniq) {
+      b_plus_tree_destroy(rolling_data(timedb, 0)->b_plus_tree);
+      rolling_data(timedb, 0)->b_plus_tree = b_plus_tree_initialize(TIMEDB__B_PLUS_TREE__LEAF_ITEM_NUMBER, timedb->b_tree_compare, 0, timedb->b_tree_key_size);
+   }
 
    // jump step forward
    timedb->begin += timedb->step;
@@ -211,10 +364,13 @@ void timedb_free(timedb_t * timedb)
    if (timedb) {
       if (timedb->data) {
          for (int i=0; i<timedb->size; i++) {
+            if (timedb->data[i]->b_plus_tree) {
+               b_plus_tree_destroy(timedb->data[i]->b_plus_tree);
+            }
             free(timedb->data[i]);
          }
+         free(timedb->data);
       }
-      free(timedb->data);
       free(timedb);
    }
 }

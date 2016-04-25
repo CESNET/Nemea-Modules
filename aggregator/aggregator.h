@@ -65,6 +65,7 @@ typedef struct rule_s {
    timedb_t *timedb;
 } rule_t;
 
+void rule_init(rule_t *rule, ur_template_t *tpl, const void *data);
 rule_t *rule_create(const char *specifier, int step, int size, int inactive_timeout);
 void rule_destroy(rule_t *object);
 

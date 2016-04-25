@@ -79,7 +79,7 @@ UR_FIELDS(
    time TIME_FIRST,
    time TIME_LAST,
 )
-
+        
 // Struct with information about module
 trap_module_info_t *module_info = NULL;
 
@@ -161,6 +161,13 @@ void destroy_output(output_t *object)
    for (int i = 0; i < object->rules_count; i++) {
       rule_destroy(object->rules[i]);
    }
+   if (object->out_rec) {
+      ur_free_record(object->out_rec);
+   }
+   if (object->tpl) {
+      ur_free_template(object->tpl);
+   }
+   free(object->rules);
    free(object);
 }
 
@@ -243,24 +250,26 @@ int flush_aggregation_counters()
    static unsigned int header_printed_before = INTMAX_MAX & 0xffffffff;
    int ret;
 
-   // print headers
-   if (header_printed_before > 20) {
-      header_printed_before = 0;
+   if (trap_get_verbose_level()>0) {
+      // print headers
+      if (header_printed_before > 20) {
+         header_printed_before = 0;
 
-      printf("--------------------------------------------------------------------------------\n");
-      for (int i = 0; i < outputs_count; i++) {
-         printf("[OUT-%02d] ", i);
-         for (int j = 0; j < outputs[i]->rules_count; j++) {
-            if (j > 0) {
-               printf(",");
+         printf("--------------------------------------------------------------------------------\n");
+         for (int i = 0; i < outputs_count; i++) {
+            printf("[OUT-%02d] ", i);
+            for (int j = 0; j < outputs[i]->rules_count; j++) {
+               if (j > 0) {
+                  printf(",");
+               }
+               printf("%s", outputs[i]->rules[j]->name);
             }
-            printf("%s", outputs[i]->rules[j]->name);
+            printf("\n");
          }
-         printf("\n");
+         printf("--------------------------------------------------------------------------------\n");
       }
-      printf("--------------------------------------------------------------------------------\n");
+      header_printed_before++;
    }
-   header_printed_before++;
 
    // print values
    for (int i = 0; i < outputs_count; i++) {
@@ -279,11 +288,15 @@ int flush_aggregation_counters()
             field_id = ur_get_id_by_name("TIME");
             (* (ur_time_t *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = ur_time_from_sec_msec(time, 0);
             // Verbose
-            strftime(buff, 20, "%Y-%m-%d %H:%M:%S", gmtime(&time));
-            printf("[OUT-%02d] %s", i, buff);
+            if (trap_get_verbose_level()>0) {
+               strftime(buff, 20, "%Y-%m-%d %H:%M:%S", gmtime(&time));
+               printf("[OUT-%02d] %s", i, buff);
+            }
          }
          
-         printf(",");
+         if (trap_get_verbose_level()>0) {
+            printf(",");
+         }
 
          double avgtmp;
          switch (outputs[i]->rules[j]->agg) {
@@ -292,14 +305,18 @@ int flush_aggregation_counters()
             field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
             (* (double *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = sum;
             // Verbose
-            printf("%.2f", sum);
+            if (trap_get_verbose_level()>0) {
+               printf("%.2f", sum);
+            }
             break;
          case AGG_COUNT:
             // UniRec
             field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
             (* (uint64_t *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = count;
             // Verbose
-            printf("%" PRIu32, count);
+            if (trap_get_verbose_level()>0) {
+               printf("%" PRIu32, count);
+            }
             break;
          case AGG_AVG:
             avgtmp = count>0 ? 1.0*sum/count : 0;
@@ -307,7 +324,9 @@ int flush_aggregation_counters()
             field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
             (* (double *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = avgtmp;
             // Verbose
-            printf("%.2f", avgtmp);
+            if (trap_get_verbose_level()>0) {
+               printf("%.2f", avgtmp);
+            }
             break;
          case AGG_RATE:
             avgtmp = count>0 ? 1.0*sum/outputs[i]->rules[j]->timedb->step : 0;
@@ -315,14 +334,28 @@ int flush_aggregation_counters()
             field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
             (* (double *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = avgtmp;
             // Verbose
-            printf("%.2f", avgtmp);
+            if (trap_get_verbose_level()>0) {
+               printf("%.2f", avgtmp);
+            }
+            break;
+         case AGG_COUNT_UNIQ:
+            // UniRec
+            field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
+            (* (uint64_t *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = count;
+            // Verbose
+            if (trap_get_verbose_level()>0) {
+               printf("%" PRIu32, count);
+            }
             break;
          default:
             printf("?");
             break;
          }
       }
-      printf("\n");
+      
+      if (trap_get_verbose_level()>0) {
+         printf("\n");
+      }
       
       // Send UniRec record
       ret = trap_send(i, outputs[i]->out_rec, ur_rec_fixlen_size(outputs[i]->tpl));
@@ -470,7 +503,6 @@ rule_t *rule_create(const char *specifier, int step, int size, int inactive_time
    // construct aggregation rule object
    rule_t *object = (rule_t *) calloc(1, sizeof (rule_t));
    object->name = name;
-   object->timedb = timedb_create(step, size, inactive_timeout);
 
    // parse aggregation function
    if (!rule_parse_agg_function(agg, &object->agg, &object->agg_arg)) {
@@ -479,6 +511,8 @@ rule_t *rule_create(const char *specifier, int step, int size, int inactive_time
    }
    free(agg);
 
+   
+   object->timedb = timedb_create(step, size, inactive_timeout, object->agg == AGG_COUNT_UNIQ ? 1 : 0);
    object->filter = urfilter_prepare(filter);
    if (filter) {
       free(filter);
@@ -498,9 +532,11 @@ void rule_destroy(rule_t *object)
 {
    if (object) {
       free(object->name);
+      free(object->agg_arg);
       urfilter_destroy(object->filter);
+      timedb_free(object->timedb);
+      free(object);
    }
-   free(object);
 }
 
 // save data from record into time series
@@ -515,7 +551,7 @@ int rule_save_data(rule_t *rule, ur_template_t *tpl, const void *record)
    }
    
    ur_field_type_t field_type = ur_get_type(field_id);
-   (field_type) {
+   switch(field_type) {
    case UR_TYPE_INT8:
    case UR_TYPE_INT16:
    case UR_TYPE_INT32:
@@ -560,13 +596,11 @@ int rule_save_data(rule_t *rule, ur_template_t *tpl, const void *record)
    case AGG_COUNT:
    case AGG_AVG:
    case AGG_RATE:
+   case AGG_COUNT_UNIQ:
       while (timedb_save_data(rule->timedb, ur_get(tpl, record, F_TIME_FIRST), ur_get(tpl, record, F_TIME_LAST), field_type, value) == TIMEDB_SAVE_NEED_ROLLOUT) {
          flush_aggregation_counters();
       }
       break;
-   // set flag in hash map (or similar structure)
-//   case AGG_COUNT_UNIQ:
-//       break;
    default:
       fprintf(stderr, "Error: This couldn't happen EVER!!! Unknown aggregation type durning main loop.\n");
       return 0;
@@ -580,7 +614,7 @@ int main(int argc, char **argv)
    int ret;
 
    // ***** TRAP initialization *****
-   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
 
    // parse TRAP params
    trap_ifc_spec_t ifc_spec;
@@ -653,6 +687,7 @@ int main(int argc, char **argv)
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 1;
    }
+   trap_free_ifc_spec(ifc_spec);
 
    // check output interface counts
    if(module_info->num_ifc_out != outputs_count) {
@@ -687,6 +722,7 @@ int main(int argc, char **argv)
 
    const void *data;
    uint16_t data_size;
+   uint8_t timedb_initialized = 0;
 
    // ***** Main processing loop *****
    while (!stop) {
@@ -698,6 +734,17 @@ int main(int argc, char **argv)
       if (data_size <= 1) {
          break;
       }
+      
+      // Initialize TimeDBs synchronously
+      if (!timedb_initialized) {
+         time_t time = ur_time_get_sec(ur_get(tpl, data, F_TIME_FIRST));
+         for (int o = 0; o < outputs_count; o++) {
+            for (int i = 0; i < outputs[o]->rules_count; i++) {
+               timedb_init(outputs[o]->rules[i]->timedb, time);
+            }
+         }
+         timedb_initialized = 1;
+      }
 
       // process every output
       for (int o = 0; o < outputs_count; o++) {
@@ -707,7 +754,7 @@ int main(int argc, char **argv)
             if (urfilter_match(outputs[o]->rules[i]->filter, tpl, data)) {
                // save record data
                if (!rule_save_data(outputs[o]->rules[i], tpl, data)) {
-                  fprintf(stderr, "Error when saving aggregationn data.\n");
+                  fprintf(stderr, "Error when saving aggregation data.\n");
                   TRAP_DEFAULT_FINALIZATION();
                   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                   return 6;
@@ -730,6 +777,6 @@ int main(int argc, char **argv)
 
    ur_finalize();
    ur_free_template(tpl);
-   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
    return EXIT_SUCCESS;
 }
