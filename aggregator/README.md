@@ -21,7 +21,7 @@ This NEMEA module filters and aggregates input flows by given rules and sends th
 - `-d NUMBER`        Output is delayed by given time interval (sec). This value is necessary and should match active timeout at flow gathering (e.g. flow_meter module) plus 30 seconds. Some flows will be missed if value is too small.
 - `-I NUMBER`        When incoming flow is older then inactive timeout, all counters are trashed and reinitialized (module soft restart). Default: 900 seconds.
 - `-r STRING`        Rule defining one value to be aggregated. Whitespaces are trimmed completely. Syntax: -r "NAME:AGGREGATION_FUNCTION(FIELD)[:FILTER]"
-  - NAME ~ /^[A-Za-z_-]*$/
+  - NAME ~ /^[A-Za-z][A-Za-z0-9_]*$/
   - AGGREGATION_FUNCTION ~ /^(SUM|COUNT|AVG|RATE|COUNT_UNIQ)$/
   - FIELD ... any field present in input template
   - FILTER ... any kind of filter handled by UR Filter library (like unirecfilter module)
