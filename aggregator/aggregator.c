@@ -250,19 +250,16 @@ int flush_aggregation_counters()
    static unsigned int header_printed_before = INTMAX_MAX & 0xffffffff;
    int ret;
 
-   if (trap_get_verbose_level()>0) {
+   if (trap_get_verbose_level()>=0) {
       // print headers
       if (header_printed_before > 20) {
          header_printed_before = 0;
 
          printf("--------------------------------------------------------------------------------\n");
          for (int i = 0; i < outputs_count; i++) {
-            printf("[OUT-%02d] ", i);
+            printf("[OUT-%02d] TIME", i);
             for (int j = 0; j < outputs[i]->rules_count; j++) {
-               if (j > 0) {
-                  printf(",");
-               }
-               printf("%s", outputs[i]->rules[j]->name);
+               printf(",%s", outputs[i]->rules[j]->name);
             }
             printf("\n");
          }
@@ -288,13 +285,13 @@ int flush_aggregation_counters()
             field_id = ur_get_id_by_name("TIME");
             (* (ur_time_t *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = ur_time_from_sec_msec(time, 0);
             // Verbose
-            if (trap_get_verbose_level()>0) {
+            if (trap_get_verbose_level()>=0) {
                strftime(buff, 20, "%Y-%m-%d %H:%M:%S", gmtime(&time));
                printf("[OUT-%02d] %s", i, buff);
             }
          }
          
-         if (trap_get_verbose_level()>0) {
+         if (trap_get_verbose_level()>=0) {
             printf(",");
          }
 
@@ -305,7 +302,7 @@ int flush_aggregation_counters()
             field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
             (* (double *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = sum;
             // Verbose
-            if (trap_get_verbose_level()>0) {
+            if (trap_get_verbose_level()>=0) {
                printf("%.2f", sum);
             }
             break;
@@ -314,7 +311,7 @@ int flush_aggregation_counters()
             field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
             (* (uint64_t *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = count;
             // Verbose
-            if (trap_get_verbose_level()>0) {
+            if (trap_get_verbose_level()>=0) {
                printf("%" PRIu32, count);
             }
             break;
@@ -324,7 +321,7 @@ int flush_aggregation_counters()
             field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
             (* (double *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = avgtmp;
             // Verbose
-            if (trap_get_verbose_level()>0) {
+            if (trap_get_verbose_level()>=0) {
                printf("%.2f", avgtmp);
             }
             break;
@@ -334,7 +331,7 @@ int flush_aggregation_counters()
             field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
             (* (double *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = avgtmp;
             // Verbose
-            if (trap_get_verbose_level()>0) {
+            if (trap_get_verbose_level()>=0) {
                printf("%.2f", avgtmp);
             }
             break;
@@ -343,7 +340,7 @@ int flush_aggregation_counters()
             field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
             (* (uint64_t *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = count;
             // Verbose
-            if (trap_get_verbose_level()>0) {
+            if (trap_get_verbose_level()>=0) {
                printf("%" PRIu32, count);
             }
             break;
@@ -353,7 +350,7 @@ int flush_aggregation_counters()
          }
       }
       
-      if (trap_get_verbose_level()>0) {
+      if (trap_get_verbose_level()>=0) {
          printf("\n");
       }
       
@@ -444,10 +441,6 @@ rule_t *rule_create(const char *specifier, int step, int size, int inactive_time
    char *agg = NULL;
    char *filter = NULL;
 
-   // Nelze použít strtok(), protože:
-   // - ve stringu začínající tokenem ignoruje první část nulové délky
-   // - blbě se s ním řeší escapování tokenu
-   
    int token_start = 0;
    for (int i = 0; i <= strlen(specifier); i++) {
       // Separator or NULL byte ... token should be processed
@@ -552,6 +545,7 @@ int rule_save_data(rule_t *rule, ur_template_t *tpl, const void *record)
    
    ur_field_type_t field_type = ur_get_type(field_id);
    switch(field_type) {
+   case UR_TYPE_CHAR:
    case UR_TYPE_INT8:
    case UR_TYPE_INT16:
    case UR_TYPE_INT32:
@@ -563,15 +557,16 @@ int rule_save_data(rule_t *rule, ur_template_t *tpl, const void *record)
    case UR_TYPE_FLOAT:
    case UR_TYPE_DOUBLE:
       break;
-   case UR_TYPE_CHAR:
    case UR_TYPE_IP:
    case UR_TYPE_TIME:
+   case UR_TYPE_STRING:
+   case UR_TYPE_BYTES:
       switch(rule->agg) {
       case AGG_SUM:
       case AGG_COUNT:
       case AGG_AVG:
       case AGG_RATE:
-         fprintf(stderr, "Error: Only COUNT_UNIQ make sense with IP or TIME.\n");
+         fprintf(stderr, "Error: Only COUNT_UNIQ make sense with IP, TIME, STRING or BYTES.\n");
          fprintf(stderr, " Aggregation rule name: %s\n", rule->name);
          return 0;
          break;
@@ -580,7 +575,7 @@ int rule_save_data(rule_t *rule, ur_template_t *tpl, const void *record)
       }
       break;
    default:
-      fprintf(stderr, "Error: Unsupported type of aggregation argument (probably due to variable length).\n");
+      fprintf(stderr, "Error: Unsupported type of aggregation argument.\n");
       fprintf(stderr, " Aggregation rule name: %s\n", rule->name);
       fprintf(stderr, " Aggregation argument name: %s\n", rule->agg_arg);
       return 0;
@@ -588,6 +583,7 @@ int rule_save_data(rule_t *rule, ur_template_t *tpl, const void *record)
 
    // get record pointer
    void * value = ur_get_ptr_by_id(tpl, record, field_id);
+   int var_value_size = ur_get_var_len(tpl, record, field_id);
    
    // add flow to time series
    switch (rule->agg) {
@@ -597,7 +593,7 @@ int rule_save_data(rule_t *rule, ur_template_t *tpl, const void *record)
    case AGG_AVG:
    case AGG_RATE:
    case AGG_COUNT_UNIQ:
-      while (timedb_save_data(rule->timedb, ur_get(tpl, record, F_TIME_FIRST), ur_get(tpl, record, F_TIME_LAST), field_type, value) == TIMEDB_SAVE_NEED_ROLLOUT) {
+      while (timedb_save_data(rule->timedb, ur_get(tpl, record, F_TIME_FIRST), ur_get(tpl, record, F_TIME_LAST), field_type, value, var_value_size) == TIMEDB_SAVE_NEED_ROLLOUT) {
          flush_aggregation_counters();
       }
       break;
@@ -615,20 +611,7 @@ int main(int argc, char **argv)
 
    // ***** TRAP initialization *****
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-
-   // parse TRAP params
-   trap_ifc_spec_t ifc_spec;
-   ret = trap_parse_params(&argc, argv, &ifc_spec);
-   if (ret != TRAP_E_OK) {
-      if (ret == TRAP_E_HELP) { // "-h" was found
-         trap_print_help(module_info);
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-         return 0;
-      }
-      fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-      return 1;
-   }
+   TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
 
    // prepare first output interface
    outputs = (output_t **) calloc(MAX_OUTPUT_COUNT, sizeof (output_t *));
@@ -678,17 +661,6 @@ int main(int argc, char **argv)
       }
    }
    
-   // Initialize TRAP library (create and init all interfaces)
-   ret = trap_init(module_info, ifc_spec);
-   if (ret != TRAP_E_OK) {
-      fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
-      trap_free_ifc_spec(ifc_spec);
-      TRAP_DEFAULT_FINALIZATION();
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-      return 1;
-   }
-   trap_free_ifc_spec(ifc_spec);
-
    // check output interface counts
    if(module_info->num_ifc_out != outputs_count) {
       fprintf(stderr, "Error: Number of TRAP interfaces doesn't match number defined by rules.\n");
@@ -703,7 +675,7 @@ int main(int argc, char **argv)
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER(); // Handles SIGTERM and SIGINT
 
    // ***** Create input UniRec template *****
-   ur_template_t *tpl = ur_create_input_template(0, NULL, NULL);
+   ur_template_t *tpl = ur_create_input_template(0, "TIME_FIRST,TIME_LAST", NULL);
    if (tpl == NULL) {
       fprintf(stderr, "Error: Invalid UniRec specifier.\n");
       TRAP_DEFAULT_FINALIZATION();
@@ -730,11 +702,18 @@ int main(int argc, char **argv)
       ret = TRAP_RECEIVE(0, data, data_size, tpl);
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
 
+      if (!tpl) {
+         fprintf(stderr, "Error: Unable to get TRAP template. Perhaps name colision Rules vs Input template?\n");
+         TRAP_DEFAULT_FINALIZATION();
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+         return 4;
+      }
+      
       // Check for end-of-stream message
       if (data_size <= 1) {
          break;
       }
-      
+
       // Initialize TimeDBs synchronously
       if (!timedb_initialized) {
          time_t time = ur_time_get_sec(ur_get(tpl, data, F_TIME_FIRST));

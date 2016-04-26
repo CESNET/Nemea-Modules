@@ -49,6 +49,7 @@
 #include <math.h>
 #include <b_plus_tree.h>
 #include <unirec/ipaddr.h>
+#include <openssl/md5.h>
 
 // -------- Useful definitions -------------
 
@@ -116,6 +117,28 @@ int compare_md5(void * a, void * b) {
    }
 }
 
+// -------- Helper functions -------------
+
+char *get_md5_hash(const void * value, int value_size) {
+   MD5_CTX ctx;
+   char *digest = (char *) calloc(16, sizeof(char));
+
+   MD5_Init(&ctx);
+   while (value_size > 0) {
+      if (value_size > 512) {
+         MD5_Update(&ctx, value, 512);
+      } else {
+         MD5_Update(&ctx, value, value_size);
+      }
+      value_size -= 512;
+      value += 512;
+   }
+
+   MD5_Final((unsigned char *)digest, &ctx);
+
+   return digest;
+}
+
 // -------- TimeDB main code -------------
 
 timedb_t * timedb_create(int step, int delay, int inactive_timeout, int count_uniq)
@@ -160,62 +183,49 @@ void timedb_init_tree(timedb_t *timedb, ur_field_type_t value_type) {
    if (timedb->count_uniq == 1 && !timedb->initialized) { // count will be counted as unique values
       timedb->value_type = value_type;
       for (int i=0; i<timedb->size; i++) {
+         timedb->b_tree_key_size = ur_get_size(timedb->value_type);
          switch (timedb->value_type) {
          case UR_TYPE_CHAR:
          case UR_TYPE_UINT8:
             timedb->b_tree_compare = &compare_uint8_t;
-            timedb->b_tree_key_size = 1;
             break;
          case UR_TYPE_INT8:
             timedb->b_tree_compare = &compare_uint8_t;
-            timedb->b_tree_key_size = 1;
             break;
          case UR_TYPE_UINT16:
             timedb->b_tree_compare = &compare_uint16_t;
-            timedb->b_tree_key_size = 2;
             break;
          case UR_TYPE_INT16:
             timedb->b_tree_compare = &compare_int16_t;
-            timedb->b_tree_key_size = 2;
             break;
          case UR_TYPE_UINT32:
             timedb->b_tree_compare = &compare_uint32_t;
-            timedb->b_tree_key_size = 4;
             break;
          case UR_TYPE_INT32:
             timedb->b_tree_compare = &compare_int32_t;
-            timedb->b_tree_key_size = 4;
             break;
          case UR_TYPE_FLOAT:
             timedb->b_tree_compare = &compare_float;
-            timedb->b_tree_key_size = 4;
             break;
          case UR_TYPE_UINT64:
             timedb->b_tree_compare = &compare_uint64_t;
-            timedb->b_tree_key_size = 8;
             break;
          case UR_TYPE_INT64:
             timedb->b_tree_compare = &compare_int64_t;
-            timedb->b_tree_key_size = 8;
             break;
          case UR_TYPE_DOUBLE:
             timedb->b_tree_compare = &compare_double;
-            timedb->b_tree_key_size = 8;
             break;
          case UR_TYPE_TIME:
             timedb->b_tree_compare = &compare_ur_time_t;
-            timedb->b_tree_key_size = 8;
             break;
          case UR_TYPE_IP:
             timedb->b_tree_compare = &compare_ip_addr_t;
-            timedb->b_tree_key_size = 16;
             break;
          case UR_TYPE_STRING:
          case UR_TYPE_BYTES:
-            // @TODO compute md5 hash of value and insert it into B+ tree (16B long value)
-            //timedb->b_tree_compare = &compare_md5;
-            //timedb->b_tree_key_size = 16;
-            fprintf(stderr, "Implementation error: Handling UNIQ counts of UR_String or UR_Bytes is not yet supported.\n");
+            timedb->b_tree_compare = &compare_md5;
+            timedb->b_tree_key_size = 16;
             break;
          }
          timedb->data[i]->b_plus_tree = b_plus_tree_initialize(TIMEDB__B_PLUS_TREE__LEAF_ITEM_NUMBER, timedb->b_tree_compare, 0, timedb->b_tree_key_size);
@@ -224,7 +234,7 @@ void timedb_init_tree(timedb_t *timedb, ur_field_type_t value_type) {
    }
 }
 
-int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_field_type_t value_type, void * value_ptr)
+int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_field_type_t value_type, void * value_ptr, int var_value_size)
 {
    // get first and last time seen
    time_t first_sec = ur_time_get_sec(urfirst);
@@ -282,11 +292,18 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
    default:
       if (timedb->count_uniq) {
          value = 0;
+         if (value_type == UR_TYPE_STRING || value_type == UR_TYPE_BYTES) {
+            // @TODO Shall we allow saving zero length UR_STRING and UR_BYTES ??? Or it should be ignored as empty = nothing ?
+            //if (var_value_size <= 0) {
+            //   fprintf(stderr, "Warning: Saving zero-length string into TimeDB.\n");
+            //}
+            value_ptr = get_md5_hash(value_ptr, var_value_size);
+         }
       } else {
-         fprintf(stderr, "Error: Trying to save unsupported value into TimeDB.");
+         fprintf(stderr, "Error: Trying to save unsupported value into TimeDB.\n");
          return TIMEDB_SAVE_ERROR;
-         break;
       }
+      break;
    }
    
    double value_per_sec = 1.0 * value / (1.0*(last_sec-first_sec) + 1.0*(last_msec-first_msec)/1000 );
@@ -320,6 +337,11 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
             rolling_data(timedb, i)->count += 1;
          }
       }
+   }
+
+   // Free md5 hash if is was computed
+   if (var_value_size > 0 && value_ptr) {
+      free(value_ptr);
    }
    
    // check if record starts before database

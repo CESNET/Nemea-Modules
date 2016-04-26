@@ -89,7 +89,7 @@ void timedb_init(timedb_t *timedb, time_t first);
 
 void timedb_init_tree(timedb_t *timedb, ur_field_type_t value_type);
 
-int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_field_type_t value_type, void * value);
+int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_field_type_t value_type, void * value, int var_value_size);
 
 void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count);
 
