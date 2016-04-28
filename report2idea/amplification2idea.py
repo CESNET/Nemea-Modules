@@ -34,12 +34,13 @@ def convert_to_idea(rec, opts=None):
         "Format": "IDEA0",
         "ID": getRandomId(),
         "CreateTime": getIDEAtime(), # Set current time
-            "EventTime": getIDEAtime(rec.TIME_FIRST),
+        "EventTime": getIDEAtime(rec.TIME_FIRST),
         "CeaseTime": endTime,
         "DetectTime": endTime,
         "Type": [ "Flow", "Statistical" ],
         "Category": [ "Availibility.DDoS" ],
         "Source": [{
+            'Type': ['Backscatter'],
             'InFlowCount': rec.REQ_FLOWS,
             'InPacketCount': rec.REQ_PACKETS,
             'InByteCount': rec.REQ_BYTES,
