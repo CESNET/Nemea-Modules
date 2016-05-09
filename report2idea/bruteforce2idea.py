@@ -67,7 +67,7 @@ def convert_to_idea(rec, opts=None):
             "Proto": [ proto_conv[rec.PROTOCOL], service.lower() ] if service else [ proto_conv[rec.PROTOCOL] ]
          }],
         "Target": [{
-            "Port": rec.DST_PORT,
+            "Port": [rec.DST_PORT],
             "Proto": [ proto_conv[rec.PROTOCOL], service.lower() ] if service else [ proto_conv[rec.PROTOCOL] ]
          }],
         'Node': [{
