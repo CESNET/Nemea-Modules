@@ -505,7 +505,7 @@ rule_t *rule_create(const char *specifier, int step, int size, int inactive_time
    free(agg);
 
    object->timedb = timedb_create(step, size, inactive_timeout, object->agg == AGG_COUNT_UNIQ ? 1 : 0);
-   object->filter = urfilter_prepare(filter);
+   object->filter = urfilter_create(filter);
    if (filter) {
       free(filter);
    }
@@ -516,7 +516,7 @@ rule_t *rule_create(const char *specifier, int step, int size, int inactive_time
 void rule_compile(rule_t *object)
 {
    if (object && object->filter) {
-      urfilter_compile_prepared(object->filter);
+      urfilter_compile(object->filter);
    }
 }
 

@@ -621,7 +621,7 @@ void changeProtocol(struct ast **ast)
    case NODE_T_EXPRESSION_FP:
       return;
    case NODE_T_PROTOCOL:
-      proto = getprotobyname(((struct protocol*) (*ast))->data);
+      proto = getprotobyname(((struct protocol *) (*ast))->data);
       if (proto != NULL) {
          protocol = proto->p_proto;
       } else {

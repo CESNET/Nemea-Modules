@@ -358,7 +358,7 @@ float, double, ipaddr, string, bytes\n");
       }
 
       // Get Abstract syntax tree from filter
-      output_specifiers[i]->filter = urfilter_compile(output_specifiers[i]->filter_str);
+      output_specifiers[i]->filter = urfilter_create(output_specifiers[i]->filter_str);
 
       // Calculate maximum needed memory for dynamic fields
       ur_field_id_t field_id = UR_ITER_BEGIN;

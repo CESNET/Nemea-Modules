@@ -54,7 +54,7 @@
 #include "functions.h"
 #include "liburfilter.h"
 
-urfilter_t * urfilter_prepare(const char * filter_str)
+urfilter_t * urfilter_create(const char * filter_str)
 {
    // allocate filter structure
    urfilter_t * unirec_filter = (urfilter_t *) calloc(1, sizeof (urfilter_t));
@@ -66,7 +66,7 @@ urfilter_t * urfilter_prepare(const char * filter_str)
    return unirec_filter;
 }
 
-int urfilter_compile_prepared(urfilter_t * unirec_filter)
+int urfilter_compile(urfilter_t * unirec_filter)
 {
    // @TODO Verify if template is present in global context (filter keywords MUST be known before compile)
 
@@ -81,18 +81,10 @@ int urfilter_compile_prepared(urfilter_t * unirec_filter)
    return 0;
 }
 
-urfilter_t * urfilter_compile(const char * filter_str)
-{
-   urfilter_t * unirec_filter = urfilter_prepare(filter_str);
-   urfilter_compile_prepared(unirec_filter);
-
-   return unirec_filter;
-}
-
 int urfilter_match(urfilter_t * unirec_filter, const ur_template_t * template, const void * record)
 {
    if (!unirec_filter->tree && unirec_filter->filter) {
-      urfilter_compile_prepared(unirec_filter);
+      urfilter_compile(unirec_filter);
    }
    
    // empty filter means always TRUE

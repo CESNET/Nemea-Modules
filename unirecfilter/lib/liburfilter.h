@@ -56,11 +56,9 @@ typedef struct urfilter_s {
    void * tree;
 } urfilter_t;
 
-urfilter_t * urfilter_prepare(const char * filter_str);
+urfilter_t * urfilter_create(const char * filter_str);
 
-int urfilter_compile_prepared(urfilter_t * unirec_filter);
-
-urfilter_t * urfilter_compile(const char * filter_str);
+int urfilter_compile(urfilter_t * unirec_filter);
 
 int urfilter_match(urfilter_t * unirec_filter, const ur_template_t * template, const void * record);
 
