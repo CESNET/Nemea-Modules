@@ -51,15 +51,29 @@
 
 // ------- CONFIGURATION -----------
 
+/*!
+ * \name Configuration variables
+ *  Used to set number of items in B+ tree leaves
+ * \{ */
 #define TIMEDB__B_PLUS_TREE__LEAF_ITEM_NUMBER 8
+ /* /} */
 
 // -------- DEFINITIONS ------------
 
+/*!
+ * \name Return values definitions
+ *  Specifies possible return values of TimeDB_Save() function
+ * \{ */
 #define TIMEDB_SAVE_ERROR -1
 #define TIMEDB_SAVE_OK 0
 #define TIMEDB_SAVE_NEED_ROLLOUT 1
 #define TIMEDB_SAVE_FLOW_TRUNCATED 2
+ /* /} */
 
+/*!
+ * \brief Time series structure
+ * Structure to keep calculated values for time series in TimeDB
+ */
 typedef struct time_series_s {
     time_t begin;
     time_t end;
@@ -68,6 +82,10 @@ typedef struct time_series_s {
     void *b_plus_tree;
 } time_series_t;
 
+/*!
+ * \brief TimeDB structure
+ * Structure describing internal state of TimeDB
+ */
 typedef struct timedb_s {
    int step;
    int size;
@@ -83,16 +101,62 @@ typedef struct timedb_s {
    uint8_t initialized;
 } timedb_t;
 
+/*!
+ * \brief Creates TimeDB strucutre
+ * Creates structure of TimeDB and initializes internal series
+ * \param[in] step interval of single time step
+ * \param[in] delay interval of total database delay
+ * \param[in] inactive_timeout database is reinitialized when no data is saved within given timeout
+ * \param[in] count_uniq positive number specifies that only unique values shall be counted (using B+ trees)
+ * \return pointer to created stucture
+ */
 timedb_t * timedb_create(int step, int delay, int inactive_timeout, int count_uniq);
 
+/*!
+ * \brief Initializes TimeDB
+ * Clears and initializes whole TimeDB to start with given time
+ * \param[in] timedb_t pointer to TimeDB structure
+ * \param[in] first time of first time series in DB
+ */
 void timedb_init(timedb_t *timedb, time_t first);
 
+/*!
+ * \brief Initializes structure for unique counting
+ * Creates B+ trees with key-size related to given UR Field Type
+ * \param[in] timedb_t pointer to TimeDB structure
+ * \param[in] value_type type of values to be inserted in TimeDB
+ */
 void timedb_init_tree(timedb_t *timedb, ur_field_type_t value_type);
 
+/*!
+ * \brief Saves data into TimeDB
+ * Function to save data into database if there it's not overflowing. Otherwise
+ * until database is rolled out
+ * \param[in] timedb_t pointer to TimeDB structure
+ * \param[in] utfirst UR Time value of flow begin
+ * \param[in] urlast UR Time value of flow end
+ * \param[in] value_type Type of value to be saved
+ * \param[in] value pointer to value to save
+ * \param[in] var_value_size size of variable-length value (if suitable)
+ * \return Return value. Possible values are constants TIMEDB_SAVE_* 
+ */
 int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_field_type_t value_type, void * value, int var_value_size);
 
+/*!
+ * \brief Gets values from TimeDB
+ * Extracts values from oldest time series in database and frees it for next one
+ * \param[in] timedb_t pointer to TimeDB structure
+ * \param[out] time beginning time of extracted time series
+ * \param[out] sum extracted summary value
+ * \param[out] count extracted count value
+ */
 void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count);
 
+/*!
+ * \brief Free TimeDB structure
+ * Function which frees all used memory and structures
+ * \param[in] timedb_t pointer to TimeDB structure
+ */
 void timedb_free(timedb_t *timedb);
 
 #endif /* TIMEDB_H */
