@@ -504,7 +504,6 @@ rule_t *rule_create(const char *specifier, int step, int size, int inactive_time
    }
    free(agg);
 
-   
    object->timedb = timedb_create(step, size, inactive_timeout, object->agg == AGG_COUNT_UNIQ ? 1 : 0);
    object->filter = urfilter_prepare(filter);
    if (filter) {
@@ -583,7 +582,17 @@ int rule_save_data(rule_t *rule, ur_template_t *tpl, const void *record)
 
    // get record pointer
    void * value = ur_get_ptr_by_id(tpl, record, field_id);
-   int var_value_size = ur_get_var_len(tpl, record, field_id);
+   int var_value_size;
+
+   switch(field_type){
+   case UR_TYPE_STRING:
+   case UR_TYPE_BYTES:
+      var_value_size = ur_get_var_len(tpl, record, field_id);
+      break;
+   default:
+      var_value_size = 0;
+      break;
+   }
    
    // add flow to time series
    switch (rule->agg) {

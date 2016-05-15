@@ -183,44 +183,55 @@ void timedb_init_tree(timedb_t *timedb, ur_field_type_t value_type) {
    if (timedb->count_uniq == 1 && !timedb->initialized) { // count will be counted as unique values
       timedb->value_type = value_type;
       for (int i=0; i<timedb->size; i++) {
-         timedb->b_tree_key_size = ur_get_size(timedb->value_type);
          switch (timedb->value_type) {
          case UR_TYPE_CHAR:
          case UR_TYPE_UINT8:
             timedb->b_tree_compare = &compare_uint8_t;
+            timedb->b_tree_key_size = 1;
             break;
          case UR_TYPE_INT8:
             timedb->b_tree_compare = &compare_uint8_t;
+            timedb->b_tree_key_size = 1;
             break;
          case UR_TYPE_UINT16:
             timedb->b_tree_compare = &compare_uint16_t;
+            timedb->b_tree_key_size = 2;
             break;
          case UR_TYPE_INT16:
             timedb->b_tree_compare = &compare_int16_t;
+            timedb->b_tree_key_size = 2;
             break;
          case UR_TYPE_UINT32:
             timedb->b_tree_compare = &compare_uint32_t;
+            timedb->b_tree_key_size = 4;
             break;
          case UR_TYPE_INT32:
             timedb->b_tree_compare = &compare_int32_t;
+            timedb->b_tree_key_size = 4;
             break;
          case UR_TYPE_FLOAT:
             timedb->b_tree_compare = &compare_float;
+            timedb->b_tree_key_size = 4;
             break;
          case UR_TYPE_UINT64:
             timedb->b_tree_compare = &compare_uint64_t;
+            timedb->b_tree_key_size = 8;
             break;
          case UR_TYPE_INT64:
             timedb->b_tree_compare = &compare_int64_t;
+            timedb->b_tree_key_size = 8;
             break;
          case UR_TYPE_DOUBLE:
             timedb->b_tree_compare = &compare_double;
+            timedb->b_tree_key_size = 8;
             break;
          case UR_TYPE_TIME:
             timedb->b_tree_compare = &compare_ur_time_t;
+            timedb->b_tree_key_size = 8;
             break;
          case UR_TYPE_IP:
             timedb->b_tree_compare = &compare_ip_addr_t;
+            timedb->b_tree_key_size = 16;
             break;
          case UR_TYPE_STRING:
          case UR_TYPE_BYTES:
