@@ -38,7 +38,7 @@ def convert_to_idea(rec, opts=None):
         "CeaseTime": endTime,
         "DetectTime": endTime,
         "Type": [ "Flow", "Statistical" ],
-        "Category": [ "Availibility.DDoS" ],
+        "Category": [ "Availability.DDoS" ],
         "Source": [{
             'Type': ['Backscatter'],
             'InFlowCount': rec.REQ_FLOWS,
