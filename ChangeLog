@@ -1,6 +1,17 @@
+2016-06-03 Nemea-modules-2.3.6
+        * logger:
+		improved error messages
+		changed order of functions during initialization
+	* bruteforce2idea:
+		bugfix
+	* amplification2idea.py:
+		added "Source.Type"="Backscatter"
+
 2016-04-14 Nemea-modules-2.3.5
-        * nfdump_reader: fixed timestamps when libnf is used
-	* Anonymizer: removed progress printing, disabled strict-aliasing
+        * nfdump_reader: 
+		fixed timestamps when libnf is used
+	* Anonymizer: 
+		removed progress printing, disabled strict-aliasing
 
 
 2016-04-03 Nemea-modules-2.3.4
