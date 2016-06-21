@@ -23,12 +23,13 @@ addons:
       - ubuntu-toolchain-r-test
     packages:
       - gcc-multilib
-      - gcc-c++
+      - gcc
+      - g++
       - autoconf
       - pkg-config
       - make
       - automake
-      - libxml2-devel
+      - libxml2-dev
       - libxml2
       - python
   coverity_scan:
