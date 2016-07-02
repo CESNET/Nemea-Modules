@@ -11,7 +11,7 @@ from report2idea import *
 # Moudle name, description and required input data format
 MODULE_NAME = "vportscan2idea"
 MODULE_DESC = "Converts output of vportscan detector (vertical scans) to IDEA."
-REQ_TYPE = trap.TRAP_FMT_UNIREC
+REQ_TYPE = pytrap.FMT_UNIREC
 REQ_FORMAT = "ipaddr DST_IP,ipaddr SRC_IP,uint32 PORT_CNT,time TIME_FIRST,time TIME_LAST,uint16 DST_PORT,uint16 SRC_PORT,uint8 EVENT_TYPE,uint8 PROTOCOL"
 
 # Main conversion function
