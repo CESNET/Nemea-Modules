@@ -11,7 +11,7 @@ from report2idea import *
 # Moudle name, description and required input data format
 MODULE_NAME = "haddrscan2idea"
 MODULE_DESC = "Converts output of haddrscan detector (horizontal scans) to IDEA."
-REQ_TYPE = trap.TRAP_FMT_UNIREC
+REQ_TYPE = pytrap.FMT_UNIREC
 REQ_FORMAT = "ipaddr SRC_IP,uint32 ADDR_CNT,time TIME_FIRST,time TIME_LAST,uint8 EVENT_TYPE,uint8 PROTOCOL"
 
 # Main conversion function

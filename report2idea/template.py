@@ -14,7 +14,7 @@ from report2idea import *
 MODULE_NAME = "something2idea" # TODO name of this reporter
 MODULE_DESC = "Converts output of SOME_MODULE module to IDEA." # TODO name of detection module
 
-REQ_TYPE = trap.TRAP_FMT_UNIREC
+REQ_TYPE = pytrap.FMT_UNIREC
 REQ_FORMAT = "" # TODO Put the string of required fields or specifier
 
 # Main conversion function

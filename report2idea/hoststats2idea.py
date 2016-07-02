@@ -13,7 +13,7 @@ import re
 # Module parameters
 MODULE_NAME = "hoststats2idea"
 MODULE_DESC = "Converts output of HostStatsNemea module to IDEA."
-REQ_TYPE = trap.TRAP_FMT_UNIREC
+REQ_TYPE = pytrap.FMT_UNIREC
 REQ_FORMAT = "uint8 EVENT_TYPE,time TIME_FIRST,time TIME_LAST,ipaddr SRC_IP,ipaddr DST_IP,uint16 SRC_PORT,uint16 DST_PORT,uint8 PROTOCOL,uint32 EVENT_SCALE,string NOTE"
 
 # Event type contants (from old "unirec/fields" file)

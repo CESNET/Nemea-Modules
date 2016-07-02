@@ -14,7 +14,7 @@ from report2idea import *
 MODULE_NAME = "ipblacklist2idea"
 MODULE_DESC = "Converts output of ipblacklistfilter module to IDEA."
 
-REQ_TYPE = trap.TRAP_FMT_UNIREC
+REQ_TYPE = pytrap.FMT_UNIREC
 REQ_FORMAT = "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,uint64 DST_BLACKLIST,uint64 SRC_BLACKLIST,time TIME_FIRST,time TIME_LAST,uint32 EVENT_SCALE,uint32 PACKETS"
 
 

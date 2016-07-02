@@ -15,7 +15,7 @@ from report2idea import *
 # Moudle name, description and required input data format
 MODULE_NAME = "amplification2idea"
 MODULE_DESC = "Converts output of amplification_detection module to IDEA."
-REQ_TYPE = trap.TRAP_FMT_UNIREC
+REQ_TYPE = pytrap.FMT_UNIREC
 REQ_FORMAT = "ipaddr DST_IP,ipaddr SRC_IP,uint64 REQ_BYTES,uint64 RSP_BYTES,time TIME_FIRST,time TIME_LAST,uint32 EVENT_ID,uint32 REQ_FLOWS,uint32 REQ_PACKETS,uint32 RSP_FLOWS,uint32 RSP_PACKETS,uint16 SRC_PORT"
 
 # Main conversion function

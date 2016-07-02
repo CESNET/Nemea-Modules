@@ -15,7 +15,7 @@ import socket
 MODULE_NAME = "bruteforce2idea"
 MODULE_DESC = "Converts output of brute_force_detector module to IDEA."
 
-REQ_TYPE = trap.TRAP_FMT_UNIREC
+REQ_TYPE = pytrap.FMT_UNIREC
 REQ_FORMAT = "ipaddr SRC_IP,time DETECTION_TIME,uint32 EVENT_SCALE,uint16 DST_PORT,uint8 PROTOCOL,uint8 WARDEN_TYPE"
 
 # Auxiliary function

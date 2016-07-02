@@ -13,7 +13,7 @@ from report2idea import *
 # Moudle name, description and required input data format
 MODULE_NAME = "voipfraud2idea"
 MODULE_DESC = "Converts output of voip_fraud_detection module to IDEA."
-REQ_TYPE = trap.TRAP_FMT_UNIREC
+REQ_TYPE = pytrap.FMT_UNIREC
 REQ_FORMAT = "ipaddr DST_IP,ipaddr SRC_IP,time DETECTION_TIME,time TIME_FIRST,uint32 EVENT_ID,uint32 VOIP_FRAUD_INVITE_COUNT,uint32 VOIP_FRAUD_PREFIX_EXAMINATION_COUNT,uint32 VOIP_FRAUD_SUCCESSFUL_CALL_COUNT,uint16 VOIP_FRAUD_PREFIX_LENGTH,uint8 EVENT_TYPE,string VOIP_FRAUD_COUNTRY_CODE,string VOIP_FRAUD_SIP_FROM,string VOIP_FRAUD_SIP_TO,string VOIP_FRAUD_USER_AGENT"
 
 # Main conversion function
