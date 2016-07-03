@@ -4,7 +4,7 @@ import sys
 import os.path
 import pytrap
 import json
-import optparse # TODO change TRAP Python wrapper to use argparse
+import optparse
 
 from optparse import OptionParser
 parser = OptionParser(add_help_option=False)

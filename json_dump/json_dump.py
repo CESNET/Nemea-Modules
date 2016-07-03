@@ -4,7 +4,7 @@ import sys
 import os.path
 import pytrap
 import json
-import optparse # TODO change TRAP Python wrapper to use argparse
+import optparse
 
 from optparse import OptionParser
 parser = OptionParser(add_help_option=False)
@@ -16,6 +16,8 @@ parser.add_option("-a", dest="filename_append",
     help="Write dump to FILE instead of stdout (append to file)", metavar="FILE")
 parser.add_option("-I", "--indent", metavar="N", type=int,
     help="Pretty-print JSON with indentation set to N spaces. Note that such format can't be read by json_replay module.")
+parser.add_option("-v", "--verbose", action="store_true",
+    help="Set verbose mode - print messages.")
 
 # Parse remaining command-line arguments
 (options, args) = parser.parse_args()
@@ -48,7 +50,8 @@ while not stop:
         sys.stderr.write("Error: output and input interfaces data type or format mismatch\n")
         break
     except pytrap.FormatChanged as e:
-        # TODO: if verbose print message about new format
+        if options.verbose:
+            print(trap.getDataFmt(0))
         data = e.data
         del(e)
         pass
@@ -62,6 +65,8 @@ while not stop:
     try:
         # Decode data (and check it's valid JSON)
         rec = json.loads(data.decode("utf-8"))
+        if options.verbose:
+            print("Message: {}".format(rec))
         # Print it to file or stdout
         file.write(json.dumps(rec, indent=options.indent) + '\n')
     except ValueException:
