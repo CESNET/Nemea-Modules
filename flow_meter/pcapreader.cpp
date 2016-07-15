@@ -76,19 +76,6 @@ using namespace std;
 #define DEBUG_CODE(code)
 #endif
 
-/**
- * \brief Swap an IPv6 address bytes.
- */
-inline void swapbytes128(char *x)
-{
-   char tmp;
-   for (int i = 0; i < 8; i++) {
-      tmp = x[i];
-      x[i] = x[15 - i];
-      x[15 - i] = tmp;
-   }
-}
-
 #ifdef DEBUG
 static uint32_t s_total_pkts = 0;
 #endif /* DEBUG */
@@ -149,8 +136,8 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
       pkt.ipClassOfService = ip->tos;
       pkt.ipLength = ntohs(ip->tot_len);
       pkt.ipTtl = ip->ttl;
-      pkt.sourceIPv4Address = ntohl(ip->saddr);
-      pkt.destinationIPv4Address = ntohl(ip->daddr);
+      pkt.sourceIPv4Address = ip->saddr;
+      pkt.destinationIPv4Address = ip->daddr;
       pkt.packetFieldIndicator |= PCKT_IPV4_MASK;
 
       transport_proto = ip->protocol;
@@ -181,9 +168,6 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
       memcpy(pkt.sourceIPv6Address, (const char *)&ip6->ip6_src, 16);
       memcpy(pkt.destinationIPv6Address, (const char *)&ip6->ip6_dst, 16);
       pkt.packetFieldIndicator |= PCKT_IPV6_MASK;
-
-      swapbytes128(pkt.sourceIPv6Address);
-      swapbytes128(pkt.destinationIPv6Address);
 
       transport_proto = ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;
       payload_len = ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);   //TODO: IPv6 Extension header
