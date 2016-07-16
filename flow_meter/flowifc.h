@@ -123,7 +123,8 @@ enum extTypeEnum {
    http_request = 0,
    http_response,
    dns,
-   sip
+   sip,
+   ntp
    /* Add extension header identifiers for your plugins here */
 };
 
