@@ -185,6 +185,7 @@ AC_CONFIG_FILES([Makefile
                  report2idea/Makefile
                  traffic_repeater/Makefile
                  unirecfilter/Makefile
+                 endiverter/Makefile
                ])
 
 AC_SUBST(RPM_REQUIRES)
