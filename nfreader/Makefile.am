@@ -13,3 +13,8 @@ AM_CPPFLAGS=-DHAVE_LIBNFDUMP=1
 endif
 
 nfdump_reader_test_CXXFLAGS=-Wno-write-strings
+
+EXTRA_DIST=README.md
+pkgdocdir=${docdir}/nfreader
+pkgdoc_DATA=README.md
+

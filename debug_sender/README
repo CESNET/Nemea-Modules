@@ -1,0 +1,59 @@
+DebugSender
+
+Author: Vaclav Bartos <ibartosv@fit.vutbr.cz>
+        Jan Wrona <xwrona00@stud.fit.vutbr.cz>
+        Tomas Cejka <cejkat@cesnet.cz>
+
+Goal: Provide a way to manually send UniRec records.
+
+Inputs: --
+Outputs: 1 (any UniRec, format is given on command-line)
+
+Usage:
+   python debug_sender.py -i IFC_SPEC UNIREC_FORMAT
+
+Example:
+   python debug_sender.py -i u:test "uint32 FOO,time BAR,ipaddr BAZ"
+
+-------------------------------------------------------
+
+The module, intended for debugging purposes, allows to manually create and send arbitrary UniRec records to TRAP interface.
+
+When the module is started, an UniRec record is created with all fields set to zero. Format of the UniRec is given by parametr.
+
+Then a simple command-line can be used execute the following commands:
+  'print' 'p'  Print current contents of the record.
+  'edit'  'e'  Edit values of all fields of the record.
+  'send'  's'  Send the record to the output interface.
+               To send multiple records, put an integer number after the
+               command, e.g. 's 5' to send 5 records.
+  'help'  'h'  Print this help.
+  'exit'  'x'  Exit the Debug Sender
+
+Records are sent using blocking send (TRAP_WAIT), buffering is disabled.
+
+When editing the record, you will be asked for values of all fields. If you leave the field empty (i.e. just hit enter), the old value (shown in brackets) will be used.
+
+If you press Ctrl-C, any pending send is interrupted and TRAP interface is terminated, but the module doesn't exit. If you want, you can reinitialize TRAP and continue.
+
+Special edit values:
+  In addition to regular values you can specify a few special values allowing
+  to set new value of a field relatively to its current value. They can be
+  divided into edit-time and send-time. Edit-time rules are executed once,
+  rigtht after you insert them. Send-time rules are stored and executed every
+  time before the record is sent. For instance command "s 5" causes a send-time
+  rule to be executed five times.
+
+  Special symbols are "!", "now", "+" and "-" and have to be specified in following order:
+    1. !     save/update rule as send-time (when no symbol/value follows, current rule is removed)
+    2. now   set time to currect system time (applicable only to timestamps)
+    3. +/-   add/subtract X to/from value (for timestamps the value is number of seconds)
+
+
+  Examples:
+    +10, -5, +1.1.1.1 /* edit-time addition, substraction */
+    now, now-5, now+10 /* edit-time timestamp manipulation */
+
+    !+10, !+5, !-1.1.1.1 /* send-time addition, subtraction */
+    !now, !now-3, !now+8 /* send-time timestamp manipulation */
+    ! /* send-time rule removal */

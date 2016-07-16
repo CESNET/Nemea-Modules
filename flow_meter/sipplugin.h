@@ -82,6 +82,7 @@
 #define SIP_MSG_TYPE_REQ_CANCELED   487
 #define SIP_MSG_TYPE_INTERNAL_ERR   500
 #define SIP_MSG_TYPE_DECLINE        603
+#define SIP_MSG_TYPE_UNDEFINED      999
 
 /* Mininum length of SIP message: */
 #define SIP_MIN_MSG_LEN     64
@@ -125,6 +126,8 @@
 #define SIP_NOT_NOTIFY1 0x2a205946	/* * YF */
 #define SIP_NOT_NOTIFY2 0x54544820	/* TTH  */
 
+#define SIP_NOT_OPTIONS1 0x20534e4f	/*  SNO */
+#define SIP_NOT_OPTIONS2 0x3a706973	/* :sip */
 /*
  * SIP fields table - these patterns are used to quickly
  * detect necessary SIP fields.

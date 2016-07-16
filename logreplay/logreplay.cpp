@@ -48,6 +48,8 @@
 #include <config.h>
 #endif
 
+#include <unirec/unirec.h>
+
 #include <inttypes.h>
 #include <iostream>
 #include <sstream>
@@ -58,7 +60,6 @@
 #include <signal.h>
 #include <getopt.h>
 #include <libtrap/trap.h>
-#include <unirec/unirec.h>
 #include <map>
 #include "fields.h"
 
@@ -384,7 +385,7 @@ exit:
       ur_free_record(data);
       data = NULL;
    }
-
+   ur_finalize();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    return ret;

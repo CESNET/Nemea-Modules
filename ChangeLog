@@ -1,41 +1,71 @@
-2014-07-29 Nemea-2.0
-	
-	* Added components:
-		blacklistfilter
-		debug_sender
-		dns_amplification
+2016-06-03 Nemea-modules-2.3.6
+        * logger:
+		improved error messages
+		changed order of functions during initialization
+	* bruteforce2idea:
+		bugfix
+	* amplification2idea.py:
+		added "Source.Type"="Backscatter"
+
+2016-04-14 Nemea-modules-2.3.5
+        * nfdump_reader: 
+		fixed timestamps when libnf is used
+	* Anonymizer: 
+		removed progress printing, disabled strict-aliasing
+
+
+2016-04-03 Nemea-modules-2.3.4
+        * report2idea dnstunnel bugfixed
+	* flow_meter bugfixed
+
+
+2016-03-20 Nemea-modules-2.3.3
+        * flow_meter sip plugin bugfixed - no longer causes segfault
+	* many smaller bugfixes
+
+
+2016-03-16 Nemea-modules-2.3.2
+        * debug_sender can now be installed properly
+	* added install README for:
+		nfreader
 		email_reporter
-		heartbleed_detector
-		ipspoofingdetector
-		ipv6stats
+		debug_sender
+		merger
+
+2016-03-14 Nemea-modules-2.3.1
+        * Added modules:
+		reporter for brute_force_detector
+        * bugfixes
+
+2016-03-10 Nemea-modules-2.3
+        * Added modules:
+		reporter for ipblacklistfilter
+	* documentation for creating flow_meter plugins
+	* bugfixes
+
+
+2016-02-28 Nemea-modules-2.2
+	* Added modules:
+		reporters to idea
+		email_reporter
+		json_dump
+		json_replay
+	* added test of repoeters
+	* bugfixes
+
+
+2016-02-16 Nemea-modules-2.1
+
+	* Contained modules:
+		anonymizer
+		debug_sender
+		flow_meter
+		flowcounter
+		logger
 		logreplay
 		merger
 		nfreader
-		protocolcounters
-		python_example
-		report_handler
-		supervisor
+		report2idea
 		traffic_repeater
-		tunnel_detection
-		python wrapper
-	* Removed components:
-		script (replaced by supervisor)
-
-2014-01-16 Nemea-1.0
-
-	* Added components:
-		anonymizer
-		astute
-		entropy_module
-		example
-		flowcounter
-		flowdirection
-		hoststatsnemea
-		logger
-		pca
-		script
-		transitfilter
-		trapdump
-		trapreplay
-		unirec
+		unirecfilter
 

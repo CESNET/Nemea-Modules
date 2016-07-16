@@ -1,6 +1,10 @@
+include ../aminclude.am
+
 bin_PROGRAMS=merger
 merger_SOURCES=merger.c fields.c fields.h
 merger_LDADD=-lunirec -ltrap
-merger_CFLAGS=-fopenmp
-merger_LDFLAGS=-fopenmp
-include ../aminclude.am
+merger_CFLAGS=${OPENMP_CFLAGS}
+
+EXTRA_DIST=README.md
+pkgdocdir=${docdir}/merger
+pkgdoc_DATA=README.md

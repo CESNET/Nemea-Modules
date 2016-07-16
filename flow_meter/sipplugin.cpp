@@ -151,12 +151,18 @@ uint16_t SIPPlugin::parse_msg_type(const Packet &pkt)
       case SIP_INVITE:
          return SIP_MSG_TYPE_INVITE;
       case SIP_OPTIONS:
-         return SIP_MSG_TYPE_OPTIONS;
+                /* OPTIONS message is also a request in HTTP - we must identify false positives here: */
+         if (first_bytes[1] == SIP_NOT_OPTIONS1 && first_bytes[2] == SIP_NOT_OPTIONS2) {
+            return SIP_MSG_TYPE_OPTIONS;
+         }
+
+         return SIP_MSG_TYPE_INVALID;
       case SIP_NOTIFY:	/* Notify message is a bit tricky because also Microsoft's SSDP protocol uses HTTP-like structure
                 * and NOTIFY message - we must identify false positives here: */
          if (first_bytes[1] == SIP_NOT_NOTIFY1 && first_bytes[2] == SIP_NOT_NOTIFY2) {
             return SIP_MSG_TYPE_INVALID;
          }
+
          return SIP_MSG_TYPE_NOTIFY;
       case SIP_CANCEL:
          return SIP_MSG_TYPE_CANCEL;
@@ -483,7 +489,10 @@ int SIPPlugin::parser_process_sip(const Packet &pkt, FlowRecordExtSIP *sip_data)
          unsigned int line_token_len;
          line_token = parser_strtok(line, line_len, ' ', &line_token_len, &first_line_parser);
          line_token = parser_strtok(NULL, 0, ' ', &line_token_len, &first_line_parser);
-         sip_data->status_code = atoi((const char *)line_token);
+         sip_data->status_code = SIP_MSG_TYPE_UNDEFINED;
+         if (line_token) {
+            sip_data->status_code = atoi((const char *)line_token);
+         }
       }
    }
 

@@ -125,7 +125,8 @@ void send_handler(int signal)
    ur_set(out_tmplt, out_rec, F_PACKETS, cnt_packets);
    ur_set(out_tmplt, out_rec, F_BYTES, cnt_bytes);
    ret = trap_send(0, out_rec, ur_rec_fixlen_size(out_tmplt));
-   TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, 0, exit(EXIT_FAILURE));
+   TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, goto set_alarm, exit(EXIT_FAILURE));
+set_alarm:
    alarm(send_interval);
 }
 
@@ -189,7 +190,6 @@ void get_o_param(int argc, char **argv, const char *module_getopt_string, const 
 int main(int argc, char **argv)
 {
 	int ret;
-
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    // Declare progress structure, pointer to this struct, initialize progress limit
@@ -319,6 +319,7 @@ int main(int argc, char **argv)
       ur_free_record(out_rec);
    }
 
+   ur_finalize();
    ur_free_template(tmplt);
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    return EXIT_SUCCESS;

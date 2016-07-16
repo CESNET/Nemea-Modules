@@ -146,12 +146,12 @@ void capture_thread(int index, char delimiter)
       if (ret == TRAP_E_FORMAT_CHANGED) {
          const char *spec = NULL;
          if (trap_get_data_fmt(TRAPIFC_INPUT, index, &data_fmt, &spec) != TRAP_E_OK) {
-            fprintf(stderr, "Error: Data format was not loaded.");
+            fprintf(stderr, "Error: Data format was not loaded.\n");
             break;
          } else {
             templates[index] = ur_define_fields_and_update_template(spec, templates[index]);
             if (templates[index] == NULL) {
-               fprintf(stderr, "Error: Template could not be created");
+               fprintf(stderr, "Error: Template could not be created.\n");
                break;
             }
             #pragma omp critical
@@ -446,7 +446,7 @@ int main(int argc, char **argv)
       printf("Number of inputs: %i\n", n_inputs);
    }
    if (n_inputs < 1) {
-      fprintf(stderr, "Error: You must specify at least one UniRec template.\n");
+      fprintf(stderr, "Error: Number of input interfaces must be positive integer.\n");
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 0;
    }
@@ -459,9 +459,6 @@ int main(int argc, char **argv)
       fprintf(stderr, "Error: If you use more than one interface, output template has to be specified.\n");
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 4;
-   }
-   if (verbose >= 0) {
-      printf("Creating UniRec templates ...\n");
    }
 
    // Set number of input interfaces
@@ -480,15 +477,22 @@ int main(int argc, char **argv)
       goto exit;
    }
 
+   // We don't need ifc_spec anymore, destroy it
+   trap_free_ifc_spec(ifc_spec);
 
+   // Register signal handler.
+   TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
+   if (verbose >= 0) {
+      printf("Creating UniRec templates ...\n");
+   }
    templates = (ur_template_t**)calloc(n_inputs, sizeof(*templates));
    if (templates == NULL) {
       fprintf(stderr, "Memory allocation error.\n");
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return -1;
    }
-   //inicialize templates for negociation
+   //initialize templates for negotiation
    for (int i = 0; i < n_inputs; i++) {
       templates[i] = ur_create_input_template(i, NULL, NULL);
       if (templates[i] == NULL) {
@@ -499,20 +503,14 @@ int main(int argc, char **argv)
       trap_set_required_fmt(i, TRAP_FMT_UNIREC, NULL);
    }
 
-   // We don't need ifc_spec anymore, destroy it
-   trap_free_ifc_spec(ifc_spec);
-
-   // Register signal handler.
-   TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
    // Create output UniRec template (user-specified or union of all inputs)
-
    if (out_template_str != NULL) {
       if (ur_define_set_of_fields(out_template_str) != UR_OK) {
          fprintf(stderr, "Error: output template format is not accurate.\n \
 It should be: \"type1 name1,type2 name2,...\".\n \
 Name of field may be any string matching the reqular expression [A-Za-z][A-Za-z0-9_]*\n\
 Available types are: int8, int16, int32, int64, uint8, uint16, uint32, uint64, char,\
- float, double, ipaddr, time, string, bytes");
+ float, double, ipaddr, time, string, bytes\n");
          ret = 2;
          goto exit;
       }

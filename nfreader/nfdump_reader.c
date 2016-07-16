@@ -100,7 +100,6 @@ trap_module_info_t *module_info = NULL;
   BASIC("Nfdump-reader module","This module reads a given nfdump file and outputs flow records in UniRec format. If more files are specified, all flows from the first file are read, then all flows from second file and so on.",0,1)
 
 #define MODULE_PARAMS(PARAM) \
-   PARAM('F', "file", "A file in nfdump format.", required_argument, "string") \
    PARAM('f', "filter", "A nfdump-like filter expression. Only records matching the filter will be sent to the output.", required_argument, "string") \
    PARAM('c', "first", "Read only the first N flow records.", required_argument, "uint64") \
    PARAM('n', "no_eof", "Don't send EOF message at the end.", no_argument, "none") \
@@ -148,8 +147,8 @@ void set_actual_timestamps(lnf_brec1_t *brec, void *out_rec, ur_template_t *tmpl
 
    time(&act_time);
 
-   first = ur_time_from_sec_msec(act_time - (brec->last - brec->first), 0);
-   last = ur_time_from_sec_msec(act_time, 0);
+   first = ur_time_from_sec_msec(act_time - (brec->last/1000 - brec->first/1000), brec->first%1000);
+   last = ur_time_from_sec_msec(act_time, brec->last%1000);
 
    ur_set(tmplt, out_rec, F_TIME_FIRST, first);
    ur_set(tmplt, out_rec, F_TIME_LAST, last);
@@ -485,8 +484,8 @@ int main(int argc, char **argv)
             ur_set(tmplt, rec_out, F_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
          }
 
-         ur_set(tmplt, rec_out, F_TIME_FIRST, ur_time_from_sec_msec(brec.first, 0));
-         ur_set(tmplt, rec_out, F_TIME_LAST, ur_time_from_sec_msec(brec.last, 0));
+         ur_set(tmplt, rec_out, F_TIME_FIRST, ur_time_from_sec_msec(brec.first/1000, brec.first%1000));
+         ur_set(tmplt, rec_out, F_TIME_LAST, ur_time_from_sec_msec(brec.last/1000, brec.last%1000));
 
          if (rt_sending) {
             RT_CHECK_DELAY(record_counter, brec.last, rt_sending_state);
@@ -545,6 +544,7 @@ exit:
    ur_free_record(rec_out);
    ur_free_template(tmplt);
    ur_free_links(links);
+   ur_finalize();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    return module_state;

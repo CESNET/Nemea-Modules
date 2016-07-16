@@ -9,8 +9,8 @@ License: BSD
 Vendor: CESNET, z.s.p.o.
 Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
-Requires: libtrap nemea-common
-BuildRequires: gcc make doxygen pkgconfig unirec libtrap-devel nemea-common-devel
+Requires: libtrap nemea-pycommon nemea-python nemea-common@RPM_REQUIRES@
+BuildRequires: gcc make doxygen pkgconfig unirec libtrap-devel nemea-common-devel@RPM_BUILDREQ@
 Provides: nemea-modules
 
 %description
@@ -19,15 +19,20 @@ Provides: nemea-modules
 %setup
 
 %build
-./configure --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir}/nemea -q --enable-silent-rules --disable-repobuild;
+./configure --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir}/nemea -q --docdir=%{_docdir}/nemea-modules --enable-silent-rules --disable-repobuild;
 make -j5
 
 %install
 make -j5 DESTDIR=$RPM_BUILD_ROOT install
 
 %post
+test -x %{_bindir}/nemea/flow_meter && setcap "CAP_NET_RAW+eip" %{_bindir}/nemea/flow_meter || true
 
 %files
 %{_bindir}/nemea/*
-%{_docdir}/nemea-modules/*/README
+%{_docdir}/nemea-modules/*/*
+%config(noreplace) %{_sysconfdir}/nemea/email_reporter/example.cfg
+%config(noreplace) %{_sysconfdir}/nemea/email_reporter/generic.cfg
+
+
 

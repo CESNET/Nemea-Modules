@@ -1,12 +1,19 @@
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS=flowcounter \
+SUBDIRS=anonymizer \
+debug_sender \
+email_reporter \
+flowcounter \
+json_dump \
+json_replay \
 logger \
 logreplay \
 merger \
-traffic_repeater
+report2idea \
+traffic_repeater \
+endiverter
 
-EXTRA_DIST = nfreader
+EXTRA_DIST = AUTHORS COPYING ChangeLog INSTALL NEWS README.md nfreader
 
 if HAVE_LIBNF
 SUBDIRS += nfreader

@@ -1,0 +1,41 @@
+EmailReporter
+
+Author: Vaclav Bartos <bartos@cesnet.cz>
+
+Goal: Convert detection reports to email messages.
+
+Inputs: 1 (any UniRec)
+Outputs: --
+
+-------------------------------------------------------
+
+Each UniRec record received is transformed to an email of specified 
+template and send to specified address.
+
+Usage:
+   python email_reporter.py -i "ifc_spec" [options] CONFIG_FILE 
+
+Parameters:
+   CONFIG_FILE    File with configuration. It should contain information about 
+                  SMTP server to connect to and a teplate of the message.
+                  Format of this file is given below.
+   -d, --dry-run  Dry-run mode - nothing is sent, messages are printed to stdout
+                  instead.\n"
+   --skip-smtp-test  By default, the module tries to connect to specified SMTP 
+                     server on startup to check that the connection (and login
+                     credentials, if specified) works. You can skip the test 
+                     using this option.
+ 
+The config file has two sections. First, there is specification of required 
+UniRec fields, SMTP server to be used, optionally login credentials and so on.
+Format of this section is given by example below. You can use comments (start 
+them with '#') in this section. 
+
+The second section starts after a blank line and it contains template of
+an email message in RFC2822 format. That is: headers (e.g. From, To, Subject),
+blank line and message body. The "Date:" header is added automatically.
+The template may contain references to fields of UniRec record which will be
+substituted by corresponding values in each message. References are made using
+'$' followed by name of the field.
+
+An example of config file can be found in example.cfg.

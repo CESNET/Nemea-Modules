@@ -1,0 +1,32 @@
+Anonymizer
+
+Goal: Anonymize IP addresses in Unirec records.
+
+Method: IP addresses in Unirec (source and destination) are anonymized and then sent to output interface.
+        CryptoPAn library, which were taken from NfDump source codes, is used.
+        By default Rijndael cipher is used as pseudorandom generator,
+        but if faster algorithm is needed, MurmurHash3 can be used instead (parameter -M).
+        RijdaelCipher comes with CryptoPAn library, and is used by several other anonymization tools,
+        anonymized addresses should therefore be exactly the same as if other common tools are used (when the same key is used).
+        Usage of MurmurHash3 is our own modofication and since we are not experts on cryptography, we can't
+        give any guarantees of non-reversibility of anonymization process. However, it's much faster.
+        In both cases, anonymization is prefix-preserving and a anonymization key is required.
+        Deanonymization is possible with the correct key (use -d switch).
+
+Input interface: Unirec containing at least:
+                 - Source address     (SRC_IP)
+                 - Destination addres (DST_IP)
+
+Output interface: Unirec containing the same items as input Unirec, but with anonymized IP addresses.
+
+Algorithm: CryptoPAn tools (http://www.cc.gatech.edu/computing/Telecomm/projects/cryptopan/).
+
+Anonymization key: 32 characters long string or 32B sized hex string starting with 0x.
+                   Needs to be specified by one of the following ways:
+                   - As a parameter on command line.
+                   - Written in a file whose name must be specified on command line.
+
+Parameters: -k KEY     Specify anonymization key.
+            -f FILE    Specify file containg anonymization key.
+            -M         Use MurmurHash3 instead of Rijndael cipher.
+            -d         Switch to de-anonymization mode, i.e. do reverse transofmration of the addresses.
