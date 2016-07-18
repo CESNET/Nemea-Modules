@@ -97,12 +97,6 @@ int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, 
          free_unirec_resources();
          return -2;
       }
-
-      record[basic_ifc_num] = ur_create_record(tmplt[basic_ifc_num], UR_MAX_SIZE);
-      if (record[basic_ifc_num] == NULL) {
-         free_unirec_resources();
-         return -3;
-      }
    }
 
    for (unsigned int i = 0; i < plugins.size(); i++) {
@@ -131,7 +125,7 @@ int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, 
 
    for (int i = 0; i < out_ifc_cnt; i++) { // Create unirec records.
       if (tmplt[i] != NULL) {
-         record[i] = ur_create_record(tmplt[i], UR_MAX_SIZE);
+         record[i] = ur_create_record(tmplt[i], (i == basic_ifc_num ? 0 : UR_MAX_SIZE));
 
          if (record == NULL) {
             free_unirec_resources();
@@ -249,11 +243,11 @@ void UnirecExporter::fill_basic_flow(FlowRecord &flow, ur_template_t *tmplt_ptr,
    uint32_t time_msec;
 
    if (flow.ipVersion == 4) {
-      ur_set(tmplt_ptr, record_ptr, F_SRC_IP, ip_from_4_bytes_le((char *)&flow.sourceIPv4Address));
-      ur_set(tmplt_ptr, record_ptr, F_DST_IP, ip_from_4_bytes_le((char *)&flow.destinationIPv4Address));
+      ur_set(tmplt_ptr, record_ptr, F_SRC_IP, ip_from_4_bytes_be((char *)&flow.sourceIPv4Address));
+      ur_set(tmplt_ptr, record_ptr, F_DST_IP, ip_from_4_bytes_be((char *)&flow.destinationIPv4Address));
    } else {
-      ur_set(tmplt_ptr, record_ptr, F_SRC_IP, ip_from_16_bytes_le((char *)&flow.sourceIPv6Address));
-      ur_set(tmplt_ptr, record_ptr, F_DST_IP, ip_from_16_bytes_le((char *)&flow.destinationIPv6Address));
+      ur_set(tmplt_ptr, record_ptr, F_SRC_IP, ip_from_16_bytes_be((char *)&flow.sourceIPv6Address));
+      ur_set(tmplt_ptr, record_ptr, F_DST_IP, ip_from_16_bytes_be((char *)&flow.destinationIPv6Address));
    }
 
    time_sec = (uint32_t)flow.flowStartTimestamp;

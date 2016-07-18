@@ -53,7 +53,7 @@
 #include <vector>
 
 /**
- * \brief Tell FlowCache to flush current flow.
+ * \brief Tell FlowCache to flush (immediately export) current flow.
  * Behavior when called from post_create: flush current Flow and erase FlowRecord.
  * Behavior when called from pre_update and post_update: flush current Flow, erase FlowRecord and call post_create
  */

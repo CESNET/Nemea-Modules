@@ -10,7 +10,8 @@ logger \
 logreplay \
 merger \
 report2idea \
-traffic_repeater
+traffic_repeater \
+endiverter
 
 EXTRA_DIST = AUTHORS COPYING ChangeLog INSTALL NEWS README.md nfreader
 

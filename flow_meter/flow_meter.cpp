@@ -51,14 +51,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <signal.h>
 
 #include <stdlib.h>
 #include <time.h>
-
-#include <libtrap/trap.h>
-
-#include <unirec/unirec.h>
-#include <nemea-common.h>
 
 #include "flow_meter.h"
 #include "packet.h"
@@ -72,6 +68,7 @@
 #include "httpplugin.h"
 #include "dnsplugin.h"
 #include "sipplugin.h"
+#include "ntpplugin.h"
 
 using namespace std;
 
@@ -87,6 +84,7 @@ inline bool error(const string &e)
 }
 
 trap_module_info_t *module_info = NULL;
+static int stop = 0;
 
 UR_FIELDS (
    ipaddr DST_IP,
@@ -135,14 +133,18 @@ int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plu
    size_t begin = 0, end = 0;
 
    int ifc_num = 0;
-   while (end != string::npos) {
+   while (end != string::npos) { // Iterate through user specified settings.
       end = settings.find(",", begin);
       proto = settings.substr(begin, (end == string::npos ? (settings.length() - begin) : (end - begin)));
 
       if (proto == "basic") {
-         module_options.basic_ifc_num = ifc_num++;
+         module_options.basic_ifc_num = ifc_num++; // Enable parsing basic flow (flow without any plugin output).
       } else if (proto == "http") {
          vector<plugin_opt> tmp;
+         // Register extension header identifiers.
+         // New configuration support sending plugin output to specific libtrap interface (e.g. http to ifc 1, dns to ifc 2...)
+         // so it is necessary store extension-header -> output interface mapping within plugin.
+
          tmp.push_back(plugin_opt("http-req", http_request, ifc_num));
          tmp.push_back(plugin_opt("http-resp", http_response, ifc_num++));
 
@@ -157,6 +159,11 @@ int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plu
          tmp.push_back(plugin_opt("sip", sip, ifc_num++));
 
          plugins.push_back(new SIPPlugin(module_options, tmp));
+      } else if (proto == "ntp"){
+         vector<plugin_opt> tmp;
+         tmp.push_back(plugin_opt("ntp", ntp, ifc_num++));
+
+         plugins.push_back(new NTPPlugin(module_options, tmp));
       } else {
          fprintf(stderr, "Unsupported plugin: \"%s\"\n", proto.c_str());
          return -1;
@@ -176,7 +183,7 @@ int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plu
 int count_ifc_interfaces(int argc, char *argv[])
 {
    char *interfaces = NULL;
-   for (int i = 1; i < argc; i++) {
+   for (int i = 1; i < argc; i++) { // Find argument for param -i.
       if (!strcmp(argv[i], "-i") && i + 1 < argc) {
          interfaces = argv[i + 1];
       }
@@ -184,7 +191,7 @@ int count_ifc_interfaces(int argc, char *argv[])
 
    int int_cnt = 1;
    if (interfaces != NULL) {
-      while(*interfaces) {
+      while(*interfaces) { // Count number of specified interfaces.
          if (*(interfaces++) == ',') {
             int_cnt++;
          }
@@ -194,6 +201,8 @@ int count_ifc_interfaces(int argc, char *argv[])
 
    return int_cnt;
 }
+
+TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
 int main(int argc, char *argv[])
 {
@@ -209,12 +218,13 @@ int main(int argc, char *argv[])
    options.interface = "";
    options.basic_ifc_num = 0;
 
-   uint32_t pkt_limit = 0;
+   uint32_t pkt_limit = 0; // Limit of packets for packet parser. 0 = no limit
    int sampling = 100;
    srand(time(NULL));
 
    // ***** TRAP initialization *****
-   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+   TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
    module_info->num_ifc_out = count_ifc_interfaces(argc, argv);
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
 
@@ -231,11 +241,13 @@ int main(int argc, char *argv[])
             options.basic_ifc_num = -1;
             int ret = parse_plugin_settings(string(optarg), plugin_wrapper.plugins, options);
             if (ret < 0) {
-               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               TRAP_DEFAULT_FINALIZATION();
                return error("Invalid argument for option -p");
             }
             if (ret != module_info->num_ifc_out) {
-               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               TRAP_DEFAULT_FINALIZATION();
                return error("Number of output ifc interfaces does not correspond number of items in -p parameter.");
             }
          }
@@ -249,7 +261,8 @@ int main(int argc, char *argv[])
       case 't':
          cptr = strchr(optarg, ':');
          if (cptr == NULL) {
-            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+            TRAP_DEFAULT_FINALIZATION();
             return error("Invalid argument for option -t");
          }
          *cptr = '\0';
@@ -269,7 +282,8 @@ int main(int argc, char *argv[])
       case 'm':
          sampling = atoi(optarg);
          if (sampling < 0 || sampling > 100) {
-            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+            TRAP_DEFAULT_FINALIZATION();
             return error("Invalid argument for option -m: interval needs to be between 0-100");
          }
          break;
@@ -280,33 +294,39 @@ int main(int argc, char *argv[])
          options.verbose = true;
          break;
       default:
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+         TRAP_DEFAULT_FINALIZATION();
          return error("Invalid arguments");
       }
    }
 
    if (options.interface != "" && options.infilename != "") {
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      TRAP_DEFAULT_FINALIZATION();
       return error("Cannot capture from file and from interface at the same time.");
    } else if (options.interface == "" && options.infilename == "") {
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      TRAP_DEFAULT_FINALIZATION();
       return error("Specify capture interface (-I) or file for reading (-r). ");
    }
 
    if (options.flowcachesize % options.flowlinesize != 0) {
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      TRAP_DEFAULT_FINALIZATION();
       return error("Size of flow line (32 by default) must divide size of flow cache.");
    }
 
    PcapReader packetloader(options);
    if (options.interface == "") {
       if (packetloader.open_file(options.infilename) != 0) {
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+         TRAP_DEFAULT_FINALIZATION();
          return error("Can't open input file: " + options.infilename);
       }
    } else {
       if (packetloader.init_interface(options.interface) != 0) {
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+         TRAP_DEFAULT_FINALIZATION();
          return error("Unable to initialize libpcap: " + packetloader.errmsg);
       }
    }
@@ -315,42 +335,52 @@ int main(int argc, char *argv[])
    UnirecExporter flowwriter;
 
    if (flowwriter.init(plugin_wrapper.plugins, module_info->num_ifc_out, options.basic_ifc_num) != 0) {
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      TRAP_DEFAULT_FINALIZATION();
       return error("Unable to initialize UnirecExporter.");
    }
    flowcache.set_exporter(&flowwriter);
+
+   if (options.statsout) {
+      plugin_wrapper.plugins.push_back(new StatsPlugin(options.statstime, cout));
+   }
 
    for (unsigned int i = 0; i < plugin_wrapper.plugins.size(); i++) {
       flowcache.add_plugin(plugin_wrapper.plugins[i]);
    }
 
-   if (options.statsout) {
-      StatsPlugin stats(options.statstime, cout);
-      flowcache.add_plugin(&stats);
-   }
-
    flowcache.init();
 
    Packet packet;
-   int ret;
+   int ret = 0;
    uint32_t pkt_total = 0, pkt_parsed = 0;
    packet.packet = new char[MAXPCKTSIZE + 1];
 
-   while ((ret = packetloader.get_pkt(packet)) > 0) {
-      if (ret == 2 && (sampling == 100 || ((rand() % 99) +1) <= sampling)) {
+   // Main packet capture loop.
+   while (!stop && (ret = packetloader.get_pkt(packet)) > 0) {
+      if (ret == 3) { // Process timeout
+         flowcache.exportexpired(false);
+         continue;
+      }
+
+      pkt_total++;
+      if (ret == 2 && (sampling == 100 || ((rand() % 99) + 1) <= sampling)) {
          flowcache.put_pkt(packet);
          pkt_parsed++;
-      }
-      pkt_total++;
 
-      if (pkt_limit != 0 && pkt_parsed >= pkt_limit) {
-         break;
+         // Check if packet limit is reached.
+         if (pkt_limit != 0 && pkt_parsed >= pkt_limit) {
+            break;
+         }
       }
    }
 
    if (ret < 0) {
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       packetloader.close();
+      flowwriter.close();
+      delete [] packet.packet;
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      TRAP_DEFAULT_FINALIZATION();
       return error("Error during reading: " + packetloader.errmsg);
    }
 
@@ -359,13 +389,14 @@ int main(int argc, char *argv[])
       cout << "Packet headers parsed: "<< pkt_parsed << endl;
    }
 
+   // Cleanup
    flowcache.finish();
    flowwriter.close();
    packetloader.close();
 
    delete [] packet.packet;
-
-   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+   TRAP_DEFAULT_FINALIZATION();
 
    return EXIT_SUCCESS;
 }

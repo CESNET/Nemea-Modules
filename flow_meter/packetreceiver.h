@@ -60,7 +60,8 @@ public:
    /**
     * \brief Get packet from network interface or file.
     * \param [out] packet Variable for storing parsed packet.
-    * \return 2 if packet was parsed and stored, 1 if packet was not parsed, 0 if EOF or value < 0 on error
+    * \return 2 if packet was parsed and stored, 1 if packet was not parsed, 3 when read timeout occur,
+    *         0 if EOF or value < 0 on error
     */
    virtual int get_pkt(Packet &packet) = 0;
 };

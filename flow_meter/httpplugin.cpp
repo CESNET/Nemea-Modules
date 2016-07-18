@@ -99,10 +99,6 @@ HTTPPlugin::HTTPPlugin(const options_t &module_options, vector<plugin_opt> plugi
 
 int HTTPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 {
-   if ((pkt.packetFieldIndicator & PCKT_PAYLOAD_MASK) != PCKT_PAYLOAD_MASK) { // If payload is not present, return.
-      return 0;
-   }
-
    if (pkt.sourceTransportPort == 80) {
       return add_ext_http_response(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
    } else if (pkt.destinationTransportPort == 80) {
@@ -114,14 +110,10 @@ int HTTPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 
 int HTTPPlugin::pre_update(FlowRecord &rec, Packet &pkt)
 {
-   if ((pkt.packetFieldIndicator & PCKT_PAYLOAD_MASK) != PCKT_PAYLOAD_MASK) { // If payload is not present, return.
-      return 0;
-   }
-
    FlowRecordExt *ext = NULL;
    if (pkt.sourceTransportPort == 80) {
       ext = rec.getExtension(http_response);
-      if (ext == NULL) {
+      if (ext == NULL) { // Check if header is present in flow.
          return add_ext_http_response(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
       }
 
@@ -132,7 +124,7 @@ int HTTPPlugin::pre_update(FlowRecord &rec, Packet &pkt)
       }
    } else if (pkt.destinationTransportPort == 80) {
       ext = rec.getExtension(http_request);
-      if(ext == NULL) {
+      if(ext == NULL) { // Check if header is present in flow.
          return add_ext_http_request(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
       }
 
@@ -230,7 +222,7 @@ bool HTTPPlugin::parse_http_request(const char *data, int payload_len, FlowRecor
    DEBUG_MSG("\tUrl: %s\n", rec->httpReqUrl);
 
    line_begin = strstr(data + line_end, HTTP_LINE_DELIMITER) - data + 2;
-   while (line_begin < payload_len) {
+   while (line_begin < payload_len) { // Process http fields.
       line_end = strstr(data + line_begin, HTTP_LINE_DELIMITER) - data;
       keyval_delimiter = strchr(data + line_begin, HTTP_HEADER_DELIMITER) - data;
 
@@ -247,7 +239,7 @@ bool HTTPPlugin::parse_http_request(const char *data, int payload_len, FlowRecor
       DEBUG_CODE(STRCPY(debug_buff, data, keyval_delimiter + 2, line_end));
       DEBUG_MSG("\t%s: %s\n", buf, debug_buff);
 
-      if (strcmp(buf, "Host") == 0) {
+      if (strcmp(buf, "Host") == 0) { // Copy interesting field values.
          STRCPY(rec->httpReqHost, data, keyval_delimiter + 2, line_end);
       } else if (strcmp(buf, "User-Agent") == 0) {
          STRCPY(rec->httpReqUserAgent, data, keyval_delimiter + 2, line_end);
@@ -307,7 +299,7 @@ bool HTTPPlugin::parse_http_response(const char *data, int payload_len, FlowReco
 
    STRCPY(buf, data, line_begin + 1, line_end);
    int code = atoi(buf);
-   if (code <= 0 || code > 1000) {
+   if (code <= 0) {
       DEBUG_MSG("Parser quits:\twrong response code: %d\n", code);
       return false;
    }
@@ -323,7 +315,7 @@ bool HTTPPlugin::parse_http_response(const char *data, int payload_len, FlowReco
    DEBUG_MSG("\tCode: %d\n", code);
 
    line_begin = strstr(data + line_end, HTTP_LINE_DELIMITER) - data + 2;
-   while (line_begin < payload_len) {
+   while (line_begin < payload_len) { // Process http header fields.
       line_end = strstr(data + line_begin, HTTP_LINE_DELIMITER) - data;
       keyval_delimiter = strchr(data + line_begin, HTTP_HEADER_DELIMITER) - data;
 
@@ -340,7 +332,7 @@ bool HTTPPlugin::parse_http_response(const char *data, int payload_len, FlowReco
       DEBUG_CODE(STRCPY(debug_buff, data, keyval_delimiter + 2, line_end));
       DEBUG_MSG("\t%s: %s\n", buf, debug_buff);
 
-      if (strcmp(buf, "Content-Type") == 0) {
+      if (strcmp(buf, "Content-Type") == 0) { // Copy interesting field values.
          STRCPY(rec->httpRespContentType, data, keyval_delimiter + 2, line_end);
       }
 
@@ -359,27 +351,11 @@ bool HTTPPlugin::parse_http_response(const char *data, int payload_len, FlowReco
  */
 bool HTTPPlugin::valid_http_method(const char *method) const
 {
-   if (strcmp(method, "GET") == 0) {
-      return true;
-   } else if (strcmp(method, "POST") == 0) {
-      return true;
-   } else if (strcmp(method, "PUT") == 0) {
-      return true;
-   } else if (strcmp(method, "HEAD") == 0) {
-      return true;
-   } else if (strcmp(method, "DELETE") == 0) {
-      return true;
-   } else if (strcmp(method, "TRACE") == 0) {
-      return true;
-   } else if (strcmp(method, "OPTIONS") == 0) {
-      return true;
-   } else if (strcmp(method, "CONNECT") == 0) {
-      return true;
-   } else if (strcmp(method, "PATCH") == 0) {
-      return true;
-   }
-
-   return false;
+   return (!strcmp(method, "GET") || !strcmp(method, "POST") ||
+         !strcmp(method, "PUT") || !strcmp(method, "HEAD") ||
+         !strcmp(method, "DELETE") || !strcmp(method, "TRACE") ||
+         !strcmp(method, "OPTIONS") || !strcmp(method, "CONNECT") ||
+         !strcmp(method, "PATCH"));
 }
 
 /**

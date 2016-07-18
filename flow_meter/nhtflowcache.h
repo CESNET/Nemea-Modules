@@ -169,12 +169,13 @@ public:
    virtual void init();
    virtual void finish();
 
+   int exportexpired(bool exportall);
+
 protected:
    void parsereplacementstring();
    void createhashkey(Packet pkt);
    long calculatehash();
    int flushflows();
-   int exportexpired(bool exportall);
    void endreport();
 };
 
