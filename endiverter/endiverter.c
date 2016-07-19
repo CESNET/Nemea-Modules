@@ -164,6 +164,8 @@ int main(int argc, char *argv[])
       ur_free_template(tmplt);
    }
 
+   ur_finalize();
+
    TRAP_DEFAULT_FINALIZATION();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
 
