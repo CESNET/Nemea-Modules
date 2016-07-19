@@ -238,7 +238,7 @@ int UnirecExporter::export_flow(FlowRecord &flow)
  */
 void UnirecExporter::fill_basic_flow(FlowRecord &flow, ur_template_t *tmplt_ptr, void *record_ptr)
 {
-   ur_time_t tmp_time;
+   uint64_t tmp_time;
    uint32_t time_sec;
    uint32_t time_msec;
 
@@ -253,12 +253,12 @@ void UnirecExporter::fill_basic_flow(FlowRecord &flow, ur_template_t *tmplt_ptr,
    time_sec = (uint32_t)flow.flowStartTimestamp;
    time_msec = (uint32_t)((flow.flowStartTimestamp - ((double)((uint32_t)flow.flowStartTimestamp))) * 1000);
    tmp_time = ur_time_from_sec_msec(time_sec, time_msec);
-   memcpy((void *)((char *)record_ptr + tmplt_ptr->offset[F_TIME_FIRST]), (void *) &tmp_time, sizeof(tmp_time));
+   ur_set(tmplt_ptr, record_ptr, F_TIME_FIRST, tmp_time);
 
    time_sec = (uint32_t)flow.flowEndTimestamp;
    time_msec = (uint32_t)((flow.flowEndTimestamp - ((double)((uint32_t)flow.flowEndTimestamp))) * 1000);
    tmp_time = ur_time_from_sec_msec(time_sec, time_msec);
-   memcpy((void *)((char *)record_ptr + tmplt_ptr->offset[F_TIME_LAST]), (void *) &tmp_time, sizeof(tmp_time));
+   ur_set(tmplt_ptr, record_ptr, F_TIME_LAST, tmp_time);
 
    ur_set(tmplt_ptr, record_ptr, F_PROTOCOL, flow.protocolIdentifier);
    ur_set(tmplt_ptr, record_ptr, F_SRC_PORT, flow.sourceTransportPort);
