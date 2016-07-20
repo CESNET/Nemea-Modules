@@ -1,9 +1,10 @@
-bin_PROGRAMS=svm-predict svm-train svm-scale
-#lib_LTLIBRARIES=libsvm.la
+svmbindir=${bindir}/svm-tools
+svmbin_PROGRAMS=svm-predict svm-train svm-scale
 AM_LDFLAGS=-lm
+SUBDIRS=data tools
+
 
 EXTRA_DIST=svm.h
-#libsvm_la_SOURCES=svm.cpp svm.h
 svm_predict_SOURCES=svm.cpp svm-predict.c
 
 svm_train_SOURCES=svm-train.c svm.cpp
