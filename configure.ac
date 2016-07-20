@@ -172,6 +172,8 @@ AM_CONDITIONAL(MAKE_RPMS, test x$RPMBUILD != x)
 AC_CONFIG_FILES([Makefile
                  anonymizer/Makefile
                  debug_sender/Makefile
+                 device_classifier/Makefile
+                 device_classifier/libsvm/Makefile
                  email_reporter/Makefile
                  flowcounter/Makefile
                  flow_meter/Makefile
