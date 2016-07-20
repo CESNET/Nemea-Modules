@@ -90,7 +90,7 @@ using namespace std;
 /**
  * \brief Struct containing DNS header fields.
  */
-struct dns_hdr {
+struct __attribute__ ((packed)) dns_hdr {
    uint16_t id;
    union {
       struct {
@@ -129,7 +129,7 @@ struct dns_hdr {
 /**
  * \brief Struct containing DNS question.
  */
-struct dns_question {
+struct __attribute__ ((packed)) dns_question {
    /* name */
    uint16_t qtype;
    uint16_t qclass;
@@ -138,7 +138,7 @@ struct dns_question {
 /**
  * \brief Struct containing DNS answer.
  */
-struct dns_answer {
+struct __attribute__ ((packed)) dns_answer {
    /* name */
    uint16_t atype;
    uint16_t aclass;
@@ -150,7 +150,7 @@ struct dns_answer {
 /**
  * \brief Struct containing DNS SOA record.
  */
-struct dns_soa {
+struct __attribute__ ((packed)) dns_soa {
    /* primary NS */
    /* admin MB */
    uint32_t serial;
@@ -163,7 +163,7 @@ struct dns_soa {
 /**
  * \brief Struct containing DNS SRV record.
  */
-struct dns_srv {
+struct __attribute__ ((packed)) dns_srv {
    /* _service._proto.name*/
    uint16_t priority;
    uint16_t weight;
@@ -174,7 +174,7 @@ struct dns_srv {
 /**
  * \brief Struct containing DNS DS record.
  */
-struct dns_ds {
+struct __attribute__ ((packed)) dns_ds {
    uint16_t keytag;
    uint8_t algorithm;
    uint8_t digest_type;
@@ -184,7 +184,7 @@ struct dns_ds {
 /**
  * \brief Struct containing DNS RRSIG record.
  */
-struct dns_rrsig {
+struct __attribute__ ((packed)) dns_rrsig {
    uint16_t type;
    uint8_t algorithm;
    uint8_t labels;
@@ -199,7 +199,7 @@ struct dns_rrsig {
 /**
  * \brief Struct containing DNS DNSKEY record.
  */
-struct dns_dnskey {
+struct __attribute__ ((packed)) dns_dnskey {
    uint16_t flags;
    uint8_t protocol;
    uint8_t algorithm;
@@ -268,14 +268,14 @@ public:
    int post_create(FlowRecord &rec, const Packet &pkt);
    int pre_update(FlowRecord &rec, Packet &pkt);
    void finish();
-   std::string get_unirec_field_string();
+   string get_unirec_field_string();
 
 private:
-   bool parse_dns(const char *data, int payload_len, FlowRecordExtDNS *rec);
-   void add_ext_dns(const char *data, int payload_len, FlowRecord &rec);
-   std::string get_name(const char *begin, const char *data, int counter) const;
+   bool parse_dns(const char *data, unsigned int payload_len, FlowRecordExtDNS *rec);
+   int  add_ext_dns(const char *data, unsigned int payload_len, FlowRecord &rec);
+   string get_name(const char *begin, const char *data, int counter) const;
    void process_srv(string &str) const;
-   void process_rdata(const char *data_begin, const char *record_begin, const char* data, std::ostringstream &rdata, uint16_t type, size_t length) const;
+   void process_rdata(const char *data_begin, const char *record_begin, const char *data, ostringstream &rdata, uint16_t type, size_t length) const;
    size_t get_name_length(const char *data, bool total_length) const;
 
    bool statsout;       /**< Indicator whether to print stats when flow cache is finishing or not. */

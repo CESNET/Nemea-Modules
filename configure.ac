@@ -35,6 +35,11 @@ AC_SUBST(PKGDATADIR)
 AC_SUBST(pkgdatadir)
 AC_DEFINE_DIR(PKGDATADIR, [pkgdatadir], [Path to configuration files])
 AC_DEFINE_DIR(SYSCONFDIR, [sysconfdir], [Path to configuration files])
+deviceclassifierdatadir=${pkgdatadir}/device_classifier
+AC_DEFINE_DIR(DEVICECLASSIFIERDATADIR, [deviceclassifierdatadir], [Path to SVM data files])
+AC_SUBST(DEVICECLASSIFIERDATADIR)
+AC_SUBST(deviceclassifierdatadir)
+
 RPM_REQUIRES=
 RPM_BUILDREQ=
 
@@ -172,6 +177,10 @@ AM_CONDITIONAL(MAKE_RPMS, test x$RPMBUILD != x)
 AC_CONFIG_FILES([Makefile
                  anonymizer/Makefile
                  debug_sender/Makefile
+                 device_classifier/Makefile
+                 device_classifier/libsvm/Makefile
+                 device_classifier/libsvm/data/Makefile
+                 device_classifier/libsvm/tools/Makefile
                  email_reporter/Makefile
                  flowcounter/Makefile
                  flow_meter/Makefile
@@ -185,6 +194,7 @@ AC_CONFIG_FILES([Makefile
                  report2idea/Makefile
                  traffic_repeater/Makefile
                  unirecfilter/Makefile
+                 endiverter/Makefile
                ])
 
 AC_SUBST(RPM_REQUIRES)

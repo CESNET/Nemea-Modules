@@ -76,19 +76,6 @@ using namespace std;
 #define DEBUG_CODE(code)
 #endif
 
-/**
- * \brief Swap an IPv6 address bytes.
- */
-inline void swapbytes128(char *x)
-{
-   char tmp;
-   for (int i = 0; i < 8; i++) {
-      tmp = x[i];
-      x[i] = x[15 - i];
-      x[15 - i] = tmp;
-   }
-}
-
 #ifdef DEBUG
 static uint32_t s_total_pkts = 0;
 #endif /* DEBUG */
@@ -149,8 +136,8 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
       pkt.ipClassOfService = ip->tos;
       pkt.ipLength = ntohs(ip->tot_len);
       pkt.ipTtl = ip->ttl;
-      pkt.sourceIPv4Address = ntohl(ip->saddr);
-      pkt.destinationIPv4Address = ntohl(ip->daddr);
+      pkt.sourceIPv4Address = ip->saddr;
+      pkt.destinationIPv4Address = ip->daddr;
       pkt.packetFieldIndicator |= PCKT_IPV4_MASK;
 
       transport_proto = ip->protocol;
@@ -181,9 +168,6 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
       memcpy(pkt.sourceIPv6Address, (const char *)&ip6->ip6_src, 16);
       memcpy(pkt.destinationIPv6Address, (const char *)&ip6->ip6_dst, 16);
       pkt.packetFieldIndicator |= PCKT_IPV6_MASK;
-
-      swapbytes128(pkt.sourceIPv6Address);
-      swapbytes128(pkt.destinationIPv6Address);
 
       transport_proto = ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;
       payload_len = ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);   //TODO: IPv6 Extension header
@@ -366,7 +350,7 @@ int PcapReader::init_interface(const std::string &interface)
    char errbuf[PCAP_ERRBUF_SIZE];
    errbuf[0] = 0;
 
-   handle = pcap_open_live(interface.c_str(), 1 << 15, 1, 0, errbuf);
+   handle = pcap_open_live(interface.c_str(), 1 << 16, 1, 1000, errbuf);
    if (handle == NULL) {
       errmsg = errbuf;
       return 2;
@@ -401,13 +385,19 @@ int PcapReader::get_pkt(Packet &packet)
    packet_valid = false;
    int ret;
 
-   while ((ret = pcap_dispatch(handle, 1, packet_handler, (u_char *)(&packet))) == 0 && live_capture) {
-   } // Wait until packet is read.
+   // Get pkt from network interface or file.
+   ret = pcap_dispatch(handle, 1, packet_handler, (u_char *)(&packet));
+   if (ret == 0) {
+      // Read timeout occured or no more packets in file...
+      return (live_capture ? 3 : 0);
+   }
 
    if (ret == 1 && packet_valid) {
+      // Packet is valid and ready to process by flow_cache.
       return 2;
    }
    if (ret < 0) {
+      // Error occured.
       errmsg = pcap_geterr(handle);
    }
    return ret;

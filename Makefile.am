@@ -2,6 +2,7 @@ ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS=anonymizer \
 debug_sender \
+device_classifier \
 email_reporter \
 flowcounter \
 json_dump \
@@ -10,7 +11,8 @@ logger \
 logreplay \
 merger \
 report2idea \
-traffic_repeater
+traffic_repeater \
+endiverter
 
 EXTRA_DIST = AUTHORS COPYING ChangeLog INSTALL NEWS README.md nfreader
 
