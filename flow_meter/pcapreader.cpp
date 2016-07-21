@@ -100,7 +100,12 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
    uint16_t payload_len = 0;
 
    DEBUG_MSG("---------- packet parser  #%u -------------\n", ++s_total_pkts);
-   DEBUG_MSG("Time:\t\t\t%ld.%ld\n",      h->ts.tv_sec, h->ts.tv_usec);
+   DEBUG_CODE(
+      char timestamp[32];
+      time_t time = h->ts.tv_sec;
+      strftime(timestamp, sizeof(timestamp), "%FT%T", localtime(&time));
+   );
+   DEBUG_MSG("Time:\t\t\t%s.%06lu\n",      timestamp, h->ts.tv_usec);
    DEBUG_MSG("Packet length:\t\tcaplen=%uB len=%uB\n\n", h->caplen, h->len);
 
    DEBUG_MSG("Ethernet header:\n");
