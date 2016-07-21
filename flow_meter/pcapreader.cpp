@@ -355,7 +355,7 @@ int PcapReader::init_interface(const std::string &interface)
    char errbuf[PCAP_ERRBUF_SIZE];
    errbuf[0] = 0;
 
-   handle = pcap_open_live(interface.c_str(), 1 << 16, 1, 1000, errbuf);
+   handle = pcap_open_live(interface.c_str(), MAXPCKTSIZE, 1, 1000, errbuf);
    if (handle == NULL) {
       errmsg = errbuf;
       return 2;
