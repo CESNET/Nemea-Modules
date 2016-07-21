@@ -198,7 +198,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       int newrel = rpl[relpos];
       int flowindexstart = lineindex + newrel;
 
-      Flow * ptrflow = flowarray[flowindex];
+      Flow *ptrflow = flowarray[flowindex];
       for (int j = flowindex; j > flowindexstart; j--) {
          flowarray[j] = flowarray[j - 1];
       }
@@ -329,11 +329,11 @@ void NHTFlowCache::createhashkey(Packet pkt)
    if ((pkt.packetFieldIndicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
       *(uint8_t *) k = pkt.protocolIdentifier;
       k += sizeof(pkt.protocolIdentifier);
-      for (int i=0; i<16; i++) {
+      for (int i = 0; i < 16; i++) {
          *(char *) k = pkt.sourceIPv6Address[i];
          k += sizeof(pkt.sourceIPv6Address[i]);
       }
-      for (int i=0; i<16; i++) {
+      for (int i = 0; i < 16; i++) {
          *(char *) k = pkt.destinationIPv6Address[i];
          k += sizeof(pkt.destinationIPv6Address[i]);
       }

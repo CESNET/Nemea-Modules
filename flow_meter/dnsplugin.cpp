@@ -262,13 +262,13 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
 
    switch (type){
    case DNS_TYPE_A:
-      rdata << inet_ntoa(*(struct in_addr *)(data));
+      rdata << inet_ntoa(*(struct in_addr *) (data));
       DEBUG_MSG("\tData A:\t\t\t%s\n",       rdata.str().c_str());
       break;
    case DNS_TYPE_AAAA:
       {
          char addr[INET6_ADDRSTRLEN];
-         inet_ntop(AF_INET6, (const void *)data, addr, INET6_ADDRSTRLEN);
+         inet_ntop(AF_INET6, (const void *) data, addr, INET6_ADDRSTRLEN);
          rdata << addr;
          DEBUG_MSG("\tData AAAA:\t\t%s\n",   rdata.str().c_str());
       }
@@ -301,7 +301,7 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
 
          rdata << " " << tmp;
 
-         struct dns_soa *soa = (struct dns_soa *)data;
+         struct dns_soa *soa = (struct dns_soa *) data;
          DEBUG_MSG("\t\tSerial:\t\t%u\n",    ntohl(soa->serial));
          DEBUG_MSG("\t\tRefresh:\t%u\n",     ntohl(soa->refresh));
          DEBUG_MSG("\t\tRetry:\t\t%u\n",     ntohl(soa->retry));
@@ -316,7 +316,7 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
          DEBUG_MSG("\tData SRV:\n");
          std::string tmp = get_name(data_begin, record_begin, 0);
          process_srv(tmp);
-         struct dns_srv *srv = (struct dns_srv *)data;
+         struct dns_srv *srv = (struct dns_srv *) data;
 
          DEBUG_MSG("\t\tPriority:\t%u\n",    ntohs(srv->priority));
          DEBUG_MSG("\t\tWeight:\t\t%u\n",    ntohs(srv->weight));
@@ -331,7 +331,7 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
       break;
    case DNS_TYPE_MX:
       {
-         uint16_t preference = ntohs(*(uint16_t *)data);
+         uint16_t preference = ntohs(*(uint16_t *) data);
          rdata << preference << " " << get_name(data_begin, data + 2, 0);
          DEBUG_MSG("\tData MX:\n");
          DEBUG_MSG("\t\tPreference:\t%u\n",     preference);
@@ -342,7 +342,7 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
       {
          DEBUG_MSG("\tData TXT:\n");
 
-         size_t len = (uint8_t)*(data++);
+         size_t len = (uint8_t) *(data++);
          size_t total_len = len + 1;
 
          while (length != 0 && total_len <= length) {
@@ -350,7 +350,7 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
             rdata << string(data, len);
 
             data += len;
-            len = (uint8_t)*(data++);
+            len = (uint8_t) *(data++);
             total_len += len + 1;
 
             if (total_len <= length) {
@@ -380,19 +380,19 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
       break;
    case DNS_TYPE_DS:
       {
-         struct dns_ds *ds = (struct dns_ds *)data;
+         struct dns_ds *ds = (struct dns_ds *) data;
          DEBUG_MSG("\tData DS:\n");
          DEBUG_MSG("\t\tKey tag:\t%u\n",        ntohs(ds->keytag));
          DEBUG_MSG("\t\tAlgorithm:\t%u\n",      ds->algorithm);
          DEBUG_MSG("\t\tDigest type:\t%u\n",    ds->digest_type);
          DEBUG_MSG("\t\tDigest:\t\t(binary)\n");
-         rdata << ntohs(ds->keytag) << " " << (uint16_t)ds->keytag << " "
-               << (uint16_t)ds->digest_type << " <key>";
+         rdata << ntohs(ds->keytag) << " " << (uint16_t) ds->keytag << " "
+               << (uint16_t) ds->digest_type << " <key>";
       }
       break;
    case DNS_TYPE_RRSIG:
       {
-         struct dns_rrsig *rrsig = (struct dns_rrsig *)data;
+         struct dns_rrsig *rrsig = (struct dns_rrsig *) data;
          std::string tmp = "";
          DEBUG_MSG("\tData RRSIG:\n");
          DEBUG_MSG("\t\tType:\t\t%u\n",         ntohs(rrsig->type));
@@ -402,8 +402,8 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
          DEBUG_MSG("\t\tSig expiration:\t%u\n", ntohl(rrsig->sig_expiration));
          DEBUG_MSG("\t\tSig inception:\t%u\n",  ntohl(rrsig->sig_inception));
          DEBUG_MSG("\t\tKey tag:\t%u\n",        ntohs(rrsig->keytag));
-         rdata << ntohs(rrsig->type) << " " << (uint16_t)rrsig->algorithm << " " // Conversion needed, otherwise uint8_t will be threated as a char.
-               << (uint16_t)rrsig->labels << " " << ntohl(rrsig->ttl) << " "
+         rdata << ntohs(rrsig->type) << " " << (uint16_t) rrsig->algorithm << " " // Conversion needed, otherwise uint8_t will be threated as a char.
+               << (uint16_t) rrsig->labels << " " << ntohl(rrsig->ttl) << " "
                << ntohl(rrsig->sig_expiration) << " " << ntohl(rrsig->sig_inception)
                << " " << ntohs(rrsig->keytag) << " <key>";
 
@@ -414,13 +414,13 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
       break;
    case DNS_TYPE_DNSKEY:
       {
-         struct dns_dnskey *dnskey = (struct dns_dnskey *)data;
+         struct dns_dnskey *dnskey = (struct dns_dnskey *) data;
          DEBUG_MSG("\tData DNSKEY:\n");
          DEBUG_MSG("\t\tFlags:\t\t%u\n",        ntohs(dnskey->flags));
          DEBUG_MSG("\t\tProtocol:\t%u\n",       dnskey->protocol);
          DEBUG_MSG("\t\tAlgorithm:\t%u\n",      dnskey->algorithm);
 
-         rdata << ntohs(dnskey->flags) << " " << (uint16_t)dnskey->protocol << " " << (uint16_t)dnskey->algorithm << " <key>";
+         rdata << ntohs(dnskey->flags) << " " << (uint16_t) dnskey->protocol << " " << (uint16_t) dnskey->algorithm << " <key>";
          DEBUG_MSG("\t\tPublic key:\t(binary data)\n");
       }
       break;
@@ -456,7 +456,7 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, FlowRecord
          return false;
       }
 
-      struct dns_hdr *dns = (struct dns_hdr *)data;
+      struct dns_hdr *dns = (struct dns_hdr *) data;
       uint16_t flags = ntohs(dns->flags);
       uint16_t question_cnt = ntohs(dns->question_rec_cnt);
       uint16_t answer_rr_cnt = ntohs(dns->answer_rec_cnt);
@@ -499,7 +499,7 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, FlowRecord
          DEBUG_MSG("\tName:\t\t\t%s\n",               name.c_str());
 
          data += get_name_length(data, true);
-         struct dns_question *question = (struct dns_question *)data;
+         struct dns_question *question = (struct dns_question *) data;
 
          if (i == 0) { // Copy only first question.
             rec->dns_qtype = ntohs(question->qtype);
@@ -525,7 +525,7 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, FlowRecord
          DEBUG_MSG("\tAnswer name:\t\t%s\n",          get_name(data_begin, data, 0).c_str());
          data += get_name_length(data, true);
 
-         struct dns_answer *answer = (struct dns_answer *)data;
+         struct dns_answer *answer = (struct dns_answer *) data;
          DEBUG_MSG("\tType:\t\t\t%u\n",               ntohs(answer->atype));
          DEBUG_MSG("\tClass:\t\t\t%u\n",              ntohs(answer->aclass));
          DEBUG_MSG("\tTTL:\t\t\t%u\n",                ntohl(answer->ttl));
@@ -560,7 +560,7 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, FlowRecord
          DEBUG_MSG("\tAnswer name:\t\t%s\n",          get_name(data_begin, data, 0).c_str());
          data += get_name_length(data, true);
 
-         struct dns_answer *answer = (struct dns_answer *)data;
+         struct dns_answer *answer = (struct dns_answer *) data;
          DEBUG_MSG("\tType:\t\t\t%u\n",               ntohs(answer->atype));
          DEBUG_MSG("\tClass:\t\t\t%u\n",              ntohs(answer->aclass));
          DEBUG_MSG("\tTTL:\t\t\t%u\n",                ntohl(answer->ttl));
@@ -583,7 +583,7 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, FlowRecord
          DEBUG_MSG("\tAnswer name:\t\t%s\n",          get_name(data_begin, data, 0).c_str());
          data += get_name_length(data, true);
 
-         struct dns_answer *answer = (struct dns_answer *)data;
+         struct dns_answer *answer = (struct dns_answer *) data;
          DEBUG_MSG("\tType:\t\t\t%u\n",               ntohs(answer->atype));
 
          if (ntohs(answer->atype) != DNS_TYPE_OPT) {
