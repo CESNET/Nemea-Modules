@@ -327,6 +327,8 @@ void NHTFlowCache::createhashkey(Packet pkt)
    }
 
    if ((pkt.packetFieldIndicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
+      *(uint8_t *) k = pkt.protocolIdentifier;
+      k += sizeof(pkt.protocolIdentifier);
       for (int i=0; i<16; i++) {
          *(char *) k = pkt.sourceIPv6Address[i];
          k += sizeof(pkt.sourceIPv6Address[i]);
@@ -340,7 +342,7 @@ void NHTFlowCache::createhashkey(Packet pkt)
       *(uint16_t *) k = pkt.destinationTransportPort;
       k += sizeof(pkt.destinationTransportPort);
       *k = '\0';
-      key_len = 36;
+      key_len = 37;
    }
 }
 
