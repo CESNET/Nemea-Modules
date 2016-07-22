@@ -242,11 +242,11 @@ void UnirecExporter::fill_basic_flow(FlowRecord &flow, ur_template_t *tmplt_ptr,
    ur_time_t tmp_time;
 
    if (flow.ipVersion == 4) {
-      ur_set(tmplt_ptr, record_ptr, F_SRC_IP, ip_from_4_bytes_be((char *) &flow.sourceIPv4Address));
-      ur_set(tmplt_ptr, record_ptr, F_DST_IP, ip_from_4_bytes_be((char *) &flow.destinationIPv4Address));
-   } else {
-      ur_set(tmplt_ptr, record_ptr, F_SRC_IP, ip_from_16_bytes_be((char *) &flow.sourceIPv6Address));
-      ur_set(tmplt_ptr, record_ptr, F_DST_IP, ip_from_16_bytes_be((char *) &flow.destinationIPv6Address));
+      ur_set(tmplt_ptr, record_ptr, F_SRC_IP, ip_from_4_bytes_be((char *) &flow.sourceIPAddress.v4));
+      ur_set(tmplt_ptr, record_ptr, F_DST_IP, ip_from_4_bytes_be((char *) &flow.destinationIPAddress.v4));
+   } else if (flow.ipVersion == 6) {
+      ur_set(tmplt_ptr, record_ptr, F_SRC_IP, ip_from_16_bytes_be((char *) flow.sourceIPAddress.v6));
+      ur_set(tmplt_ptr, record_ptr, F_DST_IP, ip_from_16_bytes_be((char *) flow.destinationIPAddress.v6));
    }
 
    tmp_time = ur_time_from_sec_msec(flow.flowStartTimestamp.tv_sec, flow.flowStartTimestamp.tv_usec / 1000.0);

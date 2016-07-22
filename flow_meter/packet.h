@@ -49,6 +49,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "ipaddr.h"
+
 #define MAXPCKTSIZE 1600
 
 // Values of field presence indicator flags (packetFieldIndicator)
@@ -133,10 +135,8 @@ struct Packet {
    uint8_t     ipTtl;
    uint8_t     protocolIdentifier;
    uint8_t     ipClassOfService;
-   uint32_t    sourceIPv4Address;
-   uint32_t    destinationIPv4Address;
-   char        sourceIPv6Address[16];
-   char        destinationIPv6Address[16];
+   ipaddr_t    sourceIPAddress;
+   ipaddr_t    destinationIPAddress;
 
    uint16_t    sourceTransportPort;
    uint16_t    destinationTransportPort;

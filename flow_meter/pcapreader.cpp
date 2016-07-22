@@ -144,8 +144,8 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
       pkt.ipClassOfService = ip->tos;
       pkt.ipLength = ntohs(ip->tot_len);
       pkt.ipTtl = ip->ttl;
-      pkt.sourceIPv4Address = ip->saddr;
-      pkt.destinationIPv4Address = ip->daddr;
+      pkt.sourceIPAddress.v4 = ip->saddr;
+      pkt.destinationIPAddress.v4 = ip->daddr;
       pkt.packetFieldIndicator |= PCKT_IPV4_MASK;
 
       transport_proto = ip->protocol;
@@ -173,8 +173,8 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
       pkt.ipClassOfService = (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0x0ff00000) >> 20;
       pkt.protocolIdentifier = ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;
       pkt.ipLength = ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);
-      memcpy(pkt.sourceIPv6Address, (const char *) &ip6->ip6_src, 16);
-      memcpy(pkt.destinationIPv6Address, (const char *) &ip6->ip6_dst, 16);
+      memcpy(pkt.sourceIPAddress.v6, (const char *) &ip6->ip6_src, 16);
+      memcpy(pkt.destinationIPAddress.v6, (const char *) &ip6->ip6_dst, 16);
       pkt.packetFieldIndicator |= PCKT_IPV6_MASK;
 
       transport_proto = ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;

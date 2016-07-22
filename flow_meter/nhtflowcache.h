@@ -52,13 +52,11 @@
 #include "flowexporter.h"
 #include <string>
 
-#define MAX_KEYLENGTH 76
+#define MAX_KEYLENGTH 40
 
 class Flow
 {
    uint64_t hash;
-   struct timeval inactive;
-   struct timeval active;
    char key[MAX_KEYLENGTH];
 
 public:
@@ -72,19 +70,16 @@ public:
       empty_flow = true;
    }
 
-   Flow(const struct timeval &inactivetimeout, const struct timeval &activetimeout)
+   Flow()
    {
       erase();
-      this->inactive = inactivetimeout;
-      this->active = activetimeout;
    };
    ~Flow()
    {
    };
 
-   bool isempty();
-   inline bool isexpired(const struct timeval &current_ts);
-   bool belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len);
+   bool isempty() const;
+   bool belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len) const;
    void create(Packet pkt, uint64_t pkt_hash, char *pkt_key, uint8_t key_len);
    void update(Packet pkt);
 };
@@ -111,6 +106,8 @@ class NHTFlowCache : public FlowCache
    long lookups2;
    struct timeval currtimestamp;
    struct timeval lasttimestamp;
+   struct timeval active;
+   struct timeval inactive;
    char key[MAX_KEYLENGTH];
    std::string policy;
    replacementvector_t rpl;
@@ -131,10 +128,12 @@ public:
       this->lookups2 = 0;
       this->policy = options.replacementstring;
       this->statsout = options.statsout;
+      this->active = options.activetimeout;
+      this->inactive = options.inactivetimeout;
 
       flowarray = new Flow*[size];
       for (int i = 0; i < size; i++) {
-         flowarray[i] = new Flow(options.inactivetimeout, options.activetimeout);
+         flowarray[i] = new Flow();
       }
    };
    ~NHTFlowCache()
