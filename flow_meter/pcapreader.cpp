@@ -131,7 +131,7 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
    }
 
    pkt.packetFieldIndicator = PCKT_TIMESTAMP;
-   pkt.timestamp = h->ts.tv_sec + h->ts.tv_usec / 1000000.0;
+   pkt.timestamp = h->ts;
 
    if (ethertype == ETH_P_IP) {
       struct iphdr *ip = (struct iphdr *) data_ptr;

@@ -56,19 +56,20 @@ class StatsPlugin : public FlowCachePlugin
    unsigned long cache_hits;
    unsigned long flows_in_cache;
 
-   double interval;
-   double last_ts;
+   struct timeval interval;
+   struct timeval last_ts;
    std::ostream &out;
+   bool init_ts;
 
    FILE *create_keys;
    FILE *export_keys;
 
    void check_timestamp(const Packet &pkt);
    void print_header() const;
-   void print_stats(double ts) const;
+   void print_stats(const struct timeval &ts) const;
 
 public:
-   StatsPlugin(double interval, std::ostream &out);
+   StatsPlugin(struct timeval interval, std::ostream &out);
 
    void init();
    int post_create(FlowRecord &rec, const Packet &pkt);

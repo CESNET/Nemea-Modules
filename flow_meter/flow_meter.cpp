@@ -202,6 +202,12 @@ int count_ifc_interfaces(int argc, char *argv[])
    return int_cnt;
 }
 
+static inline void double_to_time(double value, struct timeval &time)
+{
+   time.tv_sec = (long) value;
+   time.tv_usec = (value - (long) value) * 1000000;
+}
+
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
 int main(int argc, char *argv[])
@@ -210,8 +216,8 @@ int main(int argc, char *argv[])
    options_t options;
    options.flowcachesize = DEFAULT_FLOW_CACHE_SIZE;
    options.flowlinesize = DEFAULT_FLOW_LINE_SIZE;
-   options.inactivetimeout = DEFAULT_INACTIVE_TIMEOUT;
-   options.activetimeout = DEFAULT_ACTIVE_TIMEOUT;
+   double_to_time(DEFAULT_INACTIVE_TIMEOUT, options.inactivetimeout);
+   double_to_time(DEFAULT_ACTIVE_TIMEOUT, options.activetimeout);
    options.replacementstring = DEFAULT_REPLACEMENT_STRING;
    options.statsout = false;
    options.verbose = false;
@@ -266,8 +272,8 @@ int main(int argc, char *argv[])
             return error("Invalid argument for option -t");
          }
          *cptr = '\0';
-         options.activetimeout = atof(optarg);
-         options.inactivetimeout = atof(cptr + 1);
+         double_to_time(atof(optarg), options.activetimeout);
+         double_to_time(atof(cptr + 1), options.inactivetimeout);
          break;
       case 'r':
          options.infilename = string(optarg);
@@ -276,7 +282,7 @@ int main(int argc, char *argv[])
          options.flowcachesize = atoi(optarg);
          break;
       case 'S':
-         options.statstime = atof(optarg);
+         double_to_time(atof(optarg), options.statstime);
          options.statsout = true;
          break;
       case 'm':

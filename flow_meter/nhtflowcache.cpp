@@ -49,14 +49,17 @@
 #include <cstdlib>
 #include <iostream>
 #include <locale>
+#include <sys/time.h>
 
 using namespace std;
 
-inline bool Flow::isexpired(double current_ts)
+inline bool Flow::isexpired(const struct timeval &current_ts)
 {
-   if (!isempty() &&
-      (current_ts - flowrecord.flowStartTimestamp > active ||
-         current_ts - flowrecord.flowEndTimestamp > inactive)) {
+   struct timeval tmp1, tmp2;
+   timersub(&current_ts, &flowrecord.flowStartTimestamp, &tmp1);
+   timersub(&current_ts, &flowrecord.flowEndTimestamp, &tmp2);
+
+   if (!isempty() && (timercmp(&tmp1, &active, >) || timercmp(&tmp2, &inactive, >))) {
       return true;
    } else {
       return false;
@@ -162,6 +165,7 @@ void NHTFlowCache::finish()
 {
    plugins_finish();
    exportexpired(true); // export whole cache
+
    if (!statsout) {
       endreport();
    }
@@ -178,7 +182,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
    createhashkey(pkt); // saves key value and key length into attributes NHTFlowCache::key and NHTFlowCache::key_len
    uint64_t hashval = calculatehash(); // calculates hash value from key created before
 
-// Find place for packet
+   // Find place for packet
    int lineindex = ((hashval % size) / linesize) * linesize;
 
    bool found = false;
@@ -269,7 +273,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       }
    }
 
-   if (currtimestamp < lasttimestamp) {
+   if (timercmp(&currtimestamp, &lasttimestamp, <)) {
       static bool warning_printed = false;
       if (!warning_printed) {
          cerr << "Warning: Timestamps of packets are not in ascending order." << endl;
@@ -277,7 +281,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       }
    }
 
-   if (currtimestamp - lasttimestamp > 5.0) {
+   if (currtimestamp.tv_sec - lasttimestamp.tv_sec > 5) {
       exportexpired(false); // false -- export only expired flows
       lasttimestamp = currtimestamp;
    }

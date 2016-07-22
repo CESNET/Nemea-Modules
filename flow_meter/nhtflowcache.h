@@ -57,8 +57,8 @@
 class Flow
 {
    uint64_t hash;
-   double inactive;
-   double active;
+   struct timeval inactive;
+   struct timeval active;
    char key[MAX_KEYLENGTH];
 
 public:
@@ -68,8 +68,8 @@ public:
    void erase()
    {
       flowrecord.flowFieldIndicator = 0x0;
-      flowrecord.flowStartTimestamp = 0;
-      flowrecord.flowEndTimestamp = 0;
+      memset(&flowrecord.flowStartTimestamp, 0, sizeof(flowrecord.flowStartTimestamp));
+      memset(&flowrecord.flowEndTimestamp, 0, sizeof(flowrecord.flowEndTimestamp));
       flowrecord.ipVersion = 0;
       flowrecord.protocolIdentifier = 0;
       flowrecord.ipClassOfService = 0;
@@ -86,7 +86,7 @@ public:
       empty_flow = true;
    }
 
-   Flow(double inactivetimeout, double activetimeout)
+   Flow(const struct timeval &inactivetimeout, const struct timeval &activetimeout)
    {
       erase();
       this->inactive = inactivetimeout;
@@ -97,7 +97,7 @@ public:
    };
 
    bool isempty();
-   inline bool isexpired(double current_ts);
+   inline bool isexpired(const struct timeval &current_ts);
    bool belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len);
    void create(Packet pkt, uint64_t pkt_hash, char *pkt_key, uint8_t key_len);
    void update(Packet pkt);
@@ -123,8 +123,8 @@ class NHTFlowCache : public FlowCache
    long flushed;
    long lookups;
    long lookups2;
-   double currtimestamp;
-   double lasttimestamp;
+   struct timeval currtimestamp;
+   struct timeval lasttimestamp;
    char key[MAX_KEYLENGTH];
    std::string policy;
    replacementvector_t rpl;

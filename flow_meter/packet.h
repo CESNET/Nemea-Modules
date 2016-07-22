@@ -126,7 +126,7 @@
  */
 struct Packet {
    uint64_t    packetFieldIndicator;
-   double      timestamp;
+   struct timeval timestamp;
 
    uint8_t     ipVersion;
    uint16_t    ipLength;

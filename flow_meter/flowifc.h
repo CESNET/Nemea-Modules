@@ -168,8 +168,8 @@ struct FlowRecordExt {
  */
 struct FlowRecord {
    uint64_t flowFieldIndicator;
-   double   flowStartTimestamp;
-   double   flowEndTimestamp;
+   struct timeval flowStartTimestamp;
+   struct timeval flowEndTimestamp;
    uint8_t  ipVersion;
    uint8_t  protocolIdentifier;
    uint8_t  ipClassOfService;

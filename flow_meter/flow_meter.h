@@ -66,9 +66,9 @@ struct options_t {
    bool verbose;
    uint32_t flowcachesize;
    uint32_t flowlinesize;
-   double inactivetimeout;
-   double activetimeout;
-   double statstime;
+   struct timeval inactivetimeout;
+   struct timeval activetimeout;
+   struct timeval statstime;
    std::string interface;
    std::string infilename;
    std::string outfilename;
