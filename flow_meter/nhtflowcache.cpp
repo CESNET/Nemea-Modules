@@ -107,8 +107,7 @@ void Flow::create(Packet pkt, uint64_t pkt_hash, char *pkt_key, uint8_t key_len)
       flowrecord.sourceIPv4Address        = pkt.sourceIPv4Address;
       flowrecord.destinationIPv4Address   = pkt.destinationIPv4Address;
       flowrecord.octetTotalLength         = pkt.ipLength;
-      flowrecord.flowFieldIndicator      |= FLW_IPV4_MASK;
-      flowrecord.flowFieldIndicator      |= FLW_IPSTAT_MASK;
+      flowrecord.flowFieldIndicator      |= (FLW_IPV4_MASK | FLW_IPSTAT_MASK);
    } else if ((pkt.packetFieldIndicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
       flowrecord.ipVersion                = pkt.ipVersion;
       flowrecord.protocolIdentifier       = pkt.protocolIdentifier;
@@ -116,8 +115,7 @@ void Flow::create(Packet pkt, uint64_t pkt_hash, char *pkt_key, uint8_t key_len)
       memcpy(flowrecord.sourceIPv6Address, pkt.sourceIPv6Address, 16);
       memcpy(flowrecord.destinationIPv6Address, pkt.destinationIPv6Address, 16);
       flowrecord.octetTotalLength         = pkt.ipLength;
-      flowrecord.flowFieldIndicator      |= FLW_IPV6_MASK;
-      flowrecord.flowFieldIndicator      |= FLW_IPSTAT_MASK;
+      flowrecord.flowFieldIndicator      |= (FLW_IPV6_MASK | FLW_IPSTAT_MASK);
    }
 
    if ((pkt.packetFieldIndicator & PCKT_TCP_MASK) == PCKT_TCP_MASK) {
@@ -173,12 +171,6 @@ void NHTFlowCache::finish()
 
 int NHTFlowCache::put_pkt(Packet &pkt)
 {
-   if (((pkt.packetFieldIndicator & PCKT_TCP_MASK) != PCKT_TCP_MASK) &&
-       ((pkt.packetFieldIndicator & PCKT_UDP_MASK) != PCKT_UDP_MASK)) {
-      pkt.sourceTransportPort = 0;
-      pkt.destinationTransportPort = 0;
-   }
-
    createhashkey(pkt); // saves key value and key length into attributes NHTFlowCache::key and NHTFlowCache::key_len
    uint64_t hashval = calculatehash(); // calculates hash value from key created before
 
@@ -273,14 +265,6 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       }
    }
 
-   if (timercmp(&currtimestamp, &lasttimestamp, <)) {
-      static bool warning_printed = false;
-      if (!warning_printed) {
-         cerr << "Warning: Timestamps of packets are not in ascending order." << endl;
-         warning_printed = true;
-      }
-   }
-
    if (currtimestamp.tv_sec - lasttimestamp.tv_sec > 5) {
       exportexpired(false); // false -- export only expired flows
       lasttimestamp = currtimestamp;
@@ -333,14 +317,10 @@ void NHTFlowCache::createhashkey(Packet pkt)
    if ((pkt.packetFieldIndicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
       *(uint8_t *) k = pkt.protocolIdentifier;
       k += sizeof(pkt.protocolIdentifier);
-      for (int i = 0; i < 16; i++) {
-         *(char *) k = pkt.sourceIPv6Address[i];
-         k += sizeof(pkt.sourceIPv6Address[i]);
-      }
-      for (int i = 0; i < 16; i++) {
-         *(char *) k = pkt.destinationIPv6Address[i];
-         k += sizeof(pkt.destinationIPv6Address[i]);
-      }
+      memcpy(k, pkt.sourceIPv6Address, sizeof(pkt.sourceIPv6Address));
+      k += sizeof(pkt.sourceIPv6Address);
+      memcpy(k, pkt.destinationIPv6Address, sizeof(pkt.sourceIPv6Address));
+      k += sizeof(pkt.destinationIPv6Address);
       *(uint16_t *) k = pkt.sourceTransportPort;
       k += sizeof(pkt.sourceTransportPort);
       *(uint16_t *) k = pkt.destinationTransportPort;

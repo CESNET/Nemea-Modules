@@ -67,22 +67,8 @@ public:
 
    void erase()
    {
-      flowrecord.flowFieldIndicator = 0x0;
-      memset(&flowrecord.flowStartTimestamp, 0, sizeof(flowrecord.flowStartTimestamp));
-      memset(&flowrecord.flowEndTimestamp, 0, sizeof(flowrecord.flowEndTimestamp));
-      flowrecord.ipVersion = 0;
-      flowrecord.protocolIdentifier = 0;
-      flowrecord.ipClassOfService = 0;
-      flowrecord.ipTtl = 0;
-      flowrecord.sourceIPv4Address = 0;
-      flowrecord.destinationIPv4Address = 0;
-      flowrecord.sourceTransportPort = 0;
-      flowrecord.destinationTransportPort = 0;
-      flowrecord.octetTotalLength = 0;
-      flowrecord.packetTotalCount = 0;
-      flowrecord.tcpControlBits = 0;
       flowrecord.removeExtensions();
-
+      memset(&flowrecord, 0, sizeof(flowrecord));
       empty_flow = true;
    }
 

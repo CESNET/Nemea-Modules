@@ -116,6 +116,9 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
 
    DEBUG_MSG("\tEthertype:\t%#06x\n",     ethertype);
 
+   pkt.sourceTransportPort = 0;
+   pkt.destinationTransportPort = 0;
+
    if (ethertype == ETH_P_8021Q) {
       DEBUG_CODE(uint16_t vlan = ntohs(*(unsigned uint32_t *) (data_ptr + 14)));
       DEBUG_MSG("\t802.1Q field:\n");
@@ -130,7 +133,7 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
       data_ptr += 14;
    }
 
-   pkt.packetFieldIndicator = PCKT_TIMESTAMP;
+   pkt.packetFieldIndicator = PCKT_PCAP_MASK;
    pkt.timestamp = h->ts;
 
    if (ethertype == ETH_P_IP) {

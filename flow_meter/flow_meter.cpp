@@ -370,7 +370,7 @@ int main(int argc, char *argv[])
       }
 
       pkt_total++;
-      if (ret == 2 && (sampling == 100 || ((rand() % 99) + 1) <= sampling)) {
+      if (ret == 2 && (sampling == 100 || ((rand() % 100) + 1) <= sampling)) {
          flowcache.put_pkt(packet);
          pkt_parsed++;
 

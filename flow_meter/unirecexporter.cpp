@@ -185,16 +185,13 @@ int UnirecExporter::export_flow(FlowRecord &flow)
    ur_template_t *tmplt_ptr = NULL;
    void *record_ptr = NULL;
 
-   for (int i = 0; i < out_ifc_cnt; i++) {
-      ur_clear_varlen(tmplt[i], record[i]);
-      memset(record[i], 0, ur_rec_fixlen_size(tmplt[i]));
-   }
-
    if (basic_ifc_num >= 0 && ext == NULL) { // Process basic flow.
       tmplt_ptr = tmplt[basic_ifc_num];
       record_ptr = record[basic_ifc_num];
 
       ur_clear_varlen(tmplt_ptr, record_ptr);
+      memset(record_ptr, 0, ur_rec_fixlen_size(tmplt_ptr));
+
       fill_basic_flow(flow, tmplt_ptr, record_ptr);
       trap_send(basic_ifc_num, record_ptr, ur_rec_fixlen_size(tmplt_ptr) + ur_rec_varlen_size(tmplt_ptr, record_ptr));
       return 0;
@@ -211,9 +208,13 @@ int UnirecExporter::export_flow(FlowRecord &flow)
 
          tmplt_ptr = tmplt[ifc_num];
          record_ptr = record[ifc_num];
+
          if (find(to_export.begin(), to_export.end(), ifc_num) == to_export.end()) {
             to_export.push_back(ifc_num);
          }
+
+         ur_clear_varlen(tmplt_ptr, record_ptr);
+         memset(record_ptr, 0, ur_rec_fixlen_size(tmplt_ptr));
 
          fill_basic_flow(flow, tmplt_ptr, record_ptr);
          ext->fillUnirec(tmplt_ptr, record_ptr); /* Add each extension header into unirec record. */
@@ -261,7 +262,7 @@ void UnirecExporter::fill_basic_flow(FlowRecord &flow, ur_template_t *tmplt_ptr,
    ur_set(tmplt_ptr, record_ptr, F_BYTES, flow.octetTotalLength);
    ur_set(tmplt_ptr, record_ptr, F_TCP_FLAGS, flow.tcpControlBits);
 
-   ur_set(tmplt_ptr, record_ptr, F_DIR_BIT_FIELD, 0);
-   ur_set(tmplt_ptr, record_ptr, F_LINK_BIT_FIELD, 0);
+   //ur_set(tmplt_ptr, record_ptr, F_DIR_BIT_FIELD, 0);
+   //ur_set(tmplt_ptr, record_ptr, F_LINK_BIT_FIELD, 0);
 }
 
