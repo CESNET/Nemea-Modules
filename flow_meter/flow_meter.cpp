@@ -109,12 +109,12 @@ UR_FIELDS (
 #define MODULE_PARAMS(PARAM) \
   PARAM('p', "plugins", "Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. "\
   "For example: \'-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter"\
-  "will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,dns,sip,basic", required_argument, "string")\
+  " will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,dns,sip,ntp,basic", required_argument, "string")\
   PARAM('c', "count", "Quit after number of packets are captured.", required_argument, "uint32")\
   PARAM('I', "interface", "Capture from given network interface. Parameter require interface name (eth0 for example).", required_argument, "string")\
   PARAM('r', "file", "Pcap file to read.", required_argument, "string") \
   PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: FLOAT:FLOAT. (DEFAULT: 300.0:30.0)", required_argument, "string") \
-  PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 232 bytes. (DEFAULT: 65536)", required_argument, "uint32") \
+  PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 168 bytes. (DEFAULT: 65536)", required_argument, "uint32") \
   PARAM('S', "statistic", "Print statistics. NUMBER specifies interval between prints.", required_argument, "float") \
   PARAM('m', "sample", "Sampling probability. NUMBER in 100 (DEFAULT: 100)", required_argument, "int32") \
   PARAM('V', "vector", "Replacement vector. 1+32 NUMBERS.", required_argument, "string") \

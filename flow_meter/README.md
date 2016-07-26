@@ -9,12 +9,12 @@ This NEMEA module creates flows from input PCAP file / network interface and exp
 
 ## Parameters
 ### Module specific parameters
-- `-p STRING`        Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. For example: '-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,dns,sip,basic
+- `-p STRING`        Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. For example: '-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,dns,sip,ntp,basic
 - `-c NUMBER`        Quit after `NUMBER` of packets are captured.
 - `-I STRING`        Capture from given network interface. Parameter require interface name (eth0 for example).
 - `-r STRING`        Pcap file to read.
 - `-t NUM:NUM`       Active and inactive timeout in seconds. (DEFAULT: 300.0:30.0)
-- `-s NUMBER`        Size of flow cache in number of flow records. Each flow record has 232 bytes. (DEFAULT: 65536)
+- `-s NUMBER`        Size of flow cache in number of flow records. Each flow record has 186 bytes. (DEFAULT: 65536)
 - `-S NUMBER`        Print statistics. `NUMBER` specifies interval between prints.
 - `-m NUMBER`        Sampling probability. `NUMBER` in 100 (DEFAULT: 100)
 - `-V STRING`        Replacement vector. 1+32 NUMBERS.
@@ -32,6 +32,6 @@ When capturing from network interface, flows are continuously send to output int
 
 ## Extension
 `flow_meter` can be extended by new plugins for exporting various new information from flow.
-There are already some existing plugins that export e.g. `DNS`, `HTTP`, `SIP`.
+There are already some existing plugins that export e.g. `DNS`, `HTTP`, `SIP`, `NTP`.
 
 To learn how to write new plugin for `flow_meter`, see [writing-plugins.md](writing-plugins.md).
