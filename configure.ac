@@ -81,6 +81,13 @@ RPM_REQUIRES+=" libidn"
 RPM_BUILDREQ+=" libidn-devel"
 fi
 
+AC_ARG_WITH([flowcachesize],
+	AC_HELP_STRING([--with-flowcachesize=NUMBER],[Set size of flow cache for flow_meter module in number of flow records. Size must be divisible by 32. Default is 65536.]),
+	[
+	CPPFLAGS="$CPPFLAGS -DFLOW_CACHE_SIZE=$withval"
+	]
+)
+
 AC_ARG_WITH([nfreader],
 	AC_HELP_STRING([--without-nfreader], [Skip nfreader module.]),
         [if test "$withval" = "no"; then
