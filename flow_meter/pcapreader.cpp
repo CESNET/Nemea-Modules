@@ -63,9 +63,9 @@ using namespace std;
 // Read timeout in miliseconds for pcap_open_live function.
 #define READ_TIMEOUT 1000
 
-//#define DEBUG
+//#define DEBUG_PARSER
 
-#ifdef DEBUG
+#ifdef DEBUG_PARSER
 // Print debug message if debugging is allowed.
 #define DEBUG_MSG(format, ...) fprintf(stderr, format, ##__VA_ARGS__)
 // Process code if debugging is allowed.
@@ -75,9 +75,9 @@ using namespace std;
 #define DEBUG_CODE(code)
 #endif
 
-#ifdef DEBUG
+#ifdef DEBUG_PARSER
 static uint32_t s_total_pkts = 0;
-#endif /* DEBUG */
+#endif /* DEBUG_PARSER */
 
 /**
  * \brief Distinguish between valid (parsed) and non-valid packet.
