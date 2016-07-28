@@ -1,3 +1,23 @@
+2016-07-28 Nemea-modules-2.4.0
+	* report2idea modules:
+		replaced python wrapper with pytrap
+	* miner_detector:
+		add reporter module
+	* json_dump, json_replay:
+		replaced python wrapper with pytrap
+	* flow_meter:
+		optimization and improvement
+		add NTP plugin
+	* endiverter:
+		add converter of UniRec message from OpenWRT
+	* email_reporter:
+		replaced python wrapper with pytrap
+	* device_classifier:
+		add beta version of module
+		installation must be fixed
+	* debug_sender:
+		replaced python wrapper with pytrap
+
 2016-06-03 Nemea-modules-2.3.6
         * logger:
 		improved error messages
