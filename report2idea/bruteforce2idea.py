@@ -61,7 +61,7 @@ def convert_to_idea(rec, opts=None):
         "DetectTime": getIDEAtime(rec.DETECTION_TIME),
         "CreateTime": getIDEAtime(),
         "Category": [ "Attempt.Login" ],
-        "Description": "Multiple unsuccessful login attempts" + (" on {}".format(service) if service else ""),
+        "Description": "Multiple unsuccessful login attempts" + (" on {0}".format(service) if service else ""),
         "FlowCount": rec.EVENT_SCALE,
         "Source": [{
             "Proto": [ proto_conv[rec.PROTOCOL], service.lower() ] if service else [ proto_conv[rec.PROTOCOL] ]

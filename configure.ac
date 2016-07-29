@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-modules], [2.3.6], [traffic-analysis@cesnet.cz])
+AC_INIT([nemea-modules], [2.4.0], [traffic-analysis@cesnet.cz])
 AC_CONFIG_SRCDIR([flowcounter/flowcounter.c])
 AC_CONFIG_HEADERS([config.h])
-RELEASE=1
+RELEASE=2
 AC_SUBST(RELEASE)
 USERNAME=`git config --get user.name`
 USERMAIL=`git config --get user.email`
@@ -35,6 +35,11 @@ AC_SUBST(PKGDATADIR)
 AC_SUBST(pkgdatadir)
 AC_DEFINE_DIR(PKGDATADIR, [pkgdatadir], [Path to configuration files])
 AC_DEFINE_DIR(SYSCONFDIR, [sysconfdir], [Path to configuration files])
+deviceclassifierdatadir=${pkgdatadir}/device_classifier
+AC_DEFINE_DIR(DEVICECLASSIFIERDATADIR, [deviceclassifierdatadir], [Path to SVM data files])
+AC_SUBST(DEVICECLASSIFIERDATADIR)
+AC_SUBST(deviceclassifierdatadir)
+
 RPM_REQUIRES=
 RPM_BUILDREQ=
 
@@ -179,6 +184,10 @@ AM_CONDITIONAL(MAKE_RPMS, test x$RPMBUILD != x)
 AC_CONFIG_FILES([Makefile
                  anonymizer/Makefile
                  debug_sender/Makefile
+                 device_classifier/Makefile
+                 device_classifier/libsvm/Makefile
+                 device_classifier/libsvm/data/Makefile
+                 device_classifier/libsvm/tools/Makefile
                  email_reporter/Makefile
                  flowcounter/Makefile
                  flow_meter/Makefile

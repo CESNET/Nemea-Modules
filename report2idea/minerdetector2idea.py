@@ -57,8 +57,8 @@ def convert_to_idea(rec, opts=None):
     idea['ConnCount'] = rec.EVENT_SCALE
     setAddr(idea['Source'][0], rec.SRC_IP)
     setAddr(idea['Target'][0], rec.DST_IP)
-    idea['Note'] = 'Source IP {} might be a miner.'.format(rec.SRC_IP)
-    idea['Description'] = "{} might be a miner, because it connected to {}:{} which is flagged as a mining pool server.".format(rec.SRC_IP, rec.DST_IP, rec.DST_PORT)
+    idea['Note'] = 'Source IP {0} might be a miner.'.format(rec.SRC_IP)
+    idea['Description'] = "{0} might be a miner, because it connected to {1}:{2} which is flagged as a mining pool server.".format(rec.SRC_IP, rec.DST_IP, rec.DST_PORT)
     return idea
 
 

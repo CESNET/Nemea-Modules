@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-# Copyright (C) 2013-2015 CESNET
+# Copyright (C) 2013-2016 CESNET
 #
 # LICENSE TERMS
 #
@@ -35,38 +35,23 @@
 # if advised of the possibility of such damage.
 
 import sys
-import os.path
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "nemea-framework", "python"))
-import trap
-import unirec
-from unirec import Timestamp, IPAddr
 import readline
 from re import match
+import argparse
+import cmd
+import pytrap
 
-module_info = trap.CreateModuleInfo(
-   name = "DebugSender",
-   description = """\
-This module allows to manually send arbitrary UniRec records to a TRAP
-interface. You have to specify UniRec format at startup, everything other is
-done interactively by writing simple commands.
-
-Usage:
-   python debug_sender.py -i IFC_SPEC UNIREC_FORMAT
-""",
-   num_ifc_in = 0,
-   num_ifc_out = 1
-)
+trap = pytrap.TrapCtx()
 
 fieldOrder = []
 
 # ----------------------------------------------------------------------------
 
 def init_trap():
-   trap.init(module_info, ifc_spec)
-   trap.registerDefaultSignalHandler()
-   trap.ifcctl(trap.IFC_OUTPUT, 0, trap.CTL_BUFFERSWITCH, 0) # Disable output buffering
+   trap.init(sys.argv, 0, 1)
+   trap.ifcctl(0, False, pytrap.CTL_BUFFERSWITCH, 0) # Disable output buffering
 
-import cmd
+
 class Commands(cmd.Cmd):
    prompt = '> '
    doc_leader = """This shows the list of commands.
@@ -84,37 +69,35 @@ Character in apostrophs is an abbreviation of the command (e.g. p for print).
 
    def do_print(self, line = ""):
       """'p'  Print current contents of the record."""
-      global record, record_metadata, fieldOrder
+      global urtmplt, record, record_metadata, fieldOrder
       t = "Current record:\n"
       for name in fieldOrder:
-         value = getattr(record, name)
+         value = urtmplt.get(record, name)
          t = t + "%s = %s%s\n" % (name, value if not isinstance(value, str) else '"'+value+'"', " {"+record_metadata[name]+"}" if name in record_metadata else "")
       print(t)
 
    def do_edit(self, line):
       """'e'  Edit values of all fields of the record."""
-      global record, record_metadata, fieldOrder
+      global urtmplt, record, record_metadata, fieldOrder
       for name in fieldOrder:
-         val = getattr(record, name)
+         val = urtmplt.get(record, name)
          while True:
             valstr = raw_input("%s [%s]%s: " % (name, val if not isinstance(val, str) else '"'+val+'"', " {"+record_metadata[name]+"}" if name in record_metadata else ""))
             if valstr == "":
                break # Continue with next field
 
-            field_type = record._field_types[name]
+            field_type = urtmplt.getFieldType(name)
+            print(field_type)
 
             # Try special cases first, then all other cases
             if not edit_time_rules(name, valstr):
                try:
-                  if hasattr(field_type, "fromString"):
-                     val = field_type.fromString(valstr)
-                  else:
-                     val = field_type(valstr)
+                  val = field_type(valstr)
                except Exception, e:
                   print "Unable to convert %r to %s:" % (valstr, field_type.__name__),
                   print e
                   continue # Try it again
-               setattr(record, name, val)
+               urtmplt.set(record, name, val)
 
             break # Continue with next field
       print
@@ -149,7 +132,7 @@ Character in apostrophs is an abbreviation of the command (e.g. p for print).
       try:
          for _ in range(int(count)):
             send_time_rules() # Edit record according to send-time rules
-            trap.send(0, record.serialize())
+            trap.send(0, record)
          print "done"
       except trap.ETerminated:
          print("Libtrap was terminated")
@@ -197,11 +180,11 @@ Character in apostrophs is an abbreviation of the command (e.g. p for print).
 # end of Commands class
 
 def edit_time_rules(name, valstr):
-   global record, record_metadata
-   wrapper = {'is_special': False, 'val': getattr(record, name)}
+   global urtmplt, record, record_metadata
+   wrapper = {'is_special': False, 'val': urtmplt.get(record, name)}
 
    # Validity check
-   if not match(r"!?([+-].+)?$", valstr) and not (isinstance(wrapper['val'], Timestamp) and match(r"!?(now)?([+-].+)?$", valstr)):
+   if not match(r"!?([+-].+)?$", valstr) and not (isinstance(wrapper['val'], pytrap.UnirecTime) and match(r"!?(now)?([+-].+)?$", valstr)):
       return wrapper['is_special'] # Is not special or is invalid
 
    # Gather send-time rules, don't apply
@@ -221,25 +204,25 @@ def edit_time_rules(name, valstr):
       print e
       return wrapper['is_special'] # Should be false
 
-   setattr(record, name, wrapper['val']) # Save attribute to record
+   urtmplt.set(record, name, wrapper['val']) # Save attribute to record
    return wrapper['is_special'] # False also in case of parsing error
 
 def send_time_rules():
-   global record, record_metadata
+   global urtmplt, record, record_metadata
 
    for name in record_metadata:
       wrapper = {'is_special': False, 'val': getattr(record, name)}
       valstr = record_metadata[name][1:] # Croup out "!"
       apply_rules(wrapper, valstr) # Apply send-time rules
-      setattr(record, name, wrapper['val'])
+      urtmplt.set(record, name, wrapper['val'])
 
 def apply_rules(wrapper, valstr):
    val = wrapper['val']
    is_special = wrapper['is_special']
 
-   if isinstance(val, Timestamp): # Timestamp is treated specially
+   if isinstance(val, pytrap.UnirecTime): # UnirecTime is treated specially
       if valstr.startswith("now"):
-         val = Timestamp.now()
+         val = pytrap.UnirecTime.now()
          valstr = valstr[len("now"):] # Crop out "now"
          is_special = True
 
@@ -268,30 +251,42 @@ def apply_rules(wrapper, valstr):
 
 # --------------------------------------------------------------------
 
-# Parse TRAP params
-ifc_spec = trap.parseParams(sys.argv, module_info)
 
+MODULE_DESCR = """Debug Sender (NEMEA module)
+Inputs: 0
+Outputs: 1 (UniRec, format given as parameter)
 
-# Create UniRec template
-URTmplt = unirec.CreateTemplate("URTmplt", sys.argv[1])
-record = URTmplt()
+This module allows to manually send arbitrary UniRec records to a TRAP
+interface. You have to specify UniRec format at startup, everything other is
+done interactively by writing simple commands.
+"""
+
+parser = argparse.ArgumentParser(description=MODULE_DESCR)
+parser.add_argument('-i', metavar='IFC_SPEC',
+                    help='TRAP interface specifier.')
+parser.add_argument('template', metavar='UNIREC_FORMAT',
+                    help='UniRec specifier of the records to send, e.g. "uint32 FOO,string BAR"')
+# TODO add common help for IFC_SPEC, it should probably be as some constant in pytrap
+parser.formatter_class = argparse.RawTextHelpFormatter # TODO: neco co zachova explicitni odradkovani (klidne tam dam \n) ale jinak vyresi inteligentni zalamovani
+args = parser.parse_args()
+
+# Create UniRec template and record
+urtmplt = pytrap.UnirecTemplate(args.template)
+record = bytearray(65536) # allocate empty record of maximal possible size (i.e. 64kB by Unirec definition)
 record_metadata = dict() # To save send-time rules
+
 
 # UniRec specifier was parsed and template created successfuly,
 # remember field order from the specifier, we expect ',' as a field delimiter
 # and ' ' as type and name delimiter
-fieldOrder = [ f.split(' ')[1] for f in sys.argv[1].split(',') ]
+fieldOrder = [ f.split(' ')[1] for f in args.template.split(',') ]
 
 # Inititalize module
 init_trap()
-trap.set_data_fmt(0, trap.TRAP_FMT_UNIREC, sys.argv[1])
+trap.setDataFmt(0, pytrap.FMT_UNIREC, args.template)
 
 # Main loop
 if __name__ == '__main__':
-   if len(sys.argv) != 2:
-      print "Usage:\n      python debug_sender.py -i IFC_SPEC UNIREC_FORMAT"
-      exit(1)
-
    c = Commands()
    print("""Interactive Debug Sender
 This module can be used to create UniRec messages and send them via TRAP.
