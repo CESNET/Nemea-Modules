@@ -62,8 +62,8 @@ static int stop = 0;
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
 /**
- * \brief Swap `size` bytes in memory.
- * \param [in] ptr Pointer to memory
+ * \brief Swap `size` bytes in memory pointed by `ptr`.
+ * \param [in] ptr Pointer to memory.
  * \param [in] size Number of bytes to swap.
  */
 inline void swap_bytes(char *ptr, size_t size) {
@@ -79,50 +79,62 @@ int main(int argc, char *argv[])
 {
    int ret;
    uint8_t data_fmt = TRAP_FMT_UNKNOWN;
-   ur_template_t *tmplt = NULL;
+   ur_template_t *tmplt = NULL; // Template storage for input / output ifc.
 
-   // ***** TRAP initialization *****
+   // TRAP initialization.
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
+   // Unset data format on input and output interface.
    trap_set_required_fmt(0, TRAP_FMT_UNIREC, NULL);
    trap_set_data_fmt(0, TRAP_FMT_UNIREC, NULL);
 
+   // Main loop.
    while (!stop) {
       const void *rec;
       uint16_t rec_size;
 
+      // Receive message.
       ret = trap_recv(0, &rec, &rec_size);
       if (ret == TRAP_E_FORMAT_CHANGED) {
          const char *spec;
 
+         // Get new data format used on input interface.
          if (trap_get_data_fmt(TRAPIFC_INPUT, 0, &data_fmt, &spec) != TRAP_E_OK) {
             fprintf(stderr, "Error: Data format was not loaded.\n");
             break;
          } else {
+            // Update input / output template.
             tmplt = ur_define_fields_and_update_template(spec, tmplt);
             if (tmplt == NULL) {
                fprintf(stderr, "Error: Template could not be created.\n");
                break;
             }
+            // Set new data format for output interface.
             trap_set_data_fmt(0, TRAP_FMT_UNIREC, spec);
          }
       } else if (ret != TRAP_E_OK) {
          TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
       }
 
+      // Check for null record.
       if (rec_size <= 1) {
+         // Forward null record to output interface.
          trap_send(0, "", 1);
          break;
       }
 
+
+      // Iterate fields in received unirec message.
       ur_field_id_t id = UR_ITER_BEGIN;
       int i = 0;
       while ((id = ur_iter_fields_record_order(tmplt, i++)) != UR_ITER_END) {
          if (ur_is_present(tmplt, id)) {
+            // Get pointer to currently processed field.
             void *ptr = ur_get_ptr_by_id(tmplt, rec, id);
 
+            // Switch byte order for specific fields.
             switch(ur_get_type(id)) {
                case UR_TYPE_TIME:
                   swap_bytes((char *)ptr, sizeof(ur_time_t));
@@ -157,13 +169,14 @@ int main(int argc, char *argv[])
          }
       }
 
+      // Send altered message to output interface.
       trap_send(0, rec, rec_size);
    }
 
+   // Cleanup.
    if (tmplt != NULL) {
       ur_free_template(tmplt);
    }
-
    ur_finalize();
 
    TRAP_DEFAULT_FINALIZATION();
