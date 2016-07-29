@@ -157,6 +157,14 @@ int main(int argc, char *argv[])
                case UR_TYPE_INT64:
                   swap_bytes((char *)ptr, sizeof(int64_t));
                   break;
+               case UR_TYPE_STRING:
+               case UR_TYPE_BYTES:
+                  // Switch metadata byteorder:
+                  // Swap field offset bytes.
+                  swap_bytes(((char *)rec + tmplt->offset[id]), sizeof(uint16_t));
+                  // Swap field length bytes.
+                  swap_bytes(((char *)rec + tmplt->offset[id] + 2), sizeof(uint16_t));
+                  break;
                case UR_TYPE_FLOAT:
                   swap_bytes((char *)ptr, sizeof(float));
                   break;
