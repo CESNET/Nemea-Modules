@@ -464,7 +464,7 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, FlowRecord
       uint16_t additional_rr_cnt = ntohs(dns->additional_rec_cnt);
 
       rec->dns_answers = answer_rr_cnt;
-      rec->dns_id = dns->id;
+      rec->dns_id = ntohs(dns->id);
       rec->dns_rcode = DNS_HDR_GET_RESPCODE(flags);
 
       DEBUG_MSG("%s number: %u\n",                    DNS_HDR_GET_QR(flags) ? "Response" : "Query",
