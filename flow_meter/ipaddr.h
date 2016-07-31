@@ -1,10 +1,8 @@
 /**
- * \file stats.h
- * \brief Plugin periodically printing statistics about flow cache
- * \author Vaclav Bartos <bartos@cesnet.cz>
+ * \file ipaddr.h
+ * \brief Structure for storing IPv4 or IPv6 address.
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
- * \date 2014
- * \date 2015
+ * \date 2016
  */
 /*
  * Copyright (C) 2014-2015 CESNET
@@ -42,40 +40,16 @@
  * if advised of the possibility of such damage.
  *
  */
-#ifndef STATS_H
-#define STATS_H
 
-#include "flowcacheplugin.h"
+#ifndef IPADDR_H
+#define IPADDR_H
 
-#include <ostream>
-
-class StatsPlugin : public FlowCachePlugin
-{
-   unsigned long packets;
-   unsigned long new_flows;
-   unsigned long cache_hits;
-   unsigned long flows_in_cache;
-
-   struct timeval interval;
-   struct timeval last_ts;
-   std::ostream &out;
-   bool init_ts;
-
-   FILE *create_keys;
-   FILE *export_keys;
-
-   void check_timestamp(const Packet &pkt);
-   void print_header() const;
-   void print_stats(const struct timeval &ts) const;
-
-public:
-   StatsPlugin(struct timeval interval, std::ostream &out);
-
-   void init();
-   int post_create(FlowRecord &rec, const Packet &pkt);
-   int post_update(FlowRecord &rec, const Packet &pkt);
-   void pre_export(FlowRecord &rec);
-   void finish();
-};
+/**
+ * \brief Store IPv4 or IPv6 address.
+ */
+typedef union ipaddr_u {
+   uint8_t  v6[16];  /**< IPv6 address. */
+   uint32_t v4;      /**< IPv4 address  */
+} ipaddr_t;
 
 #endif

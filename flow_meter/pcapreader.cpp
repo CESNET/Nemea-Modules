@@ -60,230 +60,272 @@
 
 using namespace std;
 
-//#define DEBUG
+// Read timeout in miliseconds for pcap_open_live function.
+#define READ_TIMEOUT 1000
 
+//#define DEBUG_PARSER
+
+#ifdef DEBUG_PARSER
 // Print debug message if debugging is allowed.
-#ifdef DEBUG
 #define DEBUG_MSG(format, ...) fprintf(stderr, format, ##__VA_ARGS__)
-#else
-#define DEBUG_MSG(format, ...)
-#endif
-
 // Process code if debugging is allowed.
-#ifdef DEBUG
 #define DEBUG_CODE(code) code
 #else
+#define DEBUG_MSG(format, ...)
 #define DEBUG_CODE(code)
 #endif
 
-#ifdef DEBUG
+#ifdef DEBUG_PARSER
 static uint32_t s_total_pkts = 0;
-#endif /* DEBUG */
+#endif /* DEBUG_PARSER */
 
 /**
- * \brief Serves to distinguish between valid (parsed) and non-valid packet.
+ * \brief Distinguish between valid (parsed) and non-valid packet.
  */
 bool packet_valid = false;
 
 /**
- * \brief Parsing callback function for pcap_dispatch() call. Parse packets up to tranport layer.
- * \param [in,out] arg Serves for passing pointer into callback function.
- * \param [in] h Contains timestamp and packet size.
- * \param [in] data Pointer to the captured packet data.
+ * \brief Parse specific fields from ETHERNET frame header.
+ * \param [in] data_ptr Pointer to begin of header.
+ * \param [out] ethertype Pointer where ethertype field is stored.
+ * \return Size of header in bytes.
  */
-void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data)
+inline uint16_t parse_eth_hdr(const u_char *data_ptr, uint16_t *ethertype)
 {
-   Packet &pkt = *(Packet *)arg;
-   const u_char *data_ptr = data;
-   struct ethhdr *eth = (struct ethhdr *)data_ptr;
-   uint8_t transport_proto = 0;
-   uint16_t payload_len = 0;
-
-   DEBUG_MSG("---------- packet parser  #%u -------------\n", ++s_total_pkts);
-   DEBUG_MSG("Time:\t\t\t%ld.%ld\n",      h->ts.tv_sec, h->ts.tv_usec);
-   DEBUG_MSG("Packet length:\t\tcaplen=%uB len=%uB\n\n", h->caplen, h->len);
+   struct ethhdr *eth = (struct ethhdr *) data_ptr;
+   uint16_t hdr_len, tmp = ntohs(eth->h_proto);
 
    DEBUG_MSG("Ethernet header:\n");
-   DEBUG_MSG("\tDest mac:\t%s\n",         ether_ntoa((struct ether_addr *)eth->h_dest));
-   DEBUG_MSG("\tSrc mac:\t%s\n",          ether_ntoa((struct ether_addr *)eth->h_source));
+   DEBUG_MSG("\tDest mac:\t%s\n",         ether_ntoa((struct ether_addr *) eth->h_dest));
+   DEBUG_MSG("\tSrc mac:\t%s\n",          ether_ntoa((struct ether_addr *) eth->h_source));
+   DEBUG_MSG("\tEthertype:\t%#06x\n",     ntohs(eth->h_proto));
 
-   uint16_t ethertype = ntohs(eth->h_proto);
-
-   DEBUG_MSG("\tEthertype:\t%#06x\n",     ethertype);
-
-   if (ethertype == ETH_P_8021Q) {
-      DEBUG_CODE(uint16_t vlan = ntohs(*(unsigned uint32_t *)(data_ptr + 14)));
+   if (tmp == ETH_P_8021Q) {
+      DEBUG_CODE(uint16_t vlan = ntohs(*(unsigned uint32_t *) (data_ptr + 14)));
       DEBUG_MSG("\t802.1Q field:\n");
       DEBUG_MSG("\t\tPriority:\t%u\n",    ((vlan & 0xE000) >> 12));
       DEBUG_MSG("\t\tCFI:\t\t%u\n",       ((vlan & 0x1000) >> 11));
       DEBUG_MSG("\t\tVLAN:\t\t%u\n",      (vlan & 0x0FFF));
 
-      data_ptr += 18;
-      ethertype = ntohs(*(uint16_t *)&data_ptr[-2]);
-      DEBUG_MSG("\t\tEthertype:\t%#06x\n",     ethertype);
+      hdr_len = 18;
+      tmp = ntohs(*(uint16_t *) &data_ptr[16]);
+      DEBUG_MSG("\t\tEthertype:\t%#06x\n", tmp);
    } else {
-      data_ptr += 14;
+      hdr_len = 14;
    }
 
-   pkt.packetFieldIndicator = PCKT_TIMESTAMP;
-   pkt.timestamp = h->ts.tv_sec + h->ts.tv_usec / 1000000.0;
+   *ethertype = tmp;
 
+   return hdr_len;
+}
+
+/**
+ * \brief Parse specific fields from IPv4 header.
+ * \param [in] data_ptr Pointer to begin of header.
+ * \param [out] pkt Pointer to Packet structure where parsed fields will be stored.
+ * \return Size of header in bytes.
+ */
+inline uint16_t parse_ipv4_hdr(const u_char *data_ptr, Packet *pkt)
+{
+   struct iphdr *ip = (struct iphdr *) data_ptr;
+
+   pkt->packetFieldIndicator |= PCKT_IPV4_MASK;
+   pkt->ipVersion = ip->version;
+   pkt->protocolIdentifier = ip->protocol;
+   pkt->ipClassOfService = ip->tos;
+   pkt->ipLength = ntohs(ip->tot_len);
+   pkt->ipTtl = ip->ttl;
+   pkt->sourceIPAddress.v4 = ip->saddr;
+   pkt->destinationIPAddress.v4 = ip->daddr;
+
+   DEBUG_MSG("IPv4 header:\n");
+   DEBUG_MSG("\tHDR version:\t%u\n",   ip->version);
+   DEBUG_MSG("\tHDR length:\t%u\n",    ip->ihl);
+   DEBUG_MSG("\tTOS:\t\t%u\n",         ip->tos);
+   DEBUG_MSG("\tTotal length:\t%u\n",  ntohs(ip->tot_len));
+   DEBUG_MSG("\tID:\t\t%#x\n",         ntohs(ip->id));
+   DEBUG_MSG("\tFlags:\t\t%#x\n",      ((ntohs(ip->frag_off) & 0xE000) >> 13));
+   DEBUG_MSG("\tFrag off:\t%#x\n",     (ntohs(ip->frag_off) & 0x1FFF));
+   DEBUG_MSG("\tTTL:\t\t%u\n",         ip->ttl);
+   DEBUG_MSG("\tProtocol:\t%u\n",      ip->protocol);
+   DEBUG_MSG("\tChecksum:\t%#06x\n",   ntohs(ip->check));
+   DEBUG_MSG("\tSrc addr:\t%s\n",      inet_ntoa(*(struct in_addr *) (&ip->saddr)));
+   DEBUG_MSG("\tDest addr:\t%s\n",     inet_ntoa(*(struct in_addr *) (&ip->daddr)));
+
+   return (ip->ihl << 2);
+}
+
+/**
+ * \brief Parse specific fields from IPv6 header.
+ * \param [in] data_ptr Pointer to begin of header.
+ * \param [out] pkt Pointer to Packet structure where parsed fields will be stored.
+ * \return Size of header in bytes.
+ */
+inline uint16_t parse_ipv6_hdr(const u_char *data_ptr, Packet *pkt)
+{
+   struct ip6_hdr *ip6 = (struct ip6_hdr *) data_ptr;
+   uint16_t hdr_len = 40;
+
+   pkt->packetFieldIndicator |= PCKT_IPV6_MASK;
+   pkt->ipVersion = (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0xf0000000) >> 28;
+   pkt->ipClassOfService = (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0x0ff00000) >> 20;
+   pkt->protocolIdentifier = ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;
+   pkt->ipLength = ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);
+   memcpy(pkt->sourceIPAddress.v6, (const char *) &ip6->ip6_src, 16);
+   memcpy(pkt->destinationIPAddress.v6, (const char *) &ip6->ip6_dst, 16);
+
+   DEBUG_CODE(char buffer[INET6_ADDRSTRLEN]);
+   DEBUG_MSG("IPv6 header:\n");
+   DEBUG_MSG("\tVersion:\t%u\n",       (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0xf0000000) >> 28);
+   DEBUG_MSG("\tClass:\t\t%u\n",       (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0x0ff00000) >> 20);
+   DEBUG_MSG("\tFlow:\t\t%#x\n",       (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0x000fffff));
+   DEBUG_MSG("\tLength:\t\t%u\n",      ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen));
+   DEBUG_MSG("\tProtocol:\t%u\n",      ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt);
+   DEBUG_MSG("\tHop limit:\t%u\n",     ip6->ip6_ctlun.ip6_un1.ip6_un1_hlim);
+
+   DEBUG_CODE(inet_ntop(AF_INET6, (const void *) &ip6->ip6_src, buffer, INET6_ADDRSTRLEN));
+   DEBUG_MSG("\tSrc addr:\t%s\n",      buffer);
+   DEBUG_CODE(inet_ntop(AF_INET6, (const void *) &ip6->ip6_dst, buffer, INET6_ADDRSTRLEN));
+   DEBUG_MSG("\tDest addr:\t%s\n",     buffer);
+
+   return hdr_len;
+}
+
+/**
+ * \brief Parse specific fields from TCP header.
+ * \param [in] data_ptr Pointer to begin of header.
+ * \param [out] pkt Pointer to Packet structure where parsed fields will be stored.
+ * \return Size of header in bytes.
+ */
+inline uint16_t parse_tcp_hdr(const u_char *data_ptr, Packet *pkt)
+{
+   struct tcphdr *tcp = (struct tcphdr *) data_ptr;
+
+   pkt->packetFieldIndicator |= PCKT_PAYLOAD_MASK;
+   pkt->packetFieldIndicator |= PCKT_TCP_MASK;
+   pkt->sourceTransportPort = ntohs(tcp->source);
+   pkt->destinationTransportPort = ntohs(tcp->dest);
+   pkt->tcpControlBits = 0;
+
+   if (tcp->fin) {
+      pkt->tcpControlBits |= TCP_FIN;
+   }
+   if (tcp->syn) {
+      pkt->tcpControlBits |= TCP_SYN;
+   }
+   if (tcp->rst) {
+      pkt->tcpControlBits |= TCP_RST;
+   }
+   if (tcp->psh) {
+      pkt->tcpControlBits |= TCP_PUSH;
+   }
+   if (tcp->ack) {
+      pkt->tcpControlBits |= TCP_ACK;
+   }
+   if (tcp->urg) {
+      pkt->tcpControlBits |= TCP_URG;
+   }
+
+   DEBUG_MSG("TCP header:\n");
+   DEBUG_MSG("\tSrc port:\t%u\n",   ntohs(tcp->source));
+   DEBUG_MSG("\tDest port:\t%u\n",  ntohs(tcp->dest));
+   DEBUG_MSG("\tSEQ:\t\t%#x\n",     ntohl(tcp->seq));
+   DEBUG_MSG("\tACK SEQ:\t%#x\n",   ntohl(tcp->ack_seq));
+   DEBUG_MSG("\tData offset:\t%u\n",tcp->doff);
+   DEBUG_MSG("\tFlags:\t\t%s%s%s%s%s%s\n", (tcp->fin ? "FIN " : ""), (tcp->syn ? "SYN " : ""),
+                                           (tcp->rst ? "RST " : ""), (tcp->psh ? "PSH " : ""),
+                                           (tcp->ack ? "ACK " : ""), (tcp->urg ? "URG"  : ""));
+   DEBUG_MSG("\tWindow:\t\t%u\n",   ntohs(tcp->window));
+   DEBUG_MSG("\tChecksum:\t%#06x\n",ntohs(tcp->check));
+   DEBUG_MSG("\tUrg ptr:\t%#x\n",   ntohs(tcp->urg_ptr));
+   DEBUG_MSG("\tReserved1:\t%#x\n", tcp->res1);
+   DEBUG_MSG("\tReserved2:\t%#x\n", tcp->res2);
+
+   return (tcp->doff << 2);
+}
+
+/**
+ * \brief Parse specific fields from UDP header.
+ * \param [in] data_ptr Pointer to begin of header.
+ * \param [out] pkt Pointer to Packet structure where parsed fields will be stored.
+ * \return Size of header in bytes.
+ */
+inline uint16_t parse_udp_hdr(const u_char *data_ptr, Packet *pkt)
+{
+   struct udphdr *udp = (struct udphdr *) data_ptr;
+
+   pkt->packetFieldIndicator |= PCKT_PAYLOAD_MASK;
+   pkt->packetFieldIndicator |= PCKT_UDP_MASK;
+   pkt->sourceTransportPort = ntohs(udp->source);
+   pkt->destinationTransportPort = ntohs(udp->dest);
+
+   DEBUG_MSG("UDP header:\n");
+   DEBUG_MSG("\tSrc port:\t%u\n",   ntohs(udp->source));
+   DEBUG_MSG("\tDest port:\t%u\n",  ntohs(udp->dest));
+   DEBUG_MSG("\tLength:\t\t%u\n",   ntohs(udp->len));
+   DEBUG_MSG("\tChecksum:\t%#06x\n",ntohs(udp->check));
+
+   return 8;
+}
+
+/**
+ * \brief Parsing callback function for pcap_dispatch() call. Parse packets up to transport layer.
+ * \param [in,out] arg Serves for passing pointer to Packet structure into callback function.
+ * \param [in] h Contains timestamp and packet size.
+ * \param [in] data Pointer to the captured packet data.
+ */
+void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data)
+{
+   Packet *pkt = (Packet *) arg;
+   uint16_t data_offset = 0, ethertype;
+
+   DEBUG_MSG("---------- packet parser  #%u -------------\n", ++s_total_pkts);
+   DEBUG_CODE(
+      char timestamp[32];
+      time_t time = h->ts.tv_sec;
+      strftime(timestamp, sizeof(timestamp), "%FT%T", localtime(&time));
+   );
+   DEBUG_MSG("Time:\t\t\t%s.%06lu\n",     timestamp, h->ts.tv_usec);
+   DEBUG_MSG("Packet length:\t\tcaplen=%uB len=%uB\n\n", h->caplen, h->len);
+
+   pkt->packetFieldIndicator = PCKT_PCAP_MASK;
+   pkt->timestamp = h->ts;
+   pkt->sourceTransportPort = 0;
+   pkt->destinationTransportPort = 0;
+   pkt->protocolIdentifier = 0;
+
+   data_offset = parse_eth_hdr(data, &ethertype);
    if (ethertype == ETH_P_IP) {
-      struct iphdr *ip = (struct iphdr *)data_ptr;
-
-      pkt.ipVersion = ip->version;
-      pkt.protocolIdentifier = ip->protocol;
-      pkt.ipClassOfService = ip->tos;
-      pkt.ipLength = ntohs(ip->tot_len);
-      pkt.ipTtl = ip->ttl;
-      pkt.sourceIPv4Address = ip->saddr;
-      pkt.destinationIPv4Address = ip->daddr;
-      pkt.packetFieldIndicator |= PCKT_IPV4_MASK;
-
-      transport_proto = ip->protocol;
-      payload_len = ntohs(ip->tot_len) - ip->ihl * 4;
-      data_ptr += ip->ihl * 4;
-
-      DEBUG_MSG("IPv4 header:\n");
-      DEBUG_MSG("\tHDR version:\t%u\n",   ip->version);
-      DEBUG_MSG("\tHDR length:\t%u\n",    ip->ihl);
-      DEBUG_MSG("\tTOS:\t\t%u\n",         ip->tos);
-      DEBUG_MSG("\tTotal length:\t%u\n",  ntohs(ip->tot_len));
-      DEBUG_MSG("\tID:\t\t%#x\n",         ntohs(ip->id));
-      DEBUG_MSG("\tFlags:\t\t%#x\n",      ((ntohs(ip->frag_off) & 0xE000) >> 13));
-      DEBUG_MSG("\tFrag off:\t%#x\n",     (ntohs(ip->frag_off) & 0x1FFF));
-      DEBUG_MSG("\tTTL:\t\t%u\n",         ip->ttl);
-      DEBUG_MSG("\tProtocol:\t%u\n",      ip->protocol);
-      DEBUG_MSG("\tChecksum:\t%#06x\n",   ntohs(ip->check));
-      DEBUG_MSG("\tSrc addr:\t%s\n",      inet_ntoa(*(struct in_addr *)(&ip->saddr)));
-      DEBUG_MSG("\tDest addr:\t%s\n",     inet_ntoa(*(struct in_addr *)(&ip->daddr)));
-
+      data_offset += parse_ipv4_hdr(data + data_offset, pkt);
    } else if (ethertype == ETH_P_IPV6) {
-      struct ip6_hdr *ip6 = (struct ip6_hdr *)data_ptr;
-
-      pkt.ipVersion = (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0xf0000000) >> 28;
-      pkt.ipClassOfService = (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0x0ff00000) >> 20;
-      pkt.protocolIdentifier = ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;
-      pkt.ipLength = ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);
-      memcpy(pkt.sourceIPv6Address, (const char *)&ip6->ip6_src, 16);
-      memcpy(pkt.destinationIPv6Address, (const char *)&ip6->ip6_dst, 16);
-      pkt.packetFieldIndicator |= PCKT_IPV6_MASK;
-
-      transport_proto = ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;
-      payload_len = ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);   //TODO: IPv6 Extension header
-      data_ptr += 40;
-
-      DEBUG_CODE(char buffer[INET6_ADDRSTRLEN]);
-      DEBUG_MSG("IPv6 header:\n");
-      DEBUG_MSG("\tVersion:\t%u\n",       (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0xf0000000) >> 28);
-      DEBUG_MSG("\tClass:\t\t%u\n",       (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0x0ff00000) >> 20);
-      DEBUG_MSG("\tFlow:\t\t%#x\n",       (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0x000fffff));
-      DEBUG_MSG("\tLength:\t\t%u\n",      ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen));
-      DEBUG_MSG("\tProtocol:\t%u\n",      ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt);
-      DEBUG_MSG("\tHop limit:\t%u\n",     ip6->ip6_ctlun.ip6_un1.ip6_un1_hlim);
-
-      DEBUG_CODE(inet_ntop(AF_INET6, (const void *)&ip6->ip6_src, buffer, INET6_ADDRSTRLEN));
-      DEBUG_MSG("\tSrc addr:\t%s\n",      buffer);
-      DEBUG_CODE(inet_ntop(AF_INET6, (const void *)&ip6->ip6_dst, buffer, INET6_ADDRSTRLEN));
-      DEBUG_MSG("\tDest addr:\t%s\n",     buffer);
+      data_offset += parse_ipv6_hdr(data + data_offset, pkt);
    } else {
       DEBUG_MSG("Packet parser exits: unknown ethernet type: %#06x\n", ethertype);
       return;
    }
 
-   if (transport_proto == IPPROTO_TCP) {
-      struct tcphdr *tcp = (struct tcphdr *)data_ptr;
-
-      pkt.sourceTransportPort = ntohs(tcp->source);
-      pkt.destinationTransportPort = ntohs(tcp->dest);
-      pkt.tcpControlBits = 0x0;
-      if (tcp->fin) {
-         pkt.tcpControlBits |= TCP_FIN;
-      }
-      if (tcp->syn) {
-         pkt.tcpControlBits |= TCP_SYN;
-      }
-      if (tcp->rst) {
-         pkt.tcpControlBits |= TCP_RST;
-      }
-      if (tcp->psh) {
-         pkt.tcpControlBits |= TCP_PUSH;
-      }
-      if (tcp->ack) {
-         pkt.tcpControlBits |= TCP_ACK;
-      }
-      if (tcp->urg) {
-         pkt.tcpControlBits |= TCP_URG;
-      }
-      pkt.packetFieldIndicator |= PCKT_TCP_MASK;
-
-      data_ptr += tcp->doff * 4;
-      payload_len -= tcp->doff * 4;
-
-      DEBUG_MSG("TCP header:\n");
-      DEBUG_MSG("\tSrc port:\t%u\n",   ntohs(tcp->source));
-      DEBUG_MSG("\tDest port:\t%u\n",  ntohs(tcp->dest));
-      DEBUG_MSG("\tSEQ:\t\t%#x\n",     ntohl(tcp->seq));
-      DEBUG_MSG("\tACK SEQ:\t%#x\n",   ntohl(tcp->ack_seq));
-      DEBUG_MSG("\tData offset:\t%u\n",tcp->doff);
-      DEBUG_MSG("\tFlags:\t\t%s%s%s%s%s%s\n", (tcp->fin ? "FIN " : ""), (tcp->syn ? "SYN " : ""), (tcp->rst ? "RST " : ""), (tcp->psh ? "PSH " : ""), (tcp->ack ? "ACK " : ""), (tcp->urg ? "URG" : ""));
-      DEBUG_MSG("\tWindow:\t\t%u\n",   ntohs(tcp->window));
-      DEBUG_MSG("\tChecksum:\t%#06x\n",ntohs(tcp->check));
-      DEBUG_MSG("\tUrg ptr:\t%#x\n",   ntohs(tcp->urg_ptr));
-      DEBUG_MSG("\tReserved1:\t%#x\n", tcp->res1);
-      DEBUG_MSG("\tReserved2:\t%#x\n", tcp->res2);
-   } else if (transport_proto == IPPROTO_UDP) {
-      struct udphdr *udp = (struct udphdr *)data_ptr;
-
-      pkt.sourceTransportPort = ntohs(udp->source);
-      pkt.destinationTransportPort = ntohs(udp->dest);
-      pkt.packetFieldIndicator |= PCKT_UDP_MASK;
-
-      data_ptr += 8;
-      payload_len -= 8;
-
-      DEBUG_MSG("UDP header:\n");
-      DEBUG_MSG("\tSrc port:\t%u\n",   ntohs(udp->source));
-      DEBUG_MSG("\tDest port:\t%u\n",  ntohs(udp->dest));
-      DEBUG_MSG("\tLength:\t\t%u\n",   ntohs(udp->len));
-      DEBUG_MSG("\tChecksum:\t%#06x\n",ntohs(udp->check));
-   } else if (transport_proto == IPPROTO_ICMP) {
-      DEBUG_CODE(struct icmphdr *icmp = (struct icmphdr *)data_ptr);
-      DEBUG_MSG("ICMP header:\n");
-      DEBUG_MSG("\tType:\t\t%u\n",     icmp->type);
-      DEBUG_MSG("\tCode:\t\t%u\n",     icmp->code);
-      DEBUG_MSG("\tChecksum:\t%#06x\n",ntohs(icmp->checksum));
-      DEBUG_MSG("\tRest:\t\t%#06x\n",  ntohl(*(uint32_t *)&icmp->un));
-   } else if (transport_proto == IPPROTO_ICMPV6) {
-      DEBUG_CODE(struct icmp6_hdr *icmp6 = (struct icmp6_hdr *)data_ptr);
-      DEBUG_MSG("ICMPv6 header:\n");
-      DEBUG_MSG("\tType:\t\t%u\n",     icmp6->icmp6_type);
-      DEBUG_MSG("\tCode:\t\t%u\n",     icmp6->icmp6_code);
-      DEBUG_MSG("\tChecksum:\t%#x\n",  ntohs(icmp6->icmp6_cksum));
-      DEBUG_MSG("\tBody:\t\t%#x\n",    ntohs(*(uint32_t *)&icmp6->icmp6_dataun));
-   } else {
-      DEBUG_MSG("Packet parser exits: unknown transport protocol: %#06x\n", transport_proto);
+   if (pkt->protocolIdentifier == IPPROTO_TCP) {
+      data_offset += parse_tcp_hdr(data + data_offset, pkt);
+   } else if (pkt->protocolIdentifier == IPPROTO_UDP) {
+      data_offset += parse_udp_hdr(data + data_offset, pkt);
+   } else if (pkt->protocolIdentifier != IPPROTO_ICMP && pkt->protocolIdentifier != IPPROTO_ICMPV6) {
+      DEBUG_MSG("Packet parser exits: unknown transport protocol: %#06x\n", pkt->protocolIdentifier);
       return;
    }
 
-   int len = (data_ptr - data) + payload_len;
+   uint32_t len = h->caplen;
    if (len > MAXPCKTSIZE) {
       len = MAXPCKTSIZE;
       DEBUG_MSG("Packet size too long, truncating to %u\n", len);
    }
-   memcpy(pkt.packet, data, len);
-   pkt.packet[len] = 0;
-   pkt.packetTotalLength = len;
+   memcpy(pkt->packet, data, len);
+   pkt->packet[len] = 0;
+   pkt->packetTotalLength = len;
 
-   pkt.transportPayloadPacketSectionSize = len - (data_ptr - data);
-   pkt.transportPayloadPacketSection = pkt.packet + (data_ptr - data);
+   pkt->transportPayloadPacketSectionSize = len - data_offset;
+   pkt->transportPayloadPacketSection = pkt->packet + data_offset;
 
-   if ((pkt.packetFieldIndicator & PCKT_TCP_MASK) == PCKT_TCP_MASK ||
-       (pkt.packetFieldIndicator & PCKT_UDP_MASK) == PCKT_UDP_MASK) {
-      pkt.packetFieldIndicator |= PCKT_PAYLOAD_MASK;
-   }
-
-   DEBUG_MSG("Payload length:\t%u\n", payload_len);
+   DEBUG_MSG("Payload length:\t%u\n", pkt->transportPayloadPacketSectionSize);
    DEBUG_MSG("Packet parser exits: packet parsed\n");
    packet_valid = true;
 }
@@ -350,7 +392,8 @@ int PcapReader::init_interface(const std::string &interface)
    char errbuf[PCAP_ERRBUF_SIZE];
    errbuf[0] = 0;
 
-   handle = pcap_open_live(interface.c_str(), 1 << 16, 1, 1000, errbuf);
+   // TODO: check for specific format of link-layer header
+   handle = pcap_open_live(interface.c_str(), MAXPCKTSIZE, 1, READ_TIMEOUT, errbuf);
    if (handle == NULL) {
       errmsg = errbuf;
       return 2;
@@ -382,11 +425,11 @@ int PcapReader::get_pkt(Packet &packet)
       return -3;
    }
 
-   packet_valid = false;
    int ret;
+   packet_valid = false;
 
    // Get pkt from network interface or file.
-   ret = pcap_dispatch(handle, 1, packet_handler, (u_char *)(&packet));
+   ret = pcap_dispatch(handle, 1, packet_handler, (u_char *) (&packet));
    if (ret == 0) {
       // Read timeout occured or no more packets in file...
       return (live_capture ? 3 : 0);

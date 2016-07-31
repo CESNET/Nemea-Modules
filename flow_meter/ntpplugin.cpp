@@ -48,7 +48,6 @@
 
 #include <unirec/unirec.h>
 
-
 #include "flowifc.h"
 #include "flowcacheplugin.h"
 #include "flow_meter.h"
@@ -144,9 +143,9 @@ void NTPPlugin::add_ext_ntp(FlowRecord &rec, const Packet &pkt)
 {
    FlowRecordExtNTP *ntp_data_ext = new FlowRecordExtNTP();
    if (!parse_ntp(pkt, ntp_data_ext)) {
-      delete ntp_data_ext;/*Don't add new extension packet.*/
+      delete ntp_data_ext; /*Don't add new extension packet.*/
    } else {
-      rec.addExtension(ntp_data_ext);/*Add extension to  packet.*/
+      rec.addExtension(ntp_data_ext); /*Add extension to  packet.*/
    }
 }
 
@@ -173,7 +172,7 @@ bool NTPPlugin::parse_ntp(const Packet &pkt, FlowRecordExtNTP *ntp_data_ext)
    }
 
    try{
-      DEBUG_MSG("\n---------- NTP PARSER #%u ----------\n", total+1);
+      DEBUG_MSG("\n---------- NTP PARSER #%u ----------\n", total + 1);
 
       /******************
                  * PARSE NTP_LEAP.*
@@ -379,12 +378,11 @@ bool NTPPlugin::parse_ntp(const Packet &pkt, FlowRecordExtNTP *ntp_data_ext)
       DEBUG_MSG("\t\ttimestamp:\t\t%s\n", ntp_data_ext->sent);
 
    } catch (const char *err) {
-
       DEBUG_MSG("%s\n", err);
       return false; /*Don't add extension to  paket.*/
    }
 
-   return true;/*Add extension to  NTP packet*/
+   return true; /*Add extension to  NTP packet*/
 }
 
 /**
@@ -448,7 +446,7 @@ std::string  NTPPlugin::parse_timestamp(const Packet &pkt, int p1, int p4, int p
    for (i = 1; i <= 32; i++) {
       if ((highestbit & tmp) != 0) {
          fract = fract + curfract;
-    j++;
+         j++;
       }
       curfract = curfract / 2;
       tmp = tmp << 1;
@@ -460,7 +458,8 @@ std::string  NTPPlugin::parse_timestamp(const Packet &pkt, int p1, int p4, int p
    for(i = 0; j <= 1; i++) {
       if (result2[i] == '.') {
          j = 5;
-         for (k = i + 2; k <= result2.length(); k++) { result2[k-2] = result2[k]; }            }
+         for (k = i + 2; k <= result2.length(); k++) { result2[k - 2] = result2[k]; }
+      }
    }
    result2.resize(result2.length() - 1);
    return result2;

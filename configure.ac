@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-modules], [2.3.6], [traffic-analysis@cesnet.cz])
+AC_INIT([nemea-modules], [2.4.0], [traffic-analysis@cesnet.cz])
 AC_CONFIG_SRCDIR([flowcounter/flowcounter.c])
 AC_CONFIG_HEADERS([config.h])
-RELEASE=1
+RELEASE=2
 AC_SUBST(RELEASE)
 USERNAME=`git config --get user.name`
 USERMAIL=`git config --get user.email`
@@ -90,6 +90,13 @@ if [[ -z "$HAVE_LIBIDN_TRUE" ]]; then
 RPM_REQUIRES+=" libidn"
 RPM_BUILDREQ+=" libidn-devel"
 fi
+
+AC_ARG_WITH([flowcachesize],
+	AC_HELP_STRING([--with-flowcachesize=NUMBER],[Set size of flow cache for flow_meter module in number of flow records. Size must be divisible by 32. Default is 65536.]),
+	[
+	CPPFLAGS="$CPPFLAGS -DFLOW_CACHE_SIZE=$withval"
+	]
+)
 
 AC_ARG_WITH([nfreader],
 	AC_HELP_STRING([--without-nfreader], [Skip nfreader module.]),

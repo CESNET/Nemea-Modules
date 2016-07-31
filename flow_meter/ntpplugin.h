@@ -137,7 +137,7 @@ public:
 private:
    bool parse_ntp(const Packet &pkt, FlowRecordExtNTP *ntp_data_ext);
    void add_ext_ntp(FlowRecord &rec, const Packet &pkt);
-   std::string  parse_timestamp(const Packet &pkt, int p1, int p4, int p5, int p8);
+   std::string parse_timestamp(const Packet &pkt, int p1, int p4, int p5, int p8);
 
    bool statsout;    /**< Indicator whether to print stats when flow cache is finishing or not. */
    uint32_t requests;   /**< Total number of parsed NTP queries. */

@@ -250,7 +250,6 @@ struct FlowRecordExtDNS : FlowRecordExt {
          ur_set(tmplt, record, F_DNS_CLASS, dns_qclass);
          ur_set(tmplt, record, F_DNS_RR_TTL, dns_rr_ttl);
          ur_set(tmplt, record, F_DNS_RLENGTH, dns_rlength);
-         //ur_set_string(tmplt, record, F_DNS_RDATA, dns_data);
          ur_set_var(tmplt, record, F_DNS_RDATA, dns_data, dns_rlength);
          ur_set(tmplt, record, F_DNS_PSIZE, dns_psize);
          ur_set(tmplt, record, F_DNS_DO, dns_do);

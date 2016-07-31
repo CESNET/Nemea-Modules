@@ -128,14 +128,11 @@ protected:
     */
    int plugins_post_create(FlowRecord &rec, const Packet &pkt)
    {
-      int retval = 0;
+      int ret = 0;
       for (unsigned int i = 0; i < plugins.size(); i++) {
-         int tmp = plugins[i]->post_create(rec, pkt);
-         if (tmp != 0) {
-            retval |= tmp;
-         }
+         ret |= plugins[i]->post_create(rec, pkt);
       }
-      return retval;
+      return ret;
    }
 
    /**
@@ -146,14 +143,11 @@ protected:
     */
    int plugins_pre_update(FlowRecord &rec, Packet &pkt)
    {
-      int retval = 0;
+      int ret = 0;
       for (unsigned int i = 0; i < plugins.size(); i++) {
-         int tmp = plugins[i]->pre_update(rec, pkt);
-         if (tmp != 0) {
-            retval |= tmp;
-         }
+         ret |= plugins[i]->pre_update(rec, pkt);
       }
-      return retval;
+      return ret;
    }
 
    /**
@@ -163,14 +157,11 @@ protected:
     */
    int plugins_post_update(FlowRecord &rec, const Packet &pkt)
    {
-      int retval = 0;
+      int ret = 0;
       for (unsigned int i = 0; i < plugins.size(); i++) {
-         int tmp = plugins[i]->post_update(rec, pkt);
-         if (tmp != 0) {
-            retval |= tmp;
-         }
+         ret |= plugins[i]->post_update(rec, pkt);
       }
-      return retval;
+      return ret;
    }
 
    /**

@@ -52,13 +52,11 @@
 #include "flowexporter.h"
 #include <string>
 
-#define MAX_KEYLENGTH 76
+#define MAX_KEYLENGTH 40
 
 class Flow
 {
    uint64_t hash;
-   double inactive;
-   double active;
    char key[MAX_KEYLENGTH];
 
 public:
@@ -67,38 +65,21 @@ public:
 
    void erase()
    {
-      flowrecord.flowFieldIndicator = 0x0;
-      flowrecord.flowStartTimestamp = 0;
-      flowrecord.flowEndTimestamp = 0;
-      flowrecord.ipVersion = 0;
-      flowrecord.protocolIdentifier = 0;
-      flowrecord.ipClassOfService = 0;
-      flowrecord.ipTtl = 0;
-      flowrecord.sourceIPv4Address = 0;
-      flowrecord.destinationIPv4Address = 0;
-      flowrecord.sourceTransportPort = 0;
-      flowrecord.destinationTransportPort = 0;
-      flowrecord.octetTotalLength = 0;
-      flowrecord.packetTotalCount = 0;
-      flowrecord.tcpControlBits = 0;
       flowrecord.removeExtensions();
-
+      memset(&flowrecord, 0, sizeof(flowrecord));
       empty_flow = true;
    }
 
-   Flow(double inactivetimeout, double activetimeout)
+   Flow()
    {
       erase();
-      this->inactive = inactivetimeout;
-      this->active = activetimeout;
    };
    ~Flow()
    {
    };
 
-   bool isempty();
-   inline bool isexpired(double current_ts);
-   bool belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len);
+   bool isempty() const;
+   bool belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len) const;
    void create(Packet pkt, uint64_t pkt_hash, char *pkt_key, uint8_t key_len);
    void update(Packet pkt);
 };
@@ -123,8 +104,10 @@ class NHTFlowCache : public FlowCache
    long flushed;
    long lookups;
    long lookups2;
-   double currtimestamp;
-   double lasttimestamp;
+   struct timeval currtimestamp;
+   struct timeval lasttimestamp;
+   struct timeval active;
+   struct timeval inactive;
    char key[MAX_KEYLENGTH];
    std::string policy;
    replacementvector_t rpl;
@@ -145,10 +128,12 @@ public:
       this->lookups2 = 0;
       this->policy = options.replacementstring;
       this->statsout = options.statsout;
+      this->active = options.activetimeout;
+      this->inactive = options.inactivetimeout;
 
       flowarray = new Flow*[size];
       for (int i = 0; i < size; i++) {
-         flowarray[i] = new Flow(options.inactivetimeout, options.activetimeout);
+         flowarray[i] = new Flow();
       }
    };
    ~NHTFlowCache()

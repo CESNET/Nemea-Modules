@@ -52,6 +52,8 @@
 #include <stdlib.h>
 #include <unirec/unirec.h>
 
+#include "ipaddr.h"
+
 // Values of field presence indicator flags (flowFieldIndicator)
 // (Names of the fields are inspired by IPFIX specification)
 #define FLW_FLOWFIELDINDICATOR       (0x1 << 0)
@@ -168,16 +170,14 @@ struct FlowRecordExt {
  */
 struct FlowRecord {
    uint64_t flowFieldIndicator;
-   double   flowStartTimestamp;
-   double   flowEndTimestamp;
+   struct timeval flowStartTimestamp;
+   struct timeval flowEndTimestamp;
    uint8_t  ipVersion;
    uint8_t  protocolIdentifier;
    uint8_t  ipClassOfService;
    uint8_t  ipTtl;
-   uint32_t sourceIPv4Address;
-   uint32_t destinationIPv4Address;
-   char     sourceIPv6Address[16];
-   char     destinationIPv6Address[16];
+   ipaddr_t sourceIPAddress;
+   ipaddr_t destinationIPAddress;
    uint16_t sourceTransportPort;
    uint16_t destinationTransportPort;
    uint32_t packetTotalCount;

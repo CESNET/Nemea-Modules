@@ -46,11 +46,12 @@
 
 #include <iostream>
 #include <iomanip>
+#include <sys/time.h>
 
 using namespace std;
 
 // Constructor
-StatsPlugin::StatsPlugin(double interval, ostream &out)
+StatsPlugin::StatsPlugin(struct timeval interval, ostream &out)
  : interval(interval), out(out)
 {
 }
@@ -58,7 +59,7 @@ StatsPlugin::StatsPlugin(double interval, ostream &out)
 void StatsPlugin::init()
 {
    packets = new_flows = cache_hits = flows_in_cache = 0;
-   last_ts = -1;
+   init_ts = true;
    print_header();
 }
 
@@ -91,13 +92,18 @@ void StatsPlugin::finish()
 
 void StatsPlugin::check_timestamp(const Packet &pkt)
 {
-   if (last_ts == -1.0) {
+   if (init_ts) {
+      init_ts = false;
       last_ts = pkt.timestamp;
       return;
    }
-   if (pkt.timestamp >= last_ts + interval) {
+
+   struct timeval tmp;
+   timeradd(&last_ts, &interval, &tmp);
+
+   if (timercmp(&pkt.timestamp, &tmp, >)) {
       print_stats(last_ts);
-      last_ts += interval;
+      timeradd(&last_ts, &interval, &last_ts);
       packets = new_flows = cache_hits = 0;
    }
 }
@@ -107,8 +113,8 @@ void StatsPlugin::print_header() const
    out << "#timestamp packets hits newflows incache" << endl;
 }
 
-void StatsPlugin::print_stats(double ts) const
+void StatsPlugin::print_stats(const struct timeval &ts) const
 {
-   out << fixed << setprecision(3) << ts << " ";
+   out << ts.tv_sec << "." << ts.tv_usec << " ";
    out << packets << " " << cache_hits << " " << new_flows << " " << flows_in_cache << endl;
 }

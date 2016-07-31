@@ -50,7 +50,11 @@
 #include <vector>
 #include <flowcacheplugin.h>
 
+#ifndef FLOW_CACHE_SIZE
 const unsigned int DEFAULT_FLOW_CACHE_SIZE = 65536;
+#else
+const unsigned int DEFAULT_FLOW_CACHE_SIZE = FLOW_CACHE_SIZE;
+#endif
 const unsigned int DEFAULT_FLOW_LINE_SIZE = 32;
 const double DEFAULT_INACTIVE_TIMEOUT = 30.0;
 const double DEFAULT_ACTIVE_TIMEOUT = 300.0;
@@ -66,9 +70,9 @@ struct options_t {
    bool verbose;
    uint32_t flowcachesize;
    uint32_t flowlinesize;
-   double inactivetimeout;
-   double activetimeout;
-   double statstime;
+   struct timeval inactivetimeout;
+   struct timeval activetimeout;
+   struct timeval statstime;
    std::string interface;
    std::string infilename;
    std::string outfilename;

@@ -49,26 +49,38 @@
 #include <cstdlib>
 #include <iostream>
 #include <locale>
+#include <sys/time.h>
 
 using namespace std;
 
-inline bool Flow::isexpired(double current_ts)
+/**
+ * \brief Check whether flow is expired or not.
+ * \param [in] flow Pointer to flow.
+ * \param [in] current_ts Current timestamp.
+ * \param [in] active Active timeout.
+ * \param [in] inactive Inactive timeout.
+ * \return True if flow is expired, false otherwise.
+ */
+inline bool is_expired(const Flow *flow, const struct timeval &current_ts,
+                       const struct timeval &active, const struct timeval &inactive)
 {
-   if (!isempty() &&
-      (current_ts - flowrecord.flowStartTimestamp > active ||
-         current_ts - flowrecord.flowEndTimestamp > inactive)) {
+   struct timeval tmp1, tmp2;
+   timersub(&current_ts, &flow->flowrecord.flowStartTimestamp, &tmp1);
+   timersub(&current_ts, &flow->flowrecord.flowEndTimestamp, &tmp2);
+
+   if (!flow->isempty() && (timercmp(&tmp1, &active, >) || timercmp(&tmp2, &inactive, >))) {
       return true;
    } else {
       return false;
    }
 }
 
-bool Flow::isempty()
+bool Flow::isempty() const
 {
    return empty_flow;
 }
 
-bool Flow::belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len)
+bool Flow::belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len) const
 {
    if (isempty() || (pkt_hash != hash)) {
       return false;
@@ -79,9 +91,9 @@ bool Flow::belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len)
 
 void Flow::create(Packet pkt, uint64_t pkt_hash, char *pkt_key, uint8_t key_len)
 {
-   flowrecord.flowFieldIndicator = FLW_FLOWFIELDINDICATOR;
-   flowrecord.packetTotalCount = 1;
-   flowrecord.flowFieldIndicator |= FLW_PACKETTOTALCOUNT;
+   flowrecord.flowFieldIndicator    = FLW_FLOWFIELDINDICATOR;
+   flowrecord.packetTotalCount      = 1;
+   flowrecord.flowFieldIndicator    |= FLW_PACKETTOTALCOUNT;
 
    hash = pkt_hash;
    memcpy(key, pkt_key, key_len);
@@ -91,9 +103,9 @@ void Flow::create(Packet pkt, uint64_t pkt_hash, char *pkt_key, uint8_t key_len)
    }
 
    if ((pkt.packetFieldIndicator & PCKT_PCAP_MASK) == PCKT_PCAP_MASK) {
-      flowrecord.flowStartTimestamp = pkt.timestamp;
-      flowrecord.flowEndTimestamp = pkt.timestamp;
-      flowrecord.flowFieldIndicator |= FLW_TIMESTAMPS_MASK;
+      flowrecord.flowStartTimestamp    = pkt.timestamp;
+      flowrecord.flowEndTimestamp      = pkt.timestamp;
+      flowrecord.flowFieldIndicator    |= FLW_TIMESTAMPS_MASK;
    }
 
    if ((pkt.packetFieldIndicator & PCKT_IPV4_MASK) == PCKT_IPV4_MASK) {
@@ -101,20 +113,18 @@ void Flow::create(Packet pkt, uint64_t pkt_hash, char *pkt_key, uint8_t key_len)
       flowrecord.protocolIdentifier       = pkt.protocolIdentifier;
       flowrecord.ipClassOfService         = pkt.ipClassOfService;
       flowrecord.ipTtl                    = pkt.ipTtl;
-      flowrecord.sourceIPv4Address        = pkt.sourceIPv4Address;
-      flowrecord.destinationIPv4Address   = pkt.destinationIPv4Address;
+      flowrecord.sourceIPAddress.v4       = pkt.sourceIPAddress.v4;
+      flowrecord.destinationIPAddress.v4  = pkt.destinationIPAddress.v4;
       flowrecord.octetTotalLength         = pkt.ipLength;
-      flowrecord.flowFieldIndicator      |= FLW_IPV4_MASK;
-      flowrecord.flowFieldIndicator      |= FLW_IPSTAT_MASK;
+      flowrecord.flowFieldIndicator      |= (FLW_IPV4_MASK | FLW_IPSTAT_MASK);
    } else if ((pkt.packetFieldIndicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
       flowrecord.ipVersion                = pkt.ipVersion;
       flowrecord.protocolIdentifier       = pkt.protocolIdentifier;
       flowrecord.ipClassOfService         = pkt.ipClassOfService;
-      memcpy(flowrecord.sourceIPv6Address, pkt.sourceIPv6Address, 16);
-      memcpy(flowrecord.destinationIPv6Address, pkt.destinationIPv6Address, 16);
+      memcpy(flowrecord.sourceIPAddress.v6, pkt.sourceIPAddress.v6, 16);
+      memcpy(flowrecord.destinationIPAddress.v6, pkt.destinationIPAddress.v6, 16);
       flowrecord.octetTotalLength         = pkt.ipLength;
-      flowrecord.flowFieldIndicator      |= FLW_IPV6_MASK;
-      flowrecord.flowFieldIndicator      |= FLW_IPSTAT_MASK;
+      flowrecord.flowFieldIndicator      |= (FLW_IPV6_MASK | FLW_IPSTAT_MASK);
    }
 
    if ((pkt.packetFieldIndicator & PCKT_TCP_MASK) == PCKT_TCP_MASK) {
@@ -162,6 +172,7 @@ void NHTFlowCache::finish()
 {
    plugins_finish();
    exportexpired(true); // export whole cache
+
    if (!statsout) {
       endreport();
    }
@@ -169,16 +180,10 @@ void NHTFlowCache::finish()
 
 int NHTFlowCache::put_pkt(Packet &pkt)
 {
-   if (((pkt.packetFieldIndicator & PCKT_TCP_MASK) != PCKT_TCP_MASK) &&
-       ((pkt.packetFieldIndicator & PCKT_UDP_MASK) != PCKT_UDP_MASK)) {
-      pkt.sourceTransportPort = 0;
-      pkt.destinationTransportPort = 0;
-   }
-
    createhashkey(pkt); // saves key value and key length into attributes NHTFlowCache::key and NHTFlowCache::key_len
    uint64_t hashval = calculatehash(); // calculates hash value from key created before
 
-// Find place for packet
+   // Find place for packet
    int lineindex = ((hashval % size) / linesize) * linesize;
 
    bool found = false;
@@ -198,7 +203,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       int newrel = rpl[relpos];
       int flowindexstart = lineindex + newrel;
 
-      Flow * ptrflow = flowarray[flowindex];
+      Flow *ptrflow = flowarray[flowindex];
       for (int j = flowindex; j > flowindexstart; j--) {
          flowarray[j] = flowarray[j - 1];
       }
@@ -269,15 +274,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       }
    }
 
-   if (currtimestamp < lasttimestamp) {
-      static bool warning_printed = false;
-      if (!warning_printed) {
-         cerr << "Warning: Timestamps of packets are not in ascending order." << endl;
-         warning_printed = true;
-      }
-   }
-
-   if (currtimestamp - lasttimestamp > 5.0) {
+   if (currtimestamp.tv_sec - lasttimestamp.tv_sec > 5) {
       exportexpired(false); // false -- export only expired flows
       lasttimestamp = currtimestamp;
    }
@@ -314,10 +311,10 @@ void NHTFlowCache::createhashkey(Packet pkt)
    if ((pkt.packetFieldIndicator & PCKT_IPV4_MASK) == PCKT_IPV4_MASK) {
       *(uint8_t *) k = pkt.protocolIdentifier;
       k += sizeof(pkt.protocolIdentifier);
-      *(uint32_t *) k = pkt.sourceIPv4Address;
-      k += sizeof(pkt.sourceIPv4Address);
-      *(uint32_t *) k = pkt.destinationIPv4Address;
-      k += sizeof(pkt.destinationIPv4Address);
+      *(uint32_t *) k = pkt.sourceIPAddress.v4;
+      k += sizeof(pkt.sourceIPAddress.v4);
+      *(uint32_t *) k = pkt.destinationIPAddress.v4;
+      k += sizeof(pkt.destinationIPAddress.v4);
       *(uint16_t *) k = pkt.sourceTransportPort;
       k += sizeof(pkt.sourceTransportPort);
       *(uint16_t *) k = pkt.destinationTransportPort;
@@ -327,20 +324,18 @@ void NHTFlowCache::createhashkey(Packet pkt)
    }
 
    if ((pkt.packetFieldIndicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
-      for (int i=0; i<16; i++) {
-         *(char *) k = pkt.sourceIPv6Address[i];
-         k += sizeof(pkt.sourceIPv6Address[i]);
-      }
-      for (int i=0; i<16; i++) {
-         *(char *) k = pkt.destinationIPv6Address[i];
-         k += sizeof(pkt.destinationIPv6Address[i]);
-      }
+      *(uint8_t *) k = pkt.protocolIdentifier;
+      k += sizeof(pkt.protocolIdentifier);
+      memcpy(k, pkt.sourceIPAddress.v6, sizeof(pkt.sourceIPAddress.v6));
+      k += sizeof(pkt.sourceIPAddress.v6);
+      memcpy(k, pkt.destinationIPAddress.v6, sizeof(pkt.sourceIPAddress.v6));
+      k += sizeof(pkt.destinationIPAddress.v6);
       *(uint16_t *) k = pkt.sourceTransportPort;
       k += sizeof(pkt.sourceTransportPort);
       *(uint16_t *) k = pkt.destinationTransportPort;
       k += sizeof(pkt.destinationTransportPort);
       *k = '\0';
-      key_len = 36;
+      key_len = 37;
    }
 }
 
@@ -352,7 +347,7 @@ int NHTFlowCache::exportexpired(bool exportall)
       if (exportall && !flowarray[i]->isempty()) {
          result = true;
       }
-      if (!exportall && flowarray[i]->isexpired(currtimestamp)) {
+      if (!exportall && is_expired(flowarray[i], currtimestamp, active, inactive)) {
          result = true;
       }
       if (result) {

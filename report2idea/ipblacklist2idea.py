@@ -126,7 +126,7 @@ def convert_to_idea(rec, opts=None):
         else:
             if rec.DST_BLACKLIST:
                 addr["Type"] = [ "Botnet", "CC" ]
-                idea['Note'] = 'Destination IP {} was found on blacklist.'.format(rec.DST_IP)
+                idea['Note'] = 'Destination IP {0} was found on blacklist.'.format(rec.DST_IP)
             else:
                 addr["Type"] = [ "Botnet" ]
         idea['Source'].append(addr)
@@ -147,24 +147,24 @@ def convert_to_idea(rec, opts=None):
         else:
             if rec.SRC_BLACKLIST:
                 addr["Type"] = [ "Botnet", "CC" ]
-                idea['Note'] = 'Source IP {} was found on blacklist.'.format(rec.SRC_IP)
+                idea['Note'] = 'Source IP {0} was found on blacklist.'.format(rec.SRC_IP)
             else:
                 addr["Type"] = [ "Botnet" ]
         idea['Source'].append(addr)
 
     if rec.SRC_BLACKLIST:
         if tor:
-            descSRC = "{} which is TOR exit node".format(rec.SRC_IP)
+            descSRC = "{0} which is TOR exit node".format(rec.SRC_IP)
         else:
-            descSRC = "{} which is on {} blacklist".format(rec.SRC_IP, bl_conv[rec.SRC_BLACKLIST])
-        descDST = "{}".format(rec.DST_IP)
+            descSRC = "{0} which is on {1} blacklist".format(rec.SRC_IP, bl_conv[rec.SRC_BLACKLIST])
+        descDST = "{0}".format(rec.DST_IP)
     else:
         if tor:
-            descDST = "{} which is TOR exit node".format(rec.DST_IP)
+            descDST = "{0} which is TOR exit node".format(rec.DST_IP)
         else:
-            descDST = "{} which is on {} blacklist".format(rec.DST_IP, bl_conv[rec.DST_BLACKLIST])
-        descSRC = "{}".format(rec.SRC_IP)
-    idea['Description'] = "{} connected to {}.".format(descSRC, descDST)
+            descDST = "{0} which is on {1} blacklist".format(rec.DST_IP, bl_conv[rec.DST_BLACKLIST])
+        descSRC = "{0}".format(rec.SRC_IP)
+    idea['Description'] = "{0} connected to {1}.".format(descSRC, descDST)
     return idea
 
 

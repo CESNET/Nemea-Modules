@@ -109,12 +109,12 @@ UR_FIELDS (
 #define MODULE_PARAMS(PARAM) \
   PARAM('p', "plugins", "Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. "\
   "For example: \'-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter"\
-  "will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,dns,sip,basic", required_argument, "string")\
+  " will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,dns,sip,ntp,basic", required_argument, "string")\
   PARAM('c', "count", "Quit after number of packets are captured.", required_argument, "uint32")\
   PARAM('I', "interface", "Capture from given network interface. Parameter require interface name (eth0 for example).", required_argument, "string")\
   PARAM('r', "file", "Pcap file to read.", required_argument, "string") \
   PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: FLOAT:FLOAT. (DEFAULT: 300.0:30.0)", required_argument, "string") \
-  PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 232 bytes. (DEFAULT: 65536)", required_argument, "uint32") \
+  PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 168 bytes. (DEFAULT: 65536)", required_argument, "uint32") \
   PARAM('S', "statistic", "Print statistics. NUMBER specifies interval between prints.", required_argument, "float") \
   PARAM('m', "sample", "Sampling probability. NUMBER in 100 (DEFAULT: 100)", required_argument, "int32") \
   PARAM('V', "vector", "Replacement vector. 1+32 NUMBERS.", required_argument, "string") \
@@ -202,6 +202,12 @@ int count_ifc_interfaces(int argc, char *argv[])
    return int_cnt;
 }
 
+static inline void double_to_time(double value, struct timeval &time)
+{
+   time.tv_sec = (long) value;
+   time.tv_usec = (value - (long) value) * 1000000;
+}
+
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
 int main(int argc, char *argv[])
@@ -210,8 +216,8 @@ int main(int argc, char *argv[])
    options_t options;
    options.flowcachesize = DEFAULT_FLOW_CACHE_SIZE;
    options.flowlinesize = DEFAULT_FLOW_LINE_SIZE;
-   options.inactivetimeout = DEFAULT_INACTIVE_TIMEOUT;
-   options.activetimeout = DEFAULT_ACTIVE_TIMEOUT;
+   double_to_time(DEFAULT_INACTIVE_TIMEOUT, options.inactivetimeout);
+   double_to_time(DEFAULT_ACTIVE_TIMEOUT, options.activetimeout);
    options.replacementstring = DEFAULT_REPLACEMENT_STRING;
    options.statsout = false;
    options.verbose = false;
@@ -266,8 +272,8 @@ int main(int argc, char *argv[])
             return error("Invalid argument for option -t");
          }
          *cptr = '\0';
-         options.activetimeout = atof(optarg);
-         options.inactivetimeout = atof(cptr + 1);
+         double_to_time(atof(optarg), options.activetimeout);
+         double_to_time(atof(cptr + 1), options.inactivetimeout);
          break;
       case 'r':
          options.infilename = string(optarg);
@@ -276,7 +282,7 @@ int main(int argc, char *argv[])
          options.flowcachesize = atoi(optarg);
          break;
       case 'S':
-         options.statstime = atof(optarg);
+         double_to_time(atof(optarg), options.statstime);
          options.statsout = true;
          break;
       case 'm':
@@ -364,7 +370,7 @@ int main(int argc, char *argv[])
       }
 
       pkt_total++;
-      if (ret == 2 && (sampling == 100 || ((rand() % 99) + 1) <= sampling)) {
+      if (ret == 2 && (sampling == 100 || ((rand() % 100) + 1) <= sampling)) {
          flowcache.put_pkt(packet);
          pkt_parsed++;
 
