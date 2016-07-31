@@ -88,11 +88,6 @@ static int dump_mins = 0;                                      // 0 = output onl
 static bool accumulate_stats = false;
 static bool train_mode = false;
 
-// Paths
-const char *models_dir = "./libsvm/models";                    // directory with models
-const char *models_lst_fname = "./libsvm/models/models.list";  // list of existing models
-const char *train_db_fname = "./libsvm/dataset/db.svm.tmp";    // new features trained in training mode
-const char *train_script = "./train.sh";                       // script for training new labels
 
 // Training data
 FILE *train_db = NULL;
@@ -1124,8 +1119,9 @@ int main(int argc, char **argv)
          printf("Training may take a few minutes, please wait.\n");
          if ((ret = system(train_script)) != 0) {
             printf("Error: Training failed. Check %s\n", train_script);
+         } else {
+            printf("\nTraining finished succesfully.\n");
          }
-         printf("\nTraining finished succesfully.\n");
       } else {
          printf("You can finish training by launching the program in training mode again.\n"
                 "You can delete the data by removing %s or run the scipt %s manually to add them to the dataset now.\n\n",
