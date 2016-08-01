@@ -303,26 +303,6 @@
 #  define SIP_CONT_SDP3   0x53445000	/* SDP  */
 #endif
 
-/* Encoded SDP field names: */
-#if BYTEORDER == 1234
-#  define SDP_MAUDIO      0x55411d4d	/* UA=M */
-#else
-#  define SDP_MAUDIO      0x4d1d4155	/* M=UA */
-#endif
-
-#if BYTEORDER == 1234
-#  define SDP_MVIDEO      0x49561d4d	/* IV=M */
-#else
-#  define SDP_MVIDEO      0x4d1d5649	/* M=VI */
-#endif
-
-#if BYTEORDER == 1234
-#  define SDP_CONNECT     0x4e491d43	/* NI=C */
-#else
-#  define SDP_CONNECT     0x431d494e	/* C=IN */
-#endif
-
-
 /* Encoded SIP URI start: */
 #if BYTEORDER == 1234
 #  define SIP_URI         0x1a504953	/* :PIS */
@@ -338,13 +318,6 @@
 #endif
 
 #define SIP_URIS_LEN    4
-
-/* Length of initial characters to skip in some of SIP or SDP fields: */
-#define SIP_STATUS_PAD  8	/* Skip SIP/2.0 */
-#define SDP_AUDIO_PAD   8	/* Skip m=audio */
-#define SDP_VIDEO_PAD   8	/* Skip m=video */
-#define SDP_CONN_PAD    7	/* Skip c=IN IP */
-#define SDP_CONN_IP_PAD 9	/* Skip c=IN IP4 */
 
 /*
  * Bits 31, 24, 16, and 8 of this number are zero.  Call these bits
