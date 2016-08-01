@@ -42,6 +42,7 @@
 
 #ifndef SIPPLUGIN_H
 #define SIPPLUGIN_H
+#include <config.h>
 
 #include <cstdlib>
 #include <stdio.h>
@@ -94,71 +95,248 @@
  */
 /* ** The first pattern test group: ** */
 /*                                     v    */
-#define SIP_INVITE		0x49564e49	/* IVNI */
-#define SIP_REGISTER	0x49474552	/* IGER */
+#if BYTEORDER == 1234
+#  define SIP_INVITE		0x49564e49	/* IVNI */
+#else
+#  define SIP_INVITE		0x494e5649	/* INVI */
+#endif
+
+#if BYTEORDER == 1234
+#  define SIP_REGISTER		0x49474552	/* IGER */
+#else
+#  define SIP_REGISTER		0x52454749	/* REGI */
+#endif
+
 /*                                     vv   */
-#define SIP_NOTIFY		0x49544f4e	/* ITON */
-#define SIP_OPTIONS		0x4954504f	/* ITPO */
+#if BYTEORDER == 1234
+#  define SIP_NOTIFY		0x49544f4e	/* ITON */
+#else
+#  define SIP_NOTIFY		0x4e4f5449	/* NOTI */
+#endif
+
+#if BYTEORDER == 1234
+#  define SIP_OPTIONS		0x4954504f	/* ITPO */
+#else
+#  define SIP_OPTIONS		0x4f505449	/* OPTI */
+#endif
+
 /*                                       v  */
-#define SIP_CANCEL		0x434e4143	/* CNAC */
+#if BYTEORDER == 1234
+#  define SIP_CANCEL		0x434e4143	/* CNAC */
+#else
+#  define SIP_CANCEL		0x43414e43	/* CANC */
+#endif
+
 /*                                        v */
-#define SIP_INFO		0x4f464e49	/* OFNI */
+#if BYTEORDER == 1234
+#  define SIP_INFO		0x4f464e49	/* OFNI */
+#else
+#  define SIP_INFO		0x494e464f	/* INFO */
+#endif
 
 /* ** Test second pattern test group: ** */
 /*                                     v    */
-#define SIP_ACK			0x204b4341	/*  KCA */
-#define SIP_BYE			0x20455942	/*  EYB */
+#if BYTEORDER == 1234
+#  define SIP_ACK		0x204b4341	/*  KCA */
+#else
+#  define SIP_ACK		0x41434b20	/*  ACK */
+#endif
+
+#if BYTEORDER == 1234
+#  define SIP_BYE		0x20455942	/*  EYB */
+#else
+#  define SIP_BYE		0x42594520	/*  BYE */
+#endif
 
 /*                                      v   */
-#define SIP_PUBLISH		0x4c425550	/* LBUP */
-#define SIP_SUBSCRIBE	0x53425553	/* SBUS */
+#if BYTEORDER == 1234
+#  define SIP_PUBLISH		0x4c425550	/* LBUP */
+#else
+#  define SIP_PUBLISH		0x5055424c	/* PUBL */
+#endif
+
+#if BYTEORDER == 1234
+#  define SIP_SUBSCRIBE		0x53425553	/* SBUS */
+#else
+#  define SIP_SUBSCRIBE		0x53554253	/* SUBS */
+#endif
+
 /*                                       vv */
-#define SIP_REPLY	    0x2f504953	/* /PIS */
+#if BYTEORDER == 1234
+#  define SIP_REPLY	    	0x2f504953	/* /PIS */
+#else
+#  define SIP_REPLY	    	0x5349502f	/* SIP/ */
+#endif
 
 /* If one of the bytes in the tested packet equals to byte in the
  * test pattern, the packet *could* begin with the strings which
  * where used to make the test pattern.
  */
-#define SIP_TEST_1      0x49544149	/* ITAI */
-#define SIP_TEST_2      0x20424953	/*  BIS */
+#if BYTEORDER == 1234
+#  define SIP_TEST_1		0x49544149	/* ITAI */
+#else
+#  define SIP_TEST_1		0x49415449	/* IATI */
+#endif
+
+#if BYTEORDER == 1234
+#define SIP_TEST_2		0x20424953	/*  BIS */
+#else
+#define SIP_TEST_2		0x53494220	/* SIB  */
+#endif
 
 /* MS SSDP notify header for detecting false SIP packets: */
-#define SIP_NOT_NOTIFY1 0x2a205946	/* * YF */
-#define SIP_NOT_NOTIFY2 0x54544820	/* TTH  */
+#if BYTEORDER == 1234
+#  define SIP_NOT_NOTIFY1	0x2a205946	/* * YF */
+#else
+#  define SIP_NOT_NOTIFY1	0x4659202a	/* FY * */
+#endif
 
-#define SIP_NOT_OPTIONS1 0x20534e4f	/*  SNO */
-#define SIP_NOT_OPTIONS2 0x3a706973	/* :sip */
+#if BYTEORDER == 1234
+#  define SIP_NOT_NOTIFY2	0x54544820	/* TTH  */
+#else
+#  define SIP_NOT_NOTIFY2	0x20485454	/*  HTT */
+#endif
+
+#if BYTEORDER == 1234
+#  define SIP_NOT_OPTIONS1	0x20534e4f	/*  SNO */
+#else
+#  define SIP_NOT_OPTIONS1	0x4f4e5320	/* ONS  */
+#endif
+
+#if BYTEORDER == 1234
+#  define SIP_NOT_OPTIONS2	0x3a706973	/* :sip */
+#else
+#  define SIP_NOT_OPTIONS2	0x7369703a	/* pis: */
+#endif
+
 /*
  * SIP fields table - these patterns are used to quickly
  * detect necessary SIP fields.
  */
 /* This macro converts low ASCII characters to upper case. Colon changes to 0x1a character: */
-#define SIP_UCFOUR(A)   ((A) & 0xdfdfdfdf)
-#define SIP_UCTWO(A)    ((A) & 0x0000dfdf)
-#define SIP_UCTHREE(A)  ((A) & 0x00dfdfdf)
+#if BYTEORDER == 1234
+#  define SIP_UCFOUR(A)   ((A) & 0xdfdfdfdf)
+#  define SIP_UCTWO(A)    ((A) & 0x0000dfdf)
+#  define SIP_UCTHREE(A)  ((A) & 0x00dfdfdf)
+#else
+#  define SIP_UCFOUR(A)   ((A) & 0xdfdfdfdf)
+#  define SIP_UCTWO(A)    ((A) & 0xdfdf0000)
+#  define SIP_UCTHREE(A)  ((A) & 0xdfdfdf00)
+#endif
+
 /* Encoded SIP field names - long and short alternatives. The trailing number means the number of bytes to compare: */
-#define SIP_VIA4        0x1a414956	/* :AIV */
-#define SIP_VIA2        0x00001a56	/*   :V */
-#define SIP_FROM4       0x4d4f5246	/* MORF */
-#define SIP_FROM2       0x00001a46	/*   :F */
-#define SIP_TO3         0x001a4f54	/*  :OT */
-#define SIP_TO2         0x00001a54	/*   :T */
-#define SIP_CALLID4     0x4c4c4143	/* LLAC */
-#define SIP_CALLID2     0x00001a49	/*   :I */
-#define SIP_CSEQ4       0x51455343	/* QESC */
-#define SIP_CONT4       0x544e4f43	/* TNOC */
-#define SIP_CONT2       0x00001a43	/*   :C */
-#define SIP_USERAGENT4  0x52455355	/* RESU */
-#define SIP_CONT_SDP3   0x00504453	/*  PDS */
+#if BYTEORDER == 1234
+#  define SIP_VIA4        0x1a414956	/* :AIV */
+#else
+#  define SIP_VIA4        0x5649411a	/* VIA: */
+#endif
+
+#if BYTEORDER == 1234
+#  define SIP_VIA2        0x00001a56	/*   :V */
+#else
+#  define SIP_VIA2        0x561a0000	/* V:   */
+#endif
+
+#if BYTEORDER == 1234
+#  define SIP_FROM4       0x4d4f5246	/* MORF */
+#else
+#  define SIP_FROM4       0x46524f4d	/* FROM */
+#endif
+
+#if BYTEORDER == 1234
+#  define SIP_FROM2       0x00001a46	/*   :F */
+#else
+#  define SIP_FROM2       0x461a0000	/* F:   */
+#endif
+
+#if BYTEORDER == 1234
+#  define SIP_TO3         0x001a4f54	/*  :OT */
+#else
+#  define SIP_TO3         0x544f1a00	/* TO:  */
+#endif
+
+#if BYTEORDER == 1234
+#  define SIP_TO2         0x00001a54	/*   :T */
+#else
+#  define SIP_TO2         0x541a0000	/* T:   */
+#endif
+
+#if BYTEORDER == 1234
+#  define SIP_CALLID4     0x4c4c4143	/* LLAC */
+#else
+#  define SIP_CALLID4     0x43414c4c	/* CALL */
+#endif
+
+#if BYTEORDER == 1234
+#  define SIP_CALLID2     0x00001a49	/*   :I */
+#else
+#  define SIP_CALLID2     0x491a0000	/* I:   */
+#endif
+
+#if BYTEORDER == 1234
+#  define SIP_CSEQ4       0x51455343	/* QESC */
+#else
+#  define SIP_CSEQ4       0x43534551	/* CSEQ */
+#endif
+
+#if BYTEORDER == 1234
+#  define SIP_CONT4       0x544e4f43	/* TNOC */
+#else
+#  define SIP_CONT4       0x434f4e54	/* CONT */
+#endif
+
+#if BYTEORDER == 1234
+#  define SIP_CONT2       0x00001a43	/*   :C */
+#else
+#  define SIP_CONT2       0x431a0000	/* C:   */
+#endif
+
+#if BYTEORDER == 1234
+#  define SIP_USERAGENT4  0x52455355	/* RESU */
+#else
+#  define SIP_USERAGENT4  0x55534552	/* USER */
+#endif
+
+#if BYTEORDER == 1234
+#  define SIP_CONT_SDP3   0x00504453	/*  PDS */
+#else
+#  define SIP_CONT_SDP3   0x53445000	/* SDP  */
+#endif
+
 /* Encoded SDP field names: */
-#define SDP_MAUDIO      0x55411d4d	/* UA=M */
-#define SDP_MVIDEO      0x49561d4d	/* IV=M */
-#define SDP_CONNECT     0x4e491d43	/* NI=C */
+#if BYTEORDER == 1234
+#  define SDP_MAUDIO      0x55411d4d	/* UA=M */
+#else
+#  define SDP_MAUDIO      0x4d1d4155	/* M=UA */
+#endif
+
+#if BYTEORDER == 1234
+#  define SDP_MVIDEO      0x49561d4d	/* IV=M */
+#else
+#  define SDP_MVIDEO      0x4d1d5649	/* M=VI */
+#endif
+
+#if BYTEORDER == 1234
+#  define SDP_CONNECT     0x4e491d43	/* NI=C */
+#else
+#  define SDP_CONNECT     0x431d494e	/* C=IN */
+#endif
+
 
 /* Encoded SIP URI start: */
-#define SIP_URI         0x1a504953	/* :PIS */
+#if BYTEORDER == 1234
+#  define SIP_URI         0x1a504953	/* :PIS */
+#else
+#  define SIP_URI         0x5349501a	/* SIP: */
+#endif
+
 #define SIP_URI_LEN     3
-#define SIP_URIS        0x1a535049	/* :SPI */
+#if BYTEORDER == 1234
+#  define SIP_URIS        0x1a535049	/* :SPI */
+#else
+#  define SIP_URIS        0x4950531a	/* IPS: */
+#endif
+
 #define SIP_URIS_LEN    4
 
 /* Length of initial characters to skip in some of SIP or SDP fields: */

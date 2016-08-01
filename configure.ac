@@ -75,6 +75,8 @@ AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--disable-repobuild],
 	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-repobuild]) ;;
 esac], [repobuild=true])
 
+AX_C_BIGENDIAN_CROSS
+
 AX_OPENMP([], [AC_MSG_ERROR([OpenMP was not found. Some modules need it (e.g. logger and merger)])])
 AC_SUBST(OPENMP_CFLAGS)
 
