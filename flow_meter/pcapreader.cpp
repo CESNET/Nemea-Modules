@@ -154,7 +154,6 @@ inline uint16_t parse_ipv4_hdr(const u_char *data_ptr, Packet *pkt)
 
    return (ip->ihl << 2);
 }
-
 /**
  * \brief Parse specific fields from IPv6 header.
  * \param [in] data_ptr Pointer to begin of header.
@@ -205,26 +204,7 @@ inline uint16_t parse_tcp_hdr(const u_char *data_ptr, Packet *pkt)
    pkt->packetFieldIndicator |= PCKT_TCP_MASK;
    pkt->sourceTransportPort = ntohs(tcp->source);
    pkt->destinationTransportPort = ntohs(tcp->dest);
-   pkt->tcpControlBits = 0;
-
-   if (tcp->fin) {
-      pkt->tcpControlBits |= TCP_FIN;
-   }
-   if (tcp->syn) {
-      pkt->tcpControlBits |= TCP_SYN;
-   }
-   if (tcp->rst) {
-      pkt->tcpControlBits |= TCP_RST;
-   }
-   if (tcp->psh) {
-      pkt->tcpControlBits |= TCP_PUSH;
-   }
-   if (tcp->ack) {
-      pkt->tcpControlBits |= TCP_ACK;
-   }
-   if (tcp->urg) {
-      pkt->tcpControlBits |= TCP_URG;
-   }
+   pkt->tcpControlBits = tcp->th_flags & 0x3F;
 
    DEBUG_MSG("TCP header:\n");
    DEBUG_MSG("\tSrc port:\t%u\n",   ntohs(tcp->source));
