@@ -150,23 +150,12 @@
 #define SIP_CONT2       0x00001a43	/*   :C */
 #define SIP_USERAGENT4  0x52455355	/* RESU */
 #define SIP_CONT_SDP3   0x00504453	/*  PDS */
-/* Encoded SDP field names: */
-#define SDP_MAUDIO      0x55411d4d	/* UA=M */
-#define SDP_MVIDEO      0x49561d4d	/* IV=M */
-#define SDP_CONNECT     0x4e491d43	/* NI=C */
 
 /* Encoded SIP URI start: */
 #define SIP_URI         0x1a504953	/* :PIS */
 #define SIP_URI_LEN     3
 #define SIP_URIS        0x1a535049	/* :SPI */
 #define SIP_URIS_LEN    4
-
-/* Length of initial characters to skip in some of SIP or SDP fields: */
-#define SIP_STATUS_PAD  8	/* Skip SIP/2.0 */
-#define SDP_AUDIO_PAD   8	/* Skip m=audio */
-#define SDP_VIDEO_PAD   8	/* Skip m=video */
-#define SDP_CONN_PAD    7	/* Skip c=IN IP */
-#define SDP_CONN_IP_PAD 9	/* Skip c=IN IP4 */
 
 /*
  * Bits 31, 24, 16, and 8 of this number are zero.  Call these bits
