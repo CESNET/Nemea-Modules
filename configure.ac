@@ -35,9 +35,7 @@ AC_SUBST(PKGDATADIR)
 AC_SUBST(pkgdatadir)
 AC_DEFINE_DIR(PKGDATADIR, [pkgdatadir], [Path to configuration files])
 AC_DEFINE_DIR(SYSCONFDIR, [sysconfdir], [Path to configuration files])
-BINDIR=`eval "case $prefix$exec_prefix in \
-        NONENONE) exec_prefix=$ac_default_prefix;; \
-        *NONE) exec_prefix=$prefix;;esac;  echo $bindir"`
+AC_DEFINE_DIR(BINDIR, [bindir], [Path to executable files])
 AC_SUBST(BINDIR)
 
 deviceclassifierdatadir=${pkgdatadir}/device_classifier
@@ -195,7 +193,6 @@ AC_CONFIG_FILES([Makefile
                  device_classifier/libsvm/tools/train.sh
                  device_classifier/libsvm/tools/binary.py
                  device_classifier/libsvm/tools/grid.py
-                 device_classifier/device_classifier.h
                  device_classifier/libsvm/Makefile
                  device_classifier/libsvm/data/Makefile
                  device_classifier/libsvm/tools/Makefile

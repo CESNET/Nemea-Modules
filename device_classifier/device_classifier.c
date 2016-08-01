@@ -399,15 +399,15 @@ void update_models_list(const char *fname)
  * Load the models.
  * The model for each label is in a separate file specified by models list (see init_model_list())
  *
- * @param models_dir Directory where the models are located
+ * @param m Directory where the models are located
  */
-int init_models(const char *models_dir) 
+int init_models(const char *m)
 {
    char path[256];
 
    // Load the models
    for (int i = 0; i < model_cnt; i++) {
-      sprintf(path, "%s/%d", models_dir, models[i].id);
+      sprintf(path, "%s/%d", m, models[i].id);
 
       // Model not found, maybe not trained
       if ((models[i].model = svm_load_model(path)) == 0) {
