@@ -185,7 +185,7 @@ int UnirecExporter::export_flow(FlowRecord &flow)
    ur_template_t *tmplt_ptr = NULL;
    void *record_ptr = NULL;
 
-   if (basic_ifc_num >= 0 && ext == NULL) { // Process basic flow.
+   if (basic_ifc_num >= 0) { // Process basic flow.
       tmplt_ptr = tmplt[basic_ifc_num];
       record_ptr = record[basic_ifc_num];
 
@@ -193,8 +193,7 @@ int UnirecExporter::export_flow(FlowRecord &flow)
       memset(record_ptr, 0, ur_rec_fixlen_size(tmplt_ptr));
 
       fill_basic_flow(flow, tmplt_ptr, record_ptr);
-      trap_send(basic_ifc_num, record_ptr, ur_rec_fixlen_size(tmplt_ptr) + ur_rec_varlen_size(tmplt_ptr, record_ptr));
-      return 0;
+      to_export.push_back(basic_ifc_num);
    }
 
    while (ext != NULL) {
@@ -244,7 +243,7 @@ void UnirecExporter::fill_basic_flow(FlowRecord &flow, ur_template_t *tmplt_ptr,
    if (flow.ipVersion == 4) {
       ur_set(tmplt_ptr, record_ptr, F_SRC_IP, ip_from_4_bytes_be((char *) &flow.sourceIPAddress.v4));
       ur_set(tmplt_ptr, record_ptr, F_DST_IP, ip_from_4_bytes_be((char *) &flow.destinationIPAddress.v4));
-   } else if (flow.ipVersion == 6) {
+   } else {
       ur_set(tmplt_ptr, record_ptr, F_SRC_IP, ip_from_16_bytes_be((char *) flow.sourceIPAddress.v6));
       ur_set(tmplt_ptr, record_ptr, F_DST_IP, ip_from_16_bytes_be((char *) flow.destinationIPAddress.v6));
    }
