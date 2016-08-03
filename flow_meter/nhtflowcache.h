@@ -78,7 +78,7 @@ public:
    {
    };
 
-   bool isempty() const;
+   inline bool isempty() const;
    bool belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len) const;
    void create(Packet pkt, uint64_t pkt_hash, char *pkt_key, uint8_t key_len);
    void update(Packet pkt);

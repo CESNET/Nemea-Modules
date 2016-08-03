@@ -75,7 +75,7 @@ inline bool is_expired(const Flow *flow, const struct timeval &current_ts,
    }
 }
 
-bool Flow::isempty() const
+inline bool Flow::isempty() const
 {
    return empty_flow;
 }
@@ -282,6 +282,23 @@ int NHTFlowCache::put_pkt(Packet &pkt)
    return 0;
 }
 
+int NHTFlowCache::exportexpired(bool exportall)
+{
+   int exported = 0;
+   for (int i = 0; i < size; i++) {
+      if (is_expired(flowarray[i], currtimestamp, active, inactive) ||
+         (exportall && !flowarray[i]->isempty())) {
+         plugins_pre_export(flowarray[i]->flowrecord);
+         exporter->export_flow(flowarray[i]->flowrecord);
+
+         flowarray[i]->erase();
+         expired++;
+         exported++;
+      }
+   }
+   return exported;
+}
+
 // NHTFlowCache -- PROTECTED **************************************************
 
 void NHTFlowCache::parsereplacementstring()
@@ -337,30 +354,6 @@ void NHTFlowCache::createhashkey(Packet pkt)
       *k = '\0';
       key_len = 37;
    }
-}
-
-int NHTFlowCache::exportexpired(bool exportall)
-{
-   int exported = 0;
-   bool result = false;
-   for (int i = 0; i < size; i++) {
-      if (exportall && !flowarray[i]->isempty()) {
-         result = true;
-      }
-      if (!exportall && is_expired(flowarray[i], currtimestamp, active, inactive)) {
-         result = true;
-      }
-      if (result) {
-         plugins_pre_export(flowarray[i]->flowrecord);
-         exporter->export_flow(flowarray[i]->flowrecord);
-
-         flowarray[i]->erase();
-         expired++;
-         exported++;
-         result = false;
-      }
-   }
-   return exported;
 }
 
 void NHTFlowCache::endreport()
