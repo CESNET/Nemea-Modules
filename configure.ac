@@ -35,6 +35,9 @@ AC_SUBST(PKGDATADIR)
 AC_SUBST(pkgdatadir)
 AC_DEFINE_DIR(PKGDATADIR, [pkgdatadir], [Path to configuration files])
 AC_DEFINE_DIR(SYSCONFDIR, [sysconfdir], [Path to configuration files])
+AC_DEFINE_DIR(BINDIR, [bindir], [Path to executable files])
+AC_SUBST(BINDIR)
+
 deviceclassifierdatadir=${pkgdatadir}/device_classifier
 AC_DEFINE_DIR(DEVICECLASSIFIERDATADIR, [deviceclassifierdatadir], [Path to SVM data files])
 AC_SUBST(DEVICECLASSIFIERDATADIR)
@@ -69,6 +72,8 @@ AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--disable-repobuild],
 	no)  repobuild=false ;;
 	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-repobuild]) ;;
 esac], [repobuild=true])
+
+AX_C_BIGENDIAN_CROSS
 
 AX_OPENMP([], [AC_MSG_ERROR([OpenMP was not found. Some modules need it (e.g. logger and merger)])])
 AC_SUBST(OPENMP_CFLAGS)
@@ -185,6 +190,9 @@ AC_CONFIG_FILES([Makefile
                  anonymizer/Makefile
                  debug_sender/Makefile
                  device_classifier/Makefile
+                 device_classifier/libsvm/tools/train.sh
+                 device_classifier/libsvm/tools/binary.py
+                 device_classifier/libsvm/tools/grid.py
                  device_classifier/libsvm/Makefile
                  device_classifier/libsvm/data/Makefile
                  device_classifier/libsvm/tools/Makefile

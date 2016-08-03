@@ -137,31 +137,39 @@ int main(int argc, char *argv[])
             // Switch byte order for specific fields.
             switch(ur_get_type(id)) {
                case UR_TYPE_TIME:
-                  swap_bytes((char *)ptr, sizeof(ur_time_t));
+                  swap_bytes((char *) ptr, sizeof(ur_time_t));
                   break;
                case UR_TYPE_UINT16:
-                  swap_bytes((char *)ptr, sizeof(uint16_t));
+                  swap_bytes((char *) ptr, sizeof(uint16_t));
                   break;
                case UR_TYPE_UINT32:
-                  swap_bytes((char *)ptr, sizeof(uint32_t));
+                  swap_bytes((char *) ptr, sizeof(uint32_t));
                   break;
                case UR_TYPE_UINT64:
-                  swap_bytes((char *)ptr, sizeof(uint64_t));
+                  swap_bytes((char *) ptr, sizeof(uint64_t));
                   break;
                case UR_TYPE_INT16:
-                  swap_bytes((char *)ptr, sizeof(int16_t));
+                  swap_bytes((char *) ptr, sizeof(int16_t));
                   break;
                case UR_TYPE_INT32:
-                  swap_bytes((char *)ptr, sizeof(int32_t));
+                  swap_bytes((char *) ptr, sizeof(int32_t));
                   break;
                case UR_TYPE_INT64:
-                  swap_bytes((char *)ptr, sizeof(int64_t));
+                  swap_bytes((char *) ptr, sizeof(int64_t));
+                  break;
+               case UR_TYPE_STRING:
+               case UR_TYPE_BYTES:
+                  // Switch metadata byteorder:
+                  // Swap field offset bytes.
+                  swap_bytes(((char *) rec + tmplt->offset[id]), sizeof(uint16_t));
+                  // Swap field length bytes.
+                  swap_bytes(((char *) rec + tmplt->offset[id] + 2), sizeof(uint16_t));
                   break;
                case UR_TYPE_FLOAT:
-                  swap_bytes((char *)ptr, sizeof(float));
+                  swap_bytes((char *) ptr, sizeof(float));
                   break;
                case UR_TYPE_DOUBLE:
-                  swap_bytes((char *)ptr, sizeof(double));
+                  swap_bytes((char *) ptr, sizeof(double));
                   break;
                default:
                   break;

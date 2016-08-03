@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# *** Create SVM models from training data. ***
+#
+# This script is run automatically after device_classifier 
+# has been launched in training mode.
+#
+# It can be also run as a standalone script, but it is not recommended.
+# See README for more details.
+
+ORIG_DB="@DEVICECLASSIFIERDATADIR@/db.svm"
+USER_DB="$HOME/.nemea/db.svm"
+TRAINED_DB="/tmp/db.svm.tmp"
+BINARY="@BINDIR@/svm-tools/binary.py"
+
+if [ ! -e "$ORIG_DB.gz" -a ! -e "$USER_DB.gz" ]; then
+    echo "Error: Cannot find the training dataset. Check if the path is set correctly."
+    exit 1
+fi
+
+if [ ! -e "$USER_DB.gz" ]; then
+    if [ ! -e "$ORIG_DB.gz" ]; then
+        echo "Error: Cannot find the training dataset. Check if the path is set correctly."
+        exit 1
+    fi
+    cp "$ORIG_DB.gz" "$USER_DB.gz"
+fi
+
+gzip -d "$USER_DB.gz"
+
+if [ ! -f "$TRAINED_DB" ]; then
+    echo "Warning: No new training data available. You should run device_classifier in training mode at first."
+else
+    cat "$TRAINED_DB" >> "$USER_DB"
+    rm "$TRAINED_DB"
+fi
+
+python "$BINARY" "$USER_DB" # train a multi-label classifier
+
+gzip "$USER_DB"
+
+echo "Done!"
+exit 0
