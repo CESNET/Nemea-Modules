@@ -280,27 +280,9 @@
 #endif
 
 #if BYTEORDER == 1234
-#  define SIP_CONT4       0x544e4f43	/* TNOC */
-#else
-#  define SIP_CONT4       0x434f4e54	/* CONT */
-#endif
-
-#if BYTEORDER == 1234
-#  define SIP_CONT2       0x00001a43	/*   :C */
-#else
-#  define SIP_CONT2       0x431a0000	/* C:   */
-#endif
-
-#if BYTEORDER == 1234
 #  define SIP_USERAGENT4  0x52455355	/* RESU */
 #else
 #  define SIP_USERAGENT4  0x55534552	/* USER */
-#endif
-
-#if BYTEORDER == 1234
-#  define SIP_CONT_SDP3   0x00504453	/*  PDS */
-#else
-#  define SIP_CONT_SDP3   0x53445000	/* SDP  */
 #endif
 
 /* Encoded SIP URI start: */
