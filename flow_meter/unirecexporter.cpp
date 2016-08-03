@@ -59,6 +59,23 @@ using namespace std;
 
 #define BASIC_UNIREC_TEMPLATE "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL"
 
+UR_FIELDS (
+   ipaddr DST_IP,
+   ipaddr SRC_IP,
+   uint64 BYTES,
+   uint64 LINK_BIT_FIELD,
+   time TIME_FIRST,
+   time TIME_LAST,
+   uint32 PACKETS,
+   uint16 DST_PORT,
+   uint16 SRC_PORT,
+   uint8 DIR_BIT_FIELD,
+   uint8 PROTOCOL,
+   uint8 TCP_FLAGS,
+   uint8 TOS,
+   uint8 TTL
+)
+
 /**
  * \brief Constructor.
  */

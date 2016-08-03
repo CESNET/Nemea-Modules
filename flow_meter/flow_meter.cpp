@@ -86,23 +86,6 @@ inline bool error(const string &e)
 trap_module_info_t *module_info = NULL;
 static int stop = 0;
 
-UR_FIELDS (
-   ipaddr DST_IP,
-   ipaddr SRC_IP,
-   uint64 BYTES,
-   uint64 LINK_BIT_FIELD,
-   time TIME_FIRST,
-   time TIME_LAST,
-   uint32 PACKETS,
-   uint16 DST_PORT,
-   uint16 SRC_PORT,
-   uint8 DIR_BIT_FIELD,
-   uint8 PROTOCOL,
-   uint8 TCP_FLAGS,
-   uint8 TOS,
-   uint8 TTL
-)
-
 #define MODULE_BASIC_INFO(BASIC) \
   BASIC("Flow meter module", "Convert packets from PCAP file or network interface into flow records.", 0, -1)
 
