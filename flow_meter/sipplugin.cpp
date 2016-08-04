@@ -265,7 +265,7 @@ const unsigned char * SIPPlugin::parser_strtok(const unsigned char *str, unsigne
 #define FOUND(A)        { nst->saveptr = cp + (A) + 1; *strlen = len + A; nst->instrlen -= A + 1; return beginning; }
 
    /* Go across the string word by word: */
-   longword_ptr = (unsigned long int *)char_ptr;
+   longword_ptr = (MAGIC_INT *)char_ptr;
    for (;;) {
       /*
        * Get the current item and move to the next one. The XOR operator does the following thing:
