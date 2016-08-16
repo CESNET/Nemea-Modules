@@ -6,7 +6,8 @@ bin_SCRIPTS=hoststats2idea.py \
 			dnstunnel2idea.py \
 			bruteforce2idea.py \
 			haddrscan2idea.py \
-			amplification2idea.py
+			amplification2idea.py \
+			minerdetector2idea.py
 
 EXTRA_DIST=template.py test.sh ${bin_SCRIPTS}
 

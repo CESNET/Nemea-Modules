@@ -14,7 +14,7 @@ from report2idea import *
 MODULE_NAME = "minerdetector2idea"
 MODULE_DESC = "Converts output of minerdetector module to IDEA."
 
-REQ_TYPE = trap.TRAP_FMT_UNIREC
+REQ_TYPE = pytrap.FMT_UNIREC
 REQ_FORMAT = "ipaddr DST_IP,ipaddr SRC_IP,time TIME_FIRST,time TIME_LAST,uint32 EVENT_SCALE,uint16 DST_PORT"
 
 
