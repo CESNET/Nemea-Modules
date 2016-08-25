@@ -382,7 +382,7 @@ int main(int argc, char **argv)
    const void *in_rec;
    uint16_t in_rec_size;
    char *req_format = NULL;
-   char opt;
+   signed char opt;
    int ret;
    int i;
    int from = 0; // 0 - template and filter from CMD, 1 - from file

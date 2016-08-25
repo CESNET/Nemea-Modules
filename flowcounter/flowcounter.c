@@ -135,7 +135,7 @@ void get_o_param(int argc, char **argv, const char *module_getopt_string, const 
    /* backup global variables */
    int bck_optind = optind, bck_optopt = optopt, bck_opterr = opterr;
    char *bck_optarg = optarg;
-   char opt;
+   signed char opt;
 
    // Add "i:" to getopt_string
    /* This is necessary because getopt rearragnes arguments in such a way that
@@ -207,7 +207,7 @@ int main(int argc, char **argv)
 
    // ***** Create UniRec template *****
    char *unirec_specifier = "PACKETS,BYTES";
-   char opt;
+   signed char opt;
 
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {

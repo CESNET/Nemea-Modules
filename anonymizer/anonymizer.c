@@ -240,7 +240,7 @@ int main(int argc, char **argv)
 
    //signal(SIGUSR1, signal_handler); //signal not used in previous commit
 
-   char opt;
+   signed char opt;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
       case 'k':

@@ -914,7 +914,7 @@ void cleanup()
 int main(int argc, char **argv)
 {
    int ret;
-   char opt;
+   signed char opt;
    uint64_t start = 0;
    char *rules_fname = NULL;
    bool append = false;

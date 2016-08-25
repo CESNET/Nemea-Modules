@@ -216,7 +216,7 @@ int main(int argc, char **argv)
    verbose = (trap_get_verbose_level() >= 0);
 
    // Parse remaining parameters
-   char opt;
+   signed char opt;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
          case 'f':
