@@ -277,6 +277,8 @@ void UnirecExporter::fill_basic_flow(FlowRecord &flow, ur_template_t *tmplt_ptr,
    ur_set(tmplt_ptr, record_ptr, F_PACKETS, flow.packetTotalCount);
    ur_set(tmplt_ptr, record_ptr, F_BYTES, flow.octetTotalLength);
    ur_set(tmplt_ptr, record_ptr, F_TCP_FLAGS, flow.tcpControlBits);
+   ur_set(tmplt_ptr, record_ptr, F_TOS, flow.ipClassOfService);
+   ur_set(tmplt_ptr, record_ptr, F_TTL, flow.ipTtl);
 
    //ur_set(tmplt_ptr, record_ptr, F_DIR_BIT_FIELD, 0);
    //ur_set(tmplt_ptr, record_ptr, F_LINK_BIT_FIELD, 0);
