@@ -185,7 +185,12 @@ int count_ifc_interfaces(int argc, char *argv[])
    return int_cnt;
 }
 
-static inline void double_to_time(double value, struct timeval &time)
+/**
+ * \brief Convert double to struct timeval.
+ * \param [in] value Value to convert.
+ * \param [out] time Struct for storing converted time.
+ */
+static inline void double_to_timeval(double value, struct timeval &time)
 {
    time.tv_sec = (long) value;
    time.tv_usec = (value - (long) value) * 1000000;
@@ -206,8 +211,8 @@ int main(int argc, char *argv[])
    options_t options;
    options.flowcachesize = DEFAULT_FLOW_CACHE_SIZE;
    options.flowlinesize = DEFAULT_FLOW_LINE_SIZE;
-   double_to_time(DEFAULT_INACTIVE_TIMEOUT, options.inactivetimeout);
-   double_to_time(DEFAULT_ACTIVE_TIMEOUT, options.activetimeout);
+   double_to_timeval(DEFAULT_INACTIVE_TIMEOUT, options.inactivetimeout);
+   double_to_timeval(DEFAULT_ACTIVE_TIMEOUT, options.activetimeout);
    options.replacementstring = DEFAULT_REPLACEMENT_STRING;
    options.statsout = false;
    options.verbose = false;
@@ -264,8 +269,8 @@ int main(int argc, char *argv[])
             return error("Invalid argument for option -t");
          }
          *cptr = '\0';
-         double_to_time(atof(optarg), options.activetimeout);
-         double_to_time(atof(cptr + 1), options.inactivetimeout);
+         double_to_timeval(atof(optarg), options.activetimeout);
+         double_to_timeval(atof(cptr + 1), options.inactivetimeout);
          break;
       case 'r':
          options.infilename = string(optarg);
@@ -274,7 +279,7 @@ int main(int argc, char *argv[])
          options.flowcachesize = atoi(optarg);
          break;
       case 'S':
-         double_to_time(atof(optarg), options.statstime);
+         double_to_timeval(atof(optarg), options.statstime);
          options.statsout = true;
          break;
       case 'm':
