@@ -191,7 +191,14 @@ static inline void double_to_time(double value, struct timeval &time)
    time.tv_usec = (value - (long) value) * 1000000;
 }
 
-TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
+/**
+ * \brief Signal handler function.
+ * \param [in] sig Signal number.
+ */
+void signal_handler(int sig)
+{
+   stop = 1;
+}
 
 int main(int argc, char *argv[])
 {
@@ -212,10 +219,12 @@ int main(int argc, char *argv[])
    srand(time(NULL));
 
    // ***** TRAP initialization *****
-   TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
    module_info->num_ifc_out = count_ifc_interfaces(argc, argv);
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
+
+   signal(SIGTERM, signal_handler);
+   signal(SIGINT, signal_handler);
 
    for (int i = 0; i < module_info->num_ifc_out; i++) {
       trap_ifcctl(TRAPIFC_OUTPUT, i, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
