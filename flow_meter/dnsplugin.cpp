@@ -123,11 +123,11 @@ int DNSPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 int DNSPlugin::pre_update(FlowRecord &rec, Packet &pkt)
 {
    if (pkt.destinationTransportPort == 53 || pkt.sourceTransportPort == 53) {
-      FlowRecordExt *ext = rec.getExtension(dns);
+      RecordExt *ext = rec.getExtension(dns);
       if(ext == NULL) {
          return add_ext_dns(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
       } else {
-         parse_dns(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, dynamic_cast<FlowRecordExtDNS *>(ext));
+         parse_dns(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, dynamic_cast<RecordExtDNS *>(ext));
       }
       return FLOW_FLUSH;
    }
@@ -443,7 +443,7 @@ uint32_t s_responses = 0;
  * \param [out] rec Output FlowRecord extension header.
  * \return True if DNS was parsed.
  */
-bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, FlowRecordExtDNS *rec)
+bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, RecordExtDNS *rec)
 {
    try {
       total++;
@@ -636,7 +636,7 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, FlowRecord
  */
 int DNSPlugin::add_ext_dns(const char *data, unsigned int payload_len, FlowRecord &rec)
 {
-   FlowRecordExtDNS *ext = new FlowRecordExtDNS();
+   RecordExtDNS *ext = new RecordExtDNS();
    if (!parse_dns(data, payload_len, ext)) {
       delete ext;
       return 0;

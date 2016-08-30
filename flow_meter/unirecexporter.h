@@ -54,6 +54,7 @@
 
 #include "flowcacheplugin.h"
 #include "flowexporter.h"
+#include "packet.h"
 
 using namespace std;
 
@@ -67,9 +68,11 @@ public:
    int init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, int basic_ifc_num);
    void close();
    int export_flow(FlowRecord &flow);
+   int export_packet(Packet &pkt);
 
 private:
    void fill_basic_flow(FlowRecord &flow, ur_template_t *tmplt_ptr, void *record_ptr);
+   void fill_packet_fields(Packet &pkt, ur_template_t *tmplt_ptr, void *record_ptr);
    void free_unirec_resources();
 
    int out_ifc_cnt; /**< Number of output interfaces. */

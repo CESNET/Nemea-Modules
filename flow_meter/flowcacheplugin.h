@@ -59,6 +59,12 @@
  */
 #define FLOW_FLUSH   (0x1 << 0)
 
+/**
+ * \biref Tell FlowCache to export currently processed packet.
+ * This return value has only effect when called from pre_create method.
+ */
+#define EXPORT_PACKET   (0x1 << 1)
+
 using namespace std;
 
 /**
@@ -104,6 +110,16 @@ public:
     */
    virtual void init()
    {
+   }
+
+   /**
+    * \brief Called before a new flow record is created.
+    * \param [in] pkt Parsed packet.
+    * \return 0 on success or FLOW_FLUSH option.
+    */
+   virtual int pre_create(Packet &pkt)
+   {
+      return 0;
    }
 
    /**
@@ -161,6 +177,15 @@ public:
    virtual std::string get_unirec_field_string()
    {
       return "";
+   }
+
+   /**
+    * \brief Check if plugin require basic flow fields in unirec template.
+    * \return True if basic flow is need to be included, false otherwise.
+    */
+   virtual bool include_basic_flow_fields()
+   {
+      return true;
    }
 
    /**

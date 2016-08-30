@@ -57,7 +57,9 @@
 
 using namespace std;
 
-#define BASIC_UNIREC_TEMPLATE "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL"
+#define BASIC_FLOW_TEMPLATE    "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL"
+
+#define PACKET_TEMPLATE   "TIME"
 
 UR_FIELDS (
    ipaddr DST_IP,
@@ -73,7 +75,9 @@ UR_FIELDS (
    uint8 PROTOCOL,
    uint8 TCP_FLAGS,
    uint8 TOS,
-   uint8 TTL
+   uint8 TTL,
+
+   time TIME
 )
 
 /**
@@ -92,7 +96,6 @@ UnirecExporter::UnirecExporter() : out_ifc_cnt(0), tmplt(NULL), record(NULL)
  */
 int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, int basic_ifc_number)
 {
-   string template_str(BASIC_UNIREC_TEMPLATE);
    out_ifc_cnt = ifc_cnt;
    basic_ifc_num = basic_ifc_number;
    ifc_mapping.clear();
@@ -107,7 +110,7 @@ int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, 
 
    char *error = NULL;
    if (basic_ifc_num >= 0) {
-      tmplt[basic_ifc_num] = ur_create_output_template(basic_ifc_num, template_str.c_str(), &error);
+      tmplt[basic_ifc_num] = ur_create_output_template(basic_ifc_num, BASIC_FLOW_TEMPLATE, &error);
       if (tmplt[basic_ifc_num] == NULL) {
          fprintf(stderr, "UnirecExporter: %s\n", error);
          free(error);
@@ -116,6 +119,7 @@ int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, 
       }
    }
 
+   string template_str;
    for (unsigned int i = 0; i < plugins.size(); i++) {
       FlowCachePlugin * const tmp = plugins[i];
       vector<plugin_opt> &opts = tmp->get_options();
@@ -131,7 +135,14 @@ int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, 
       }
 
       // Create unirec templates.
-      tmplt[ifc] = ur_create_output_template(ifc, (template_str + string(",") + tmp->get_unirec_field_string()).c_str(), &error);
+      template_str = tmp->get_unirec_field_string();
+      if (tmp->include_basic_flow_fields()) {
+         template_str += string(",") + BASIC_FLOW_TEMPLATE;
+      } else {
+         template_str += string (",") + PACKET_TEMPLATE;
+      }
+
+      tmplt[ifc] = ur_create_output_template(ifc, template_str.c_str(), &error);
       if (tmplt == NULL) {
          fprintf(stderr, "UnirecExporter: %s\n", error);
          free(error);
@@ -195,9 +206,49 @@ void UnirecExporter::free_unirec_resources()
    }
 }
 
+int UnirecExporter::export_packet(Packet &pkt)
+{
+   RecordExt *ext = pkt.exts;
+   vector<int> to_export; // Contains output ifc numbers.
+   ur_template_t *tmplt_ptr = NULL;
+   void *record_ptr = NULL;
+
+   while (ext != NULL) {
+      map<int, int>::iterator it = ifc_mapping.find(ext->extType); // Find if mapping exists.
+      if (it != ifc_mapping.end()) {
+         int ifc_num = it->second;
+         if (ifc_num < 0) {
+            ext = ext->next;
+            continue;
+         }
+
+         tmplt_ptr = tmplt[ifc_num];
+         record_ptr = record[ifc_num];
+
+         if (find(to_export.begin(), to_export.end(), ifc_num) == to_export.end()) {
+            to_export.push_back(ifc_num);
+         }
+
+         ur_clear_varlen(tmplt_ptr, record_ptr);
+         memset(record_ptr, 0, ur_rec_fixlen_size(tmplt_ptr));
+         fill_packet_fields(pkt, tmplt_ptr, record_ptr);
+         ext->fillUnirec(tmplt_ptr, record_ptr); /* Add each extension header into unirec record. */
+      }
+      ext = ext->next;
+   }
+
+   for (unsigned int i = 0; i < to_export.size(); i++) {
+      tmplt_ptr = tmplt[to_export[i]];
+      record_ptr = record[to_export[i]];
+      trap_send(to_export[i], record_ptr, ur_rec_fixlen_size(tmplt_ptr) + ur_rec_varlen_size(tmplt_ptr, record_ptr));
+   }
+
+   return 0;
+}
+
 int UnirecExporter::export_flow(FlowRecord &flow)
 {
-   FlowRecordExt *ext = flow.exts;
+   RecordExt *ext = flow.exts;
    vector<int> to_export; // Contains output ifc numbers.
    ur_template_t *tmplt_ptr = NULL;
    void *record_ptr = NULL;
@@ -282,5 +333,18 @@ void UnirecExporter::fill_basic_flow(FlowRecord &flow, ur_template_t *tmplt_ptr,
 
    //ur_set(tmplt_ptr, record_ptr, F_DIR_BIT_FIELD, 0);
    //ur_set(tmplt_ptr, record_ptr, F_LINK_BIT_FIELD, 0);
+}
+
+
+/**
+ * \brief Fill record with basic flow fields.
+ * \param [in] flow Flow record.
+ * \param [in] tmplt_ptr Pointer to unirec template.
+ * \param [out] record_ptr Pointer to unirec record.
+ */
+void UnirecExporter::fill_packet_fields(Packet &pkt, ur_template_t *tmplt_ptr, void *record_ptr)
+{
+   ur_time_t tmp_time = ur_time_from_sec_msec(pkt.timestamp.tv_sec, pkt.timestamp.tv_usec / 1000.0);
+   ur_set(tmplt_ptr, record_ptr, F_TIME, tmp_time);
 }
 

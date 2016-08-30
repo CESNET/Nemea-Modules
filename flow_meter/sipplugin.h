@@ -341,7 +341,7 @@ struct parser_strtok_t {
    unsigned int instrlen;
 };
 
-struct FlowRecordExtSIP : FlowRecordExt {
+struct RecordExtSIP : RecordExt {
    uint16_t msg_type;                  /* SIP message code (register, invite) < 100 or SIP response status > 100 */
    uint16_t status_code;
    char call_id[SIP_FIELD_LEN];	      /* Call id. For sevice SIP traffic call id = 0 */
@@ -352,7 +352,7 @@ struct FlowRecordExtSIP : FlowRecordExt {
    char cseq[SIP_FIELD_LEN];           /* CSeq field of SIP packet */
    char request_uri[SIP_FIELD_LEN];    /* Request-URI of SIP request */
 
-   FlowRecordExtSIP() : FlowRecordExt(sip)
+   RecordExtSIP() : RecordExt(sip)
    {
       msg_type = 0;
       status_code = 0;
@@ -391,7 +391,7 @@ public:
 private:
    uint16_t parse_msg_type(const Packet &pkt);
    const unsigned char *parser_strtok(const unsigned char *str, unsigned int instrlen, char separator, unsigned int *strlen, parser_strtok_t *nst);
-   int parser_process_sip(const Packet &pkt, FlowRecordExtSIP *sip_data);
+   int parser_process_sip(const Packet &pkt, RecordExtSIP *sip_data);
    void parser_field_uri(const unsigned char *line, int linelen, int skip, char *dst, unsigned int dstlen);
    void parser_field_value(const unsigned char *line, int linelen, int skip, char *dst, unsigned int dstlen);
 

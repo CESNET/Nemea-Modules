@@ -141,7 +141,7 @@ string NTPPlugin::get_unirec_field_string()
  */
 void NTPPlugin::add_ext_ntp(FlowRecord &rec, const Packet &pkt)
 {
-   FlowRecordExtNTP *ntp_data_ext = new FlowRecordExtNTP();
+   RecordExtNTP *ntp_data_ext = new RecordExtNTP();
    if (!parse_ntp(pkt, ntp_data_ext)) {
       delete ntp_data_ext; /*Don't add new extension packet.*/
    } else {
@@ -152,10 +152,10 @@ void NTPPlugin::add_ext_ntp(FlowRecord &rec, const Packet &pkt)
 /**
  *\brief Parse and store NTP packet.
  *\param [in] Packet, and then take data Pointer to packet payload section.
- *\param [out] rec Output FlowRecord extension header FlowRecordExtNTP.
+ *\param [out] rec Output FlowRecord extension header RecordExtNTP.
  *\return True if NTP was parsed.
  */
-bool NTPPlugin::parse_ntp(const Packet &pkt, FlowRecordExtNTP *ntp_data_ext)
+bool NTPPlugin::parse_ntp(const Packet &pkt, RecordExtNTP *ntp_data_ext)
 {
    uint8_t i = 0;
    int number = 0, ch_counter = 0;

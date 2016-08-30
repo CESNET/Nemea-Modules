@@ -87,20 +87,20 @@ bool packet_valid = false;
 /**
  * \brief Parse specific fields from ETHERNET frame header.
  * \param [in] data_ptr Pointer to begin of header.
- * \param [out] ethertype Pointer where ethertype field is stored.
+ * \param [out] pkt Pointer to Packet structure where parsed fields will be stored.
  * \return Size of header in bytes.
  */
-inline uint16_t parse_eth_hdr(const u_char *data_ptr, uint16_t *ethertype)
+inline uint16_t parse_eth_hdr(const u_char *data_ptr, Packet *pkt)
 {
    struct ethhdr *eth = (struct ethhdr *) data_ptr;
-   uint16_t hdr_len, tmp = ntohs(eth->h_proto);
+   uint16_t hdr_len, ethertype = ntohs(eth->h_proto);
 
    DEBUG_MSG("Ethernet header:\n");
    DEBUG_MSG("\tDest mac:\t%s\n",         ether_ntoa((struct ether_addr *) eth->h_dest));
    DEBUG_MSG("\tSrc mac:\t%s\n",          ether_ntoa((struct ether_addr *) eth->h_source));
-   DEBUG_MSG("\tEthertype:\t%#06x\n",     ntohs(eth->h_proto));
+   DEBUG_MSG("\tEthertype:\t%#06x\n",     ethertype);
 
-   if (tmp == ETH_P_8021Q) {
+   if (ethertype == ETH_P_8021Q) {
       DEBUG_CODE(uint16_t vlan = ntohs(*(unsigned uint32_t *) (data_ptr + 14)));
       DEBUG_MSG("\t802.1Q field:\n");
       DEBUG_MSG("\t\tPriority:\t%u\n",    ((vlan & 0xE000) >> 12));
@@ -108,13 +108,13 @@ inline uint16_t parse_eth_hdr(const u_char *data_ptr, uint16_t *ethertype)
       DEBUG_MSG("\t\tVLAN:\t\t%u\n",      (vlan & 0x0FFF));
 
       hdr_len = 18;
-      tmp = ntohs(*(uint16_t *) &data_ptr[16]);
-      DEBUG_MSG("\t\tEthertype:\t%#06x\n", tmp);
+      ethertype = ntohs(*(uint16_t *) &data_ptr[16]);
+      DEBUG_MSG("\t\tEthertype:\t%#06x\n", ethertype);
    } else {
       hdr_len = 14;
    }
 
-   *ethertype = tmp;
+   pkt->ethertype = ethertype;
 
    return hdr_len;
 }
@@ -257,7 +257,7 @@ inline uint16_t parse_udp_hdr(const u_char *data_ptr, Packet *pkt)
 void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data)
 {
    Packet *pkt = (Packet *) arg;
-   uint16_t data_offset = 0, ethertype;
+   uint16_t data_offset = 0;
 
    DEBUG_MSG("---------- packet parser  #%u -------------\n", ++s_total_pkts);
    DEBUG_CODE(
@@ -274,23 +274,17 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
    pkt->destinationTransportPort = 0;
    pkt->protocolIdentifier = 0;
 
-   data_offset = parse_eth_hdr(data, &ethertype);
-   if (ethertype == ETH_P_IP) {
+   data_offset = parse_eth_hdr(data, pkt);
+   if (pkt->ethertype == ETH_P_IP) {
       data_offset += parse_ipv4_hdr(data + data_offset, pkt);
-   } else if (ethertype == ETH_P_IPV6) {
+   } else if (pkt->ethertype == ETH_P_IPV6) {
       data_offset += parse_ipv6_hdr(data + data_offset, pkt);
-   } else {
-      DEBUG_MSG("Packet parser exits: unknown ethernet type: %#06x\n", ethertype);
-      return;
    }
 
    if (pkt->protocolIdentifier == IPPROTO_TCP) {
       data_offset += parse_tcp_hdr(data + data_offset, pkt);
    } else if (pkt->protocolIdentifier == IPPROTO_UDP) {
       data_offset += parse_udp_hdr(data + data_offset, pkt);
-   } else if (pkt->protocolIdentifier != IPPROTO_ICMP && pkt->protocolIdentifier != IPPROTO_ICMPV6) {
-      DEBUG_MSG("Packet parser exits: unknown transport protocol: %#06x\n", pkt->protocolIdentifier);
-      return;
    }
 
    uint32_t len = h->caplen;

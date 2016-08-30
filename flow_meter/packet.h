@@ -50,6 +50,7 @@
 #include <stdlib.h>
 
 #include "ipaddr.h"
+#include "flowifc.h"
 
 #define MAXPCKTSIZE 1600
 
@@ -126,9 +127,11 @@
 /**
  * \brief Structure for storing parsed packets up to transport layer.
  */
-struct Packet {
+struct Packet : public Record {
    uint64_t    packetFieldIndicator;
    struct timeval timestamp;
+
+   uint16_t    ethertype;
 
    uint8_t     ipVersion;
    uint16_t    ipLength;

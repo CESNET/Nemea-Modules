@@ -158,7 +158,7 @@ public:
 
 protected:
    void parsereplacementstring();
-   void createhashkey(Packet pkt);
+   bool createhashkey(Packet pkt);
    long calculatehash();
    int flushflows();
    void endreport();

@@ -110,14 +110,14 @@ int HTTPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 
 int HTTPPlugin::pre_update(FlowRecord &rec, Packet &pkt)
 {
-   FlowRecordExt *ext = NULL;
+   RecordExt *ext = NULL;
    if (pkt.sourceTransportPort == 80) {
       ext = rec.getExtension(http_response);
       if (ext == NULL) { // Check if header is present in flow.
          return add_ext_http_response(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
       }
 
-      parse_http_response(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, dynamic_cast<FlowRecordExtHTTPResp *>(ext), false);
+      parse_http_response(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, dynamic_cast<RecordExtHTTPResp *>(ext), false);
       if (flush_flow) {
          flush_flow = false;
          return FLOW_FLUSH;
@@ -128,7 +128,7 @@ int HTTPPlugin::pre_update(FlowRecord &rec, Packet &pkt)
          return add_ext_http_request(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
       }
 
-      parse_http_request(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, dynamic_cast<FlowRecordExtHTTPReq *>(ext), false);
+      parse_http_request(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, dynamic_cast<RecordExtHTTPReq *>(ext), false);
       if (flush_flow) {
          flush_flow = false;
          return FLOW_FLUSH;
@@ -176,7 +176,7 @@ static uint32_t s_requests = 0, s_responses = 0;
  * \param [in] create Indicates if plugin is creating new http request or just updates old one.
  * \return True if request was parsed, false if error occured.
  */
-bool HTTPPlugin::parse_http_request(const char *data, int payload_len, FlowRecordExtHTTPReq *rec, bool create)
+bool HTTPPlugin::parse_http_request(const char *data, int payload_len, RecordExtHTTPReq *rec, bool create)
 {
    total++;
 
@@ -263,7 +263,7 @@ bool HTTPPlugin::parse_http_request(const char *data, int payload_len, FlowRecor
  * \param [in] create Indicates if plugin is creating new http response or just updates old one.
  * \return True if request was parsed, false if error occured.
  */
-bool HTTPPlugin::parse_http_response(const char *data, int payload_len, FlowRecordExtHTTPResp *rec, bool create)
+bool HTTPPlugin::parse_http_response(const char *data, int payload_len, RecordExtHTTPResp *rec, bool create)
 {
    total++;
 
@@ -367,7 +367,7 @@ bool HTTPPlugin::valid_http_method(const char *method) const
  */
 int HTTPPlugin::add_ext_http_request(const char *data, int payload_len, FlowRecord &rec)
 {
-   FlowRecordExtHTTPReq *req = new FlowRecordExtHTTPReq();
+   RecordExtHTTPReq *req = new RecordExtHTTPReq();
    if (!parse_http_request(data, payload_len, req, true)) {
       delete req;
    } else {
@@ -386,7 +386,7 @@ int HTTPPlugin::add_ext_http_request(const char *data, int payload_len, FlowReco
  */
 int HTTPPlugin::add_ext_http_response(const char *data, int payload_len, FlowRecord &rec)
 {
-   FlowRecordExtHTTPResp *resp = new FlowRecordExtHTTPResp();
+   RecordExtHTTPResp *resp = new RecordExtHTTPResp();
    if (!parse_http_response(data, payload_len, resp, true)) {
       delete resp;
    } else {

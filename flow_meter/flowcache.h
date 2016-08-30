@@ -121,6 +121,20 @@ protected:
    }
 
    /**
+    * \brief Call pre_create function for each added plugin.
+    * \param [in] pkt Input parsed packet.
+    * \return Options for flow cache.
+    */
+   int plugins_pre_create(Packet &pkt)
+   {
+      int ret = 0;
+      for (unsigned int i = 0; i < plugins.size(); i++) {
+         ret |= plugins[i]->pre_create(pkt);
+      }
+      return ret;
+   }
+
+   /**
     * \brief Call post_create function for each added plugin.
     * \param [in,out] rec Stored flow record.
     * \param [in] pkt Input parsed packet.

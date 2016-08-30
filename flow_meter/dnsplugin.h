@@ -209,7 +209,7 @@ struct __attribute__ ((packed)) dns_dnskey {
 /**
  * \brief Flow record extension header for storing parsed DNS packets.
  */
-struct FlowRecordExtDNS : FlowRecordExt {
+struct RecordExtDNS : RecordExt {
    uint16_t dns_id;
    uint16_t dns_answers;
    uint8_t dns_rcode;
@@ -225,7 +225,7 @@ struct FlowRecordExtDNS : FlowRecordExt {
    /**
     * \brief Constructor.
     */
-   FlowRecordExtDNS() : FlowRecordExt(dns), dns_qtype(0)
+   RecordExtDNS() : RecordExt(dns), dns_qtype(0)
    {
       dns_id = 0;
       dns_answers = 0;
@@ -270,7 +270,7 @@ public:
    string get_unirec_field_string();
 
 private:
-   bool parse_dns(const char *data, unsigned int payload_len, FlowRecordExtDNS *rec);
+   bool parse_dns(const char *data, unsigned int payload_len, RecordExtDNS *rec);
    int  add_ext_dns(const char *data, unsigned int payload_len, FlowRecord &rec);
    string get_name(const char *begin, const char *data, int counter) const;
    void process_srv(string &str) const;

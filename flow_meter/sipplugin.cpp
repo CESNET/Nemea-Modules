@@ -84,7 +84,7 @@ int SIPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
       return 0;
    }
 
-   FlowRecordExtSIP *sip_data = new FlowRecordExtSIP();
+   RecordExtSIP *sip_data = new RecordExtSIP();
    sip_data->msg_type = msg_type;
    rec.addExtension(sip_data);
    parser_process_sip(pkt, sip_data);
@@ -441,7 +441,7 @@ void SIPPlugin::parser_field_uri(const unsigned char *line, int linelen, int ski
    dst[final_len] = 0;
 }
 
-int SIPPlugin::parser_process_sip(const Packet &pkt, FlowRecordExtSIP *sip_data)
+int SIPPlugin::parser_process_sip(const Packet &pkt, RecordExtSIP *sip_data)
 {
    const unsigned char *payload;
    const unsigned char *line;

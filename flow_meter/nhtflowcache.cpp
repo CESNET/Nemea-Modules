@@ -180,7 +180,19 @@ void NHTFlowCache::finish()
 
 int NHTFlowCache::put_pkt(Packet &pkt)
 {
-   createhashkey(pkt); // saves key value and key length into attributes NHTFlowCache::key and NHTFlowCache::key_len
+   int ret = plugins_pre_create(pkt);
+
+   if (ret == EXPORT_PACKET) {
+      exporter->export_packet(pkt);
+      pkt.removeExtensions();
+
+      return 0;
+   }
+
+   if (!createhashkey(pkt)) { // saves key value and key length into attributes NHTFlowCache::key and NHTFlowCache::key_len
+      return 0;
+   }
+
    uint64_t hashval = calculatehash(); // calculates hash value from key created before
 
    // Find place for packet
@@ -240,7 +252,6 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       }
    }
 
-   int ret = 0;
    currtimestamp = pkt.timestamp;
    if (flowarray[flowindex]->isempty()) {
       flowarray[flowindex]->create(pkt, hashval, key, key_len);
@@ -321,7 +332,7 @@ long NHTFlowCache::calculatehash()
    return coll.hash(key, key + key_len);
 }
 
-void NHTFlowCache::createhashkey(Packet pkt)
+bool NHTFlowCache::createhashkey(Packet pkt)
 {
    char *k = key;
 
@@ -338,9 +349,7 @@ void NHTFlowCache::createhashkey(Packet pkt)
       k += sizeof(pkt.destinationTransportPort);
       *k = '\0';
       key_len = 13;
-   }
-
-   if ((pkt.packetFieldIndicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
+   } else if ((pkt.packetFieldIndicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
       *(uint8_t *) k = pkt.protocolIdentifier;
       k += sizeof(pkt.protocolIdentifier);
       memcpy(k, pkt.sourceIPAddress.v6, sizeof(pkt.sourceIPAddress.v6));
@@ -353,7 +362,11 @@ void NHTFlowCache::createhashkey(Packet pkt)
       k += sizeof(pkt.destinationTransportPort);
       *k = '\0';
       key_len = 37;
+   } else {
+      return false;
    }
+
+   return true;
 }
 
 void NHTFlowCache::endreport()
