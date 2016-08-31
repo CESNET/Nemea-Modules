@@ -1,3 +1,13 @@
+2016-08-05 Nemea-modules-2.4.1
+	* package:
+		fixed dependencies (remove nemea-py*)
+	* flow_meter:
+		code revision
+		memory optimizations
+		fixing byte order issues
+	* endiverter:
+		coding style
+		bugfixes
 2016-07-28 Nemea-modules-2.4.0
 	* report2idea modules:
 		replaced python wrapper with pytrap
