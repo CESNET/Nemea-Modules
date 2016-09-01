@@ -84,7 +84,7 @@ static int stop = 0;
   " will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,dns,sip,ntp,basic", required_argument, "string")\
   PARAM('c', "count", "Quit after number of packets are captured.", required_argument, "uint32")\
   PARAM('I', "interface", "Capture from given network interface. Parameter require interface name (eth0 for example).", required_argument, "string")\
-  PARAM('r', "file", "Pcap file to read.", required_argument, "string") \
+  PARAM('r', "file", "Pcap file to read. - to read from stdin", required_argument, "string") \
   PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: FLOAT:FLOAT. (DEFAULT: 300.0:30.0)", required_argument, "string") \
   PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 168 bytes. (DEFAULT: 65536)", required_argument, "uint32") \
   PARAM('S', "statistic", "Print statistics. NUMBER specifies interval between prints.", required_argument, "float") \
