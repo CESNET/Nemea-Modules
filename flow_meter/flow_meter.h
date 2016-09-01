@@ -67,7 +67,6 @@ const std::string DEFAULT_REPLACEMENT_STRING = \
 struct options_t {
    int basic_ifc_num;
    bool statsout;
-   bool verbose;
    uint32_t flowcachesize;
    uint32_t flowlinesize;
    struct timeval inactivetimeout;

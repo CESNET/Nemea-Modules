@@ -100,8 +100,7 @@ static int stop = 0;
   PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 168 bytes. (DEFAULT: 65536)", required_argument, "uint32") \
   PARAM('S', "statistic", "Print statistics. NUMBER specifies interval between prints.", required_argument, "float") \
   PARAM('m', "sample", "Sampling probability. NUMBER in 100 (DEFAULT: 100)", required_argument, "int32") \
-  PARAM('V', "vector", "Replacement vector. 1+32 NUMBERS.", required_argument, "string") \
-  PARAM('v', "verbose", "Set verbose mode on.", no_argument, "none")
+  PARAM('V', "vector", "Replacement vector. 1+32 NUMBERS.", required_argument, "string")
 
 /**
  * \brief Parse input plugin settings.
@@ -215,7 +214,6 @@ int main(int argc, char *argv[])
    double_to_timeval(DEFAULT_ACTIVE_TIMEOUT, options.activetimeout);
    options.replacementstring = DEFAULT_REPLACEMENT_STRING;
    options.statsout = false;
-   options.verbose = false;
    options.interface = "";
    options.basic_ifc_num = 0;
 
@@ -292,9 +290,6 @@ int main(int argc, char *argv[])
          break;
       case 'V':
          options.replacementstring = optarg;
-         break;
-      case 'v':
-         options.verbose = true;
          break;
       default:
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
