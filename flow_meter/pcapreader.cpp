@@ -43,11 +43,8 @@
  *
  */
 
-#include "pcapreader.h"
 #include <cstdio>
 #include <cstring>
-#include <pcap/pcap.h>
-
 #include <arpa/inet.h>
 #include <netinet/ether.h>
 #include <netinet/in.h>
@@ -57,6 +54,9 @@
 #include <netinet/udp.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp6.h>
+#include <pcap/pcap.h>
+
+#include "pcapreader.h"
 
 using namespace std;
 
@@ -330,36 +330,36 @@ PcapReader::~PcapReader()
 /**
  * \brief Open pcap file for reading.
  * \param [in] file Input file name.
- * \return 0 on success, non 0 on failure + errmsg is filled with error message
+ * \return 0 on success, non 0 on failure + error_msg is filled with error message
  */
-int PcapReader::open_file(const std::string &file)
+int PcapReader::open_file(const string &file)
 {
    if (handle != NULL) {
-      errmsg = "Interface or pcap file is already opened.";
+      error_msg = "Interface or pcap file is already opened.";
       return 1;
    }
 
-   char errbuf[PCAP_ERRBUF_SIZE];
-   handle = pcap_open_offline(file.c_str(), errbuf);
+   char error_buffer[PCAP_ERRBUF_SIZE];
+   handle = pcap_open_offline(file.c_str(), error_buffer);
    if (handle == NULL) {
-      errmsg = errbuf;
+      error_msg = error_buffer;
       return 2;
    }
 
    live_capture = false;
-   errmsg = "";
+   error_msg = "";
    return 0;
 }
 
 /**
  * \brief Initialize network interface for reading.
  * \param [in] interface Interface name.
- * \return 0 on success, non 0 on failure + errmsg is filled with error message
+ * \return 0 on success, non 0 on failure + error_msg is filled with error message
  */
-int PcapReader::init_interface(const std::string &interface)
+int PcapReader::init_interface(const string &interface)
 {
    if (handle != NULL) {
-      errmsg = "Interface or pcap file is already opened.";
+      error_msg = "Interface or pcap file is already opened.";
       return 1;
    }
 
@@ -369,7 +369,7 @@ int PcapReader::init_interface(const std::string &interface)
    // TODO: check for specific format of link-layer header
    handle = pcap_open_live(interface.c_str(), MAXPCKTSIZE, 1, READ_TIMEOUT, errbuf);
    if (handle == NULL) {
-      errmsg = errbuf;
+      error_msg = errbuf;
       return 2;
    }
    if (errbuf[0] != 0) {
@@ -377,7 +377,7 @@ int PcapReader::init_interface(const std::string &interface)
    }
 
    live_capture = true;
-   errmsg = "";
+   error_msg = "";
    return 0;
 }
 
@@ -395,7 +395,7 @@ void PcapReader::close()
 int PcapReader::get_pkt(Packet &packet)
 {
    if (handle == NULL) {
-      errmsg = "No live capture or file opened.";
+      error_msg = "No live capture or file opened.";
       return -3;
    }
 
@@ -415,7 +415,7 @@ int PcapReader::get_pkt(Packet &packet)
    }
    if (ret < 0) {
       // Error occured.
-      errmsg = pcap_geterr(handle);
+      error_msg = pcap_geterr(handle);
    }
    return ret;
 }

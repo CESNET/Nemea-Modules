@@ -75,11 +75,11 @@ private:
    void fill_packet_fields(Packet &pkt, ur_template_t *tmplt_ptr, void *record_ptr);
    void free_unirec_resources();
 
-   int out_ifc_cnt; /**< Number of output interfaces. */
-   int basic_ifc_num; /**< Basic output interface number. */
+   int out_ifc_cnt;           /**< Number of output interfaces. */
+   int basic_ifc_num;         /**< Basic output interface number. */
    map<int, int> ifc_mapping; /**< Contain extension id -> output interface number mapping. */
-   ur_template_t **tmplt; /**< Pointer to unirec templates. */
-   void **record;         /**< Pointer to unirec records. */
+   ur_template_t **tmplt;     /**< Pointer to unirec templates. */
+   void **record;             /**< Pointer to unirec records. */
 };
 
 #endif

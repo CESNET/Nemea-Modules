@@ -395,7 +395,7 @@ private:
    void parser_field_uri(const unsigned char *line, int linelen, int skip, char *dst, unsigned int dstlen);
    void parser_field_value(const unsigned char *line, int linelen, int skip, char *dst, unsigned int dstlen);
 
-   bool statsout;
+   bool print_stats;
    bool flush_flow;
    uint32_t requests;
    uint32_t responses;

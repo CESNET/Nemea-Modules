@@ -46,13 +46,15 @@
 #ifndef FLOWCACHE_H
 #define FLOWCACHE_H
 
+#include <vector>
+#include <cstring>
+
 #include "packet.h"
 #include "flowifc.h"
 #include "flowcacheplugin.h"
 #include "flowexporter.h"
 
-#include <vector>
-#include <cstring>
+using namespace std;
 
 /**
  * \brief Base class for flow caches.
@@ -62,7 +64,7 @@ class FlowCache
 protected:
    FlowExporter *exporter; /**< Instance of FlowExporter used to export flows. */
 private:
-   std::vector<FlowCachePlugin *> plugins; /**< Array of plugins. */
+   vector<FlowCachePlugin *> plugins; /**< Array of plugins. */
 
 public:
    /**

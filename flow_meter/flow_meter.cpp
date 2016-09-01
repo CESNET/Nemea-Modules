@@ -72,17 +72,6 @@
 
 using namespace std;
 
-/**
- * \brief Print an error message.
- * \param [in] e String containing an error message
- * \return EXIT_FAILURE
- */
-inline bool error(const string &e)
-{
-   cerr << "flow_meter: " << e << endl;
-   return EXIT_FAILURE;
-}
-
 trap_module_info_t *module_info = NULL;
 static int stop = 0;
 
@@ -196,6 +185,17 @@ static inline void double_to_timeval(double value, struct timeval &time)
 }
 
 /**
+ * \brief Exit and print an error message.
+ * \param [in] e String containing an error message
+ * \return EXIT_FAILURE
+ */
+inline bool error(const string &e)
+{
+   cerr << "flow_meter: " << e << endl;
+   return EXIT_FAILURE;
+}
+
+/**
  * \brief Signal handler function.
  * \param [in] sig Signal number.
  */
@@ -208,12 +208,12 @@ int main(int argc, char *argv[])
 {
    plugins_t plugin_wrapper;
    options_t options;
-   options.flowcachesize = DEFAULT_FLOW_CACHE_SIZE;
-   options.flowlinesize = DEFAULT_FLOW_LINE_SIZE;
-   double_to_timeval(DEFAULT_INACTIVE_TIMEOUT, options.inactivetimeout);
-   double_to_timeval(DEFAULT_ACTIVE_TIMEOUT, options.activetimeout);
-   options.replacementstring = DEFAULT_REPLACEMENT_STRING;
-   options.statsout = false;
+   options.flow_cache_size = DEFAULT_FLOW_CACHE_SIZE;
+   options.flow_line_size = DEFAULT_FLOW_LINE_SIZE;
+   double_to_timeval(DEFAULT_INACTIVE_TIMEOUT, options.inactive_timeout);
+   double_to_timeval(DEFAULT_ACTIVE_TIMEOUT, options.active_timeout);
+   options.replacement_string = DEFAULT_REPLACEMENT_STRING;
+   options.print_stats = true;
    options.interface = "";
    options.basic_ifc_num = 0;
 
@@ -267,18 +267,18 @@ int main(int argc, char *argv[])
             return error("Invalid argument for option -t");
          }
          *cptr = '\0';
-         double_to_timeval(atof(optarg), options.activetimeout);
-         double_to_timeval(atof(cptr + 1), options.inactivetimeout);
+         double_to_timeval(atof(optarg), options.active_timeout);
+         double_to_timeval(atof(cptr + 1), options.inactive_timeout);
          break;
       case 'r':
-         options.infilename = string(optarg);
+         options.pcap_file = string(optarg);
          break;
       case 's':
-         options.flowcachesize = atoi(optarg);
+         options.flow_cache_size = atoi(optarg);
          break;
       case 'S':
-         double_to_timeval(atof(optarg), options.statstime);
-         options.statsout = true;
+         double_to_timeval(atof(optarg), options.stats_interval);
+         options.print_stats = false;
          break;
       case 'm':
          sampling = atoi(optarg);
@@ -289,7 +289,7 @@ int main(int argc, char *argv[])
          }
          break;
       case 'V':
-         options.replacementstring = optarg;
+         options.replacement_string = optarg;
          break;
       default:
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
@@ -298,17 +298,17 @@ int main(int argc, char *argv[])
       }
    }
 
-   if (options.interface != "" && options.infilename != "") {
+   if (options.interface != "" && options.pcap_file != "") {
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       TRAP_DEFAULT_FINALIZATION();
       return error("Cannot capture from file and from interface at the same time.");
-   } else if (options.interface == "" && options.infilename == "") {
+   } else if (options.interface == "" && options.pcap_file == "") {
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       TRAP_DEFAULT_FINALIZATION();
       return error("Specify capture interface (-I) or file for reading (-r). ");
    }
 
-   if (options.flowcachesize % options.flowlinesize != 0) {
+   if (options.flow_cache_size % options.flow_line_size != 0) {
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       TRAP_DEFAULT_FINALIZATION();
       return error("Size of flow line (32 by default) must divide size of flow cache.");
@@ -316,16 +316,16 @@ int main(int argc, char *argv[])
 
    PcapReader packetloader(options);
    if (options.interface == "") {
-      if (packetloader.open_file(options.infilename) != 0) {
+      if (packetloader.open_file(options.pcap_file) != 0) {
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
-         return error("Can't open input file: " + options.infilename);
+         return error("Can't open input file: " + options.pcap_file);
       }
    } else {
       if (packetloader.init_interface(options.interface) != 0) {
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
-         return error("Unable to initialize libpcap: " + packetloader.errmsg);
+         return error("Unable to initialize libpcap: " + packetloader.error_msg);
       }
    }
 
@@ -339,8 +339,8 @@ int main(int argc, char *argv[])
    }
    flowcache.set_exporter(&flowwriter);
 
-   if (options.statsout) {
-      plugin_wrapper.plugins.push_back(new StatsPlugin(options.statstime, cout));
+   if (!options.print_stats) {
+      plugin_wrapper.plugins.push_back(new StatsPlugin(options.stats_interval, cout));
    }
 
    for (unsigned int i = 0; i < plugin_wrapper.plugins.size(); i++) {
@@ -357,7 +357,7 @@ int main(int argc, char *argv[])
    // Main packet capture loop.
    while (!stop && (ret = packetloader.get_pkt(packet)) > 0) {
       if (ret == 3) { // Process timeout
-         flowcache.exportexpired(false);
+         flowcache.export_expired(false);
          continue;
       }
 
@@ -379,10 +379,10 @@ int main(int argc, char *argv[])
       delete [] packet.packet;
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       TRAP_DEFAULT_FINALIZATION();
-      return error("Error during reading: " + packetloader.errmsg);
+      return error("Error during reading: " + packetloader.error_msg);
    }
 
-   if (!options.statsout) {
+   if (options.print_stats) {
       cout << "Total packets processed: "<< pkt_total << endl;
       cout << "Packet headers parsed: "<< pkt_parsed << endl;
    }

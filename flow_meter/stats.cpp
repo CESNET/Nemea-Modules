@@ -58,7 +58,10 @@ StatsPlugin::StatsPlugin(struct timeval interval, ostream &out)
 
 void StatsPlugin::init()
 {
-   packets = new_flows = cache_hits = flows_in_cache = 0;
+   packets = 0;
+   new_flows = 0;
+   cache_hits = 0;
+   flows_in_cache = 0;
    init_ts = true;
    print_header();
 }
@@ -104,7 +107,9 @@ void StatsPlugin::check_timestamp(const Packet &pkt)
    if (timercmp(&pkt.timestamp, &tmp, >)) {
       print_stats(last_ts);
       timeradd(&last_ts, &interval, &last_ts);
-      packets = new_flows = cache_hits = 0;
+      packets = 0;
+      new_flows = 0;
+      cache_hits = 0;
    }
 }
 

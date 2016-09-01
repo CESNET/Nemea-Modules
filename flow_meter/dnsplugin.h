@@ -277,7 +277,7 @@ private:
    void process_rdata(const char *data_begin, const char *record_begin, const char *data, ostringstream &rdata, uint16_t type, size_t length) const;
    size_t get_name_length(const char *data, bool total_length) const;
 
-   bool statsout;       /**< Indicator whether to print stats when flow cache is finishing or not. */
+   bool print_stats;    /**< Indicator whether to print stats when flow cache is finishing or not. */
    uint32_t queries;    /**< Total number of parsed DNS queries. */
    uint32_t responses;  /**< Total number of parsed DNS responses. */
    uint32_t total;      /**< Total number of parsed DNS packets. */

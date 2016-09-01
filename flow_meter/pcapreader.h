@@ -52,6 +52,8 @@
 #include "packet.h"
 #include "packetreceiver.h"
 
+using namespace std;
+
 /**
  * \brief Class for reading packets from file or network interface.
  */
@@ -62,8 +64,8 @@ public:
    PcapReader(const options_t &options);
    ~PcapReader();
 
-   int open_file(const std::string &file);
-   int init_interface(const std::string &interface);
+   int open_file(const string &file);
+   int init_interface(const string &interface);
    void close();
    int get_pkt(Packet &packet);
 private:

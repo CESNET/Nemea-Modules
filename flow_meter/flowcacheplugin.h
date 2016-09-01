@@ -47,10 +47,10 @@
 #define FLOWCACHEPLUGIN_H
 
 #include <string>
+#include <vector>
 
 #include "packet.h"
 #include "flowifc.h"
-#include <vector>
 
 /**
  * \brief Tell FlowCache to flush (immediately export) current flow.
@@ -174,7 +174,7 @@ public:
     * \brief Get unirec template string from plugin.
     * \return Unirec template string.
     */
-   virtual std::string get_unirec_field_string()
+   virtual string get_unirec_field_string()
    {
       return "";
    }

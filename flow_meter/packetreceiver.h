@@ -47,7 +47,10 @@
 #define PACKETRECEIVER_H
 
 #include <string>
+
 #include "packet.h"
+
+using namespace std;
 
 /**
  * \brief Base class for packet receivers.
@@ -55,7 +58,7 @@
 class PacketReceiver
 {
 public:
-   std::string errmsg; /**< String to store an error messages. */
+   string error_msg; /**< String to store an error messages. */
 
    /**
     * \brief Get packet from network interface or file.

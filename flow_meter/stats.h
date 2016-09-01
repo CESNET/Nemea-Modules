@@ -45,9 +45,11 @@
 #ifndef STATS_H
 #define STATS_H
 
+#include <ostream>
+
 #include "flowcacheplugin.h"
 
-#include <ostream>
+using namespace std;
 
 class StatsPlugin : public FlowCachePlugin
 {
@@ -58,18 +60,15 @@ class StatsPlugin : public FlowCachePlugin
 
    struct timeval interval;
    struct timeval last_ts;
-   std::ostream &out;
+   ostream &out;
    bool init_ts;
-
-   FILE *create_keys;
-   FILE *export_keys;
 
    void check_timestamp(const Packet &pkt);
    void print_header() const;
    void print_stats(const struct timeval &ts) const;
 
 public:
-   StatsPlugin(struct timeval interval, std::ostream &out);
+   StatsPlugin(struct timeval interval, ostream &out);
 
    void init();
    int post_create(FlowRecord &rec, const Packet &pkt);

@@ -65,13 +65,21 @@ UR_FIELDS (
    string SIP_VIA
 )
 
-SIPPlugin::SIPPlugin(const options_t &module_options) : statsout(module_options.statsout), requests(0), responses(0), total(0)
+SIPPlugin::SIPPlugin(const options_t &module_options)
 {
+   print_stats = module_options.print_stats;
+   requests = 0;
+   responses = 0;
+   total = 0;
    flush_flow = true;
 }
 
-SIPPlugin::SIPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options) : FlowCachePlugin(plugin_options), statsout(module_options.statsout), requests(0), responses(0), total(0)
+SIPPlugin::SIPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options) : FlowCachePlugin(plugin_options)
 {
+   print_stats = module_options.print_stats;
+   requests = 0;
+   responses = 0;
+   total = 0;
    flush_flow = true;
 }
 
@@ -104,7 +112,7 @@ int SIPPlugin::pre_update(FlowRecord &rec, Packet &pkt)
 }
 void SIPPlugin::finish()
 {
-   if (!statsout) {
+   if (print_stats) {
       cout << "SIP plugin stats:" << endl;
       cout << "Parsed sip requests: " << requests << endl;
       cout << "Parsed sip responses: " << responses << endl;

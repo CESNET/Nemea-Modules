@@ -87,13 +87,21 @@ UR_FIELDS (
  * \brief Constructor.
  * \param [in] options Module options.
  */
-HTTPPlugin::HTTPPlugin(const options_t &module_options) : statsout(module_options.statsout), requests(0), responses(0), total(0)
+HTTPPlugin::HTTPPlugin(const options_t &module_options)
 {
+   print_stats = module_options.print_stats;
+   requests = 0;
+   responses = 0;
+   total = 0;
    flush_flow = false;
 }
 
-HTTPPlugin::HTTPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options) : FlowCachePlugin(plugin_options), statsout(module_options.statsout), requests(0), responses(0), total(0)
+HTTPPlugin::HTTPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options) : FlowCachePlugin(plugin_options)
 {
+   print_stats = module_options.print_stats;
+   requests = 0;
+   responses = 0;
+   total = 0;
    flush_flow = false;
 }
 
@@ -140,7 +148,7 @@ int HTTPPlugin::pre_update(FlowRecord &rec, Packet &pkt)
 
 void HTTPPlugin::finish()
 {
-   if (!statsout) {
+   if (print_stats) {
       cout << "HTTP plugin stats:" << endl;
       cout << "Parsed http requests: " << requests << endl;
       cout << "Parsed http responses: " << responses << endl;
