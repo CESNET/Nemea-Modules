@@ -163,17 +163,23 @@ string DNSPlugin::get_unirec_field_string()
 /**
  * \brief Get name length.
  * \param [in] data Pointer to string.
- * \param [in] total_length Count terminating character.
  * \return Number of characters in string.
  */
 size_t DNSPlugin::get_name_length(const char *data) const
 {
    size_t len = 0;
 
-   while (data[0]) {
+   while (1) {
+      if ((data - data_begin) + 1 > data_len) {
+         throw "Error: overflow";
+      }
+      if (!data[0]) {
+         break;
+      }
       if (IS_POINTER(data[0])) {
          return len + 2;
       }
+
       len += data[0] + 1;
       data += data[0] + 1;
    }
@@ -183,11 +189,10 @@ size_t DNSPlugin::get_name_length(const char *data) const
 
 /**
  * \brief Decompress dns name.
- * \param [in] data_begin Pointer to the start of dns payload section.
  * \param [in] data Pointer to compressed data.
  * \return String with decompressed dns name.
  */
-string DNSPlugin::get_name(const char *data_begin, const char *data) const
+string DNSPlugin::get_name(const char *data) const
 {
    string name = "";
    int label_cnt = 0;
@@ -252,14 +257,13 @@ void DNSPlugin::process_srv(string &str) const
 
 /**
  * \brief Process RDATA section.
- * \param [in] data_begin Pointer to start of packet payload section.
  * \param [in] record_begin Pointer to start of current resource record.
  * \param [in] data Pointer to RDATA section.
  * \param [out] rdata String which stores processed data.
  * \param [in] type Type of RDATA section.
  * \param [in] length Length of RDATA section.
  */
-void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, const char *data, ostringstream &rdata, uint16_t type, size_t length) const
+void DNSPlugin::process_rdata(const char *record_begin, const char *data, ostringstream &rdata, uint16_t type, size_t length) const
 {
    rdata.str("");
    rdata.clear();
@@ -278,26 +282,26 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
       }
       break;
    case DNS_TYPE_NS:
-      rdata << get_name(data_begin, data);
+      rdata << get_name(data);
       DEBUG_MSG("\tData NS:\t\t\t%s\n",      rdata.str().c_str());
       break;
    case DNS_TYPE_CNAME:
-      rdata << get_name(data_begin, data);
+      rdata << get_name(data);
       DEBUG_MSG("\tData CNAME:\t\t%s\n",     rdata.str().c_str());
       break;
    case DNS_TYPE_PTR:
-      rdata << get_name(data_begin, data);
+      rdata << get_name(data);
       DEBUG_MSG("\tData PTR:\t\t%s\n",       rdata.str().c_str());
       break;
    case DNS_TYPE_DNAME:
-      rdata << get_name(data_begin, data);
+      rdata << get_name(data);
       DEBUG_MSG("\tData DNAME:\t\t%s\n",     rdata.str().c_str());
       break;
    case DNS_TYPE_SOA:
       {
-         rdata << get_name(data_begin, data);
+         rdata << get_name(data);
          data += get_name_length(data);
-         string tmp = get_name(data_begin, data);
+         string tmp = get_name(data);
          data += get_name_length(data);
 
          DEBUG_MSG("\t\tMName:\t\t%s\n",     rdata.str().c_str());
@@ -318,7 +322,7 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
    case DNS_TYPE_SRV:
       {
          DEBUG_MSG("\tData SRV:\n");
-         string tmp = get_name(data_begin, record_begin);
+         string tmp = get_name(record_begin);
          process_srv(tmp);
          struct dns_srv *srv = (struct dns_srv *) data;
 
@@ -327,7 +331,7 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
          DEBUG_MSG("\t\tPort:\t\t%u\n",      ntohs(srv->port));
 
          rdata << tmp << " ";
-         tmp = get_name(data_begin, data + 6);
+         tmp = get_name(data + 6);
 
          DEBUG_MSG("\t\tTarget:\t\t%s\n", tmp.c_str());
          rdata << tmp << " " << ntohs(srv->priority) << " " <<  ntohs(srv->weight) << " " << ntohs(srv->port);
@@ -336,10 +340,10 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
    case DNS_TYPE_MX:
       {
          uint16_t preference = ntohs(*(uint16_t *) data);
-         rdata << preference << " " << get_name(data_begin, data + 2);
+         rdata << preference << " " << get_name(data + 2);
          DEBUG_MSG("\tData MX:\n");
          DEBUG_MSG("\t\tPreference:\t%u\n",     preference);
-         DEBUG_MSG("\t\tMail exchanger:\t%s\n", get_name(data_begin, data + 2).c_str());
+         DEBUG_MSG("\t\tMail exchanger:\t%s\n", get_name(data + 2).c_str());
       }
       break;
    case DNS_TYPE_TXT:
@@ -365,12 +369,12 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
       break;
    case DNS_TYPE_MINFO:
       DEBUG_MSG("\tData MINFO:\n");
-      rdata << get_name(data_begin, data);
+      rdata << get_name(data);
       DEBUG_MSG("\t\tRMAILBX:\t%s\n",  rdata.str().c_str());
       data += get_name_length(data);
 
-      rdata << get_name(data_begin, data);
-      DEBUG_MSG("\t\tEMAILBX:\t%s\n",  get_name(data_begin, data).c_str());
+      rdata << get_name(data);
+      DEBUG_MSG("\t\tEMAILBX:\t%s\n",  get_name(data).c_str());
       break;
    case DNS_TYPE_HINFO:
       DEBUG_MSG("\tData HINFO:\n");
@@ -411,7 +415,7 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
                << ntohl(rrsig->sig_expiration) << " " << ntohl(rrsig->sig_inception)
                << " " << ntohs(rrsig->keytag) << " <key>";
 
-         tmp = get_name(data_begin, data + 18);
+         tmp = get_name(data + 18);
          DEBUG_MSG("\t\tSigner's name:\t%s\n",  tmp.c_str());
          DEBUG_MSG("\t\tSignature:\t(binary)\n");
       }
@@ -452,13 +456,14 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, RecordExtD
    try {
       total++;
 
-      const char *data_begin = data;
       DEBUG_MSG("---------- dns parser #%u ----------\n", total);
       DEBUG_MSG("Payload length: %u\n", payload_len);
       if (payload_len < sizeof(struct dns_hdr)) {
          DEBUG_MSG("payload length < %ld\n", sizeof(struct dns_hdr));
          return false;
       }
+
+      data_begin = data;
       data_len = payload_len;
 
       struct dns_hdr *dns = (struct dns_hdr *) data;
@@ -500,11 +505,16 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, RecordExtD
       data += sizeof(struct dns_hdr);
       for (int i = 0; i < question_cnt; i++) {
          DEBUG_MSG("\nDNS question #%d\n",            i + 1);
-         string name = get_name(data_begin, data);
+         string name = get_name(data);
          DEBUG_MSG("\tName:\t\t\t%s\n",               name.c_str());
 
          data += get_name_length(data);
          struct dns_question *question = (struct dns_question *) data;
+
+         if ((data - data_begin) + sizeof(struct dns_question) > payload_len) {
+            DEBUG_MSG("DNS parser quits: overflow\n\n");
+            return 1;
+         }
 
          if (i == 0) { // Copy only first question.
             rec->dns_qtype = ntohs(question->qtype);
@@ -527,10 +537,17 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, RecordExtD
          record_begin = data;
 
          DEBUG_MSG("DNS answer #%d\n", i + 1);
-         DEBUG_MSG("\tAnswer name:\t\t%s\n",          get_name(data_begin, data).c_str());
+         DEBUG_MSG("\tAnswer name:\t\t%s\n",          get_name(data).c_str());
          data += get_name_length(data);
 
          struct dns_answer *answer = (struct dns_answer *) data;
+
+         uint32_t tmp = (data - data_begin) + sizeof(dns_answer);
+         if (tmp > payload_len || tmp + ntohs(answer->rdlength) > payload_len) {
+            DEBUG_MSG("DNS parser quits: overflow\n\n");
+            return 1;
+         }
+
          DEBUG_MSG("\tType:\t\t\t%u\n",               ntohs(answer->atype));
          DEBUG_MSG("\tClass:\t\t\t%u\n",              ntohs(answer->aclass));
          DEBUG_MSG("\tTTL:\t\t\t%u\n",                ntohl(answer->ttl));
@@ -538,7 +555,7 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, RecordExtD
 
          data += sizeof(struct dns_answer);
          rdlength = ntohs(answer->rdlength);
-         process_rdata(data_begin, record_begin, data, rdata, ntohs(answer->atype), rdlength);
+         process_rdata(record_begin, data, rdata, ntohs(answer->atype), rdlength);
 
          if (i == 0) { // Copy only first answer.
             rec->dns_rr_ttl = ntohl(answer->ttl);
@@ -562,10 +579,17 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, RecordExtD
          record_begin = data;
 
          DEBUG_MSG("DNS authority RR #%d\n", i + 1);
-         DEBUG_MSG("\tAnswer name:\t\t%s\n",          get_name(data_begin, data).c_str());
+         DEBUG_MSG("\tAnswer name:\t\t%s\n",          get_name(data).c_str());
          data += get_name_length(data);
 
          struct dns_answer *answer = (struct dns_answer *) data;
+
+         uint32_t tmp = (data - data_begin) + sizeof(dns_answer);
+         if (tmp > payload_len || tmp + ntohs(answer->rdlength) > payload_len) {
+            DEBUG_MSG("DNS parser quits: overflow\n\n");
+            return 1;
+         }
+
          DEBUG_MSG("\tType:\t\t\t%u\n",               ntohs(answer->atype));
          DEBUG_MSG("\tClass:\t\t\t%u\n",              ntohs(answer->aclass));
          DEBUG_MSG("\tTTL:\t\t\t%u\n",                ntohl(answer->ttl));
@@ -573,7 +597,7 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, RecordExtD
 
          data += sizeof(struct dns_answer);
          rdlength = ntohs(answer->rdlength);
-         DEBUG_CODE(process_rdata(data_begin, record_begin, data, rdata, ntohs(answer->atype), rdlength));
+         DEBUG_CODE(process_rdata(record_begin, data, rdata, ntohs(answer->atype), rdlength));
 
          data += rdlength;
       }
@@ -585,12 +609,18 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, RecordExtD
          record_begin = data;
 
          DEBUG_MSG("DNS additional RR #%d\n", i + 1);
-         DEBUG_MSG("\tAnswer name:\t\t%s\n",          get_name(data_begin, data).c_str());
+         DEBUG_MSG("\tAnswer name:\t\t%s\n",          get_name(data).c_str());
          data += get_name_length(data);
 
          struct dns_answer *answer = (struct dns_answer *) data;
-         DEBUG_MSG("\tType:\t\t\t%u\n",               ntohs(answer->atype));
 
+         uint32_t tmp = (data - data_begin) + sizeof(dns_answer);
+         if (tmp > payload_len || tmp + ntohs(answer->rdlength) > payload_len) {
+            DEBUG_MSG("DNS parser quits: overflow\n\n");
+            return 1;
+         }
+
+         DEBUG_MSG("\tType:\t\t\t%u\n",               ntohs(answer->atype));
          if (ntohs(answer->atype) != DNS_TYPE_OPT) {
             DEBUG_MSG("\tClass:\t\t\t%u\n",           ntohs(answer->aclass));
             DEBUG_MSG("\tTTL:\t\t\t%u\n",             ntohl(answer->ttl));
@@ -598,7 +628,7 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, RecordExtD
 
             data += sizeof(struct dns_answer);
             rdlength = ntohs(answer->rdlength);
-            DEBUG_CODE(process_rdata(data_begin, record_begin, data, rdata, ntohs(answer->atype), rdlength));
+            DEBUG_CODE(process_rdata(record_begin, data, rdata, ntohs(answer->atype), rdlength));
          } else { // Process OPT record.
             DEBUG_MSG("\tReq UDP payload:\t%u\n",     ntohs(answer->aclass));
             DEBUG_CODE(uint32_t ttl = ntohl(answer->ttl));
