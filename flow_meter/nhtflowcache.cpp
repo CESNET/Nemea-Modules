@@ -45,6 +45,7 @@
  */
 #include "nhtflowcache.h"
 #include "flowcache.h"
+#include <nemea-common/super_fast_hash.h>
 
 #include <cstdlib>
 #include <iostream>
@@ -193,7 +194,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       return 0;
    }
 
-   uint64_t hashval = calculate_hash(); // calculates hash value from key created before
+   uint32_t hashval = SuperFastHash(key, key_len); // calculates hash value from key created before
 
    // Find place for packet
    int line_index = ((hashval % size) / line_size) * line_size;
@@ -323,13 +324,6 @@ void NHTFlowCache::parse_replacement_string()
       search_pos_old = search_pos;
    }
    rpl.push_back(atoi((char *) policy.substr(search_pos_old).c_str()));
-}
-
-long NHTFlowCache::calculate_hash()
-{
-   locale loc;
-   const collate<char> &coll = use_facet<collate<char> >(loc);
-   return coll.hash(key, key + key_len);
 }
 
 bool NHTFlowCache::create_hash_key(Packet &pkt)

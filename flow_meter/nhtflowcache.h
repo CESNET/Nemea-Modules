@@ -152,7 +152,6 @@ public:
 protected:
    void parse_replacement_string();
    bool create_hash_key(Packet &pkt);
-   long calculate_hash();
    void print_report();
 };
 
