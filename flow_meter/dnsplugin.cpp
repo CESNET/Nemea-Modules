@@ -77,6 +77,8 @@ using namespace std;
  */
 #define IS_POINTER(ch) ((ch & 0xC0) == 0xC0)
 
+#define MAX_LABEL_CNT 127
+
 /**
  * \brief Get offset from 2 byte pointer.
  */
@@ -160,68 +162,62 @@ string DNSPlugin::get_unirec_field_string()
 
 /**
  * \brief Get name length.
- * Used to count number of characters in string, which is terminated by '\0' character or ending with DNS label pointer address.
  * \param [in] data Pointer to string.
  * \param [in] total_length Count terminating character.
  * \return Number of characters in string.
  */
-size_t DNSPlugin::get_name_length(const char *data, bool total_length) const
+size_t DNSPlugin::get_name_length(const char *data) const
 {
-   size_t i = 0;
-   for (; data[i]; i++) {
-      if (IS_POINTER(data[i])) {
-         i += 2;
-         return i;
+   size_t len = 0;
+
+   while (data[0]) {
+      if (IS_POINTER(data[0])) {
+         return len + 2;
       }
+      len += data[0] + 1;
+      data += data[0] + 1;
    }
-   return i + (total_length ? 1 : 0);
+
+   return len + 1;
 }
 
 /**
  * \brief Decompress dns name.
- * Recursively decompress dns name from labels only, pointer or labels + pointer.
  * \param [in] data_begin Pointer to the start of dns payload section.
  * \param [in] data Pointer to compressed data.
- * \param [in] counter Counts number of calls of get_name method.
  * \return String with decompressed dns name.
  */
-string DNSPlugin::get_name(const char *data_begin, const char *data, int counter) const
+string DNSPlugin::get_name(const char *data_begin, const char *data) const
 {
-   if (counter > 127) { // Check for DNS exploits.
-      throw "Error: Bad number of labels or DNS exploit detected.";
+   string name = "";
+   int label_cnt = 0;
+
+   if ((data - data_begin) > data_len) {
+      throw "Error: overflow";
    }
 
-   size_t label_len = data[0];
-   size_t name_len = 0;
-   string name("");
+   while (data[0]) { /* Check for terminating character. */
+      if (IS_POINTER(data[0])) { /* Check for label pointer (11xxxxxx byte) */
+         data = data_begin + GET_OFFSET(data[0], data[1]);
 
-   if (!IS_POINTER(label_len)) { // Check for pointers at the beginning of string.
-      name_len = get_name_length(data, false);
-      if (name_len == 0) {
-         return "";
-      }
-      name_len -= 1;
-
-      name.append(data + 1, name_len);
-   } else { // Label is pointer.
-      return get_name(data_begin, data_begin + GET_OFFSET(data[0], data[1]), ++counter);
-   }
-
-   for(unsigned int i = 0; name[i] && (name_len != i + 1); i++) { // Iterate through labels.
-      if (label_len == 0) { // Replace label length indicators with dots.
-         label_len = name[i];
-         if (!IS_POINTER(label_len)) {
-            name[i++] = '.';
+         /* Check for possible errors.*/
+         if (label_cnt++ > MAX_LABEL_CNT || (data - data_begin) > data_len) {
+            throw "Error: label count exceed or overflow";
          }
+         continue;
       }
 
-      if (IS_POINTER(label_len)) {
-         name.erase(i); // Erase label pointer.
-         name += (name.length() != 0 ? "." : "") + get_name(data_begin, data_begin + GET_OFFSET(data[i + 1], data[i + 2]), ++counter);
-         return name;
+      /* Check for possible errors.*/
+      if (label_cnt++ > MAX_LABEL_CNT || (data - data_begin) + data[0] + 2 > data_len) {
+         throw "Error: label count exceed or overflow";
       }
 
-      label_len--;
+      name += '.' + string(data + 1, data[0]);
+      data += (data[0] + 1);
+   }
+
+   if (name[0] == '.') {
+      name.erase(0, 1);
    }
 
    return name;
@@ -282,27 +278,27 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
       }
       break;
    case DNS_TYPE_NS:
-      rdata << get_name(data_begin, data, 0);
+      rdata << get_name(data_begin, data);
       DEBUG_MSG("\tData NS:\t\t\t%s\n",      rdata.str().c_str());
       break;
    case DNS_TYPE_CNAME:
-      rdata << get_name(data_begin, data, 0);
+      rdata << get_name(data_begin, data);
       DEBUG_MSG("\tData CNAME:\t\t%s\n",     rdata.str().c_str());
       break;
    case DNS_TYPE_PTR:
-      rdata << get_name(data_begin, data, 0);
+      rdata << get_name(data_begin, data);
       DEBUG_MSG("\tData PTR:\t\t%s\n",       rdata.str().c_str());
       break;
    case DNS_TYPE_DNAME:
-      rdata << get_name(data_begin, data, 0);
+      rdata << get_name(data_begin, data);
       DEBUG_MSG("\tData DNAME:\t\t%s\n",     rdata.str().c_str());
       break;
    case DNS_TYPE_SOA:
       {
-         rdata << get_name(data_begin, data, 0);
-         data += get_name_length(data, true);
-         string tmp = get_name(data_begin, data, 0);
-         data += get_name_length(data, true);
+         rdata << get_name(data_begin, data);
+         data += get_name_length(data);
+         string tmp = get_name(data_begin, data);
+         data += get_name_length(data);
 
          DEBUG_MSG("\t\tMName:\t\t%s\n",     rdata.str().c_str());
          DEBUG_MSG("\t\tRName:\t\t%s\n",     tmp.c_str());
@@ -322,7 +318,7 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
    case DNS_TYPE_SRV:
       {
          DEBUG_MSG("\tData SRV:\n");
-         string tmp = get_name(data_begin, record_begin, 0);
+         string tmp = get_name(data_begin, record_begin);
          process_srv(tmp);
          struct dns_srv *srv = (struct dns_srv *) data;
 
@@ -331,7 +327,7 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
          DEBUG_MSG("\t\tPort:\t\t%u\n",      ntohs(srv->port));
 
          rdata << tmp << " ";
-         tmp = get_name(data_begin, data + 6, 0);
+         tmp = get_name(data_begin, data + 6);
 
          DEBUG_MSG("\t\tTarget:\t\t%s\n", tmp.c_str());
          rdata << tmp << " " << ntohs(srv->priority) << " " <<  ntohs(srv->weight) << " " << ntohs(srv->port);
@@ -340,10 +336,10 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
    case DNS_TYPE_MX:
       {
          uint16_t preference = ntohs(*(uint16_t *) data);
-         rdata << preference << " " << get_name(data_begin, data + 2, 0);
+         rdata << preference << " " << get_name(data_begin, data + 2);
          DEBUG_MSG("\tData MX:\n");
          DEBUG_MSG("\t\tPreference:\t%u\n",     preference);
-         DEBUG_MSG("\t\tMail exchanger:\t%s\n", get_name(data_begin, data + 2, 0).c_str());
+         DEBUG_MSG("\t\tMail exchanger:\t%s\n", get_name(data_begin, data + 2).c_str());
       }
       break;
    case DNS_TYPE_TXT:
@@ -369,12 +365,12 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
       break;
    case DNS_TYPE_MINFO:
       DEBUG_MSG("\tData MINFO:\n");
-      rdata << get_name(data_begin, data, 0);
+      rdata << get_name(data_begin, data);
       DEBUG_MSG("\t\tRMAILBX:\t%s\n",  rdata.str().c_str());
-      data += get_name_length(data, true);
+      data += get_name_length(data);
 
-      rdata << get_name(data_begin, data, 0);
-      DEBUG_MSG("\t\tEMAILBX:\t%s\n",  get_name(data_begin, data, 0).c_str());
+      rdata << get_name(data_begin, data);
+      DEBUG_MSG("\t\tEMAILBX:\t%s\n",  get_name(data_begin, data).c_str());
       break;
    case DNS_TYPE_HINFO:
       DEBUG_MSG("\tData HINFO:\n");
@@ -415,7 +411,7 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
                << ntohl(rrsig->sig_expiration) << " " << ntohl(rrsig->sig_inception)
                << " " << ntohs(rrsig->keytag) << " <key>";
 
-         tmp = get_name(data_begin, data + 18, 0);
+         tmp = get_name(data_begin, data + 18);
          DEBUG_MSG("\t\tSigner's name:\t%s\n",  tmp.c_str());
          DEBUG_MSG("\t\tSignature:\t(binary)\n");
       }
@@ -463,6 +459,7 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, RecordExtD
          DEBUG_MSG("payload length < %ld\n", sizeof(struct dns_hdr));
          return false;
       }
+      data_len = payload_len;
 
       struct dns_hdr *dns = (struct dns_hdr *) data;
       uint16_t flags = ntohs(dns->flags);
@@ -503,10 +500,10 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, RecordExtD
       data += sizeof(struct dns_hdr);
       for (int i = 0; i < question_cnt; i++) {
          DEBUG_MSG("\nDNS question #%d\n",            i + 1);
-         string name = get_name(data_begin, data, 0);
+         string name = get_name(data_begin, data);
          DEBUG_MSG("\tName:\t\t\t%s\n",               name.c_str());
 
-         data += get_name_length(data, true);
+         data += get_name_length(data);
          struct dns_question *question = (struct dns_question *) data;
 
          if (i == 0) { // Copy only first question.
@@ -530,8 +527,8 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, RecordExtD
          record_begin = data;
 
          DEBUG_MSG("DNS answer #%d\n", i + 1);
-         DEBUG_MSG("\tAnswer name:\t\t%s\n",          get_name(data_begin, data, 0).c_str());
-         data += get_name_length(data, true);
+         DEBUG_MSG("\tAnswer name:\t\t%s\n",          get_name(data_begin, data).c_str());
+         data += get_name_length(data);
 
          struct dns_answer *answer = (struct dns_answer *) data;
          DEBUG_MSG("\tType:\t\t\t%u\n",               ntohs(answer->atype));
@@ -565,8 +562,8 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, RecordExtD
          record_begin = data;
 
          DEBUG_MSG("DNS authority RR #%d\n", i + 1);
-         DEBUG_MSG("\tAnswer name:\t\t%s\n",          get_name(data_begin, data, 0).c_str());
-         data += get_name_length(data, true);
+         DEBUG_MSG("\tAnswer name:\t\t%s\n",          get_name(data_begin, data).c_str());
+         data += get_name_length(data);
 
          struct dns_answer *answer = (struct dns_answer *) data;
          DEBUG_MSG("\tType:\t\t\t%u\n",               ntohs(answer->atype));
@@ -588,8 +585,8 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, RecordExtD
          record_begin = data;
 
          DEBUG_MSG("DNS additional RR #%d\n", i + 1);
-         DEBUG_MSG("\tAnswer name:\t\t%s\n",          get_name(data_begin, data, 0).c_str());
-         data += get_name_length(data, true);
+         DEBUG_MSG("\tAnswer name:\t\t%s\n",          get_name(data_begin, data).c_str());
+         data += get_name_length(data);
 
          struct dns_answer *answer = (struct dns_answer *) data;
          DEBUG_MSG("\tType:\t\t\t%u\n",               ntohs(answer->atype));

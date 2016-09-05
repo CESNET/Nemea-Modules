@@ -272,15 +272,17 @@ public:
 private:
    bool parse_dns(const char *data, unsigned int payload_len, RecordExtDNS *rec);
    int  add_ext_dns(const char *data, unsigned int payload_len, FlowRecord &rec);
-   string get_name(const char *begin, const char *data, int counter) const;
+   string get_name(const char *begin, const char *data) const;
    void process_srv(string &str) const;
    void process_rdata(const char *data_begin, const char *record_begin, const char *data, ostringstream &rdata, uint16_t type, size_t length) const;
-   size_t get_name_length(const char *data, bool total_length) const;
+   size_t get_name_length(const char *data) const;
 
-   bool print_stats;    /**< Indicator whether to print stats when flow cache is finishing or not. */
-   uint32_t queries;    /**< Total number of parsed DNS queries. */
-   uint32_t responses;  /**< Total number of parsed DNS responses. */
-   uint32_t total;      /**< Total number of parsed DNS packets. */
+   bool print_stats;       /**< Indicator whether to print stats when flow cache is finishing or not. */
+   uint32_t queries;       /**< Total number of parsed DNS queries. */
+   uint32_t responses;     /**< Total number of parsed DNS responses. */
+   uint32_t total;         /**< Total number of parsed DNS packets. */
+
+   uint32_t data_len;      /**< Length of packet payload. */
 };
 
 #endif
