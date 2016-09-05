@@ -153,7 +153,7 @@ void DNSPlugin::finish()
    }
 }
 
-std::string DNSPlugin::get_unirec_field_string()
+string DNSPlugin::get_unirec_field_string()
 {
    return DNS_UNIREC_TEMPLATE;
 }
@@ -185,7 +185,7 @@ size_t DNSPlugin::get_name_length(const char *data, bool total_length) const
  * \param [in] counter Counts number of calls of get_name method.
  * \return String with decompressed dns name.
  */
-std::string DNSPlugin::get_name(const char *data_begin, const char *data, int counter) const
+string DNSPlugin::get_name(const char *data_begin, const char *data, int counter) const
 {
    if (counter > 127) { // Check for DNS exploits.
       throw "Error: Bad number of labels or DNS exploit detected.";
@@ -193,7 +193,7 @@ std::string DNSPlugin::get_name(const char *data_begin, const char *data, int co
 
    size_t label_len = data[0];
    size_t name_len = 0;
-   std::string name("");
+   string name("");
 
    if (!IS_POINTER(label_len)) { // Check for pointers at the beginning of string.
       name_len = get_name_length(data, false);
@@ -231,7 +231,7 @@ std::string DNSPlugin::get_name(const char *data_begin, const char *data, int co
  * \brief Process SRV strings.
  * \param [in,out] str Raw SRV string.
  */
-void DNSPlugin::process_srv(std::string &str) const
+void DNSPlugin::process_srv(string &str) const
 {
    bool underline_found = false;
    for (int i = 0; str[i]; i++) {
@@ -263,7 +263,7 @@ void DNSPlugin::process_srv(std::string &str) const
  * \param [in] type Type of RDATA section.
  * \param [in] length Length of RDATA section.
  */
-void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, const char *data, std::ostringstream &rdata, uint16_t type, size_t length) const
+void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, const char *data, ostringstream &rdata, uint16_t type, size_t length) const
 {
    rdata.str("");
    rdata.clear();
@@ -301,7 +301,7 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
       {
          rdata << get_name(data_begin, data, 0);
          data += get_name_length(data, true);
-         std::string tmp = get_name(data_begin, data, 0);
+         string tmp = get_name(data_begin, data, 0);
          data += get_name_length(data, true);
 
          DEBUG_MSG("\t\tMName:\t\t%s\n",     rdata.str().c_str());
@@ -322,7 +322,7 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
    case DNS_TYPE_SRV:
       {
          DEBUG_MSG("\tData SRV:\n");
-         std::string tmp = get_name(data_begin, record_begin, 0);
+         string tmp = get_name(data_begin, record_begin, 0);
          process_srv(tmp);
          struct dns_srv *srv = (struct dns_srv *) data;
 
@@ -401,7 +401,7 @@ void DNSPlugin::process_rdata(const char *data_begin, const char *record_begin, 
    case DNS_TYPE_RRSIG:
       {
          struct dns_rrsig *rrsig = (struct dns_rrsig *) data;
-         std::string tmp = "";
+         string tmp = "";
          DEBUG_MSG("\tData RRSIG:\n");
          DEBUG_MSG("\t\tType:\t\t%u\n",         ntohs(rrsig->type));
          DEBUG_MSG("\t\tAlgorithm:\t%u\n",      rrsig->algorithm);
@@ -503,7 +503,7 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, RecordExtD
       data += sizeof(struct dns_hdr);
       for (int i = 0; i < question_cnt; i++) {
          DEBUG_MSG("\nDNS question #%d\n",            i + 1);
-         std::string name = get_name(data_begin, data, 0);
+         string name = get_name(data_begin, data, 0);
          DEBUG_MSG("\tName:\t\t\t%s\n",               name.c_str());
 
          data += get_name_length(data, true);
@@ -525,7 +525,7 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, RecordExtD
       ********************************************************************/
       const char *record_begin;
       size_t rdlength;
-      std::ostringstream rdata;
+      ostringstream rdata;
       for (int i = 0; i < answer_rr_cnt; i++) { // Process answers section.
          record_begin = data;
 

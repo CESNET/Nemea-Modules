@@ -54,6 +54,8 @@
 #include "packet.h"
 #include "flow_meter.h"
 
+using namespace std;
+
 #define SIP_FIELD_LEN				256
 
 #define SIP_MSG_TYPE_INVALID     0
@@ -386,7 +388,7 @@ public:
    int post_create(FlowRecord &rec, const Packet &pkt);
    int pre_update(FlowRecord &rec, Packet &pkt);
    void finish();
-   std::string get_unirec_field_string();
+   string get_unirec_field_string();
 
 private:
    uint16_t parse_msg_type(const Packet &pkt);

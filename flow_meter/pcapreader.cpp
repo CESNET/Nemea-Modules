@@ -366,7 +366,6 @@ int PcapReader::init_interface(const string &interface)
    char errbuf[PCAP_ERRBUF_SIZE];
    errbuf[0] = 0;
 
-   // TODO: check for specific format of link-layer header
    handle = pcap_open_live(interface.c_str(), MAXPCKTSIZE, 1, READ_TIMEOUT, errbuf);
    if (handle == NULL) {
       error_msg = errbuf;

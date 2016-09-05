@@ -43,7 +43,6 @@
  *
  */
 
-
 #include <config.h>
 #include <getopt.h>
 #include <string>
@@ -52,7 +51,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <signal.h>
-
 #include <stdlib.h>
 #include <time.h>
 

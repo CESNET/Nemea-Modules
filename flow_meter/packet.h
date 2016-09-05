@@ -77,6 +77,7 @@
 
 // Some common sets of flags
 #define PCKT_PCAP_MASK (PCKT_TIMESTAMP) // Bit 0
+
 #define PCKT_INFO_MASK (\
    PCKT_HASH | \
    PCKT_KEY \

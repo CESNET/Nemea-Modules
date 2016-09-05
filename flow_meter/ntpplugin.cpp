@@ -260,7 +260,7 @@ bool NTPPlugin::parse_ntp(const Packet &pkt, RecordExtNTP *ntp_data_ext)
       result = convert.str();
       for (i = 0; i < convert.str().length(); i++) {
          ntp_data_ext->reference_id[ch_counter] = result[i];
-    ch_counter++;
+         ch_counter++;
       }
       ntp_data_ext->reference_id[ch_counter] = '.';
       ch_counter++;
@@ -313,7 +313,7 @@ bool NTPPlugin::parse_ntp(const Packet &pkt, RecordExtNTP *ntp_data_ext)
          if (strcmp (ntp_data_ext->reference_id, NTP_RefID_INIT) == 0) { strcpy (ntp_data_ext->reference_id, INIT); }
          if (strcmp (ntp_data_ext->reference_id, NTP_RefID_STEP) == 0) { strcpy (ntp_data_ext->reference_id, STEP); }
          if (strcmp (ntp_data_ext->reference_id, NTP_RefID_DENY) == 0) { strcpy (ntp_data_ext->reference_id, DENY); }
-    if (strcmp (ntp_data_ext->reference_id, NTP_RefID_RATE) == 0) { strcpy (ntp_data_ext->reference_id, RATE); }
+         if (strcmp (ntp_data_ext->reference_id, NTP_RefID_RATE) == 0) { strcpy (ntp_data_ext->reference_id, RATE); }
       }
       DEBUG_MSG("\tntp reference id:\t\t%s\n", ntp_data_ext->reference_id);
 
@@ -471,4 +471,5 @@ string NTPPlugin::parse_timestamp(const Packet &pkt, int p1, int p4, int p5, int
    }
    result2.resize(result2.length() - 1);
    return result2;
-};
+}
+

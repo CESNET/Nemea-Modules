@@ -46,11 +46,12 @@
 #ifndef NHTFLOWCACHE_H
 #define NHTFLOWCACHE_H
 
+#include <string>
+
 #include "flow_meter.h"
 #include "flowcache.h"
 #include "flowifc.h"
 #include "flowexporter.h"
-#include <string>
 
 using namespace std;
 

@@ -156,7 +156,7 @@ void HTTPPlugin::finish()
    }
 }
 
-std::string HTTPPlugin::get_unirec_field_string()
+string HTTPPlugin::get_unirec_field_string()
 {
    return HTTP_UNIREC_TEMPLATE;
 }

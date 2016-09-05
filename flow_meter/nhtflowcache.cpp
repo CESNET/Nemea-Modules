@@ -43,14 +43,14 @@
  * if advised of the possibility of such damage.
  *
  */
-#include "nhtflowcache.h"
-#include "flowcache.h"
-#include <nemea-common/super_fast_hash.h>
 
 #include <cstdlib>
 #include <iostream>
-#include <locale>
 #include <sys/time.h>
+#include <nemea-common/super_fast_hash.h>
+
+#include "nhtflowcache.h"
+#include "flowcache.h"
 
 using namespace std;
 
