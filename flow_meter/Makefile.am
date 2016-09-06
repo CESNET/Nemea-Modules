@@ -1,5 +1,7 @@
 include ../aminclude.am
 
+SUBDIRS=tests
+
 bin_PROGRAMS=flow_meter
 flow_meter_SOURCES=flow_meter.cpp \
 		    flow_meter.h \
