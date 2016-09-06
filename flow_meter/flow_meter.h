@@ -70,11 +70,12 @@ const string DEFAULT_REPLACEMENT_STRING = \
 struct options_t {
    int basic_ifc_num;
    bool print_stats;
+   bool print_pcap_stats;
    uint32_t flow_cache_size;
    uint32_t flow_line_size;
    struct timeval inactive_timeout;
    struct timeval active_timeout;
-   struct timeval stats_interval;
+   struct timeval cache_stats_interval;
    string interface;
    string pcap_file;
    string replacement_string;

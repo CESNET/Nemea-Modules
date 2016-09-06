@@ -15,7 +15,8 @@ This NEMEA module creates flows from input PCAP file / network interface and exp
 - `-r STRING`        Pcap file to read. `-` to read from stdin.
 - `-t NUM:NUM`       Active and inactive timeout in seconds. (DEFAULT: 300.0:30.0)
 - `-s NUMBER`        Size of flow cache in number of flow records. Each flow record has 186 bytes. (DEFAULT: 65536)
-- `-S NUMBER`        Print statistics. `NUMBER` specifies interval between prints.
+- `-S NUMBER`        Print flow cache statistics. `NUMBER` specifies interval between prints.
+- `-P`               Print pcap statistics every 5 seconds.
 - `-m NUMBER`        Sampling probability. `NUMBER` in 100 (DEFAULT: 100)
 - `-V STRING`        Replacement vector. 1+32 NUMBERS.
 

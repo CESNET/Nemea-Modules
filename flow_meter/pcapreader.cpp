@@ -45,6 +45,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <iostream>
 #include <arpa/inet.h>
 #include <netinet/ether.h>
 #include <netinet/in.h>
@@ -62,6 +63,9 @@ using namespace std;
 
 // Read timeout in miliseconds for pcap_open_live function.
 #define READ_TIMEOUT 1000
+
+// Interval between pcap handle stats print in seconds.
+#define STATS_PRINT_INTERVAL  5
 
 //#define DEBUG_PARSER
 
@@ -307,7 +311,7 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
 /**
  * \brief Constructor.
  */
-PcapReader::PcapReader() : handle(NULL)
+PcapReader::PcapReader() : handle(NULL), print_pcap_stats(false)
 {
 }
 
@@ -317,6 +321,9 @@ PcapReader::PcapReader() : handle(NULL)
  */
 PcapReader::PcapReader(const options_t &options) : handle(NULL)
 {
+   print_pcap_stats = options.print_pcap_stats;
+   last_ts.tv_sec = 0;
+   last_ts.tv_usec = 0;
 }
 
 /**
@@ -344,6 +351,10 @@ int PcapReader::open_file(const string &file)
    if (handle == NULL) {
       error_msg = error_buffer;
       return 2;
+   }
+
+   if (print_pcap_stats) {
+      printf("PcapReader: warning: printing pcap stats is only supported in live capture\n");
    }
 
    live_capture = false;
@@ -375,6 +386,14 @@ int PcapReader::init_interface(const string &interface)
       fprintf(stderr, "%s\n", errbuf); // Print warning.
    }
 
+   if (print_pcap_stats) {
+      /* Print stats header. */
+      printf("# recv   - number of packets received\n");
+      printf("# drop   - number  of  packets dropped because there was no room in the operating system's buffer when they arrived, because packets weren't being read fast enough\n");
+      printf("# ifdrop - number of packets dropped by the network interface or its driver\n\n");
+      printf("recv\tdrop\tifdrop\n");
+   }
+
    live_capture = true;
    error_msg = "";
    return 0;
@@ -391,6 +410,27 @@ void PcapReader::close()
    }
 }
 
+void PcapReader::print_stats()
+{
+   /* Only live capture stats are supported. */
+   if (live_capture) {
+      struct timeval tmp;
+
+      gettimeofday(&tmp, NULL);
+      if (tmp.tv_sec - last_ts.tv_sec >= STATS_PRINT_INTERVAL) {
+         struct pcap_stat stats;
+         if (pcap_stats(handle, &stats) == -1) {
+            printf("PcapReader: error: %s\n", pcap_geterr(handle));
+            print_pcap_stats = false; /* Turn off printing stats. */
+            return;
+         }
+         printf("%d\t%d\t%d\n", stats.ps_recv, stats.ps_drop, stats.ps_ifdrop);
+
+         last_ts = tmp;
+      }
+   }
+}
+
 int PcapReader::get_pkt(Packet &packet)
 {
    if (handle == NULL) {
@@ -400,6 +440,10 @@ int PcapReader::get_pkt(Packet &packet)
 
    int ret;
    packet_valid = false;
+
+   if (print_pcap_stats) {
+      print_stats();
+   }
 
    // Get pkt from network interface or file.
    ret = pcap_dispatch(handle, 1, packet_handler, (u_char *) (&packet));
