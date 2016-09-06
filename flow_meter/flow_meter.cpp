@@ -86,7 +86,7 @@ static int stop = 0;
   PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: FLOAT:FLOAT. (DEFAULT: 300.0:30.0)", required_argument, "string") \
   PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 168 bytes. (DEFAULT: 65536)", required_argument, "uint32") \
   PARAM('S', "cache-statistics", "Print flow cache statistics. NUMBER specifies interval between prints.", required_argument, "float") \
-  PARAM('P', "pcap-statistics", "Print pcap statistics every 5 seconds.", no_argument, "none") \
+  PARAM('P', "pcap-statistics", "Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.", no_argument, "none") \
   PARAM('m', "sample", "Sampling probability. NUMBER in 100 (DEFAULT: 100)", required_argument, "int32") \
   PARAM('V', "vector", "Replacement vector. 1+32 NUMBERS.", required_argument, "string")
 
