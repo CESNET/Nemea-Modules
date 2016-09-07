@@ -2,9 +2,10 @@
  * \file sipplugin.cpp
  * \author Tomas Jansky <janskto1@fit.cvut.cz>
  * \date 2015
+ * \date 2016
  */
 /*
- * Copyright (C) 2015 CESNET
+ * Copyright (C) 2015-2016 CESNET
  *
  * LICENSE TERMS
  *

@@ -3,9 +3,10 @@
  * \brief Plugin for parsing HTTP traffic
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
  * \date 2015
+ * \date 2016
  */
 /*
- * Copyright (C) 2014-2015 CESNET
+ * Copyright (C) 2014-2016 CESNET
  *
  * LICENSE TERMS
  *
