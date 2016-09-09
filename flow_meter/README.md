@@ -35,4 +35,51 @@ When capturing from network interface, flows are continuously send to output int
 `flow_meter` can be extended by new plugins for exporting various new information from flow.
 There are already some existing plugins that export e.g. `DNS`, `HTTP`, `SIP`, `NTP`.
 
-To learn how to write new plugin for `flow_meter`, see [writing-plugins.md](writing-plugins.md).
+## Adding new plugin
+To create new plugin use [create_plugin.sh](create_plugin.sh) script. This interactive script will generate .cpp and .h
+file template and will also print `TODO` guide what needs to be done.
+
+## Simplified function diagram
+Diagram below shows how `flow_meter` works.
+
+1. `Packet` is read from pcap file or network interface
+2. `Packet` is processed by PcapReader and is about to put to flow cache
+3. Flow cache create or update flow and call `pre_create`, `post_create`, `pre_update`, `post_update` and `pre_export` functions for each active plugin at appropriate time
+4. `Flow` is put into exporter when considered as expired, flow cache is full or is forced to by a plugin
+5. Exporter fills `unirec record`, which is then send it to output libtrap interface
+
+```
+       +--------------------------------+
+       | pcap file or network interface |
+       +-----+--------------------------+
+             |
+          1. |
+             |                                  +-----+
+    +--------v---------+                              |
+    |                  |             +-----------+    |
+    |    PcapReader    |      +------>  Plugin1  |    |
+    |                  |      |      +-----------+    |
+    +--------+---------+      |                       |
+             |                |      +-----------+    |
+          2. |                +------>  Plugin2  |    |
+             |                |      +-----------+    |
+    +--------v---------+      |                       |
+    |                  |  3.  |      +-----------+    +----+ active plugins
+    |   NHTFlowCache   +------------->  Plugin3  |    |
+    |                  |      |      +-----------+    |
+    +--------+---------+      |                       |
+             |                |            .          |
+          4. |                |            .          |
+             |                |            .          |
+    +--------v---------+      |                       |
+    |                  |      |      +-----------+    |
+    |  UnirecExporter  |      +------>  PluginN  |    |
+    |                  |             +-----------+    |
+    +--------+---------+                              |
+             |                                  +-----+
+          5. |
+             |
+       +-----v--------------------------+
+       |    libtrap output interface    |
+       +--------------------------------+
+```
