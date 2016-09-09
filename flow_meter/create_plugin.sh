@@ -193,7 +193,7 @@ print_todo() {
    echo "4) Add ${PLUGIN} to list of supported plugins for -p param in flow_meter.cpp (also update README.md)"
    echo "5) Add plugin support in parse_plugin_settings function in flow_meter.cpp"
    echo "6) Add unirec fields to the UR_FIELDS and ${PLUGIN_UPPER}_UNIREC_TEMPLATE macro in ${PLUGIN}plugin.cpp"
-   echo "7) Do the final work in ${PLUGIN}plugin.cpp and ${PLUGIN}plugin.h files - implement pre_create, post_create, pre_update, post_update, pre_export and include_basic_flow_fields functions (also read and understand when these functions are called)"
+   echo "7) Do the final work in ${PLUGIN}plugin.cpp and ${PLUGIN}plugin.h files - implement pre_create, post_create, pre_update, post_update, pre_export, include_basic_flow_fields and fill_unirec functions (also read and understand when these functions are called, info in flowcacheplugin.h file)"
    echo "8) Be happy with your new awesome ${PLUGIN} plugin!"
    echo
    echo "Optional work:"
