@@ -13,11 +13,11 @@ This NEMEA module creates flows from input PCAP file / network interface and exp
 - `-c NUMBER`        Quit after `NUMBER` of packets are captured.
 - `-I STRING`        Capture from given network interface. Parameter require interface name (eth0 for example).
 - `-r STRING`        Pcap file to read. `-` to read from stdin.
-- `-t NUM:NUM`       Active and inactive timeout in seconds. (DEFAULT: 300.0:30.0)
-- `-s NUMBER`        Size of flow cache in number of flow records. Each flow record has 186 bytes. (DEFAULT: 65536)
+- `-t NUM:NUM`       Active and inactive timeout in seconds. Format: DOUBLE:DOUBLE. Value default means use default value 300.0:30.0.
+- `-s NUMBER`        Size of flow cache in number of flow records. Each flow record has 186 bytes. Value 0 means use default value 65536.
 - `-S NUMBER`        Print flow cache statistics. `NUMBER` specifies interval between prints.
 - `-P`               Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.
-- `-m NUMBER`        Sampling probability. `NUMBER` in 100 (DEFAULT: 100)
+- `-m NUMBER`        Sampling probability. `NUMBER` in 100 (DEFAULT: 100).
 - `-V STRING`        Replacement vector. 1+32 NUMBERS.
 
 ### Common TRAP parameters

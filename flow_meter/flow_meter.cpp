@@ -54,6 +54,8 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <time.h>
+#include <limits>
+#include <errno.h>
 
 #include "flow_meter.h"
 #include "packet.h"
@@ -83,12 +85,12 @@ static int stop = 0;
   " will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,dns,sip,ntp,basic", required_argument, "string")\
   PARAM('c', "count", "Quit after number of packets are captured.", required_argument, "uint32")\
   PARAM('I', "interface", "Capture from given network interface. Parameter require interface name (eth0 for example).", required_argument, "string")\
-  PARAM('r', "file", "Pcap file to read. - to read from stdin", required_argument, "string") \
-  PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: FLOAT:FLOAT. (DEFAULT: 300.0:30.0)", required_argument, "string") \
-  PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 168 bytes. (DEFAULT: 65536)", required_argument, "uint32") \
+  PARAM('r', "file", "Pcap file to read. - to read from stdin.", required_argument, "string") \
+  PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: DOUBLE:DOUBLE. Value default means use default value 300.0:30.0.", required_argument, "string") \
+  PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 168 bytes. Value 0 means use default value 65536.", required_argument, "uint32") \
   PARAM('S', "cache-statistics", "Print flow cache statistics. NUMBER specifies interval between prints.", required_argument, "float") \
   PARAM('P', "pcap-statistics", "Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.", no_argument, "none") \
-  PARAM('m', "sample", "Sampling probability. NUMBER in 100 (DEFAULT: 100)", required_argument, "int32") \
+  PARAM('m', "sample", "Sampling probability. NUMBER in 100 (DEFAULT: 100).", required_argument, "uint32") \
   PARAM('V', "vector", "Replacement vector. 1+32 NUMBERS.", required_argument, "string")
 
 /**
@@ -174,6 +176,46 @@ int count_ifc_interfaces(int argc, char *argv[])
 }
 
 /**
+ * \brief Provides conversion from string to uint32_t.
+ * \param [in] str String representation of value.
+ * \param [out] dst Destination variable.
+ * \return True on success, false otherwise.
+ */
+bool str_to_uint32(const char *str, uint32_t &dst)
+{
+   char *check;
+   errno = 0;
+   unsigned long long value = strtoull(str, &check, 10);
+   if (errno == ERANGE || str[0] == '-' || *check ||
+      value < numeric_limits<uint32_t>::min() ||
+      value > numeric_limits<uint32_t>::max()) {
+      return false;
+   }
+
+   dst = value;
+   return true;
+}
+
+/**
+ * \brief Provides conversion from string to double.
+ * \param [in] str String representation of value.
+ * \param [out] dst Destination variable.
+ * \return True on success, false otherwise.
+ */
+bool str_to_double(const char *str, double &dst)
+{
+   char *check;
+   errno = 0;
+   double value = strtod(str, &check);
+   if (errno == ERANGE || *check || str[0] == '\0') {
+      return false;
+   }
+
+   dst = value;
+   return true;
+}
+
+/**
  * \brief Convert double to struct timeval.
  * \param [in] value Value to convert.
  * \param [out] time Struct for storing converted time.
@@ -234,8 +276,7 @@ int main(int argc, char *argv[])
       trap_ifcctl(TRAPIFC_OUTPUT, i, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
    }
 
-   int opt;
-   char *cptr;
+   signed char opt;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
       case 'p':
@@ -255,41 +296,93 @@ int main(int argc, char *argv[])
          }
          break;
       case 'c':
-         pkt_limit = strtoul(optarg, NULL, 10);
+         {
+            uint32_t tmp;
+            if (!str_to_uint32(optarg, tmp)) {
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               TRAP_DEFAULT_FINALIZATION();
+               return error("Invalid argument for option -c");
+            }
+            pkt_limit = tmp;
+         }
          break;
       case 'I':
          options.interface = string(optarg);
          break;
       case 't':
-         cptr = strchr(optarg, ':');
-         if (cptr == NULL) {
-            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-            TRAP_DEFAULT_FINALIZATION();
-            return error("Invalid argument for option -t");
+         {
+            if (!strcmp(optarg, "default")) {
+               break;
+            }
+
+            char *check;
+            check = strchr(optarg, ':');
+            if (check == NULL) {
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               TRAP_DEFAULT_FINALIZATION();
+               return error("Invalid argument for option -t");
+            }
+
+            *check = '\0';
+            double tmp1, tmp2;
+            if (!str_to_double(optarg, tmp1) || !str_to_double(check + 1, tmp2) || tmp1 < 0 || tmp2 < 0) {
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               TRAP_DEFAULT_FINALIZATION();
+               return error("Invalid argument for option -t");
+            }
+
+            double_to_timeval(tmp1, options.active_timeout);
+            double_to_timeval(tmp2, options.inactive_timeout);
          }
-         *cptr = '\0';
-         double_to_timeval(atof(optarg), options.active_timeout);
-         double_to_timeval(atof(cptr + 1), options.inactive_timeout);
          break;
       case 'r':
          options.pcap_file = string(optarg);
          break;
       case 's':
-         options.flow_cache_size = atoi(optarg);
+         {
+            uint32_t tmp;
+            if (!str_to_uint32(optarg, tmp)) {
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               TRAP_DEFAULT_FINALIZATION();
+               return error("Invalid argument for option -s");
+            }
+
+            options.flow_cache_size = tmp;
+            if (options.flow_cache_size == 0) {
+               options.flow_cache_size = DEFAULT_FLOW_CACHE_SIZE;
+            }
+         }
          break;
       case 'S':
-         double_to_timeval(atof(optarg), options.cache_stats_interval);
-         options.print_stats = false; /* Plugins, FlowCache stats OFF.*/
+         {
+            double tmp;
+            if (!str_to_double(optarg, tmp)) {
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               TRAP_DEFAULT_FINALIZATION();
+               return error("Invalid argument for option -s");
+            }
+            double_to_timeval(tmp, options.cache_stats_interval);
+            options.print_stats = false; /* Plugins, FlowCache stats OFF.*/
+         }
          break;
       case 'P':
          options.print_pcap_stats = true;
          break;
       case 'm':
-         sampling = atoi(optarg);
-         if (sampling < 0 || sampling > 100) {
-            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-            TRAP_DEFAULT_FINALIZATION();
-            return error("Invalid argument for option -m: interval needs to be between 0-100");
+         {
+            uint32_t tmp;
+            if (!str_to_uint32(optarg, tmp)) {
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               TRAP_DEFAULT_FINALIZATION();
+               return error("Invalid argument for option -s");
+            }
+
+            sampling = tmp;
+            if (sampling < 0 || sampling > 100) {
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               TRAP_DEFAULT_FINALIZATION();
+               return error("Invalid argument for option -m: interval needs to be between 0-100");
+            }
          }
          break;
       case 'V':
@@ -358,9 +451,9 @@ int main(int argc, char *argv[])
    uint32_t pkt_total = 0, pkt_parsed = 0;
    packet.packet = new char[MAXPCKTSIZE + 1];
 
-   // Main packet capture loop.
+   /* Main packet capture loop. */
    while (!stop && (ret = packetloader.get_pkt(packet)) > 0) {
-      if (ret == 3) { // Process timeout
+      if (ret == 3) { /* Process timeout. */
          flowcache.export_expired(false);
          continue;
       }
@@ -370,7 +463,7 @@ int main(int argc, char *argv[])
          flowcache.put_pkt(packet);
          pkt_parsed++;
 
-         // Check if packet limit is reached.
+         /* Check if packet limit is reached. */
          if (pkt_limit != 0 && pkt_parsed >= pkt_limit) {
             break;
          }
@@ -391,7 +484,7 @@ int main(int argc, char *argv[])
       cout << "Packet headers parsed: "<< pkt_parsed << endl;
    }
 
-   // Cleanup
+   /* Cleanup. */
    flowcache.finish();
    flowwriter.close();
    packetloader.close();
