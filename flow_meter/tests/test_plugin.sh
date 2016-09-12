@@ -9,7 +9,7 @@ output_dir=test_output
 file_out="$$.data"
 
 # Usage: test_plugin <plugin name> <data file>
-function test_plugin() {
+test_plugin() {
    if ! [ -f "$flow_meter_bin" ]; then
       echo "flow_meter not compiled"
       return 1
