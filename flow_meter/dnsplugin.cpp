@@ -171,7 +171,7 @@ size_t DNSPlugin::get_name_length(const char *data) const
    size_t len = 0;
 
    while (1) {
-      if ((data - data_begin) + 1 > data_len) {
+      if ((uint32_t) (data - data_begin) + 1 > data_len) {
          throw "Error: overflow";
       }
       if (!data[0]) {
@@ -198,7 +198,7 @@ string DNSPlugin::get_name(const char *data) const
    string name = "";
    int label_cnt = 0;
 
-   if ((data - data_begin) > data_len) {
+   if ((uint32_t) (data - data_begin) > data_len) {
       throw "Error: overflow";
    }
 
@@ -207,14 +207,14 @@ string DNSPlugin::get_name(const char *data) const
          data = data_begin + GET_OFFSET(data[0], data[1]);
 
          /* Check for possible errors.*/
-         if (label_cnt++ > MAX_LABEL_CNT || (data - data_begin) > data_len) {
+         if (label_cnt++ > MAX_LABEL_CNT || (uint32_t) (data - data_begin) > data_len) {
             throw "Error: label count exceed or overflow";
          }
          continue;
       }
 
       /* Check for possible errors.*/
-      if (label_cnt++ > MAX_LABEL_CNT || (data - data_begin) + data[0] + 2 > data_len) {
+      if (label_cnt++ > MAX_LABEL_CNT || (uint32_t) ((data - data_begin) + data[0] + 2) > data_len) {
          throw "Error: label count exceed or overflow";
       }
 
