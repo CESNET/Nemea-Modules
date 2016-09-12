@@ -431,9 +431,9 @@ string NTPPlugin::parse_timestamp(const Packet &pkt, int p1, int p4, int p5, int
    result = convert.str();
    str = result;
    const char *c = str.c_str();
-   time = strtol(c, 0, 16);
+   time = strtoul(c, 0, 16);
    convert2 << time;
-   DEBUG_MSG("\t\ttimestamp seconds:\t\t\t%d\n", time);
+   DEBUG_MSG("\t\ttimestamp seconds:\t\t\t%u\n", time);
 
       /* *********************
       * FRACTION CALCULATION.*
@@ -448,7 +448,7 @@ string NTPPlugin::parse_timestamp(const Packet &pkt, int p1, int p4, int p5, int
    result = convert.str();
    str = result;
    const char *c2 = str.c_str();
-   time = strtol(c2, 0, 16);
+   time = strtoul(c2, 0, 16);
    j = 0;
    tmp = time;
    for (i = 1; i <= 32; i++) {
