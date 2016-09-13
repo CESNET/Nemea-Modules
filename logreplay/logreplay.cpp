@@ -187,7 +187,7 @@ int main(int argc, char **argv)
    }
 
    // Parse remaining parameters and get configuration
-   char opt;
+   signed char opt;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
          case 'f':

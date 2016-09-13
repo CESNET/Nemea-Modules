@@ -1,14 +1,11 @@
 /**
- * \file stats.cpp
- * \brief Plugin periodically printing statistics about flow cache
- * \author Vaclav Bartos <bartos@cesnet.cz>
+ * \file ipaddr.h
+ * \brief Structure for storing IPv4 or IPv6 address.
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
- * \date 2014
- * \date 2015
  * \date 2016
  */
 /*
- * Copyright (C) 2014-2016 CESNET
+ * Copyright (C) 2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -43,84 +40,16 @@
  * if advised of the possibility of such damage.
  *
  */
-#include "stats.h"
 
-#include <iostream>
-#include <iomanip>
-#include <sys/time.h>
+#ifndef IPADDR_H
+#define IPADDR_H
 
-using namespace std;
+/**
+ * \brief Store IPv4 or IPv6 address.
+ */
+typedef union ipaddr_u {
+   uint8_t  v6[16];  /**< IPv6 address. */
+   uint32_t v4;      /**< IPv4 address  */
+} ipaddr_t;
 
-// Constructor
-StatsPlugin::StatsPlugin(struct timeval interval, ostream &out)
- : interval(interval), out(out)
-{
-}
-
-void StatsPlugin::init()
-{
-   packets = 0;
-   new_flows = 0;
-   cache_hits = 0;
-   flows_in_cache = 0;
-   init_ts = true;
-   print_header();
-}
-
-int StatsPlugin::post_create(FlowRecord &rec, const Packet &pkt)
-{
-   packets += 1;
-   new_flows += 1;
-   flows_in_cache += 1;
-   check_timestamp(pkt);
-   return 0;
-}
-
-int StatsPlugin::post_update(FlowRecord &rec, const Packet &pkt)
-{
-   packets += 1;
-   cache_hits += 1;
-   check_timestamp(pkt);
-   return 0;
-}
-
-void StatsPlugin::pre_export(FlowRecord &rec)
-{
-   flows_in_cache -= 1;
-}
-
-void StatsPlugin::finish()
-{
-   print_stats(last_ts);
-}
-
-void StatsPlugin::check_timestamp(const Packet &pkt)
-{
-   if (init_ts) {
-      init_ts = false;
-      last_ts = pkt.timestamp;
-      return;
-   }
-
-   struct timeval tmp;
-   timeradd(&last_ts, &interval, &tmp);
-
-   if (timercmp(&pkt.timestamp, &tmp, >)) {
-      print_stats(last_ts);
-      timeradd(&last_ts, &interval, &last_ts);
-      packets = 0;
-      new_flows = 0;
-      cache_hits = 0;
-   }
-}
-
-void StatsPlugin::print_header() const
-{
-   out << "#timestamp packets hits newflows incache" << endl;
-}
-
-void StatsPlugin::print_stats(const struct timeval &ts) const
-{
-   out << ts.tv_sec << "." << ts.tv_usec << " ";
-   out << packets << " " << cache_hits << " " << new_flows << " " << flows_in_cache << endl;
-}
+#endif

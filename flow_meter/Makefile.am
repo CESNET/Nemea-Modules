@@ -1,5 +1,7 @@
 include ../aminclude.am
 
+SUBDIRS=tests
+
 bin_PROGRAMS=flow_meter
 flow_meter_SOURCES=flow_meter.cpp \
 		    flow_meter.h \
@@ -26,10 +28,11 @@ flow_meter_SOURCES=flow_meter.cpp \
 		    dnsplugin.cpp \
 		    dnsplugin.h \
 		    ntpplugin.cpp \
-		    ntpplugin.h
+		    ntpplugin.h \
+		    ipaddr.h
 
 
-flow_meter_LDADD=-ltrap -lunirec -lpcap
+flow_meter_LDADD=-ltrap -lunirec -lnemea-common -lpcap
 flow_meter_CXXFLAGS=-O2 -std=c++98 -Wno-write-strings
 pkgdocdir=${docdir}/flow_meter
 pkgdoc_DATA=README.md

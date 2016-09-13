@@ -5,9 +5,10 @@
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
  * \date 2014
  * \date 2015
+ * \date 2016
  */
 /*
- * Copyright (C) 2014-2015 CESNET
+ * Copyright (C) 2014-2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -51,6 +52,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <unirec/unirec.h>
+
+#include "ipaddr.h"
+#include "fields.h"
 
 // Values of field presence indicator flags (flowFieldIndicator)
 // (Names of the fields are inspired by IPFIX specification)
@@ -131,15 +135,15 @@ enum extTypeEnum {
 /**
  * \brief Flow record extension base struct.
  */
-struct FlowRecordExt {
-   FlowRecordExt *next; /**< Pointer to next extension */
+struct RecordExt {
+   RecordExt *next; /**< Pointer to next extension */
    extTypeEnum extType; /**< Type of extension. */
 
    /**
     * \brief Constructor.
     * \param [in] type Type of extension.
     */
-   FlowRecordExt(extTypeEnum type) : next(NULL), extType(type)
+   RecordExt(extTypeEnum type) : next(NULL), extType(type)
    {
    }
 
@@ -155,7 +159,7 @@ struct FlowRecordExt {
    /**
     * \brief Virtual destructor.
     */
-   virtual ~FlowRecordExt()
+   virtual ~RecordExt()
    {
       if (next != NULL) {
          delete next;
@@ -163,39 +167,29 @@ struct FlowRecordExt {
    }
 };
 
-/**
- * \brief Flow record struct constaining basic flow record data and extension headers.
- */
-struct FlowRecord {
-   uint64_t flowFieldIndicator;
-   double   flowStartTimestamp;
-   double   flowEndTimestamp;
-   uint8_t  ipVersion;
-   uint8_t  protocolIdentifier;
-   uint8_t  ipClassOfService;
-   uint8_t  ipTtl;
-   uint32_t sourceIPv4Address;
-   uint32_t destinationIPv4Address;
-   char     sourceIPv6Address[16];
-   char     destinationIPv6Address[16];
-   uint16_t sourceTransportPort;
-   uint16_t destinationTransportPort;
-   uint32_t packetTotalCount;
-   uint64_t octetTotalLength;
-   uint8_t  tcpControlBits;
-   FlowRecordExt *exts; /**< Extension headers. */
+struct Record {
+   RecordExt *exts; /**< Extension headers. */
+
+   /**
+    * \brief Fill unirec record with basic flow fields.
+    * \param [in] tmplt_ptr Pointer to unirec template.
+    * \param [out] record_ptr Pointer to unirec record.
+    */
+   virtual void fillUnirec(ur_template_t *tmplt_ptr, void *record_ptr)
+   {
+   }
 
    /**
     * \brief Add new extension header.
     * \param [in] ext Pointer to the extension header.
     */
-   void addExtension(FlowRecordExt* ext)
+   void addExtension(RecordExt* ext)
    {
       if (exts == NULL) {
          exts = ext;
          exts->next = NULL;
       } else {
-         FlowRecordExt *ext_ptr = exts;
+         RecordExt *ext_ptr = exts;
          while (ext_ptr->next != NULL) {
             ext_ptr = ext_ptr->next;
          }
@@ -209,9 +203,9 @@ struct FlowRecord {
     * \param [in] extType Type of extension.
     * \return Pointer to the requested extension or NULL if extension is not present.
     */
-   FlowRecordExt *getExtension(extTypeEnum extType)
+   RecordExt *getExtension(extTypeEnum extType)
    {
-      FlowRecordExt *ext_ptr = exts;
+      RecordExt *ext_ptr = exts;
       while (ext_ptr != NULL) {
          if (ext_ptr->extType == extType) {
             return ext_ptr;
@@ -235,17 +229,37 @@ struct FlowRecord {
    /**
     * \brief Constructor.
     */
-   FlowRecord() : exts(NULL)
+   Record() : exts(NULL)
    {
    }
 
    /**
     * \brief Destructor.
     */
-   ~FlowRecord()
+   virtual ~Record()
    {
       removeExtensions();
    }
+};
+
+/**
+ * \brief Flow record struct constaining basic flow record data and extension headers.
+ */
+struct FlowRecord : public Record {
+   uint64_t flowFieldIndicator;
+   struct timeval flowStartTimestamp;
+   struct timeval flowEndTimestamp;
+   uint8_t  ipVersion;
+   uint8_t  protocolIdentifier;
+   uint8_t  ipClassOfService;
+   uint8_t  ipTtl;
+   ipaddr_t sourceIPAddress;
+   ipaddr_t destinationIPAddress;
+   uint16_t sourceTransportPort;
+   uint16_t destinationTransportPort;
+   uint32_t packetTotalCount;
+   uint64_t octetTotalLength;
+   uint8_t  tcpControlBits;
 };
 
 #endif

@@ -3,9 +3,10 @@
  * \brief Plugin for parsing HTTP traffic
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
  * \date 2015
+ * \date 2016
  */
 /*
- * Copyright (C) 2014-2015 CESNET
+ * Copyright (C) 2014-2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -59,7 +60,7 @@ using namespace std;
 /**
  * \brief Flow record extension header for storing HTTP requests.
  */
-struct FlowRecordExtHTTPReq : FlowRecordExt {
+struct RecordExtHTTPReq : RecordExt {
    char httpReqMethod[10];
    char httpReqHost[64];
    char httpReqUrl[128];
@@ -69,7 +70,7 @@ struct FlowRecordExtHTTPReq : FlowRecordExt {
    /**
     * \brief Constructor.
     */
-   FlowRecordExtHTTPReq() : FlowRecordExt(http_request)
+   RecordExtHTTPReq() : RecordExt(http_request)
    {
       httpReqMethod[0] = 0;
       httpReqHost[0] = 0;
@@ -91,14 +92,14 @@ struct FlowRecordExtHTTPReq : FlowRecordExt {
 /**
  * \brief Flow record extension header for storing HTTP responses.
  */
-struct FlowRecordExtHTTPResp : FlowRecordExt {
+struct RecordExtHTTPResp : RecordExt {
    uint16_t httpRespCode;
    char httpRespContentType[32];
 
    /**
     * \brief Constructor.
     */
-   FlowRecordExtHTTPResp() : FlowRecordExt(http_response)
+   RecordExtHTTPResp() : RecordExt(http_response)
    {
       httpRespCode = 0;
       httpRespContentType[0] = 0;
@@ -122,16 +123,16 @@ public:
    int post_create(FlowRecord &rec, const Packet &pkt);
    int pre_update(FlowRecord &rec, Packet &pkt);
    void finish();
-   std::string get_unirec_field_string();
+   string get_unirec_field_string();
 
 private:
-   bool parse_http_request(const char *data, int payload_len, FlowRecordExtHTTPReq *rec, bool create);
-   bool parse_http_response(const char *data, int payload_len, FlowRecordExtHTTPResp *rec, bool create);
+   bool parse_http_request(const char *data, int payload_len, RecordExtHTTPReq *rec, bool create);
+   bool parse_http_response(const char *data, int payload_len, RecordExtHTTPResp *rec, bool create);
    int add_ext_http_request(const char *data, int payload_len, FlowRecord &rec);
    int add_ext_http_response(const char *data, int payload_len, FlowRecord &rec);
    bool valid_http_method(const char *method) const;
 
-   bool statsout;          /**< Print stats when flow cache is finishing. */
+   bool print_stats;       /**< Print stats when flow cache is finishing. */
    bool flush_flow;        /**< Tell FlowCache to flush current Flow. */
    uint32_t requests;      /**< Total number of parsed HTTP requests. */
    uint32_t responses;     /**< Total number of parsed HTTP responses. */

@@ -5,9 +5,10 @@
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
  * \date 2014
  * \date 2015
+ * \date 2016
  */
 /*
- * Copyright (C) 2014-2015 CESNET
+ * Copyright (C) 2014-2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -57,7 +58,28 @@
 
 using namespace std;
 
-#define BASIC_UNIREC_TEMPLATE "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL"
+#define BASIC_FLOW_TEMPLATE    "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL"
+
+#define PACKET_TEMPLATE   "TIME"
+
+UR_FIELDS (
+   ipaddr DST_IP,
+   ipaddr SRC_IP,
+   uint64 BYTES,
+   uint64 LINK_BIT_FIELD,
+   time TIME_FIRST,
+   time TIME_LAST,
+   uint32 PACKETS,
+   uint16 DST_PORT,
+   uint16 SRC_PORT,
+   uint8 DIR_BIT_FIELD,
+   uint8 PROTOCOL,
+   uint8 TCP_FLAGS,
+   uint8 TOS,
+   uint8 TTL,
+
+   time TIME
+)
 
 /**
  * \brief Constructor.
@@ -75,7 +97,6 @@ UnirecExporter::UnirecExporter() : out_ifc_cnt(0), tmplt(NULL), record(NULL)
  */
 int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, int basic_ifc_number)
 {
-   string template_str(BASIC_UNIREC_TEMPLATE);
    out_ifc_cnt = ifc_cnt;
    basic_ifc_num = basic_ifc_number;
    ifc_mapping.clear();
@@ -90,7 +111,7 @@ int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, 
 
    char *error = NULL;
    if (basic_ifc_num >= 0) {
-      tmplt[basic_ifc_num] = ur_create_output_template(basic_ifc_num, template_str.c_str(), &error);
+      tmplt[basic_ifc_num] = ur_create_output_template(basic_ifc_num, BASIC_FLOW_TEMPLATE, &error);
       if (tmplt[basic_ifc_num] == NULL) {
          fprintf(stderr, "UnirecExporter: %s\n", error);
          free(error);
@@ -99,6 +120,7 @@ int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, 
       }
    }
 
+   string template_str;
    for (unsigned int i = 0; i < plugins.size(); i++) {
       FlowCachePlugin * const tmp = plugins[i];
       vector<plugin_opt> &opts = tmp->get_options();
@@ -114,7 +136,14 @@ int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, 
       }
 
       // Create unirec templates.
-      tmplt[ifc] = ur_create_output_template(ifc, (template_str + string(",") + tmp->get_unirec_field_string()).c_str(), &error);
+      template_str = tmp->get_unirec_field_string();
+      if (tmp->include_basic_flow_fields()) {
+         template_str += string(",") + BASIC_FLOW_TEMPLATE;
+      } else {
+         template_str += string (",") + PACKET_TEMPLATE;
+      }
+
+      tmplt[ifc] = ur_create_output_template(ifc, template_str.c_str(), &error);
       if (tmplt == NULL) {
          fprintf(stderr, "UnirecExporter: %s\n", error);
          free(error);
@@ -125,7 +154,7 @@ int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, 
 
    for (int i = 0; i < out_ifc_cnt; i++) { // Create unirec records.
       if (tmplt[i] != NULL) {
-         record[i] = ur_create_record(tmplt[i], (i == basic_ifc_num ? 0 : UR_MAX_SIZE));
+         record[i] = ur_create_record(tmplt[i], (i == basic_ifc_num ? 0 : 2048));
 
          if (record == NULL) {
             free_unirec_resources();
@@ -178,26 +207,62 @@ void UnirecExporter::free_unirec_resources()
    }
 }
 
-int UnirecExporter::export_flow(FlowRecord &flow)
+int UnirecExporter::export_packet(Packet &pkt)
 {
-   FlowRecordExt *ext = flow.exts;
+   RecordExt *ext = pkt.exts;
    vector<int> to_export; // Contains output ifc numbers.
    ur_template_t *tmplt_ptr = NULL;
    void *record_ptr = NULL;
 
-   for (int i = 0; i < out_ifc_cnt; i++) {
-      ur_clear_varlen(tmplt[i], record[i]);
-      memset(record[i], 0, ur_rec_fixlen_size(tmplt[i]));
+   while (ext != NULL) {
+      map<int, int>::iterator it = ifc_mapping.find(ext->extType); // Find if mapping exists.
+      if (it != ifc_mapping.end()) {
+         int ifc_num = it->second;
+         if (ifc_num < 0) {
+            ext = ext->next;
+            continue;
+         }
+
+         tmplt_ptr = tmplt[ifc_num];
+         record_ptr = record[ifc_num];
+
+         if (find(to_export.begin(), to_export.end(), ifc_num) == to_export.end()) {
+            to_export.push_back(ifc_num);
+         }
+
+         ur_clear_varlen(tmplt_ptr, record_ptr);
+         memset(record_ptr, 0, ur_rec_fixlen_size(tmplt_ptr));
+         fill_packet_fields(pkt, tmplt_ptr, record_ptr);
+         ext->fillUnirec(tmplt_ptr, record_ptr); /* Add each extension header into unirec record. */
+      }
+      ext = ext->next;
    }
 
-   if (basic_ifc_num >= 0 && ext == NULL) { // Process basic flow.
+   for (unsigned int i = 0; i < to_export.size(); i++) {
+      tmplt_ptr = tmplt[to_export[i]];
+      record_ptr = record[to_export[i]];
+      trap_send(to_export[i], record_ptr, ur_rec_fixlen_size(tmplt_ptr) + ur_rec_varlen_size(tmplt_ptr, record_ptr));
+   }
+
+   return 0;
+}
+
+int UnirecExporter::export_flow(FlowRecord &flow)
+{
+   RecordExt *ext = flow.exts;
+   vector<int> to_export; // Contains output ifc numbers.
+   ur_template_t *tmplt_ptr = NULL;
+   void *record_ptr = NULL;
+
+   if (basic_ifc_num >= 0) { // Process basic flow.
       tmplt_ptr = tmplt[basic_ifc_num];
       record_ptr = record[basic_ifc_num];
 
       ur_clear_varlen(tmplt_ptr, record_ptr);
+      memset(record_ptr, 0, ur_rec_fixlen_size(tmplt_ptr));
+
       fill_basic_flow(flow, tmplt_ptr, record_ptr);
-      trap_send(basic_ifc_num, record_ptr, ur_rec_fixlen_size(tmplt_ptr) + ur_rec_varlen_size(tmplt_ptr, record_ptr));
-      return 0;
+      to_export.push_back(basic_ifc_num);
    }
 
    while (ext != NULL) {
@@ -211,9 +276,13 @@ int UnirecExporter::export_flow(FlowRecord &flow)
 
          tmplt_ptr = tmplt[ifc_num];
          record_ptr = record[ifc_num];
+
          if (find(to_export.begin(), to_export.end(), ifc_num) == to_export.end()) {
             to_export.push_back(ifc_num);
          }
+
+         ur_clear_varlen(tmplt_ptr, record_ptr);
+         memset(record_ptr, 0, ur_rec_fixlen_size(tmplt_ptr));
 
          fill_basic_flow(flow, tmplt_ptr, record_ptr);
          ext->fillUnirec(tmplt_ptr, record_ptr); /* Add each extension header into unirec record. */
@@ -238,26 +307,20 @@ int UnirecExporter::export_flow(FlowRecord &flow)
  */
 void UnirecExporter::fill_basic_flow(FlowRecord &flow, ur_template_t *tmplt_ptr, void *record_ptr)
 {
-   uint64_t tmp_time;
-   uint32_t time_sec;
-   uint32_t time_msec;
+   ur_time_t tmp_time;
 
    if (flow.ipVersion == 4) {
-      ur_set(tmplt_ptr, record_ptr, F_SRC_IP, ip_from_4_bytes_be((char *)&flow.sourceIPv4Address));
-      ur_set(tmplt_ptr, record_ptr, F_DST_IP, ip_from_4_bytes_be((char *)&flow.destinationIPv4Address));
+      ur_set(tmplt_ptr, record_ptr, F_SRC_IP, ip_from_4_bytes_be((char *) &flow.sourceIPAddress.v4));
+      ur_set(tmplt_ptr, record_ptr, F_DST_IP, ip_from_4_bytes_be((char *) &flow.destinationIPAddress.v4));
    } else {
-      ur_set(tmplt_ptr, record_ptr, F_SRC_IP, ip_from_16_bytes_be((char *)&flow.sourceIPv6Address));
-      ur_set(tmplt_ptr, record_ptr, F_DST_IP, ip_from_16_bytes_be((char *)&flow.destinationIPv6Address));
+      ur_set(tmplt_ptr, record_ptr, F_SRC_IP, ip_from_16_bytes_be((char *) flow.sourceIPAddress.v6));
+      ur_set(tmplt_ptr, record_ptr, F_DST_IP, ip_from_16_bytes_be((char *) flow.destinationIPAddress.v6));
    }
 
-   time_sec = (uint32_t)flow.flowStartTimestamp;
-   time_msec = (uint32_t)((flow.flowStartTimestamp - ((double)((uint32_t)flow.flowStartTimestamp))) * 1000);
-   tmp_time = ur_time_from_sec_msec(time_sec, time_msec);
+   tmp_time = ur_time_from_sec_msec(flow.flowStartTimestamp.tv_sec, flow.flowStartTimestamp.tv_usec / 1000.0);
    ur_set(tmplt_ptr, record_ptr, F_TIME_FIRST, tmp_time);
 
-   time_sec = (uint32_t)flow.flowEndTimestamp;
-   time_msec = (uint32_t)((flow.flowEndTimestamp - ((double)((uint32_t)flow.flowEndTimestamp))) * 1000);
-   tmp_time = ur_time_from_sec_msec(time_sec, time_msec);
+   tmp_time = ur_time_from_sec_msec(flow.flowEndTimestamp.tv_sec, flow.flowEndTimestamp.tv_usec / 1000.0);
    ur_set(tmplt_ptr, record_ptr, F_TIME_LAST, tmp_time);
 
    ur_set(tmplt_ptr, record_ptr, F_PROTOCOL, flow.protocolIdentifier);
@@ -266,8 +329,23 @@ void UnirecExporter::fill_basic_flow(FlowRecord &flow, ur_template_t *tmplt_ptr,
    ur_set(tmplt_ptr, record_ptr, F_PACKETS, flow.packetTotalCount);
    ur_set(tmplt_ptr, record_ptr, F_BYTES, flow.octetTotalLength);
    ur_set(tmplt_ptr, record_ptr, F_TCP_FLAGS, flow.tcpControlBits);
+   ur_set(tmplt_ptr, record_ptr, F_TOS, flow.ipClassOfService);
+   ur_set(tmplt_ptr, record_ptr, F_TTL, flow.ipTtl);
 
-   ur_set(tmplt_ptr, record_ptr, F_DIR_BIT_FIELD, 0);
-   ur_set(tmplt_ptr, record_ptr, F_LINK_BIT_FIELD, 0);
+   //ur_set(tmplt_ptr, record_ptr, F_DIR_BIT_FIELD, 0);
+   //ur_set(tmplt_ptr, record_ptr, F_LINK_BIT_FIELD, 0);
+}
+
+
+/**
+ * \brief Fill record with basic flow fields.
+ * \param [in] flow Flow record.
+ * \param [in] tmplt_ptr Pointer to unirec template.
+ * \param [out] record_ptr Pointer to unirec record.
+ */
+void UnirecExporter::fill_packet_fields(Packet &pkt, ur_template_t *tmplt_ptr, void *record_ptr)
+{
+   ur_time_t tmp_time = ur_time_from_sec_msec(pkt.timestamp.tv_sec, pkt.timestamp.tv_usec / 1000.0);
+   ur_set(tmplt_ptr, record_ptr, F_TIME, tmp_time);
 }
 

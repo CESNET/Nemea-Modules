@@ -5,9 +5,10 @@
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
  * \date 2014
  * \date 2015
+ * \date 2016
  */
 /*
- * Copyright (C) 2014-2015 CESNET
+ * Copyright (C) 2014-2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -49,6 +50,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "ipaddr.h"
+#include "flowifc.h"
+
 #define MAXPCKTSIZE 1600
 
 // Values of field presence indicator flags (packetFieldIndicator)
@@ -74,6 +78,7 @@
 
 // Some common sets of flags
 #define PCKT_PCAP_MASK (PCKT_TIMESTAMP) // Bit 0
+
 #define PCKT_INFO_MASK (\
    PCKT_HASH | \
    PCKT_KEY \
@@ -124,19 +129,19 @@
 /**
  * \brief Structure for storing parsed packets up to transport layer.
  */
-struct Packet {
+struct Packet : public Record {
    uint64_t    packetFieldIndicator;
-   double      timestamp;
+   struct timeval timestamp;
+
+   uint16_t    ethertype;
 
    uint8_t     ipVersion;
    uint16_t    ipLength;
    uint8_t     ipTtl;
    uint8_t     protocolIdentifier;
    uint8_t     ipClassOfService;
-   uint32_t    sourceIPv4Address;
-   uint32_t    destinationIPv4Address;
-   char        sourceIPv6Address[16];
-   char        destinationIPv6Address[16];
+   ipaddr_t    sourceIPAddress;
+   ipaddr_t    destinationIPAddress;
 
    uint16_t    sourceTransportPort;
    uint16_t    destinationTransportPort;

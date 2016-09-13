@@ -3,9 +3,10 @@
  * \brief Plugin for parsing DNS traffic.
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
  * \date 2015
+ * \date 2016
  */
 /*
- * Copyright (C) 2014-2015 CESNET
+ * Copyright (C) 2014-2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -209,7 +210,7 @@ struct __attribute__ ((packed)) dns_dnskey {
 /**
  * \brief Flow record extension header for storing parsed DNS packets.
  */
-struct FlowRecordExtDNS : FlowRecordExt {
+struct RecordExtDNS : RecordExt {
    uint16_t dns_id;
    uint16_t dns_answers;
    uint8_t dns_rcode;
@@ -225,7 +226,7 @@ struct FlowRecordExtDNS : FlowRecordExt {
    /**
     * \brief Constructor.
     */
-   FlowRecordExtDNS() : FlowRecordExt(dns), dns_qtype(0)
+   RecordExtDNS() : RecordExt(dns), dns_qtype(0)
    {
       dns_id = 0;
       dns_answers = 0;
@@ -250,7 +251,6 @@ struct FlowRecordExtDNS : FlowRecordExt {
          ur_set(tmplt, record, F_DNS_CLASS, dns_qclass);
          ur_set(tmplt, record, F_DNS_RR_TTL, dns_rr_ttl);
          ur_set(tmplt, record, F_DNS_RLENGTH, dns_rlength);
-         //ur_set_string(tmplt, record, F_DNS_RDATA, dns_data);
          ur_set_var(tmplt, record, F_DNS_RDATA, dns_data, dns_rlength);
          ur_set(tmplt, record, F_DNS_PSIZE, dns_psize);
          ur_set(tmplt, record, F_DNS_DO, dns_do);
@@ -271,17 +271,21 @@ public:
    string get_unirec_field_string();
 
 private:
-   bool parse_dns(const char *data, unsigned int payload_len, FlowRecordExtDNS *rec);
+   bool parse_dns(const char *data, unsigned int payload_len, RecordExtDNS *rec);
    int  add_ext_dns(const char *data, unsigned int payload_len, FlowRecord &rec);
-   string get_name(const char *begin, const char *data, int counter) const;
    void process_srv(string &str) const;
-   void process_rdata(const char *data_begin, const char *record_begin, const char *data, ostringstream &rdata, uint16_t type, size_t length) const;
-   size_t get_name_length(const char *data, bool total_length) const;
+   void process_rdata(const char *record_begin, const char *data, ostringstream &rdata, uint16_t type, size_t length) const;
 
-   bool statsout;       /**< Indicator whether to print stats when flow cache is finishing or not. */
-   uint32_t queries;    /**< Total number of parsed DNS queries. */
-   uint32_t responses;  /**< Total number of parsed DNS responses. */
-   uint32_t total;      /**< Total number of parsed DNS packets. */
+   string get_name(const char *data) const;
+   size_t get_name_length(const char *data) const;
+
+   bool print_stats;       /**< Indicator whether to print stats when flow cache is finishing or not. */
+   uint32_t queries;       /**< Total number of parsed DNS queries. */
+   uint32_t responses;     /**< Total number of parsed DNS responses. */
+   uint32_t total;         /**< Total number of parsed DNS packets. */
+
+   const char *data_begin; /**< Pointer to begin of payload. */
+   uint32_t data_len;      /**< Length of packet payload. */
 };
 
 #endif

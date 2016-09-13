@@ -5,9 +5,10 @@
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
  * \date 2014
  * \date 2015
+ * \date 2016
  */
 /*
- * Copyright (C) 2014-2015 CESNET
+ * Copyright (C) 2014-2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -46,13 +47,15 @@
 #ifndef FLOWCACHE_H
 #define FLOWCACHE_H
 
+#include <vector>
+#include <cstring>
+
 #include "packet.h"
 #include "flowifc.h"
 #include "flowcacheplugin.h"
 #include "flowexporter.h"
 
-#include <vector>
-#include <cstring>
+using namespace std;
 
 /**
  * \brief Base class for flow caches.
@@ -62,7 +65,7 @@ class FlowCache
 protected:
    FlowExporter *exporter; /**< Instance of FlowExporter used to export flows. */
 private:
-   std::vector<FlowCachePlugin *> plugins; /**< Array of plugins. */
+   vector<FlowCachePlugin *> plugins; /**< Array of plugins. */
 
 public:
    /**
@@ -121,6 +124,20 @@ protected:
    }
 
    /**
+    * \brief Call pre_create function for each added plugin.
+    * \param [in] pkt Input parsed packet.
+    * \return Options for flow cache.
+    */
+   int plugins_pre_create(Packet &pkt)
+   {
+      int ret = 0;
+      for (unsigned int i = 0; i < plugins.size(); i++) {
+         ret |= plugins[i]->pre_create(pkt);
+      }
+      return ret;
+   }
+
+   /**
     * \brief Call post_create function for each added plugin.
     * \param [in,out] rec Stored flow record.
     * \param [in] pkt Input parsed packet.
@@ -128,14 +145,11 @@ protected:
     */
    int plugins_post_create(FlowRecord &rec, const Packet &pkt)
    {
-      int retval = 0;
+      int ret = 0;
       for (unsigned int i = 0; i < plugins.size(); i++) {
-         int tmp = plugins[i]->post_create(rec, pkt);
-         if (tmp != 0) {
-            retval |= tmp;
-         }
+         ret |= plugins[i]->post_create(rec, pkt);
       }
-      return retval;
+      return ret;
    }
 
    /**
@@ -146,14 +160,11 @@ protected:
     */
    int plugins_pre_update(FlowRecord &rec, Packet &pkt)
    {
-      int retval = 0;
+      int ret = 0;
       for (unsigned int i = 0; i < plugins.size(); i++) {
-         int tmp = plugins[i]->pre_update(rec, pkt);
-         if (tmp != 0) {
-            retval |= tmp;
-         }
+         ret |= plugins[i]->pre_update(rec, pkt);
       }
-      return retval;
+      return ret;
    }
 
    /**
@@ -163,14 +174,11 @@ protected:
     */
    int plugins_post_update(FlowRecord &rec, const Packet &pkt)
    {
-      int retval = 0;
+      int ret = 0;
       for (unsigned int i = 0; i < plugins.size(); i++) {
-         int tmp = plugins[i]->post_update(rec, pkt);
-         if (tmp != 0) {
-            retval |= tmp;
-         }
+         ret |= plugins[i]->post_update(rec, pkt);
       }
-      return retval;
+      return ret;
    }
 
    /**

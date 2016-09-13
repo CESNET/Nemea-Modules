@@ -10,9 +10,9 @@ import grid
 global train, pass_through_options
 global labels, features
 
-svmtrain_exe = '../svm-train'
-svmpredict_exe = '../svm-predict'
-models_path = '../models'
+svmtrain_exe = '@BINDIR@/svm-tools/svm-train'
+svmpredict_exe = '@BINDIR@/svm-tools/svm-predict'
+models_path = '@DEVICECLASSIFIERDATADIR@'
 
 # process command line options, set global parameters
 def process_options(argv = sys.argv):
@@ -60,7 +60,7 @@ def count_labels(labels):
 # Give me a label
 def build_problem(lab):
 	# build binary classification problem for label lab
-	problem = open("tmp_binary", "w")
+	problem = open("/tmp/tmp_binary", "w")
 
 	for t in range(len(labels)):
 		if lab in labels[t]:
@@ -74,12 +74,12 @@ def train_problem(lab):
 	global pass_through_options
 	print "Training problem for label %s..." % lab
 
-	rate, param = grid.find_parameters("tmp_binary", "")
+	rate, param = grid.find_parameters("/tmp/tmp_binary", "")
 
 	pass_through_options = "-c %f -g %f" % (param['c'], param['g'])
 	print pass_through_options
 
-	cmd = "%s %s %s %s" % (svmtrain_exe, pass_through_options, "tmp_binary", "%s/%s" % (models_path, lab))
+	cmd = "%s %s %s %s" % (svmtrain_exe, pass_through_options, "/tmp/tmp_binary", "%s/%s" % (models_path, lab))
 	os.system(cmd)
 
 def main():

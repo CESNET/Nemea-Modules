@@ -157,4 +157,9 @@ typedef struct flow_t {
     uint64_t time_last; /**< End of the flow */
 } flow_t;
 
+#define train_script BINDIR "/svm-tools"
+#define models_dir "/data/device_classifier/"
+#define train_db_fname "db.svm"
+#define models_lst_fname "models.list"
+
 #endif /* _DEVICE_CLASSIFIER_ */

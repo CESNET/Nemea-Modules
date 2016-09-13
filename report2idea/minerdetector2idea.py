@@ -14,7 +14,7 @@ from report2idea import *
 MODULE_NAME = "minerdetector2idea"
 MODULE_DESC = "Converts output of minerdetector module to IDEA."
 
-REQ_TYPE = trap.TRAP_FMT_UNIREC
+REQ_TYPE = pytrap.FMT_UNIREC
 REQ_FORMAT = "ipaddr DST_IP,ipaddr SRC_IP,time TIME_FIRST,time TIME_LAST,uint32 EVENT_SCALE,uint16 DST_PORT"
 
 
@@ -57,8 +57,8 @@ def convert_to_idea(rec, opts=None):
     idea['ConnCount'] = rec.EVENT_SCALE
     setAddr(idea['Source'][0], rec.SRC_IP)
     setAddr(idea['Target'][0], rec.DST_IP)
-    idea['Note'] = 'Source IP {} might be a miner.'.format(rec.SRC_IP)
-    idea['Description'] = "{} might be a miner, because it connected to {}:{} which is flagged as a mining pool server.".format(rec.SRC_IP, rec.DST_IP, rec.DST_PORT)
+    idea['Note'] = 'Source IP {0} might be a miner.'.format(rec.SRC_IP)
+    idea['Description'] = "{0} might be a miner, because it connected to {1}:{2} which is flagged as a mining pool server.".format(rec.SRC_IP, rec.DST_IP, rec.DST_PORT)
     return idea
 
 

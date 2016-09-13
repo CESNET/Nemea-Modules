@@ -5,9 +5,10 @@
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
  * \date 2014
  * \date 2015
+ * \date 2016
  */
 /*
- * Copyright (C) 2014-2015 CESNET
+ * Copyright (C) 2014-2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -47,7 +48,10 @@
 #define PACKETRECEIVER_H
 
 #include <string>
+
 #include "packet.h"
+
+using namespace std;
 
 /**
  * \brief Base class for packet receivers.
@@ -55,7 +59,7 @@
 class PacketReceiver
 {
 public:
-   std::string errmsg; /**< String to store an error messages. */
+   string error_msg; /**< String to store an error messages. */
 
    /**
     * \brief Get packet from network interface or file.

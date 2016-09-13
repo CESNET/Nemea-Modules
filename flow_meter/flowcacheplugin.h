@@ -5,9 +5,10 @@
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
  * \date 2014
  * \date 2015
+ * \date 2016
  */
 /*
- * Copyright (C) 2014-2015 CESNET
+ * Copyright (C) 2014-2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -47,10 +48,10 @@
 #define FLOWCACHEPLUGIN_H
 
 #include <string>
+#include <vector>
 
 #include "packet.h"
 #include "flowifc.h"
-#include <vector>
 
 /**
  * \brief Tell FlowCache to flush (immediately export) current flow.
@@ -58,6 +59,12 @@
  * Behavior when called from pre_update and post_update: flush current Flow, erase FlowRecord and call post_create
  */
 #define FLOW_FLUSH   (0x1 << 0)
+
+/**
+ * \biref Tell FlowCache to export currently processed packet.
+ * This return value has only effect when called from pre_create method.
+ */
+#define EXPORT_PACKET   (0x1 << 1)
 
 using namespace std;
 
@@ -104,6 +111,16 @@ public:
     */
    virtual void init()
    {
+   }
+
+   /**
+    * \brief Called before a new flow record is created.
+    * \param [in] pkt Parsed packet.
+    * \return 0 on success or FLOW_FLUSH option.
+    */
+   virtual int pre_create(Packet &pkt)
+   {
+      return 0;
    }
 
    /**
@@ -158,9 +175,18 @@ public:
     * \brief Get unirec template string from plugin.
     * \return Unirec template string.
     */
-   virtual std::string get_unirec_field_string()
+   virtual string get_unirec_field_string()
    {
       return "";
+   }
+
+   /**
+    * \brief Check if plugin require basic flow fields in unirec template.
+    * \return True if basic flow is need to be included, false otherwise.
+    */
+   virtual bool include_basic_flow_fields()
+   {
+      return true;
    }
 
    /**

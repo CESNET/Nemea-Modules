@@ -5,9 +5,10 @@
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
  * \date 2014
  * \date 2015
+ * \date 2016
  */
 /*
- * Copyright (C) 2014-2015 CESNET
+ * Copyright (C) 2014-2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -45,9 +46,11 @@
 #ifndef STATS_H
 #define STATS_H
 
+#include <ostream>
+
 #include "flowcacheplugin.h"
 
-#include <ostream>
+using namespace std;
 
 class StatsPlugin : public FlowCachePlugin
 {
@@ -56,19 +59,17 @@ class StatsPlugin : public FlowCachePlugin
    unsigned long cache_hits;
    unsigned long flows_in_cache;
 
-   double interval;
-   double last_ts;
-   std::ostream &out;
-
-   FILE *create_keys;
-   FILE *export_keys;
+   struct timeval interval;
+   struct timeval last_ts;
+   ostream &out;
+   bool init_ts;
 
    void check_timestamp(const Packet &pkt);
    void print_header() const;
-   void print_stats(double ts) const;
+   void print_stats(const struct timeval &ts) const;
 
 public:
-   StatsPlugin(double interval, std::ostream &out);
+   StatsPlugin(struct timeval interval, ostream &out);
 
    void init();
    int post_create(FlowRecord &rec, const Packet &pkt);

@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-modules], [2.3.6], [traffic-analysis@cesnet.cz])
+AC_INIT([nemea-modules], [2.4.1], [traffic-analysis@cesnet.cz])
 AC_CONFIG_SRCDIR([flowcounter/flowcounter.c])
 AC_CONFIG_HEADERS([config.h])
-RELEASE=1
+RELEASE=2
 AC_SUBST(RELEASE)
 USERNAME=`git config --get user.name`
 USERMAIL=`git config --get user.email`
@@ -35,6 +35,9 @@ AC_SUBST(PKGDATADIR)
 AC_SUBST(pkgdatadir)
 AC_DEFINE_DIR(PKGDATADIR, [pkgdatadir], [Path to configuration files])
 AC_DEFINE_DIR(SYSCONFDIR, [sysconfdir], [Path to configuration files])
+AC_DEFINE_DIR(BINDIR, [bindir], [Path to executable files])
+AC_SUBST(BINDIR)
+
 deviceclassifierdatadir=${pkgdatadir}/device_classifier
 AC_DEFINE_DIR(DEVICECLASSIFIERDATADIR, [deviceclassifierdatadir], [Path to SVM data files])
 AC_SUBST(DEVICECLASSIFIERDATADIR)
@@ -70,6 +73,8 @@ AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--disable-repobuild],
 	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-repobuild]) ;;
 esac], [repobuild=true])
 
+AX_C_BIGENDIAN_CROSS
+
 AX_OPENMP([], [AC_MSG_ERROR([OpenMP was not found. Some modules need it (e.g. logger and merger)])])
 AC_SUBST(OPENMP_CFLAGS)
 
@@ -85,6 +90,13 @@ if [[ -z "$HAVE_LIBIDN_TRUE" ]]; then
 RPM_REQUIRES+=" libidn"
 RPM_BUILDREQ+=" libidn-devel"
 fi
+
+AC_ARG_WITH([flowcachesize],
+	AC_HELP_STRING([--with-flowcachesize=NUMBER],[Set size of flow cache for flow_meter module in number of flow records. Size must be divisible by 32. Default is 65536.]),
+	[
+	CPPFLAGS="$CPPFLAGS -DFLOW_CACHE_SIZE=$withval"
+	]
+)
 
 AC_ARG_WITH([nfreader],
 	AC_HELP_STRING([--without-nfreader], [Skip nfreader module.]),
@@ -178,12 +190,16 @@ AC_CONFIG_FILES([Makefile
                  anonymizer/Makefile
                  debug_sender/Makefile
                  device_classifier/Makefile
+                 device_classifier/libsvm/tools/train.sh
+                 device_classifier/libsvm/tools/binary.py
+                 device_classifier/libsvm/tools/grid.py
                  device_classifier/libsvm/Makefile
                  device_classifier/libsvm/data/Makefile
                  device_classifier/libsvm/tools/Makefile
                  email_reporter/Makefile
                  flowcounter/Makefile
                  flow_meter/Makefile
+                 flow_meter/tests/Makefile
                  json_dump/Makefile
                  json_replay/Makefile
                  logger/Makefile

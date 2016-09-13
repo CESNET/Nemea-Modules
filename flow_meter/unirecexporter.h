@@ -5,9 +5,10 @@
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
  * \date 2014
  * \date 2015
+ * \date 2016
  */
 /*
- * Copyright (C) 2014-2015 CESNET
+ * Copyright (C) 2014-2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -54,6 +55,7 @@
 
 #include "flowcacheplugin.h"
 #include "flowexporter.h"
+#include "packet.h"
 
 using namespace std;
 
@@ -67,16 +69,18 @@ public:
    int init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, int basic_ifc_num);
    void close();
    int export_flow(FlowRecord &flow);
+   int export_packet(Packet &pkt);
 
 private:
    void fill_basic_flow(FlowRecord &flow, ur_template_t *tmplt_ptr, void *record_ptr);
+   void fill_packet_fields(Packet &pkt, ur_template_t *tmplt_ptr, void *record_ptr);
    void free_unirec_resources();
 
-   int out_ifc_cnt; /**< Number of output interfaces. */
-   int basic_ifc_num; /**< Basic output interface number. */
+   int out_ifc_cnt;           /**< Number of output interfaces. */
+   int basic_ifc_num;         /**< Basic output interface number. */
    map<int, int> ifc_mapping; /**< Contain extension id -> output interface number mapping. */
-   ur_template_t **tmplt; /**< Pointer to unirec templates. */
-   void **record;         /**< Pointer to unirec records. */
+   ur_template_t **tmplt;     /**< Pointer to unirec templates. */
+   void **record;             /**< Pointer to unirec records. */
 };
 
 #endif

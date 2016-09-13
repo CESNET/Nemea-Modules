@@ -9,8 +9,8 @@ License: BSD
 Vendor: CESNET, z.s.p.o.
 Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
-Requires: libtrap nemea-pycommon nemea-python nemea-common@RPM_REQUIRES@
-BuildRequires: gcc make doxygen pkgconfig unirec libtrap-devel nemea-common-devel@RPM_BUILDREQ@
+Requires: nemea-framework@RPM_REQUIRES@
+BuildRequires: gcc make doxygen pkgconfig nemea-framework-devel@RPM_BUILDREQ@
 Provides: nemea-modules
 
 %description
@@ -29,10 +29,36 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 test -x %{_bindir}/nemea/flow_meter && setcap "CAP_NET_RAW+eip" %{_bindir}/nemea/flow_meter || true
 
 %files
-%{_bindir}/nemea/*
+%{_bindir}/nemea/amplification2idea.py
+%{_bindir}/nemea/anonymizer
+%{_bindir}/nemea/bruteforce2idea.py
+%{_bindir}/nemea/debug_sender.py
+%{_bindir}/nemea/device_classifier
+%{_bindir}/nemea/dnstunnel2idea.py
+%{_bindir}/nemea/email_reporter.py
+%{_bindir}/nemea/endiverter
+%{_bindir}/nemea/flowcounter
+%{_bindir}/nemea/flow_meter
+%{_bindir}/nemea/haddrscan2idea.py
+%{_bindir}/nemea/hoststats2idea.py
+%{_bindir}/nemea/idea2idea.py
+%{_bindir}/nemea/ipblacklist2idea.py
+%{_bindir}/nemea/json_dump.py
+%{_bindir}/nemea/json_replay.py
+%{_bindir}/nemea/logger
+%{_bindir}/nemea/logreplay
+%{_bindir}/nemea/merger
+%{_bindir}/nemea/nfdump_reader
+%{_bindir}/nemea/nfdump_reader_test
+%{_bindir}/nemea/svm-tools
+%{_bindir}/nemea/traffic_repeater
+%{_bindir}/nemea/unirecfilter
+%{_bindir}/nemea/voipfraud2idea.py
+%{_bindir}/nemea/vportscan2idea.py
 %{_docdir}/nemea-modules/*/*
 %config(noreplace) %{_sysconfdir}/nemea/email_reporter/example.cfg
 %config(noreplace) %{_sysconfdir}/nemea/email_reporter/generic.cfg
+%{_datadir}/nemea/*
 
 
 

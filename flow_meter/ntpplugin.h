@@ -53,6 +53,8 @@
 #include "flow_meter.h"
 #include "packet.h"
 
+using namespace std;
+
 #define NTP_FIELD_IP 16
 #define NTP_FIELD_LEN64 30
 
@@ -69,7 +71,7 @@ const char OTHER[] = "OTHER"; /*OTHER Value of NTP reference ID*/
 /**
  *\brief Flow record extension header for storing NTP fields.
  */
-struct FlowRecordExtNTP : FlowRecordExt {
+struct RecordExtNTP : RecordExt {
    uint8_t leap;
    uint8_t version;
    uint8_t mode;
@@ -87,7 +89,7 @@ struct FlowRecordExtNTP : FlowRecordExt {
    /**
          *\brief Constructor.
    */
-   FlowRecordExtNTP() : FlowRecordExt(ntp)
+   RecordExtNTP() : RecordExt(ntp)
    {
       leap = 9;
       version = 9;
@@ -132,17 +134,17 @@ public:
    NTPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options);
    int post_create(FlowRecord &rec, const Packet &pkt);
    void finish();
-   std::string get_unirec_field_string();
+   string get_unirec_field_string();
 
 private:
-   bool parse_ntp(const Packet &pkt, FlowRecordExtNTP *ntp_data_ext);
+   bool parse_ntp(const Packet &pkt, RecordExtNTP *ntp_data_ext);
    void add_ext_ntp(FlowRecord &rec, const Packet &pkt);
-   std::string  parse_timestamp(const Packet &pkt, int p1, int p4, int p5, int p8);
+   string parse_timestamp(const Packet &pkt, int p1, int p4, int p5, int p8);
 
-   bool statsout;    /**< Indicator whether to print stats when flow cache is finishing or not. */
+   bool print_stats;    /**< Indicator whether to print stats when flow cache is finishing or not. */
    uint32_t requests;   /**< Total number of parsed NTP queries. */
    uint32_t responses;  /**< Total number of parsed NTP responses. */
-   uint32_t total;   /**< Total number of parsed DNS packets. */
+   uint32_t total;      /**< Total number of parsed DNS packets. */
 };
 
 #endif

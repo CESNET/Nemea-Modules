@@ -2,9 +2,10 @@
  * \file sipplugin.cpp
  * \author Tomas Jansky <janskto1@fit.cvut.cz>
  * \date 2015
+ * \date 2016
  */
 /*
- * Copyright (C) 2015 CESNET
+ * Copyright (C) 2015-2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -65,13 +66,21 @@ UR_FIELDS (
    string SIP_VIA
 )
 
-SIPPlugin::SIPPlugin(const options_t &module_options) : statsout(module_options.statsout), requests(0), responses(0), total(0)
+SIPPlugin::SIPPlugin(const options_t &module_options)
 {
+   print_stats = module_options.print_stats;
+   requests = 0;
+   responses = 0;
+   total = 0;
    flush_flow = true;
 }
 
-SIPPlugin::SIPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options) : FlowCachePlugin(plugin_options), statsout(module_options.statsout), requests(0), responses(0), total(0)
+SIPPlugin::SIPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options) : FlowCachePlugin(plugin_options)
 {
+   print_stats = module_options.print_stats;
+   requests = 0;
+   responses = 0;
+   total = 0;
    flush_flow = true;
 }
 
@@ -84,7 +93,7 @@ int SIPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
       return 0;
    }
 
-   FlowRecordExtSIP *sip_data = new FlowRecordExtSIP();
+   RecordExtSIP *sip_data = new RecordExtSIP();
    sip_data->msg_type = msg_type;
    rec.addExtension(sip_data);
    parser_process_sip(pkt, sip_data);
@@ -104,7 +113,7 @@ int SIPPlugin::pre_update(FlowRecord &rec, Packet &pkt)
 }
 void SIPPlugin::finish()
 {
-   if (!statsout) {
+   if (print_stats) {
       cout << "SIP plugin stats:" << endl;
       cout << "Parsed sip requests: " << requests << endl;
       cout << "Parsed sip responses: " << responses << endl;
@@ -265,7 +274,7 @@ const unsigned char * SIPPlugin::parser_strtok(const unsigned char *str, unsigne
 #define FOUND(A)        { nst->saveptr = cp + (A) + 1; *strlen = len + A; nst->instrlen -= A + 1; return beginning; }
 
    /* Go across the string word by word: */
-   longword_ptr = (unsigned long int *)char_ptr;
+   longword_ptr = (MAGIC_INT *)char_ptr;
    for (;;) {
       /*
        * Get the current item and move to the next one. The XOR operator does the following thing:
@@ -441,7 +450,7 @@ void SIPPlugin::parser_field_uri(const unsigned char *line, int linelen, int ski
    dst[final_len] = 0;
 }
 
-int SIPPlugin::parser_process_sip(const Packet &pkt, FlowRecordExtSIP *sip_data)
+int SIPPlugin::parser_process_sip(const Packet &pkt, RecordExtSIP *sip_data)
 {
    const unsigned char *payload;
    const unsigned char *line;

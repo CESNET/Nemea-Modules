@@ -4,9 +4,10 @@
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
  * \date 2014
  * \date 2015
+ * \date 2016
  */
 /*
- * Copyright (C) 2014-2015 CESNET
+ * Copyright (C) 2014-2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -48,13 +49,20 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
-#include <flowcacheplugin.h>
 
+#include "flowcacheplugin.h"
+
+using namespace std;
+
+#ifndef FLOW_CACHE_SIZE
 const unsigned int DEFAULT_FLOW_CACHE_SIZE = 65536;
+#else
+const unsigned int DEFAULT_FLOW_CACHE_SIZE = FLOW_CACHE_SIZE;
+#endif
 const unsigned int DEFAULT_FLOW_LINE_SIZE = 32;
 const double DEFAULT_INACTIVE_TIMEOUT = 30.0;
 const double DEFAULT_ACTIVE_TIMEOUT = 300.0;
-const std::string DEFAULT_REPLACEMENT_STRING = \
+const string DEFAULT_REPLACEMENT_STRING = \
    "13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0";
 
 /**
@@ -62,24 +70,23 @@ const std::string DEFAULT_REPLACEMENT_STRING = \
  */
 struct options_t {
    int basic_ifc_num;
-   bool statsout;
-   bool verbose;
-   uint32_t flowcachesize;
-   uint32_t flowlinesize;
-   double inactivetimeout;
-   double activetimeout;
-   double statstime;
-   std::string interface;
-   std::string infilename;
-   std::string outfilename;
-   std::string replacementstring;
+   bool print_stats;
+   bool print_pcap_stats;
+   uint32_t flow_cache_size;
+   uint32_t flow_line_size;
+   struct timeval inactive_timeout;
+   struct timeval active_timeout;
+   struct timeval cache_stats_interval;
+   string interface;
+   string pcap_file;
+   string replacement_string;
 };
 
 /**
  * \brief Wrapper for array of plugins.
  */
 struct plugins_t {
-   std::vector<FlowCachePlugin *> plugins;
+   vector<FlowCachePlugin *> plugins;
 
    /**
     * \brief Destructor.
@@ -90,7 +97,5 @@ struct plugins_t {
       }
    }
 };
-
-void print_help();
 
 #endif
