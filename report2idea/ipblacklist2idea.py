@@ -110,7 +110,7 @@ def convert_to_idea(rec, opts=None):
         }],
     }
 
-    if rec.DST_IP != 0:
+    if not rec.DST_IP.isNull():
         addr = {
             "Proto": [ protocol ]
         }
@@ -131,7 +131,7 @@ def convert_to_idea(rec, opts=None):
                 addr["Type"] = [ "Botnet" ]
         idea['Source'].append(addr)
 
-    if rec.SRC_IP != 0:
+    if not rec.SRC_IP.isNull():
         addr = {
             "Proto": [ protocol ]
         }
