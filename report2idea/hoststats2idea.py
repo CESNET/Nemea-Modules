@@ -81,13 +81,13 @@ def convert_to_idea(rec, opts=None):
     elif rec.EVENT_TYPE == EVT_T_DNSAMP:
         idea['Category'] = ['Availability.DoS']
         
-        if rec.DST_IP != 0:
+        if not rec.DST_IP.isNull():
             idea['Target'] = [{
                 'Proto': ['udp', 'dns'],
             }]
             setAddr(idea['Target'][0], rec.DST_IP)
             idea['Description'] = str(rec.DST_IP)+' received abnormally high number of large DNS replies - probably a victim of DNS amplification DoS attack'
-        if rec.SRC_IP != 0:
+        if not rec.SRC_IP.isNull():
             idea['Source'] = [{
                 'Type': ['Backscatter'],
                 'Port': [53],
@@ -102,13 +102,13 @@ def convert_to_idea(rec, opts=None):
     elif rec.EVENT_TYPE == EVT_T_DOS:
         idea['Category'] = ['Availability.DoS']
          
-        if rec.DST_IP != 0:
+        if not rec.DST_IP.isNull():
             idea['Target'] = [{}]
             setAddr(idea['Target'][0], rec.DST_IP)
             if rec.PROTOCOL in proto_conv:
                 idea['Target'][0]['Proto'] = [proto_conv[rec.PROTOCOL]]
          
-        if rec.SRC_IP != 0:
+        if not rec.SRC_IP.isNull():
             idea['Source'] = [{}]
             setAddr(idea['Source'][0], rec.SRC_IP)
             if rec.PROTOCOL in proto_conv:
@@ -167,9 +167,9 @@ def convert_to_idea(rec, opts=None):
             'Port': [22],
             'Proto': ['tcp','ssh'],
         }]
-        if rec.DST_IP != 0:
+        if not rec.DST_IP.isNull():
             setAddr(idea['Target'][0], rec.DST_IP)
-        if rec.SRC_IP != 0:
+        if not rec.SRC_IP.isNull():
             idea['Source'] = [{}]
             setAddr(idea['Source'][0], rec.SRC_IP)
          
