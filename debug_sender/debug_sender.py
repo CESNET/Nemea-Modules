@@ -87,7 +87,6 @@ Character in apostrophs is an abbreviation of the command (e.g. p for print).
                break # Continue with next field
 
             field_type = urtmplt.getFieldType(name)
-            print(field_type)
 
             # Try special cases first, then all other cases
             if not edit_time_rules(name, valstr):
@@ -105,9 +104,9 @@ Character in apostrophs is an abbreviation of the command (e.g. p for print).
    def do_stop(self, line):
       """'t'  Send terminate message."""
       try:
-         trap.send(0, "0")
+         trap.send(bytes("0"), 0)
          print "done"
-      except trap.ETerminated:
+      except pytrap.Terminated:
          print("Libtrap was terminated")
          return True
       except Exception, e:
@@ -132,9 +131,11 @@ Character in apostrophs is an abbreviation of the command (e.g. p for print).
       try:
          for _ in range(int(count)):
             send_time_rules() # Edit record according to send-time rules
-            trap.send(0, record)
+            # Record was allocated of maximum size, extract only bytes that contain record data
+            data_to_send = record[:urtmplt.recSize(record)]
+            trap.send(data_to_send, 0)
          print "done"
-      except trap.ETerminated:
+      except pytrap.Terminated:
          print("Libtrap was terminated")
          return True
       except Exception, e:
@@ -266,7 +267,7 @@ parser.add_argument('-i', metavar='IFC_SPEC',
                     help='TRAP interface specifier.')
 parser.add_argument('template', metavar='UNIREC_FORMAT',
                     help='UniRec specifier of the records to send, e.g. "uint32 FOO,string BAR"')
-# TODO add common help for IFC_SPEC, it should probably be as some constant in pytrap
+# TODO add common help for IFC_SPEC, it should probably be some constant in pytrap
 parser.formatter_class = argparse.RawTextHelpFormatter # TODO: neco co zachova explicitni odradkovani (klidne tam dam \n) ale jinak vyresi inteligentni zalamovani
 args = parser.parse_args()
 
