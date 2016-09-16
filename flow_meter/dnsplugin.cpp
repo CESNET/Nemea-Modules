@@ -125,7 +125,7 @@ DNSPlugin::DNSPlugin(const options_t &module_options, vector<plugin_opt> plugin_
 int DNSPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 {
    if (pkt.destinationTransportPort == 53 || pkt.sourceTransportPort == 53) {
-      return add_ext_dns(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
+      return add_ext_dns(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, pkt.protocolIdentifier == IPPROTO_TCP, rec);
    }
 
    return 0;
@@ -136,9 +136,9 @@ int DNSPlugin::pre_update(FlowRecord &rec, Packet &pkt)
    if (pkt.destinationTransportPort == 53 || pkt.sourceTransportPort == 53) {
       RecordExt *ext = rec.getExtension(dns);
       if(ext == NULL) {
-         return add_ext_dns(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
+         return add_ext_dns(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, pkt.protocolIdentifier == IPPROTO_TCP, rec);
       } else {
-         parse_dns(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, dynamic_cast<RecordExtDNS *>(ext));
+         parse_dns(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, pkt.protocolIdentifier == IPPROTO_TCP, dynamic_cast<RecordExtDNS *>(ext));
       }
       return FLOW_FLUSH;
    }
@@ -451,18 +451,29 @@ uint32_t s_responses = 0;
  * \brief Parse and store DNS packet.
  * \param [in] data Pointer to packet payload section.
  * \param [in] payload_len Payload length.
+ * \param [in] tcp DNS over tcp.
  * \param [out] rec Output FlowRecord extension header.
  * \return True if DNS was parsed.
  */
-bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, RecordExtDNS *rec)
+bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp, RecordExtDNS *rec)
 {
    try {
       total++;
 
       DEBUG_MSG("---------- dns parser #%u ----------\n", total);
       DEBUG_MSG("Payload length: %u\n", payload_len);
+
+      if (tcp) {
+         payload_len -= 2;
+         if (ntohs(*(uint16_t *) data) != payload_len) {
+            DEBUG_MSG("parser quits: fragmented tcp pkt");
+            return false;
+         }
+         data += 2;
+      }
+
       if (payload_len < sizeof(struct dns_hdr)) {
-         DEBUG_MSG("payload length < %ld\n", sizeof(struct dns_hdr));
+         DEBUG_MSG("parser quits: payload length < %ld\n", sizeof(struct dns_hdr));
          return false;
       }
 
@@ -658,7 +669,6 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, RecordExtD
 
       DEBUG_MSG("DNS parser quits: parsing done\n\n");
    } catch (const char *err) {
-
       DEBUG_MSG("%s\n", err);
       return false;
    }
@@ -670,12 +680,13 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, RecordExtD
  * \brief Add new extension DNS header into FlowRecord.
  * \param [in] data Pointer to packet payload section.
  * \param [in] payload_len Payload length.
+ * \param [in] tcp DNS over tcp.
  * \param [out] rec Destination FlowRecord.
  */
-int DNSPlugin::add_ext_dns(const char *data, unsigned int payload_len, FlowRecord &rec)
+int DNSPlugin::add_ext_dns(const char *data, unsigned int payload_len, bool tcp, FlowRecord &rec)
 {
    RecordExtDNS *ext = new RecordExtDNS();
-   if (!parse_dns(data, payload_len, ext)) {
+   if (!parse_dns(data, payload_len, tcp, ext)) {
       delete ext;
       return 0;
    } else {
