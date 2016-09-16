@@ -181,8 +181,8 @@ size_t DNSPlugin::get_name_length(const char *data) const
          return len + 2;
       }
 
-      len += data[0] + 1;
-      data += data[0] + 1;
+      len += (uint8_t) data[0] + 1;
+      data += (uint8_t) data[0] + 1;
    }
 
    return len + 1;
@@ -210,16 +210,18 @@ string DNSPlugin::get_name(const char *data) const
          if (label_cnt++ > MAX_LABEL_CNT || (uint32_t) (data - data_begin) > data_len) {
             throw "Error: label count exceed or overflow";
          }
+
          continue;
       }
 
       /* Check for possible errors.*/
-      if (label_cnt++ > MAX_LABEL_CNT || (uint32_t) ((data - data_begin) + data[0] + 2) > data_len) {
+      if (label_cnt++ > MAX_LABEL_CNT || (uint8_t) data[0] > 63 ||
+         (uint32_t) ((data - data_begin) + (uint8_t) data[0] + 2) > data_len) {
          throw "Error: label count exceed or overflow";
       }
 
-      name += '.' + string(data + 1, data[0]);
-      data += (data[0] + 1);
+      name += '.' + string(data + 1, (uint8_t) data[0]);
+      data += ((uint8_t) data[0] + 1);
    }
 
    if (name[0] == '.') {
