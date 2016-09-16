@@ -108,10 +108,10 @@ HTTPPlugin::HTTPPlugin(const options_t &module_options, vector<plugin_opt> plugi
 
 int HTTPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 {
-   if (pkt.sourceTransportPort == 80) {
-      return add_ext_http_response(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
-   } else if (pkt.destinationTransportPort == 80) {
-      return add_ext_http_request(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
+   if (pkt.src_port == 80) {
+      return add_ext_http_response(pkt.payload, pkt.payload_length, rec);
+   } else if (pkt.dst_port == 80) {
+      return add_ext_http_request(pkt.payload, pkt.payload_length, rec);
    }
 
    return 0;
@@ -120,24 +120,24 @@ int HTTPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 int HTTPPlugin::pre_update(FlowRecord &rec, Packet &pkt)
 {
    RecordExt *ext = NULL;
-   if (pkt.sourceTransportPort == 80) {
+   if (pkt.src_port == 80) {
       ext = rec.getExtension(http_response);
       if (ext == NULL) { /* Check if header is present in flow. */
-         return add_ext_http_response(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
+         return add_ext_http_response(pkt.payload, pkt.payload_length, rec);
       }
 
-      parse_http_response(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, dynamic_cast<RecordExtHTTPResp *>(ext), false);
+      parse_http_response(pkt.payload, pkt.payload_length, dynamic_cast<RecordExtHTTPResp *>(ext), false);
       if (flush_flow) {
          flush_flow = false;
          return FLOW_FLUSH;
       }
-   } else if (pkt.destinationTransportPort == 80) {
+   } else if (pkt.dst_port == 80) {
       ext = rec.getExtension(http_request);
       if(ext == NULL) { /* Check if header is present in flow. */
-         return add_ext_http_request(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
+         return add_ext_http_request(pkt.payload, pkt.payload_length, rec);
       }
 
-      parse_http_request(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, dynamic_cast<RecordExtHTTPReq *>(ext), false);
+      parse_http_request(pkt.payload, pkt.payload_length, dynamic_cast<RecordExtHTTPReq *>(ext), false);
       if (flush_flow) {
          flush_flow = false;
          return FLOW_FLUSH;

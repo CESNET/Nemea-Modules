@@ -309,28 +309,28 @@ void UnirecExporter::fill_basic_flow(FlowRecord &flow, ur_template_t *tmplt_ptr,
 {
    ur_time_t tmp_time;
 
-   if (flow.ipVersion == 4) {
-      ur_set(tmplt_ptr, record_ptr, F_SRC_IP, ip_from_4_bytes_be((char *) &flow.sourceIPAddress.v4));
-      ur_set(tmplt_ptr, record_ptr, F_DST_IP, ip_from_4_bytes_be((char *) &flow.destinationIPAddress.v4));
+   if (flow.ip_version == 4) {
+      ur_set(tmplt_ptr, record_ptr, F_SRC_IP, ip_from_4_bytes_be((char *) &flow.src_ip.v4));
+      ur_set(tmplt_ptr, record_ptr, F_DST_IP, ip_from_4_bytes_be((char *) &flow.dst_ip.v4));
    } else {
-      ur_set(tmplt_ptr, record_ptr, F_SRC_IP, ip_from_16_bytes_be((char *) flow.sourceIPAddress.v6));
-      ur_set(tmplt_ptr, record_ptr, F_DST_IP, ip_from_16_bytes_be((char *) flow.destinationIPAddress.v6));
+      ur_set(tmplt_ptr, record_ptr, F_SRC_IP, ip_from_16_bytes_be((char *) flow.src_ip.v6));
+      ur_set(tmplt_ptr, record_ptr, F_DST_IP, ip_from_16_bytes_be((char *) flow.dst_ip.v6));
    }
 
-   tmp_time = ur_time_from_sec_msec(flow.flowStartTimestamp.tv_sec, flow.flowStartTimestamp.tv_usec / 1000.0);
+   tmp_time = ur_time_from_sec_msec(flow.start_timestamp.tv_sec, flow.start_timestamp.tv_usec / 1000.0);
    ur_set(tmplt_ptr, record_ptr, F_TIME_FIRST, tmp_time);
 
-   tmp_time = ur_time_from_sec_msec(flow.flowEndTimestamp.tv_sec, flow.flowEndTimestamp.tv_usec / 1000.0);
+   tmp_time = ur_time_from_sec_msec(flow.end_timestamp.tv_sec, flow.end_timestamp.tv_usec / 1000.0);
    ur_set(tmplt_ptr, record_ptr, F_TIME_LAST, tmp_time);
 
-   ur_set(tmplt_ptr, record_ptr, F_PROTOCOL, flow.protocolIdentifier);
-   ur_set(tmplt_ptr, record_ptr, F_SRC_PORT, flow.sourceTransportPort);
-   ur_set(tmplt_ptr, record_ptr, F_DST_PORT, flow.destinationTransportPort);
-   ur_set(tmplt_ptr, record_ptr, F_PACKETS, flow.packetTotalCount);
-   ur_set(tmplt_ptr, record_ptr, F_BYTES, flow.octetTotalLength);
-   ur_set(tmplt_ptr, record_ptr, F_TCP_FLAGS, flow.tcpControlBits);
-   ur_set(tmplt_ptr, record_ptr, F_TOS, flow.ipClassOfService);
-   ur_set(tmplt_ptr, record_ptr, F_TTL, flow.ipTtl);
+   ur_set(tmplt_ptr, record_ptr, F_PROTOCOL, flow.ip_proto);
+   ur_set(tmplt_ptr, record_ptr, F_SRC_PORT, flow.src_port);
+   ur_set(tmplt_ptr, record_ptr, F_DST_PORT, flow.dst_port);
+   ur_set(tmplt_ptr, record_ptr, F_PACKETS, flow.pkt_total_cnt);
+   ur_set(tmplt_ptr, record_ptr, F_BYTES, flow.octet_total_length);
+   ur_set(tmplt_ptr, record_ptr, F_TCP_FLAGS, flow.tcp_control_bits);
+   ur_set(tmplt_ptr, record_ptr, F_TOS, flow.ip_tos);
+   ur_set(tmplt_ptr, record_ptr, F_TTL, flow.ip_ttl);
 
    //ur_set(tmplt_ptr, record_ptr, F_DIR_BIT_FIELD, 0);
    //ur_set(tmplt_ptr, record_ptr, F_LINK_BIT_FIELD, 0);

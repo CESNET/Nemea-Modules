@@ -67,8 +67,8 @@ inline bool is_expired(const Flow *flow, const struct timeval &current_ts,
                        const struct timeval &active, const struct timeval &inactive)
 {
    struct timeval tmp1, tmp2;
-   timersub(&current_ts, &flow->flow_record.flowStartTimestamp, &tmp1);
-   timersub(&current_ts, &flow->flow_record.flowEndTimestamp, &tmp2);
+   timersub(&current_ts, &flow->flow_record.start_timestamp, &tmp1);
+   timersub(&current_ts, &flow->flow_record.end_timestamp, &tmp2);
 
    if (!flow->is_empty() && (timercmp(&tmp1, &active, >) || timercmp(&tmp2, &inactive, >))) {
       return true;
@@ -93,51 +93,51 @@ bool Flow::belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len) const
 
 void Flow::create(const Packet &pkt, uint64_t pkt_hash, char *pkt_key, uint8_t key_len)
 {
-   flow_record.flowFieldIndicator    = FLW_FLOWFIELDINDICATOR;
-   flow_record.packetTotalCount      = 1;
-   flow_record.flowFieldIndicator    |= FLW_PACKETTOTALCOUNT;
+   flow_record.field_indicator    = FLW_FLOWFIELDINDICATOR;
+   flow_record.pkt_total_cnt      = 1;
+   flow_record.field_indicator   |= FLW_PACKETTOTALCOUNT;
 
    hash = pkt_hash;
    memcpy(key, pkt_key, key_len);
 
-   if ((pkt.packetFieldIndicator & PCKT_INFO_MASK) == PCKT_INFO_MASK) {
-      flow_record.flowFieldIndicator |= FLW_HASH;
+   if ((pkt.field_indicator & PCKT_INFO_MASK) == PCKT_INFO_MASK) {
+      flow_record.field_indicator |= FLW_HASH;
    }
 
-   if ((pkt.packetFieldIndicator & PCKT_PCAP_MASK) == PCKT_PCAP_MASK) {
-      flow_record.flowStartTimestamp    = pkt.timestamp;
-      flow_record.flowEndTimestamp      = pkt.timestamp;
-      flow_record.flowFieldIndicator    |= FLW_TIMESTAMPS_MASK;
+   if ((pkt.field_indicator & PCKT_PCAP_MASK) == PCKT_PCAP_MASK) {
+      flow_record.start_timestamp          = pkt.timestamp;
+      flow_record.end_timestamp            = pkt.timestamp;
+      flow_record.field_indicator         |= FLW_TIMESTAMPS_MASK;
    }
 
-   if ((pkt.packetFieldIndicator & PCKT_IPV4_MASK) == PCKT_IPV4_MASK) {
-      flow_record.ipVersion                = pkt.ipVersion;
-      flow_record.protocolIdentifier       = pkt.protocolIdentifier;
-      flow_record.ipClassOfService         = pkt.ipClassOfService;
-      flow_record.ipTtl                    = pkt.ipTtl;
-      flow_record.sourceIPAddress.v4       = pkt.sourceIPAddress.v4;
-      flow_record.destinationIPAddress.v4  = pkt.destinationIPAddress.v4;
-      flow_record.octetTotalLength         = pkt.ipLength;
-      flow_record.flowFieldIndicator      |= (FLW_IPV4_MASK | FLW_IPSTAT_MASK);
-   } else if ((pkt.packetFieldIndicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
-      flow_record.ipVersion                = pkt.ipVersion;
-      flow_record.protocolIdentifier       = pkt.protocolIdentifier;
-      flow_record.ipClassOfService         = pkt.ipClassOfService;
-      memcpy(flow_record.sourceIPAddress.v6, pkt.sourceIPAddress.v6, 16);
-      memcpy(flow_record.destinationIPAddress.v6, pkt.destinationIPAddress.v6, 16);
-      flow_record.octetTotalLength         = pkt.ipLength;
-      flow_record.flowFieldIndicator      |= (FLW_IPV6_MASK | FLW_IPSTAT_MASK);
+   if ((pkt.field_indicator & PCKT_IPV4_MASK) == PCKT_IPV4_MASK) {
+      flow_record.ip_version               = pkt.ip_version;
+      flow_record.ip_proto                 = pkt.ip_proto;
+      flow_record.ip_tos                   = pkt.ip_tos;
+      flow_record.ip_ttl                   = pkt.ip_ttl;
+      flow_record.src_ip.v4                = pkt.src_ip.v4;
+      flow_record.dst_ip.v4                = pkt.dst_ip.v4;
+      flow_record.octet_total_length       = pkt.ip_length;
+      flow_record.field_indicator         |= (FLW_IPV4_MASK | FLW_IPSTAT_MASK);
+   } else if ((pkt.field_indicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
+      flow_record.ip_version               = pkt.ip_version;
+      flow_record.ip_proto                 = pkt.ip_proto;
+      flow_record.ip_tos                   = pkt.ip_tos;
+      memcpy(flow_record.src_ip.v6, pkt.src_ip.v6, 16);
+      memcpy(flow_record.dst_ip.v6, pkt.dst_ip.v6, 16);
+      flow_record.octet_total_length         = pkt.ip_length;
+      flow_record.field_indicator           |= (FLW_IPV6_MASK | FLW_IPSTAT_MASK);
    }
 
-   if ((pkt.packetFieldIndicator & PCKT_TCP_MASK) == PCKT_TCP_MASK) {
-      flow_record.sourceTransportPort      = pkt.sourceTransportPort;
-      flow_record.destinationTransportPort = pkt.destinationTransportPort;
-      flow_record.tcpControlBits           = pkt.tcpControlBits;
-      flow_record.flowFieldIndicator       |= FLW_TCP_MASK;
-   } else if ((pkt.packetFieldIndicator & PCKT_UDP_MASK) == PCKT_UDP_MASK) {
-      flow_record.sourceTransportPort      = pkt.sourceTransportPort;
-      flow_record.destinationTransportPort = pkt.destinationTransportPort;
-      flow_record.flowFieldIndicator       |= FLW_UDP_MASK;
+   if ((pkt.field_indicator & PCKT_TCP_MASK) == PCKT_TCP_MASK) {
+      flow_record.src_port                  = pkt.src_port;
+      flow_record.dst_port                  = pkt.dst_port;
+      flow_record.tcp_control_bits          = pkt.tcp_control_bits;
+      flow_record.field_indicator          |= FLW_TCP_MASK;
+   } else if ((pkt.field_indicator & PCKT_UDP_MASK) == PCKT_UDP_MASK) {
+      flow_record.src_port                  = pkt.src_port;
+      flow_record.dst_port                  = pkt.dst_port;
+      flow_record.field_indicator          |= FLW_UDP_MASK;
    }
 
    empty_flow = false;
@@ -145,18 +145,18 @@ void Flow::create(const Packet &pkt, uint64_t pkt_hash, char *pkt_key, uint8_t k
 
 void Flow::update(const Packet &pkt)
 {
-   flow_record.packetTotalCount += 1;
-   if ((pkt.packetFieldIndicator & PCKT_PCAP_MASK) == PCKT_PCAP_MASK) {
-      flow_record.flowEndTimestamp = pkt.timestamp;
+   flow_record.pkt_total_cnt += 1;
+   if ((pkt.field_indicator & PCKT_PCAP_MASK) == PCKT_PCAP_MASK) {
+      flow_record.end_timestamp = pkt.timestamp;
    }
-   if ((pkt.packetFieldIndicator & PCKT_IPV4_MASK) == PCKT_IPV4_MASK) {
-      flow_record.octetTotalLength += pkt.ipLength;
+   if ((pkt.field_indicator & PCKT_IPV4_MASK) == PCKT_IPV4_MASK) {
+      flow_record.octet_total_length += pkt.ip_length;
    }
-   if ((pkt.packetFieldIndicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
-      flow_record.octetTotalLength += pkt.ipLength;
+   if ((pkt.field_indicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
+      flow_record.octet_total_length += pkt.ip_length;
    }
-   if ((pkt.packetFieldIndicator & PCKT_TCP_MASK) == PCKT_TCP_MASK) {
-      flow_record.tcpControlBits |= pkt.tcpControlBits;
+   if ((pkt.field_indicator & PCKT_TCP_MASK) == PCKT_TCP_MASK) {
+      flow_record.tcp_control_bits |= pkt.tcp_control_bits;
    }
 }
 
@@ -331,30 +331,30 @@ bool NHTFlowCache::create_hash_key(Packet &pkt)
 {
    char *k = key;
 
-   if ((pkt.packetFieldIndicator & PCKT_IPV4_MASK) == PCKT_IPV4_MASK) {
-      *(uint8_t *) k = pkt.protocolIdentifier;
-      k += sizeof(pkt.protocolIdentifier);
-      *(uint32_t *) k = pkt.sourceIPAddress.v4;
-      k += sizeof(pkt.sourceIPAddress.v4);
-      *(uint32_t *) k = pkt.destinationIPAddress.v4;
-      k += sizeof(pkt.destinationIPAddress.v4);
-      *(uint16_t *) k = pkt.sourceTransportPort;
-      k += sizeof(pkt.sourceTransportPort);
-      *(uint16_t *) k = pkt.destinationTransportPort;
-      k += sizeof(pkt.destinationTransportPort);
+   if ((pkt.field_indicator & PCKT_IPV4_MASK) == PCKT_IPV4_MASK) {
+      *(uint8_t *) k = pkt.ip_proto;
+      k += sizeof(pkt.ip_proto);
+      *(uint32_t *) k = pkt.src_ip.v4;
+      k += sizeof(pkt.src_ip.v4);
+      *(uint32_t *) k = pkt.dst_ip.v4;
+      k += sizeof(pkt.dst_ip.v4);
+      *(uint16_t *) k = pkt.src_port;
+      k += sizeof(pkt.src_port);
+      *(uint16_t *) k = pkt.dst_port;
+      k += sizeof(pkt.dst_port);
       *k = '\0';
       key_len = 13;
-   } else if ((pkt.packetFieldIndicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
-      *(uint8_t *) k = pkt.protocolIdentifier;
-      k += sizeof(pkt.protocolIdentifier);
-      memcpy(k, pkt.sourceIPAddress.v6, sizeof(pkt.sourceIPAddress.v6));
-      k += sizeof(pkt.sourceIPAddress.v6);
-      memcpy(k, pkt.destinationIPAddress.v6, sizeof(pkt.sourceIPAddress.v6));
-      k += sizeof(pkt.destinationIPAddress.v6);
-      *(uint16_t *) k = pkt.sourceTransportPort;
-      k += sizeof(pkt.sourceTransportPort);
-      *(uint16_t *) k = pkt.destinationTransportPort;
-      k += sizeof(pkt.destinationTransportPort);
+   } else if ((pkt.field_indicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
+      *(uint8_t *) k = pkt.ip_proto;
+      k += sizeof(pkt.ip_proto);
+      memcpy(k, pkt.src_ip.v6, sizeof(pkt.src_ip.v6));
+      k += sizeof(pkt.src_ip.v6);
+      memcpy(k, pkt.dst_ip.v6, sizeof(pkt.src_ip.v6));
+      k += sizeof(pkt.dst_ip.v6);
+      *(uint16_t *) k = pkt.src_port;
+      k += sizeof(pkt.src_port);
+      *(uint16_t *) k = pkt.dst_port;
+      k += sizeof(pkt.dst_port);
       *k = '\0';
       key_len = 37;
    } else {

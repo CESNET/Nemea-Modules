@@ -112,7 +112,7 @@ NTPPlugin::NTPPlugin(const options_t &module_options, vector<plugin_opt> plugin_
  */
 int NTPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 {
-   if (pkt.destinationTransportPort == 123 || pkt.sourceTransportPort == 123) {
+   if (pkt.dst_port == 123 || pkt.src_port == 123) {
       add_ext_ntp(rec, pkt);
       return FLOW_FLUSH;
    }
@@ -172,9 +172,9 @@ bool NTPPlugin::parse_ntp(const Packet &pkt, RecordExtNTP *ntp_data_ext)
    string result = "", result2 = "";
    ostringstream convert, convert2;
    string str;
-   payload = (unsigned char *) pkt.transportPayloadPacketSection;
+   payload = (unsigned char *) pkt.payload;
 
-   if (pkt.transportPayloadPacketSectionSize == 0) {
+   if (pkt.payload_length == 0) {
       DEBUG_MSG("Parser quits:\tpayload length = 0\n");
       return false; /*Don't add extension to  paket.*/
    }
@@ -415,7 +415,7 @@ string NTPPlugin::parse_timestamp(const Packet &pkt, int p1, int p4, int p5, int
    float fract = 0.0f;
    uint32_t tmp = 0;
    float curfract = 0.5;
-   payload = (unsigned char *) pkt.transportPayloadPacketSection;
+   payload = (unsigned char *) pkt.payload;
 
       /* ********************
       * SECONDS CALCULATION.*

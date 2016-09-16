@@ -133,14 +133,14 @@ inline uint16_t parse_ipv4_hdr(const u_char *data_ptr, Packet *pkt)
 {
    struct iphdr *ip = (struct iphdr *) data_ptr;
 
-   pkt->packetFieldIndicator |= PCKT_IPV4_MASK;
-   pkt->ipVersion = ip->version;
-   pkt->protocolIdentifier = ip->protocol;
-   pkt->ipClassOfService = ip->tos;
-   pkt->ipLength = ntohs(ip->tot_len);
-   pkt->ipTtl = ip->ttl;
-   pkt->sourceIPAddress.v4 = ip->saddr;
-   pkt->destinationIPAddress.v4 = ip->daddr;
+   pkt->field_indicator |= PCKT_IPV4_MASK;
+   pkt->ip_version = ip->version;
+   pkt->ip_proto = ip->protocol;
+   pkt->ip_tos = ip->tos;
+   pkt->ip_length = ntohs(ip->tot_len);
+   pkt->ip_ttl = ip->ttl;
+   pkt->src_ip.v4 = ip->saddr;
+   pkt->dst_ip.v4 = ip->daddr;
 
    DEBUG_MSG("IPv4 header:\n");
    DEBUG_MSG("\tHDR version:\t%u\n",   ip->version);
@@ -169,13 +169,13 @@ inline uint16_t parse_ipv6_hdr(const u_char *data_ptr, Packet *pkt)
    struct ip6_hdr *ip6 = (struct ip6_hdr *) data_ptr;
    uint16_t hdr_len = 40;
 
-   pkt->packetFieldIndicator |= PCKT_IPV6_MASK;
-   pkt->ipVersion = (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0xf0000000) >> 28;
-   pkt->ipClassOfService = (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0x0ff00000) >> 20;
-   pkt->protocolIdentifier = ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;
-   pkt->ipLength = ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);
-   memcpy(pkt->sourceIPAddress.v6, (const char *) &ip6->ip6_src, 16);
-   memcpy(pkt->destinationIPAddress.v6, (const char *) &ip6->ip6_dst, 16);
+   pkt->field_indicator |= PCKT_IPV6_MASK;
+   pkt->ip_version = (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0xf0000000) >> 28;
+   pkt->ip_tos = (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0x0ff00000) >> 20;
+   pkt->ip_proto = ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;
+   pkt->ip_length = ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);
+   memcpy(pkt->src_ip.v6, (const char *) &ip6->ip6_src, 16);
+   memcpy(pkt->dst_ip.v6, (const char *) &ip6->ip6_dst, 16);
 
    DEBUG_CODE(char buffer[INET6_ADDRSTRLEN]);
    DEBUG_MSG("IPv6 header:\n");
@@ -204,11 +204,11 @@ inline uint16_t parse_tcp_hdr(const u_char *data_ptr, Packet *pkt)
 {
    struct tcphdr *tcp = (struct tcphdr *) data_ptr;
 
-   pkt->packetFieldIndicator |= PCKT_PAYLOAD_MASK;
-   pkt->packetFieldIndicator |= PCKT_TCP_MASK;
-   pkt->sourceTransportPort = ntohs(tcp->source);
-   pkt->destinationTransportPort = ntohs(tcp->dest);
-   pkt->tcpControlBits = (uint8_t) *(data_ptr + 13) & 0x3F;
+   pkt->field_indicator |= PCKT_PAYLOAD_MASK;
+   pkt->field_indicator |= PCKT_TCP_MASK;
+   pkt->src_port = ntohs(tcp->source);
+   pkt->dst_port = ntohs(tcp->dest);
+   pkt->tcp_control_bits = (uint8_t) *(data_ptr + 13) & 0x3F;
 
    DEBUG_MSG("TCP header:\n");
    DEBUG_MSG("\tSrc port:\t%u\n",   ntohs(tcp->source));
@@ -238,10 +238,10 @@ inline uint16_t parse_udp_hdr(const u_char *data_ptr, Packet *pkt)
 {
    struct udphdr *udp = (struct udphdr *) data_ptr;
 
-   pkt->packetFieldIndicator |= PCKT_PAYLOAD_MASK;
-   pkt->packetFieldIndicator |= PCKT_UDP_MASK;
-   pkt->sourceTransportPort = ntohs(udp->source);
-   pkt->destinationTransportPort = ntohs(udp->dest);
+   pkt->field_indicator |= PCKT_PAYLOAD_MASK;
+   pkt->field_indicator |= PCKT_UDP_MASK;
+   pkt->src_port = ntohs(udp->source);
+   pkt->dst_port = ntohs(udp->dest);
 
    DEBUG_MSG("UDP header:\n");
    DEBUG_MSG("\tSrc port:\t%u\n",   ntohs(udp->source));
@@ -272,11 +272,11 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
    DEBUG_MSG("Time:\t\t\t%s.%06lu\n",     timestamp, h->ts.tv_usec);
    DEBUG_MSG("Packet length:\t\tcaplen=%uB len=%uB\n\n", h->caplen, h->len);
 
-   pkt->packetFieldIndicator = PCKT_PCAP_MASK;
+   pkt->field_indicator = PCKT_PCAP_MASK;
    pkt->timestamp = h->ts;
-   pkt->sourceTransportPort = 0;
-   pkt->destinationTransportPort = 0;
-   pkt->protocolIdentifier = 0;
+   pkt->src_port = 0;
+   pkt->dst_port = 0;
+   pkt->ip_proto = 0;
 
    data_offset = parse_eth_hdr(data, pkt);
    if (pkt->ethertype == ETH_P_IP) {
@@ -285,9 +285,9 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
       data_offset += parse_ipv6_hdr(data + data_offset, pkt);
    }
 
-   if (pkt->protocolIdentifier == IPPROTO_TCP) {
+   if (pkt->ip_proto == IPPROTO_TCP) {
       data_offset += parse_tcp_hdr(data + data_offset, pkt);
-   } else if (pkt->protocolIdentifier == IPPROTO_UDP) {
+   } else if (pkt->ip_proto == IPPROTO_UDP) {
       data_offset += parse_udp_hdr(data + data_offset, pkt);
    }
 
@@ -298,12 +298,12 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
    }
    memcpy(pkt->packet, data, len);
    pkt->packet[len] = 0;
-   pkt->packetTotalLength = len;
+   pkt->total_length = len;
 
-   pkt->transportPayloadPacketSectionSize = len - data_offset;
-   pkt->transportPayloadPacketSection = pkt->packet + data_offset;
+   pkt->payload_length = len - data_offset;
+   pkt->payload = pkt->packet + data_offset;
 
-   DEBUG_MSG("Payload length:\t%u\n", pkt->transportPayloadPacketSectionSize);
+   DEBUG_MSG("Payload length:\t%u\n", pkt->payload_length);
    DEBUG_MSG("Packet parser exits: packet parsed\n");
    packet_valid = true;
 }

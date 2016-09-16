@@ -124,8 +124,8 @@ DNSPlugin::DNSPlugin(const options_t &module_options, vector<plugin_opt> plugin_
 
 int DNSPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 {
-   if (pkt.destinationTransportPort == 53 || pkt.sourceTransportPort == 53) {
-      return add_ext_dns(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, pkt.protocolIdentifier == IPPROTO_TCP, rec);
+   if (pkt.dst_port == 53 || pkt.src_port == 53) {
+      return add_ext_dns(pkt.payload, pkt.payload_length, pkt.ip_proto == IPPROTO_TCP, rec);
    }
 
    return 0;
@@ -133,12 +133,12 @@ int DNSPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 
 int DNSPlugin::pre_update(FlowRecord &rec, Packet &pkt)
 {
-   if (pkt.destinationTransportPort == 53 || pkt.sourceTransportPort == 53) {
+   if (pkt.dst_port == 53 || pkt.src_port == 53) {
       RecordExt *ext = rec.getExtension(dns);
-      if(ext == NULL) {
-         return add_ext_dns(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, pkt.protocolIdentifier == IPPROTO_TCP, rec);
+      if (ext == NULL) {
+         return add_ext_dns(pkt.payload, pkt.payload_length, pkt.ip_proto == IPPROTO_TCP, rec);
       } else {
-         parse_dns(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, pkt.protocolIdentifier == IPPROTO_TCP, dynamic_cast<RecordExtDNS *>(ext));
+         parse_dns(pkt.payload, pkt.payload_length, pkt.ip_proto == IPPROTO_TCP, dynamic_cast<RecordExtDNS *>(ext));
       }
       return FLOW_FLUSH;
    }
