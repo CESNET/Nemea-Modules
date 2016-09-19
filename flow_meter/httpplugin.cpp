@@ -151,9 +151,9 @@ void HTTPPlugin::finish()
 {
    if (print_stats) {
       cout << "HTTP plugin stats:" << endl;
-      cout << "Parsed http requests: " << requests << endl;
-      cout << "Parsed http responses: " << responses << endl;
-      cout << "Total http packets processed: " << total << endl;
+      cout << "   Parsed http requests: " << requests << endl;
+      cout << "   Parsed http responses: " << responses << endl;
+      cout << "   Total http packets processed: " << total << endl;
    }
 }
 

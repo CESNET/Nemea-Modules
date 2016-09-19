@@ -150,9 +150,9 @@ void DNSPlugin::finish()
 {
    if (print_stats) {
       cout << "DNS plugin stats:" << endl;
-      cout << "Parsed dns queries: " << queries << endl;
-      cout << "Parsed dns responses: " << responses << endl;
-      cout << "Total dns packets processed: " << total << endl;
+      cout << "   Parsed dns queries: " << queries << endl;
+      cout << "   Parsed dns responses: " << responses << endl;
+      cout << "   Total dns packets processed: " << total << endl;
    }
 }
 

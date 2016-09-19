@@ -127,9 +127,9 @@ void NTPPlugin::finish()
 {
    if (print_stats) {
       cout << "NTP plugin stats:" << endl;
-      cout << "Parsed NTP requests: " << requests << endl;
-      cout << "Parsed NTP responses: " << responses << endl;
-      cout << "Total NTP packets processed: " << total << endl;
+      cout << "   Parsed NTP requests: " << requests << endl;
+      cout << "   Parsed NTP responses: " << responses << endl;
+      cout << "   Total NTP packets processed: " << total << endl;
    }
 }
 

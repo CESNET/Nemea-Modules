@@ -115,9 +115,9 @@ void SIPPlugin::finish()
 {
    if (print_stats) {
       cout << "SIP plugin stats:" << endl;
-      cout << "Parsed sip requests: " << requests << endl;
-      cout << "Parsed sip responses: " << responses << endl;
-      cout << "Total sip packets processed: " << total << endl;
+      cout << "   Parsed sip requests: " << requests << endl;
+      cout << "   Parsed sip responses: " << responses << endl;
+      cout << "   Total sip packets processed: " << total << endl;
    }
 }
 string SIPPlugin::get_unirec_field_string()
