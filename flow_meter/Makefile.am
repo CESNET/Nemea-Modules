@@ -29,7 +29,9 @@ flow_meter_SOURCES=flow_meter.cpp \
 		    dnsplugin.h \
 		    ntpplugin.cpp \
 		    ntpplugin.h \
-		    ipaddr.h
+		    ipaddr.h \
+		    arpplugin.cpp \
+		    arpplugin.h
 
 
 flow_meter_LDADD=-ltrap -lunirec -lnemea-common -lpcap
