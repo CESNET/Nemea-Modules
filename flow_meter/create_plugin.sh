@@ -169,7 +169,7 @@ void ${PLUGIN_UPPER}Plugin::pre_export(FlowRecord &rec)
 void ${PLUGIN_UPPER}Plugin::finish()
 {
    if (print_stats) {
-      //cout << "${PLUGIN_UPPER} plugin stats:" << endl;
+      //cout << \"${PLUGIN_UPPER} plugin stats:\" << endl;
    }
 }
 
