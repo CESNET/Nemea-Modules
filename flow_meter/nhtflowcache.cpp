@@ -192,15 +192,14 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       return 0;
    }
 
-   uint32_t hashval = SuperFastHash(key, key_len); // calculates hash value from key created before
+   uint32_t hashval = SuperFastHash(key, key_len); /* Calculates hash value from key created before. */
 
-   // Find place for packet
-   int line_index = ((hashval % size) / line_size) * line_size;
+   int line_index = ((hashval % size) / line_size) * line_size; /* Find place for packet. */
+   int flow_index = 0, next_line = line_index + line_size;
 
    bool found = false;
-   int flow_index = 0;
 
-   for (flow_index = line_index; flow_index < (line_index + line_size); flow_index++) {
+   for (flow_index = line_index; flow_index < next_line; flow_index++) {
       if (flow_array[flow_index]->belongs(hashval, key, key_len)) {
          found = true;
          break;
@@ -227,14 +226,14 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       hits++;
 #endif /* FLOWCACHE_STATS */
    } else {
-      for (flow_index = line_index; flow_index < (line_index + line_size); flow_index++) {
+      for (flow_index = line_index; flow_index < next_line; flow_index++) {
          if (flow_array[flow_index]->is_empty()) {
             found = true;
             break;
          }
       }
       if (!found) {
-         flow_index = line_index + line_size - 1;
+         flow_index = next_line - 1;
 
          // Export flow
          plugins_pre_export(flow_array[flow_index]->flow_record);
@@ -253,7 +252,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
          flow_array[flow_index] = ptr_flow;
 #ifdef FLOWCACHE_STATS
          not_empty++;
-      else {
+      } else {
          empty++;
 #endif /* FLOWCACHE_STATS */
       }
