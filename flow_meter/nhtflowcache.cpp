@@ -211,8 +211,10 @@ int NHTFlowCache::put_pkt(Packet &pkt)
    }
 
    if (found) {
+#ifdef FLOWCACHE_STATS
       lookups += (flow_index - line_index + 1);
       lookups2 += (flow_index - line_index + 1) * (flow_index - line_index + 1);
+#endif /* FLOWCACHE_STATS */
       int relpos = flow_index - line_index;
       int newrel = rpl[relpos];
       int flow_index_start = line_index + newrel;
@@ -224,7 +226,9 @@ int NHTFlowCache::put_pkt(Packet &pkt)
 
       flow_array[flow_index_start] = ptr_flow;
       flow_index = flow_index_start;
+#ifdef FLOWCACHE_STATS
       hits++;
+#endif /* FLOWCACHE_STATS */
    } else {
       for (flow_index = line_index; flow_index < (line_index + line_size); flow_index++) {
          if (flow_array[flow_index]->is_empty()) {
@@ -239,7 +243,9 @@ int NHTFlowCache::put_pkt(Packet &pkt)
          plugins_pre_export(flow_array[flow_index]->flow_record);
          exporter->export_flow(flow_array[flow_index]->flow_record);
 
+#ifdef FLOWCACHE_STATS
          expired++;
+#endif /* FLOWCACHE_STATS */
          int flow_index_start = line_index + insertpos;
          Flow *ptr_flow = flow_array[flow_index];
          ptr_flow->erase();
@@ -248,9 +254,11 @@ int NHTFlowCache::put_pkt(Packet &pkt)
          }
          flow_index = flow_index_start;
          flow_array[flow_index] = ptr_flow;
+#ifdef FLOWCACHE_STATS
          not_empty++;
-      } else {
+      else {
          empty++;
+#endif /* FLOWCACHE_STATS */
       }
    }
 
@@ -261,7 +269,9 @@ int NHTFlowCache::put_pkt(Packet &pkt)
 
       if (ret & FLOW_FLUSH) {
          exporter->export_flow(flow_array[flow_index]->flow_record);
+#ifdef FLOWCACHE_STATS
          flushed++;
+#endif /* FLOWCACHE_STATS */
          flow_array[flow_index]->erase();
       }
    } else {
@@ -269,7 +279,9 @@ int NHTFlowCache::put_pkt(Packet &pkt)
 
       if (ret & FLOW_FLUSH) {
          exporter->export_flow(flow_array[flow_index]->flow_record);
+#ifdef FLOWCACHE_STATS
          flushed++;
+#endif /* FLOWCACHE_STATS */
          flow_array[flow_index]->erase();
 
          return put_pkt(pkt);
@@ -279,7 +291,9 @@ int NHTFlowCache::put_pkt(Packet &pkt)
 
          if (ret & FLOW_FLUSH) {
             exporter->export_flow(flow_array[flow_index]->flow_record);
+#ifdef FLOWCACHE_STATS
             flushed++;
+#endif /* FLOWCACHE_STATS */
             flow_array[flow_index]->erase();
 
             return put_pkt(pkt);
@@ -305,7 +319,9 @@ int NHTFlowCache::export_expired(bool export_all)
          exporter->export_flow(flow_array[i]->flow_record);
 
          flow_array[i]->erase();
+#ifdef FLOWCACHE_STATS
          expired++;
+#endif /* FLOWCACHE_STATS */
          exported++;
       }
    }
@@ -366,6 +382,7 @@ bool NHTFlowCache::create_hash_key(Packet &pkt)
 
 void NHTFlowCache::print_report()
 {
+#ifdef FLOWCACHE_STATS
    float tmp = float(lookups) / hits;
 
    cout << "Hits: " << hits << endl;
@@ -375,4 +392,5 @@ void NHTFlowCache::print_report()
    cout << "Flushed: " << flushed << endl;
    cout << "Average Lookup:  " << tmp << endl;
    cout << "Variance Lookup: " << float(lookups2) / hits - tmp * tmp << endl;
+#endif /* FLOWCACHE_STATS */
 }

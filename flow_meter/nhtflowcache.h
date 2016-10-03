@@ -98,6 +98,7 @@ class NHTFlowCache : public FlowCache
    int line_size;
    int size;
    int insertpos;
+#ifdef FLOWCACHE_STATS
    long empty;
    long not_empty;
    long hits;
@@ -105,6 +106,7 @@ class NHTFlowCache : public FlowCache
    long flushed;
    long lookups;
    long lookups2;
+#endif /* FLOWCACHE_STATS */
    struct timeval current_ts;
    struct timeval last_ts;
    struct timeval active;
@@ -118,14 +120,16 @@ public:
    NHTFlowCache(const options_t &options)
    {
       line_size = options.flow_line_size;
+      size = options.flow_cache_size;
+#ifdef FLOWCACHE_STATS
       empty = 0;
       not_empty = 0;
       hits = 0;
       expired = 0;
       flushed = 0;
-      size = options.flow_cache_size;
       lookups = 0;
       lookups2 = 0;
+#endif /* FLOWCACHE_STATS */
       policy = options.replacement_string;
       print_stats = options.print_stats;
       active = options.active_timeout;
