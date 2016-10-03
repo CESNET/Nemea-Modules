@@ -66,11 +66,8 @@ using namespace std;
 inline bool is_expired(const Flow *flow, const struct timeval &current_ts,
                        const struct timeval &active, const struct timeval &inactive)
 {
-   struct timeval tmp1, tmp2;
-   timersub(&current_ts, &flow->flow_record.start_timestamp, &tmp1);
-   timersub(&current_ts, &flow->flow_record.end_timestamp, &tmp2);
-
-   if (!flow->is_empty() && (timercmp(&tmp1, &active, >) || timercmp(&tmp2, &inactive, >))) {
+   if (!flow->is_empty() && ( current_ts.tv_sec - flow->flow_record.start_timestamp.tv_sec >= active.tv_sec ||
+      current_ts.tv_sec - flow->flow_record.end_timestamp.tv_sec >= inactive.tv_sec)) {
       return true;
    } else {
       return false;
