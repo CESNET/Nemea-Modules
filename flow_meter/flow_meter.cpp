@@ -88,7 +88,7 @@ static int stop = 0;
   PARAM('I', "interface", "Capture from given network interface. Parameter require interface name (eth0 for example).", required_argument, "string")\
   PARAM('r', "file", "Pcap file to read. - to read from stdin.", required_argument, "string") \
   PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: DOUBLE:DOUBLE. Value default means use default value 300.0:30.0.", required_argument, "string") \
-  PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 168 bytes. Value 0 means use default value 65536.", required_argument, "uint32") \
+  PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 176 bytes. default means use value 65536.", required_argument, "string") \
   PARAM('S', "cache-statistics", "Print flow cache statistics. NUMBER specifies interval between prints.", required_argument, "float") \
   PARAM('P', "pcap-statistics", "Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.", no_argument, "none") \
   PARAM('m', "sample", "Sampling probability. NUMBER in 100 (DEFAULT: 100).", required_argument, "uint32") \
@@ -345,18 +345,16 @@ int main(int argc, char *argv[])
          options.pcap_file = string(optarg);
          break;
       case 's':
-         {
+         if (strcmp(optarg, "default")) {
             uint32_t tmp;
-            if (!str_to_uint32(optarg, tmp)) {
+            if (!str_to_uint32(optarg, tmp) || tmp == 0) {
                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                TRAP_DEFAULT_FINALIZATION();
                return error("Invalid argument for option -s");
             }
-
             options.flow_cache_size = tmp;
-            if (options.flow_cache_size == 0) {
-               options.flow_cache_size = DEFAULT_FLOW_CACHE_SIZE;
-            }
+         } else {
+            options.flow_cache_size = DEFAULT_FLOW_CACHE_SIZE;
          }
          break;
       case 'S':

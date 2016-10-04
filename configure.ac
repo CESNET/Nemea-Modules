@@ -97,6 +97,12 @@ AC_ARG_WITH([flowcachesize],
 	CPPFLAGS="$CPPFLAGS -DFLOW_CACHE_SIZE=$withval"
 	]
 )
+AC_ARG_WITH([flowcachestats],
+	AC_HELP_STRING([--with-flowcachestats],[Enable print of flow cache stats when module exits.]),
+	[
+	CPPFLAGS="$CPPFLAGS -DFLOW_CACHE_STATS"
+	]
+)
 
 AC_ARG_WITH([nfreader],
 	AC_HELP_STRING([--without-nfreader], [Skip nfreader module.]),
