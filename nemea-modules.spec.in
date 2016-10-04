@@ -48,6 +48,7 @@ test -x %{_bindir}/nemea/flow_meter && setcap "CAP_NET_RAW+eip" %{_bindir}/nemea
 %{_bindir}/nemea/logger
 %{_bindir}/nemea/logreplay
 %{_bindir}/nemea/merger
+%{_bindir}/nemea/minerdetector2idea.py
 %{_bindir}/nemea/nfdump_reader
 %{_bindir}/nemea/nfdump_reader_test
 %{_bindir}/nemea/svm-tools
