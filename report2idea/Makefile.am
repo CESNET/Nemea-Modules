@@ -6,6 +6,7 @@ bin_SCRIPTS=hoststats2idea.py \
 			dnstunnel2idea.py \
 			bruteforce2idea.py \
 			haddrscan2idea.py \
+			sipbf2idea.py \
 			amplification2idea.py \
 			minerdetector2idea.py
 
