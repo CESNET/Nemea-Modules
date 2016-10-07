@@ -1,3 +1,6 @@
+2016-10-07 Nemea-modules-2.4.3
+        * added sipbf2idea reporter
+
 2016-10-04 Nemea-modules-2.4.2
         * flow_meter:
 		added arp plugin
