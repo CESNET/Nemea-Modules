@@ -88,16 +88,12 @@ public:
    void update(const Packet &pkt);
 };
 
-typedef vector<int> replacementvector_t;
-typedef replacementvector_t::iterator replacementvectoriter_t;
-
 class NHTFlowCache : public FlowCache
 {
    bool print_stats;
    uint8_t key_len;
    int line_size;
    int size;
-   int insertpos;
 #ifdef FLOW_CACHE_STATS
    long empty;
    long not_empty;
@@ -112,8 +108,6 @@ class NHTFlowCache : public FlowCache
    struct timeval active;
    struct timeval inactive;
    char key[MAX_KEY_LENGTH];
-   string policy;
-   replacementvector_t rpl;
    Flow **flow_array;
 
 public:
@@ -130,7 +124,6 @@ public:
       lookups = 0;
       lookups2 = 0;
 #endif /* FLOW_CACHE_STATS */
-      policy = options.replacement_string;
       print_stats = options.print_stats;
       active = options.active_timeout;
       inactive = options.inactive_timeout;
@@ -156,7 +149,6 @@ public:
    int export_expired(bool export_all);
 
 protected:
-   void parse_replacement_string();
    bool create_hash_key(Packet &pkt);
    void print_report();
 };

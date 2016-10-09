@@ -90,8 +90,7 @@ static int stop = 0;
   PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: DOUBLE:DOUBLE. Value default means use default value 300.0:30.0.", required_argument, "string") \
   PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 176 bytes. default means use value 65536.", required_argument, "string") \
   PARAM('S', "cache-statistics", "Print flow cache statistics. NUMBER specifies interval between prints.", required_argument, "float") \
-  PARAM('P', "pcap-statistics", "Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.", no_argument, "none") \
-  PARAM('V', "vector", "Replacement vector. 1+32 NUMBERS.", required_argument, "string")
+  PARAM('P', "pcap-statistics", "Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.", no_argument, "none")
 
 /**
  * \brief Parse input plugin settings.
@@ -259,7 +258,6 @@ int main(int argc, char *argv[])
    options.flow_line_size = DEFAULT_FLOW_LINE_SIZE;
    double_to_timeval(DEFAULT_INACTIVE_TIMEOUT, options.inactive_timeout);
    double_to_timeval(DEFAULT_ACTIVE_TIMEOUT, options.active_timeout);
-   options.replacement_string = DEFAULT_REPLACEMENT_STRING;
    options.print_stats = true; /* Plugins, FlowCache stats ON. */
    options.print_pcap_stats = false;
    options.interface = "";
@@ -383,9 +381,6 @@ int main(int argc, char *argv[])
          break;
       case 'P':
          options.print_pcap_stats = true;
-         break;
-      case 'V':
-         options.replacement_string = optarg;
          break;
       default:
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);

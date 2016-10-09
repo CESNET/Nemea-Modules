@@ -162,9 +162,6 @@ void Flow::update(const Packet &pkt)
 void NHTFlowCache::init()
 {
    plugins_init();
-   parse_replacement_string();
-   insertpos = rpl[0];
-   rpl.assign(rpl.begin() + 1, rpl.end());
 }
 
 void NHTFlowCache::finish()
@@ -211,9 +208,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       lookups += (flow_index - line_index + 1);
       lookups2 += (flow_index - line_index + 1) * (flow_index - line_index + 1);
 #endif /* FLOW_CACHE_STATS */
-      int relpos = flow_index - line_index;
-      int newrel = rpl[relpos];
-      int flow_index_start = line_index + newrel;
+      int flow_index_start = line_index;
 
       Flow *ptr_flow = flow_array[flow_index];
       for (int j = flow_index; j > flow_index_start; j--) {
@@ -242,7 +237,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
 #ifdef FLOW_CACHE_STATS
          expired++;
 #endif /* FLOW_CACHE_STATS */
-         int flow_index_start = line_index + insertpos;
+         int flow_index_start = line_index + 13;
          Flow *ptr_flow = flow_array[flow_index];
          ptr_flow->erase();
          for (int j = flow_index; j > flow_index_start; j--) {
@@ -325,19 +320,6 @@ int NHTFlowCache::export_expired(bool export_all)
 }
 
 // NHTFlowCache -- PROTECTED **************************************************
-
-void NHTFlowCache::parse_replacement_string()
-{
-   size_t search_pos = 0;
-   size_t search_pos_old = 0;
-
-   while ((search_pos = policy.find(',', search_pos)) != string::npos) {
-      rpl.push_back(atoi((char *) policy.substr(search_pos_old, search_pos - search_pos_old).c_str()));
-      search_pos++;
-      search_pos_old = search_pos;
-   }
-   rpl.push_back(atoi((char *) policy.substr(search_pos_old).c_str()));
-}
 
 bool NHTFlowCache::create_hash_key(Packet &pkt)
 {

@@ -18,7 +18,6 @@ This NEMEA module creates flows from input PCAP file / network interface and exp
 - `-s STRING`        Size of flow cache in number of flow records. Each flow record has 176 bytes. default means use value 65536.
 - `-S NUMBER`        Print flow cache statistics. `NUMBER` specifies interval between prints.
 - `-P`               Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.
-- `-V STRING`        Replacement vector. 1+32 NUMBERS.
 
 ### Common TRAP parameters
 - `-h [trap,1]`      Print help message for this module / for libtrap specific parameters.
