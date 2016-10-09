@@ -378,10 +378,11 @@ int PcapReader::open_file(const string &file, bool parse_every_pkt)
 /**
  * \brief Initialize network interface for reading.
  * \param [in] interface Interface name.
+ * \param [in] snaplen Snapshot length to be set on pcap handle.
  * \param [in] parse_every_pkt Try to parse every captured packet.
  * \return 0 on success, non 0 on failure + error_msg is filled with error message
  */
-int PcapReader::init_interface(const string &interface, bool parse_every_pkt)
+int PcapReader::init_interface(const string &interface, int snaplen, bool parse_every_pkt)
 {
    if (handle != NULL) {
       error_msg = "Interface or pcap file is already opened.";
@@ -391,7 +392,7 @@ int PcapReader::init_interface(const string &interface, bool parse_every_pkt)
    char errbuf[PCAP_ERRBUF_SIZE];
    errbuf[0] = 0;
 
-   handle = pcap_open_live(interface.c_str(), MAXPCKTSIZE, 1, READ_TIMEOUT, errbuf);
+   handle = pcap_open_live(interface.c_str(), snaplen, 1, READ_TIMEOUT, errbuf);
    if (handle == NULL) {
       error_msg = errbuf;
       return 2;

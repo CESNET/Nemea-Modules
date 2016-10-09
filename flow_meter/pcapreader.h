@@ -54,6 +54,16 @@
 
 using namespace std;
 
+/*
+ * \brief Minimum snapshot length of pcap handle.
+ */
+#define MIN_SNAPLEN  120
+
+/*
+ * \brief Maximum snapshot length of pcap handle.
+ */
+#define MAX_SNAPLEN  65535
+
 /**
  * \brief Class for reading packets from file or network interface.
  */
@@ -65,7 +75,7 @@ public:
    ~PcapReader();
 
    int open_file(const string &file, bool parse_every_pkt);
-   int init_interface(const string &interface, bool parse_every_pkt);
+   int init_interface(const string &interface, int snaplen, bool parse_every_pkt);
    void print_stats();
    void close();
    int get_pkt(Packet &packet);

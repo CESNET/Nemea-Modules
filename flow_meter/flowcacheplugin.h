@@ -66,6 +66,8 @@
  */
 #define EXPORT_PACKET   (0x1 << 1)
 
+#define MAX_PAYLOAD_LENGTH MAXPCKTSIZE
+
 using namespace std;
 
 /**
@@ -196,6 +198,11 @@ public:
    vector<plugin_opt> &get_options()
    {
       return options;
+   }
+
+   virtual uint32_t max_payload_length()
+   {
+      return MAX_PAYLOAD_LENGTH;
    }
 
    vector<plugin_opt> options; /**< Plugin options. */

@@ -87,6 +87,7 @@ static int stop = 0;
   PARAM('c', "count", "Quit after number of packets are captured.", required_argument, "uint32")\
   PARAM('I', "interface", "Capture from given network interface. Parameter require interface name (eth0 for example).", required_argument, "string")\
   PARAM('r', "file", "Pcap file to read. - to read from stdin.", required_argument, "string") \
+  PARAM('l', "snapshot_len", "Snapshot length when reading packets. Set value between 120-65535.", required_argument, "uint32") \
   PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: DOUBLE:DOUBLE. Value default means use default value 300.0:30.0.", required_argument, "string") \
   PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 176 bytes. default means use value 65536.", required_argument, "string") \
   PARAM('S', "cache-statistics", "Print flow cache statistics. NUMBER specifies interval between prints.", required_argument, "float") \
@@ -265,6 +266,7 @@ int main(int argc, char *argv[])
    options.print_pcap_stats = false;
    options.interface = "";
    options.basic_ifc_num = 0;
+   options.snaplen = 0;
 
    uint32_t pkt_limit = 0; // Limit of packets for packet parser. 0 = no limit
    int sampling = 100;
@@ -344,6 +346,20 @@ int main(int argc, char *argv[])
       case 'r':
          options.pcap_file = string(optarg);
          break;
+      case 'l':
+         if (!str_to_uint32(optarg, options.snaplen)) {
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+            TRAP_DEFAULT_FINALIZATION();
+            return error("Invalid argument for option -l");
+         }
+         if (options.snaplen < MIN_SNAPLEN) {
+            printf("Setting snapshot length to minimum value %d.\n", MIN_SNAPLEN);
+            options.snaplen = MIN_SNAPLEN;
+         } else if (options.snaplen > MAX_SNAPLEN) {
+            printf("Setting snapshot length to maximum value %d.\n", MAX_SNAPLEN);
+            options.snaplen = MAX_SNAPLEN;
+         }
+         break;
       case 's':
          if (strcmp(optarg, "default")) {
             uint32_t tmp;
@@ -416,10 +432,25 @@ int main(int argc, char *argv[])
    }
 
    bool parse_every_pkt = false;
+   uint32_t max_payload_size = 0;
+
    for (unsigned int i = 0; i < plugin_wrapper.plugins.size(); i++) {
+      /* Check if plugins need all packets. */
       if (!plugin_wrapper.plugins[i]->include_basic_flow_fields()) {
          parse_every_pkt = true;
       }
+      /* Get max payload size from plugins. */
+      if (max_payload_size < plugin_wrapper.plugins[i]->max_payload_length()) {
+         max_payload_size = plugin_wrapper.plugins[i]->max_payload_length();
+      }
+   }
+
+   if (options.snaplen == 0) { /* Check if user specified snapshot length. */
+      int max_snaplen = max_payload_size + MIN_SNAPLEN;
+      if (max_snaplen > MAXPCKTSIZE) {
+         max_snaplen = MAXPCKTSIZE;
+      }
+      options.snaplen = max_snaplen;
    }
 
    PcapReader packetloader(options);
@@ -430,7 +461,7 @@ int main(int argc, char *argv[])
          return error("Can't open input file: " + options.pcap_file);
       }
    } else {
-      if (packetloader.init_interface(options.interface, parse_every_pkt) != 0) {
+      if (packetloader.init_interface(options.interface, options.snaplen, parse_every_pkt) != 0) {
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
          return error("Unable to initialize libpcap: " + packetloader.error_msg);

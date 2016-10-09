@@ -74,6 +74,7 @@ struct options_t {
    bool print_pcap_stats;
    uint32_t flow_cache_size;
    uint32_t flow_line_size;
+   uint32_t snaplen;
    struct timeval inactive_timeout;
    struct timeval active_timeout;
    struct timeval cache_stats_interval;
