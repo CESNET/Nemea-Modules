@@ -379,7 +379,7 @@ int main(int argc, char *argv[])
             if (!str_to_double(optarg, tmp)) {
                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                TRAP_DEFAULT_FINALIZATION();
-               return error("Invalid argument for option -s");
+               return error("Invalid argument for option -S");
             }
             double_to_timeval(tmp, options.cache_stats_interval);
             options.print_stats = false; /* Plugins, FlowCache stats OFF.*/
