@@ -87,7 +87,7 @@ UR_FIELDS (
 /**
  * \brief Constructor.
  */
-UnirecExporter::UnirecExporter() : out_ifc_cnt(0), tmplt(NULL), record(NULL)
+UnirecExporter::UnirecExporter() : out_ifc_cnt(0), ifc_mapping(NULL), ifc_to_export(NULL), tmplt(NULL), record(NULL)
 {
 }
 
@@ -102,7 +102,6 @@ int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, 
 {
    out_ifc_cnt = ifc_cnt;
    basic_ifc_num = basic_ifc_number;
-   ifc_mapping.clear();
 
    tmplt = new ur_template_t*[out_ifc_cnt];
    record = new void*[out_ifc_cnt];
@@ -121,6 +120,15 @@ int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, 
          free_unirec_resources();
          return -2;
       }
+   }
+
+   ifc_mapping = new int[EXTENSION_CNT];
+   for (int i = 0; i < EXTENSION_CNT; i++) {
+      ifc_mapping[i] = -1;
+   }
+   ifc_to_export = new bool[out_ifc_cnt];
+   for (int i = 0; i < out_ifc_cnt; i++) {
+      ifc_to_export[i] = false;
    }
 
    string template_str;
@@ -208,30 +216,28 @@ void UnirecExporter::free_unirec_resources()
       delete [] record;
       record = NULL;
    }
+   if (ifc_mapping) {
+      delete [] ifc_mapping;
+      ifc_mapping = NULL;
+   }
+   if (ifc_to_export) {
+      delete [] ifc_to_export;
+      ifc_to_export = NULL;
+   }
 }
 
 int UnirecExporter::export_packet(Packet &pkt)
 {
    RecordExt *ext = pkt.exts;
-   vector<int> to_export; // Contains output ifc numbers.
    ur_template_t *tmplt_ptr = NULL;
    void *record_ptr = NULL;
 
    while (ext != NULL) {
-      map<int, int>::iterator it = ifc_mapping.find(ext->extType); // Find if mapping exists.
-      if (it != ifc_mapping.end()) {
-         int ifc_num = it->second;
-         if (ifc_num < 0) {
-            ext = ext->next;
-            continue;
-         }
-
+      int ifc_num = ifc_mapping[ext->extType];
+      if (ifc_num >= 0) {
          tmplt_ptr = tmplt[ifc_num];
          record_ptr = record[ifc_num];
-
-         if (find(to_export.begin(), to_export.end(), ifc_num) == to_export.end()) {
-            to_export.push_back(ifc_num);
-         }
+         ifc_to_export[ifc_num] = true;
 
          ur_clear_varlen(tmplt_ptr, record_ptr);
          memset(record_ptr, 0, ur_rec_fixlen_size(tmplt_ptr));
@@ -241,10 +247,13 @@ int UnirecExporter::export_packet(Packet &pkt)
       ext = ext->next;
    }
 
-   for (unsigned int i = 0; i < to_export.size(); i++) {
-      tmplt_ptr = tmplt[to_export[i]];
-      record_ptr = record[to_export[i]];
-      trap_send(to_export[i], record_ptr, ur_rec_fixlen_size(tmplt_ptr) + ur_rec_varlen_size(tmplt_ptr, record_ptr));
+   for (int i = 0; i < out_ifc_cnt; i++) {
+      if (ifc_to_export[i]) {
+         tmplt_ptr = tmplt[i];
+         record_ptr = record[i];
+         trap_send(i, record_ptr, ur_rec_fixlen_size(tmplt_ptr) + ur_rec_varlen_size(tmplt_ptr, record_ptr));
+         ifc_to_export[i] = false;
+      }
    }
 
    return 0;
@@ -253,7 +262,6 @@ int UnirecExporter::export_packet(Packet &pkt)
 int UnirecExporter::export_flow(FlowRecord &flow)
 {
    RecordExt *ext = flow.exts;
-   vector<int> to_export; // Contains output ifc numbers.
    ur_template_t *tmplt_ptr = NULL;
    void *record_ptr = NULL;
 
@@ -265,24 +273,15 @@ int UnirecExporter::export_flow(FlowRecord &flow)
       memset(record_ptr, 0, ur_rec_fixlen_size(tmplt_ptr));
 
       fill_basic_flow(flow, tmplt_ptr, record_ptr);
-      to_export.push_back(basic_ifc_num);
+      ifc_to_export[basic_ifc_num] = true;
    }
 
    while (ext != NULL) {
-      map<int, int>::iterator it = ifc_mapping.find(ext->extType); // Find if mapping exists.
-      if (it != ifc_mapping.end()) {
-         int ifc_num = it->second;
-         if (ifc_num < 0) {
-            ext = ext->next;
-            continue;
-         }
-
+      int ifc_num = ifc_mapping[ext->extType];
+      if (ifc_num >= 0) {
          tmplt_ptr = tmplt[ifc_num];
          record_ptr = record[ifc_num];
-
-         if (find(to_export.begin(), to_export.end(), ifc_num) == to_export.end()) {
-            to_export.push_back(ifc_num);
-         }
+         ifc_to_export[ifc_num] = true;
 
          ur_clear_varlen(tmplt_ptr, record_ptr);
          memset(record_ptr, 0, ur_rec_fixlen_size(tmplt_ptr));
@@ -293,10 +292,13 @@ int UnirecExporter::export_flow(FlowRecord &flow)
       ext = ext->next;
    }
 
-   for (unsigned int i = 0; i < to_export.size(); i++) {
-      tmplt_ptr = tmplt[to_export[i]];
-      record_ptr = record[to_export[i]];
-      trap_send(to_export[i], record_ptr, ur_rec_fixlen_size(tmplt_ptr) + ur_rec_varlen_size(tmplt_ptr, record_ptr));
+   for (int i = 0; i < out_ifc_cnt; i++) {
+      if (ifc_to_export[i]) {
+         tmplt_ptr = tmplt[i];
+         record_ptr = record[i];
+         trap_send(i, record_ptr, ur_rec_fixlen_size(tmplt_ptr) + ur_rec_varlen_size(tmplt_ptr, record_ptr));
+         ifc_to_export[i] = false;
+      }
    }
 
    return 0;

@@ -78,7 +78,8 @@ private:
 
    int out_ifc_cnt;           /**< Number of output interfaces. */
    int basic_ifc_num;         /**< Basic output interface number. */
-   map<int, int> ifc_mapping; /**< Contain extension id -> output interface number mapping. */
+   int *ifc_mapping;          /**< Contain extension id (as index) -> output interface number mapping. */
+   bool *ifc_to_export;       /**< Contain interfaces to export. */
    ur_template_t **tmplt;     /**< Pointer to unirec templates. */
    void **record;             /**< Pointer to unirec records. */
 };

@@ -129,8 +129,9 @@ enum extTypeEnum {
    dns,
    sip,
    ntp,
-   arp
+   arp,
    /* Add extension header identifiers for your plugins here */
+   EXTENSION_CNT
 };
 
 /**
