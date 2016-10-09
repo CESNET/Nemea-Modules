@@ -64,8 +64,8 @@ public:
    PcapReader(const options_t &options);
    ~PcapReader();
 
-   int open_file(const string &file);
-   int init_interface(const string &interface);
+   int open_file(const string &file, bool parse_every_pkt);
+   int init_interface(const string &interface, bool parse_every_pkt);
    void print_stats();
    void close();
    int get_pkt(Packet &packet);

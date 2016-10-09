@@ -89,6 +89,11 @@ static uint32_t s_total_pkts = 0;
 bool packet_valid = false;
 
 /**
+ * \brief Parse every packet.
+ */
+bool parse_all = false;
+
+/**
  * \brief Parse specific fields from ETHERNET frame header.
  * \param [in] data_ptr Pointer to begin of header.
  * \param [out] pkt Pointer to Packet structure where parsed fields will be stored.
@@ -283,12 +288,18 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
       data_offset += parse_ipv4_hdr(data + data_offset, pkt);
    } else if (pkt->ethertype == ETH_P_IPV6) {
       data_offset += parse_ipv6_hdr(data + data_offset, pkt);
+   } else if (!parse_all) {
+      DEBUG_MSG("Unknown ethertype %x\n", pkt->ethertype);
+      return;
    }
 
    if (pkt->ip_proto == IPPROTO_TCP) {
       data_offset += parse_tcp_hdr(data + data_offset, pkt);
    } else if (pkt->ip_proto == IPPROTO_UDP) {
       data_offset += parse_udp_hdr(data + data_offset, pkt);
+   } else if (!parse_all && pkt->ip_proto != IPPROTO_ICMP && pkt->ip_proto != IPPROTO_ICMPV6) {
+      DEBUG_MSG("Unknown transport protocol %x\n", pkt->ip_proto);
+      return;
    }
 
    uint32_t len = h->caplen;
@@ -337,9 +348,10 @@ PcapReader::~PcapReader()
 /**
  * \brief Open pcap file for reading.
  * \param [in] file Input file name.
+ * \param [in] parse_every_pkt Try to parse every captured packet.
  * \return 0 on success, non 0 on failure + error_msg is filled with error message
  */
-int PcapReader::open_file(const string &file)
+int PcapReader::open_file(const string &file, bool parse_every_pkt)
 {
    if (handle != NULL) {
       error_msg = "Interface or pcap file is already opened.";
@@ -358,6 +370,7 @@ int PcapReader::open_file(const string &file)
    }
 
    live_capture = false;
+   parse_all = parse_every_pkt;
    error_msg = "";
    return 0;
 }
@@ -365,9 +378,10 @@ int PcapReader::open_file(const string &file)
 /**
  * \brief Initialize network interface for reading.
  * \param [in] interface Interface name.
+ * \param [in] parse_every_pkt Try to parse every captured packet.
  * \return 0 on success, non 0 on failure + error_msg is filled with error message
  */
-int PcapReader::init_interface(const string &interface)
+int PcapReader::init_interface(const string &interface, bool parse_every_pkt)
 {
    if (handle != NULL) {
       error_msg = "Interface or pcap file is already opened.";
@@ -395,6 +409,7 @@ int PcapReader::init_interface(const string &interface)
    }
 
    live_capture = true;
+   parse_all = parse_every_pkt;
    error_msg = "";
    return 0;
 }

@@ -415,15 +415,22 @@ int main(int argc, char *argv[])
       return error("Size of flow line (32 by default) must divide size of flow cache.");
    }
 
+   bool parse_every_pkt = false;
+   for (unsigned int i = 0; i < plugin_wrapper.plugins.size(); i++) {
+      if (!plugin_wrapper.plugins[i]->include_basic_flow_fields()) {
+         parse_every_pkt = true;
+      }
+   }
+
    PcapReader packetloader(options);
    if (options.interface == "") {
-      if (packetloader.open_file(options.pcap_file) != 0) {
+      if (packetloader.open_file(options.pcap_file, parse_every_pkt) != 0) {
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
          return error("Can't open input file: " + options.pcap_file);
       }
    } else {
-      if (packetloader.init_interface(options.interface) != 0) {
+      if (packetloader.init_interface(options.interface, parse_every_pkt) != 0) {
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
          return error("Unable to initialize libpcap: " + packetloader.error_msg);
