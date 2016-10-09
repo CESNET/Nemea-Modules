@@ -53,7 +53,6 @@
 #include <cstring>
 #include <signal.h>
 #include <stdlib.h>
-#include <time.h>
 #include <limits>
 #include <errno.h>
 
@@ -92,7 +91,6 @@ static int stop = 0;
   PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 176 bytes. default means use value 65536.", required_argument, "string") \
   PARAM('S', "cache-statistics", "Print flow cache statistics. NUMBER specifies interval between prints.", required_argument, "float") \
   PARAM('P', "pcap-statistics", "Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.", no_argument, "none") \
-  PARAM('m', "sample", "Sampling probability. NUMBER in 100 (DEFAULT: 100).", required_argument, "uint32") \
   PARAM('V', "vector", "Replacement vector. 1+32 NUMBERS.", required_argument, "string")
 
 /**
@@ -269,8 +267,6 @@ int main(int argc, char *argv[])
    options.snaplen = 0;
 
    uint32_t pkt_limit = 0; // Limit of packets for packet parser. 0 = no limit
-   int sampling = 100;
-   srand(time(NULL));
 
    // ***** TRAP initialization *****
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
@@ -388,23 +384,6 @@ int main(int argc, char *argv[])
       case 'P':
          options.print_pcap_stats = true;
          break;
-      case 'm':
-         {
-            uint32_t tmp;
-            if (!str_to_uint32(optarg, tmp)) {
-               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-               TRAP_DEFAULT_FINALIZATION();
-               return error("Invalid argument for option -s");
-            }
-
-            sampling = tmp;
-            if (sampling < 0 || sampling > 100) {
-               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-               TRAP_DEFAULT_FINALIZATION();
-               return error("Invalid argument for option -m: interval needs to be between 0-100");
-            }
-         }
-         break;
       case 'V':
          options.replacement_string = optarg;
          break;
@@ -501,7 +480,7 @@ int main(int argc, char *argv[])
       }
 
       pkt_total++;
-      if (ret == 2 && (sampling == 100 || ((rand() % 100) + 1) <= sampling)) {
+      if (ret == 2) {
          flowcache.put_pkt(packet);
          pkt_parsed++;
 
