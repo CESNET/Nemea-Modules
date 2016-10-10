@@ -196,6 +196,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
 
    bool found = false;
 
+   /* Find existing flow record in flow cache. */
    for (flow_index = line_index; flow_index < next_line; flow_index++) {
       if (flow_array[flow_index]->belongs(hashval, key, key_len)) {
          found = true;
@@ -204,6 +205,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
    }
 
    if (found) {
+      /* Existing flow record was found, put flow record at the first index of flow line. */
 #ifdef FLOW_CACHE_STATS
       lookups += (flow_index - line_index + 1);
       lookups2 += (flow_index - line_index + 1) * (flow_index - line_index + 1);
@@ -221,6 +223,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       hits++;
 #endif /* FLOW_CACHE_STATS */
    } else {
+      /* Existing flow record was not found. Find free place in flow line. */
       for (flow_index = line_index; flow_index < next_line; flow_index++) {
          if (flow_array[flow_index]->is_empty()) {
             found = true;
@@ -228,6 +231,8 @@ int NHTFlowCache::put_pkt(Packet &pkt)
          }
       }
       if (!found) {
+         /* If free place was not found (flow line is full), find
+          * record which will be replaced by new record. */
          flow_index = next_line - 1;
 
          // Export flow
