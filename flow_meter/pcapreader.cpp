@@ -102,25 +102,34 @@ bool parse_all = false;
 inline uint16_t parse_eth_hdr(const u_char *data_ptr, Packet *pkt)
 {
    struct ethhdr *eth = (struct ethhdr *) data_ptr;
-   uint16_t hdr_len, ethertype = ntohs(eth->h_proto);
+   uint16_t hdr_len = 14, ethertype = ntohs(eth->h_proto);
 
    DEBUG_MSG("Ethernet header:\n");
    DEBUG_MSG("\tDest mac:\t%s\n",         ether_ntoa((struct ether_addr *) eth->h_dest));
    DEBUG_MSG("\tSrc mac:\t%s\n",          ether_ntoa((struct ether_addr *) eth->h_source));
    DEBUG_MSG("\tEthertype:\t%#06x\n",     ethertype);
 
-   if (ethertype == ETH_P_8021Q) {
-      DEBUG_CODE(uint16_t vlan = ntohs(*(unsigned uint32_t *) (data_ptr + 14)));
-      DEBUG_MSG("\t802.1Q field:\n");
+   if (ethertype == ETH_P_8021AD) {
+      DEBUG_CODE(uint16_t vlan = ntohs(*(uint16_t *) (data_ptr + hdr_len)));
+      DEBUG_MSG("\t802.1ad field:\n");
       DEBUG_MSG("\t\tPriority:\t%u\n",    ((vlan & 0xE000) >> 12));
       DEBUG_MSG("\t\tCFI:\t\t%u\n",       ((vlan & 0x1000) >> 11));
       DEBUG_MSG("\t\tVLAN:\t\t%u\n",      (vlan & 0x0FFF));
 
-      hdr_len = 18;
-      ethertype = ntohs(*(uint16_t *) &data_ptr[16]);
+      hdr_len += 4;
+      ethertype = ntohs(*(uint16_t *) (data_ptr + hdr_len - 2));
       DEBUG_MSG("\t\tEthertype:\t%#06x\n", ethertype);
-   } else {
-      hdr_len = 14;
+   }
+   if (ethertype == ETH_P_8021Q) {
+      DEBUG_CODE(uint16_t vlan = ntohs(*(uint16_t *) (data_ptr + hdr_len)));
+      DEBUG_MSG("\t802.1q field:\n");
+      DEBUG_MSG("\t\tPriority:\t%u\n",    ((vlan & 0xE000) >> 12));
+      DEBUG_MSG("\t\tCFI:\t\t%u\n",       ((vlan & 0x1000) >> 11));
+      DEBUG_MSG("\t\tVLAN:\t\t%u\n",      (vlan & 0x0FFF));
+
+      hdr_len += 4;
+      ethertype = ntohs(*(uint16_t *) (data_ptr + hdr_len - 2));
+      DEBUG_MSG("\t\tEthertype:\t%#06x\n", ethertype);
    }
 
    pkt->ethertype = ethertype;
