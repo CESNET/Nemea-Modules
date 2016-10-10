@@ -487,9 +487,9 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp, 
       uint16_t authority_rr_cnt = ntohs(dns->name_server_rec_cnt);
       uint16_t additional_rr_cnt = ntohs(dns->additional_rec_cnt);
 
-      rec->dns_answers = answer_rr_cnt;
-      rec->dns_id = ntohs(dns->id);
-      rec->dns_rcode = DNS_HDR_GET_RESPCODE(flags);
+      rec->answers = answer_rr_cnt;
+      rec->id = ntohs(dns->id);
+      rec->rcode = DNS_HDR_GET_RESPCODE(flags);
 
       DEBUG_MSG("%s number: %u\n",                    DNS_HDR_GET_QR(flags) ? "Response" : "Query",
                                                       DNS_HDR_GET_QR(flags) ? s_queries++ : s_responses++);
@@ -531,10 +531,10 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp, 
          }
 
          if (i == 0) { // Copy only first question.
-            rec->dns_qtype = ntohs(question->qtype);
-            rec->dns_qclass = ntohs(question->qclass);
-            memcpy(rec->dns_qname, name.c_str(), name.length());
-            rec->dns_qname[name.length()] = 0;
+            rec->qtype = ntohs(question->qtype);
+            rec->qclass = ntohs(question->qclass);
+            memcpy(rec->qname, name.c_str(), name.length());
+            rec->qname[name.length()] = 0;
          }
          DEBUG_MSG("\tType:\t\t\t%u\n",               ntohs(question->qtype));
          DEBUG_MSG("\tClass:\t\t\t%u\n",              ntohs(question->qclass));
@@ -572,16 +572,16 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp, 
          process_rdata(record_begin, data, rdata, ntohs(answer->atype), rdlength);
 
          if (i == 0) { // Copy only first answer.
-            rec->dns_rr_ttl = ntohl(answer->ttl);
+            rec->rr_ttl = ntohl(answer->ttl);
 
             size_t tmp = rdata.str().length();
-            if (tmp >= sizeof(rec->dns_data)) {
-               DEBUG_MSG("Truncating rdata (length = %lu) to %lu.\n", tmp, sizeof(rec->dns_data) - 1);
-               tmp = sizeof(rec->dns_data) - 1;
+            if (tmp >= sizeof(rec->data)) {
+               DEBUG_MSG("Truncating rdata (length = %lu) to %lu.\n", tmp, sizeof(rec->data) - 1);
+               tmp = sizeof(rec->data) - 1;
             }
-            memcpy(rec->dns_data, rdata.str().c_str(), tmp); // Copy processed rdata.
-            rec->dns_data[tmp] = 0; // Add terminating '\0' char.
-            rec->dns_rlength = tmp; // Report length.
+            memcpy(rec->data, rdata.str().c_str(), tmp); // Copy processed rdata.
+            rec->data[tmp] = 0; // Add terminating '\0' char.
+            rec->rlength = tmp; // Report length.
          }
          data += rdlength;
       }
@@ -654,7 +654,7 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp, 
 
             data += sizeof(struct dns_answer);
             rdlength = ntohs(answer->rdlength);
-            rec->dns_psize = ntohs(answer->aclass); // Copy requested UDP payload size. RFC 6891
+            rec->psize = ntohs(answer->aclass); // Copy requested UDP payload size. RFC 6891
             rec->dns_do = ((ntohl(answer->ttl) & 0x8000) >> 15); // Copy DO bit.
          }
 

@@ -61,31 +61,31 @@ using namespace std;
  * \brief Flow record extension header for storing HTTP requests.
  */
 struct RecordExtHTTPReq : RecordExt {
-   char httpReqMethod[10];
-   char httpReqHost[64];
-   char httpReqUrl[128];
-   char httpReqUserAgent[128];
-   char httpReqReferer[128];
+   char method[10];
+   char host[64];
+   char uri[128];
+   char user_agent[128];
+   char referer[128];
 
    /**
     * \brief Constructor.
     */
    RecordExtHTTPReq() : RecordExt(http_request)
    {
-      httpReqMethod[0] = 0;
-      httpReqHost[0] = 0;
-      httpReqUrl[0] = 0;
-      httpReqUserAgent[0] = 0;
-      httpReqReferer[0] = 0;
+      method[0] = 0;
+      host[0] = 0;
+      uri[0] = 0;
+      user_agent[0] = 0;
+      referer[0] = 0;
    }
 
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
-      ur_set_string(tmplt, record, F_HTTP_METHOD, httpReqMethod);
-      ur_set_string(tmplt, record, F_HTTP_HOST, httpReqHost);
-      ur_set_string(tmplt, record, F_HTTP_URL, httpReqUrl);
-      ur_set_string(tmplt, record, F_HTTP_USER_AGENT, httpReqUserAgent);
-      ur_set_string(tmplt, record, F_HTTP_REFERER, httpReqReferer);
+      ur_set_string(tmplt, record, F_HTTP_METHOD, method);
+      ur_set_string(tmplt, record, F_HTTP_HOST, host);
+      ur_set_string(tmplt, record, F_HTTP_URL, uri);
+      ur_set_string(tmplt, record, F_HTTP_USER_AGENT, user_agent);
+      ur_set_string(tmplt, record, F_HTTP_REFERER, referer);
    }
 };
 
@@ -93,22 +93,22 @@ struct RecordExtHTTPReq : RecordExt {
  * \brief Flow record extension header for storing HTTP responses.
  */
 struct RecordExtHTTPResp : RecordExt {
-   uint16_t httpRespCode;
-   char httpRespContentType[32];
+   uint16_t code;
+   char content_type[32];
 
    /**
     * \brief Constructor.
     */
    RecordExtHTTPResp() : RecordExt(http_response)
    {
-      httpRespCode = 0;
-      httpRespContentType[0] = 0;
+      code = 0;
+      content_type[0] = 0;
    }
 
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
-      ur_set(tmplt, record, F_HTTP_RESPONSE_CODE, httpRespCode);
-      ur_set_string(tmplt, record, F_HTTP_CONTENT_TYPE, httpRespContentType);
+      ur_set(tmplt, record, F_HTTP_RESPONSE_CODE, code);
+      ur_set_string(tmplt, record, F_HTTP_CONTENT_TYPE, content_type);
    }
 };
 
