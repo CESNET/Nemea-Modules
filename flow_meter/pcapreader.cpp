@@ -163,6 +163,45 @@ inline uint16_t parse_ipv4_hdr(const u_char *data_ptr, Packet *pkt)
 
    return (ip->ihl << 2);
 }
+
+/**
+ * \brief Skip IPv6 extension headers.
+ * \param [in] data_ptr Pointer to begin of header.
+ * \param [out] pkt Pointer to Packet structure where parsed fields will be stored.
+ * \return Length of headers in bytes.
+ */
+uint16_t skip_ipv6_ext_hdrs(const u_char *data_ptr, Packet *pkt)
+{
+   struct ip6_ext *ext = (struct ip6_ext *) data_ptr;
+   uint8_t next_hdr = pkt->ip_proto;
+   uint16_t hdrs_len = 0;
+
+   /* Skip extension headers... */
+   while (1) {
+      if (next_hdr == IPPROTO_HOPOPTS ||
+          next_hdr == IPPROTO_DSTOPTS) {
+         hdrs_len += (ext->ip6e_len << 3) + 8;
+      } else if (next_hdr == IPPROTO_ROUTING) {
+         struct ip6_rthdr *rt = (struct ip6_rthdr *) (data_ptr + hdrs_len);
+         hdrs_len += (rt->ip6r_len << 3) + 8;
+      } else if (next_hdr == IPPROTO_AH) {
+         hdrs_len += (ext->ip6e_len << 2) - 2;
+      } else if (next_hdr == IPPROTO_FRAGMENT) {
+         hdrs_len += 8;
+      } else {
+         break;
+      }
+      DEBUG_MSG("\tIPv6 extension header:\t%u\n", next_hdr);
+      DEBUG_MSG("\t\tLength:\t%u\n", ext->ip6e_len);
+
+      next_hdr = ext->ip6e_nxt;
+      ext = (struct ip6_ext *) (data_ptr + hdrs_len);
+      pkt->ip_proto = next_hdr;
+   }
+
+   return hdrs_len;
+}
+
 /**
  * \brief Parse specific fields from IPv6 header.
  * \param [in] data_ptr Pointer to begin of header.
@@ -195,6 +234,10 @@ inline uint16_t parse_ipv6_hdr(const u_char *data_ptr, Packet *pkt)
    DEBUG_MSG("\tSrc addr:\t%s\n",      buffer);
    DEBUG_CODE(inet_ntop(AF_INET6, (const void *) &ip6->ip6_dst, buffer, INET6_ADDRSTRLEN));
    DEBUG_MSG("\tDest addr:\t%s\n",     buffer);
+
+   if (pkt->ip_proto != IPPROTO_TCP && pkt->ip_proto != IPPROTO_UDP) {
+      hdr_len += skip_ipv6_ext_hdrs(data_ptr + hdr_len, pkt);
+   }
 
    return hdr_len;
 }
