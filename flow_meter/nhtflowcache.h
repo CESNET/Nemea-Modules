@@ -95,13 +95,13 @@ class NHTFlowCache : public FlowCache
    int line_size;
    int size;
 #ifdef FLOW_CACHE_STATS
-   long empty;
-   long not_empty;
-   long hits;
-   long expired;
-   long flushed;
-   long lookups;
-   long lookups2;
+   uint64_t empty;
+   uint64_t not_empty;
+   uint64_t hits;
+   uint64_t expired;
+   uint64_t flushed;
+   uint64_t lookups;
+   uint64_t lookups2;
 #endif /* FLOW_CACHE_STATS */
    struct timeval current_ts;
    struct timeval last_ts;
