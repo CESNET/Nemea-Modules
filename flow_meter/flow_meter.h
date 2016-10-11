@@ -68,6 +68,7 @@ const double DEFAULT_ACTIVE_TIMEOUT = 300.0;
  */
 struct options_t {
    int basic_ifc_num;
+   bool eof;
    bool print_stats;
    bool print_pcap_stats;
    uint32_t flow_cache_size;

@@ -87,7 +87,8 @@ UR_FIELDS (
 /**
  * \brief Constructor.
  */
-UnirecExporter::UnirecExporter() : out_ifc_cnt(0), ifc_mapping(NULL), ifc_to_export(NULL), tmplt(NULL), record(NULL)
+UnirecExporter::UnirecExporter(bool send_eof) : out_ifc_cnt(0), ifc_mapping(NULL), ifc_to_export(NULL),
+tmplt(NULL), record(NULL), eof(send_eof)
 {
 }
 
@@ -182,8 +183,10 @@ int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, 
  */
 void UnirecExporter::close()
 {
-   for (int i = 0; i < out_ifc_cnt; i++) {
-      trap_send(i, "", 1);
+   if (eof) {
+      for (int i = 0; i < out_ifc_cnt; i++) {
+         trap_send(i, "", 1);
+      }
    }
    trap_finalize();
 

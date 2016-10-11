@@ -86,6 +86,7 @@ static int stop = 0;
   PARAM('c', "count", "Quit after number of packets are captured.", required_argument, "uint32")\
   PARAM('I', "interface", "Capture from given network interface. Parameter require interface name (eth0 for example).", required_argument, "string")\
   PARAM('r', "file", "Pcap file to read. - to read from stdin.", required_argument, "string") \
+  PARAM('n', "no_eof", "Don't send EOF message when flow_meter exits.", no_argument, "none") \
   PARAM('l', "snapshot_len", "Snapshot length when reading packets. Set value between 120-65535.", required_argument, "uint32") \
   PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: DOUBLE:DOUBLE. Value default means use default value 300.0:30.0.", required_argument, "string") \
   PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 176 bytes. default means use value 65536.", required_argument, "string") \
@@ -263,6 +264,7 @@ int main(int argc, char *argv[])
    options.interface = "";
    options.basic_ifc_num = 0;
    options.snaplen = 0;
+   options.eof = true;
 
    uint32_t pkt_limit = 0; // Limit of packets for packet parser. 0 = no limit
 
@@ -339,6 +341,9 @@ int main(int argc, char *argv[])
          break;
       case 'r':
          options.pcap_file = string(optarg);
+         break;
+      case 'n':
+         options.eof = false;
          break;
       case 'l':
          if (!str_to_uint32(optarg, options.snaplen)) {
@@ -443,7 +448,7 @@ int main(int argc, char *argv[])
    }
 
    NHTFlowCache flowcache(options);
-   UnirecExporter flowwriter;
+   UnirecExporter flowwriter(options.eof);
 
    if (flowwriter.init(plugin_wrapper.plugins, module_info->num_ifc_out, options.basic_ifc_num) != 0) {
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);

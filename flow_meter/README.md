@@ -13,6 +13,7 @@ This NEMEA module creates flows from input PCAP file / network interface and exp
 - `-c NUMBER`        Quit after `NUMBER` of packets are captured.
 - `-I STRING`        Capture from given network interface. Parameter require interface name (eth0 for example).
 - `-r STRING`        Pcap file to read. `-` to read from stdin.
+- `-n`               Don't send eof when flow_meter exits.
 - `-l NUMBER`        Snapshot length when reading packets. Set value between `120`-`65535` .
 - `-t NUM:NUM`       Active and inactive timeout in seconds. Format: DOUBLE:DOUBLE. Value default means use default value 300.0:30.0.
 - `-s STRING`        Size of flow cache in number of flow records. Each flow record has 176 bytes. default means use value 65536.

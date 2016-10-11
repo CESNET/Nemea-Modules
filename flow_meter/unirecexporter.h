@@ -65,7 +65,7 @@ using namespace std;
 class UnirecExporter : public FlowExporter
 {
 public:
-   UnirecExporter();
+   UnirecExporter(bool send_eof);
    int init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, int basic_ifc_num);
    void close();
    int export_flow(FlowRecord &flow);
@@ -82,6 +82,7 @@ private:
    bool *ifc_to_export;       /**< Contain interfaces to export. */
    ur_template_t **tmplt;     /**< Pointer to unirec templates. */
    void **record;             /**< Pointer to unirec records. */
+   bool eof;                  /**< Send eof when module exits. */
 };
 
 #endif
