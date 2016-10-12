@@ -217,6 +217,7 @@ AC_CONFIG_FILES([Makefile
                  traffic_repeater/Makefile
                  unirecfilter/Makefile
                  endiverter/Makefile
+                 nfwriter/Makefile
                ])
 
 AC_SUBST(RPM_REQUIRES)
