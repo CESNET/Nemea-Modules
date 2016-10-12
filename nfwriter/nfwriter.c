@@ -220,7 +220,7 @@ int main(int argc, char **argv)
 
       /* Write record to file. */
       if (lnf_write(file, rec) != LNF_OK) {
-         printf("nfwriter: Error: unable to write flow to file\n");
+         fprintf(stderr, "nfwriter: Error: unable to write flow to file\n");
          module_status = 1;
          break;
       }
