@@ -48,7 +48,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <sys/time.h>
-#include <nemea-common/super_fast_hash.h>
+#include <nemea-common.h>
 
 #include "nhtflowcache.h"
 #include "flowcache.h"
