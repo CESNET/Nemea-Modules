@@ -56,9 +56,6 @@
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 
-#ifdef HAVE_LIBNFDUMP
-#  include <libnfdump.h>
-#else
 #  ifdef __cplusplus
 extern "C" {
 #  endif
@@ -66,7 +63,6 @@ extern "C" {
 #  ifdef __cplusplus
 }
 #  endif
-#endif /* HAVE_LIBNFDUMP */
 
 #include "fields.h"
 
@@ -113,13 +109,9 @@ void signal_handler(int signal)
 int main(int argc, char **argv)
 {
    int ret;
-#ifdef HAVE_LIBNFDUMP
-   nfdump_iter_t iter;
-#else
    lnf_brec1_t brec;
    lnf_rec_t * recp;
    lnf_file_t * filep;
-#endif /* HAVE_LIBNFDUMP */
    trap_ifc_spec_t ifc_spec;
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
@@ -144,15 +136,6 @@ int main(int argc, char **argv)
       return 2;
    }
 
-#ifdef HAVE_LIBNFDUMP
-   ret = nfdump_iter_start(&iter, argv[1], NULL);
-   if (ret != 0) {
-      fprintf(stderr, "Error when trying to open file \"%s\"\n", argv[1]);
-      trap_finalize();
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-      return 3;
-   }
-#else
    ret = lnf_open(&filep, argv[1], LNF_READ, NULL);
    if (ret != LNF_OK) {
       fprintf(stderr, "Error when trying to open file \"%s\"\n", argv[1]);
@@ -160,16 +143,11 @@ int main(int argc, char **argv)
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 3;
    }
-#endif /* HAVE_LIBNFDUMP */
 
    // Initialize TRAP library (create and init all interfaces)
    ret = trap_init(module_info, ifc_spec);
    if (ret != TRAP_E_OK) {
-#ifdef HAVE_LIBNFDUMP
-      nfdump_iter_end(&iter);
-#else
       lnf_close(filep);
-#endif /* HAVE_LIBNFDUMP */
       fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
       return 4;
@@ -189,21 +167,6 @@ int main(int argc, char **argv)
 
    cout << "Loading data from file..." << endl;
    while (1) {
-#ifdef HAVE_LIBNFDUMP
-      master_record_t *rec;
-
-      ret = nfdump_iter_next(&iter, &rec);
-      if (ret != 0) {
-         if (ret == NFDUMP_EOF) { // no more records
-            break;
-         }
-         fprintf(stderr, "Error during reading file (%i).\n", ret);
-         nfdump_iter_end(&iter);
-         trap_finalize();
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-         return 3;
-      }
-#else
       ret = lnf_read(filep, recp);
       if (ret != LNF_OK) {
          if(ret == LNF_EOF) {
@@ -215,44 +178,12 @@ int main(int argc, char **argv)
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return 3;
       }
-#endif /* HAVE_LIBNFDUMP */
       // Allocate new UniRec and put it into records vector
       records.push_back(UniRecSpaceholder());
       void *rec2 = (void*)&records.back();
 
       ++cnt_rec;
 
-#ifdef HAVE_LIBNFDUMP
-      // Copy data from master_record_t to UniRec record
-      if (rec->flags & 0x01) { // IPv6
-         uint64_t tmp_ip_v6_addr;
-         // Swap IPv6 halves
-         tmp_ip_v6_addr = rec->ip_union._v6.srcaddr[0];
-         rec->ip_union._v6.srcaddr[0] = rec->ip_union._v6.srcaddr[1];
-         rec->ip_union._v6.srcaddr[1] = tmp_ip_v6_addr;
-         tmp_ip_v6_addr = rec->ip_union._v6.dstaddr[0];
-         rec->ip_union._v6.dstaddr[0] = rec->ip_union._v6.dstaddr[1];
-         rec->ip_union._v6.dstaddr[1] = tmp_ip_v6_addr;
-
-         ur_set(tmplt, rec2, F_SRC_IP, ip_from_16_bytes_le((char *)rec->ip_union._v6.srcaddr));
-         ur_set(tmplt, rec2, F_DST_IP, ip_from_16_bytes_le((char *)rec->ip_union._v6.dstaddr));
-      }
-      else { // IPv4
-         ur_set(tmplt, rec2, F_SRC_IP, ip_from_4_bytes_le((char *)&rec->ip_union._v4.srcaddr));
-         ur_set(tmplt, rec2, F_DST_IP, ip_from_4_bytes_le((char *)&rec->ip_union._v4.dstaddr));
-
-      }
-      ur_set(tmplt, rec2, F_SRC_PORT, rec->srcport);
-      ur_set(tmplt, rec2, F_DST_PORT, rec->dstport);
-      ur_set(tmplt, rec2, F_PROTOCOL, rec->prot);
-      ur_set(tmplt, rec2, F_TCP_FLAGS, rec->tcp_flags);
-      ur_set(tmplt, rec2, F_PACKETS, rec->dPkts);
-      ur_set(tmplt, rec2, F_BYTES, rec->dOctets);
-      uint64_t first = ur_time_from_sec_msec(rec->first, rec->msec_first);
-      uint64_t last  = ur_time_from_sec_msec(rec->last, rec->msec_last);
-      ur_set(tmplt, rec2, F_TIME_FIRST, first);
-      ur_set(tmplt, rec2, F_TIME_LAST, last);
-#else
       lnf_rec_fget(recp, LNF_FLD_BREC1, &brec);
       if (!IN6_IS_ADDR_V4COMPAT(brec.srcaddr.data)) {
          uint64_t tmp_ip_v6_addr;
@@ -282,7 +213,6 @@ int main(int argc, char **argv)
 
       ur_set(tmplt, rec2, F_TIME_FIRST, ur_time_from_sec_msec(brec.first, 0));
       ur_set(tmplt, rec2, F_TIME_LAST, ur_time_from_sec_msec(brec.last, 0));
-#endif /* HAVE_LIBNFDUMP */
       // assign value for link and direction of the flow
       /*if ((counter % (rand() % 50000 + 50000)) == 0) {
           ur_set(tmplt, rec2, F_LINK_BIT_FIELD, 0x01);
@@ -297,11 +227,7 @@ int main(int argc, char **argv)
 
    }
 
-#ifdef HAVE_LIBNFDUMP
-   nfdump_iter_end(&iter);
-#else
    lnf_close(filep);
-#endif /* HAVE_LIBNFDUMP */
 
    cout << "Sending (" << records.size() << ") records..." << endl;
 

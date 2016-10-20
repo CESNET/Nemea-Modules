@@ -109,16 +109,9 @@ AC_ARG_WITH([nfreader],
 if test x${withnfreader} = xyes; then
 	# Checks for libraries.
 	AC_CHECK_LIB(nf, lnf_open, [libnf=yes],
-	  [AC_CHECK_LIB(nfdump, nfdump_init, [libnfdump=yes],
-	    [AC_MSG_WARN([libnf and libnfdump not found. The nfreader module will not be compiled.])]
-	  )]
+	  [AC_MSG_WARN([libnf not found. The nfreader module will not be compiled.])]
 	)
 
-fi
-AM_CONDITIONAL(HAVE_LIBNFDUMP, test x${libnfdump} = xyes && test x${withnfreader} = xyes)
-if [[ -z "$HAVE_LIBNFDUMP_TRUE" ]]; then
-RPM_REQUIRES+=" libnfdump"
-RPM_BUILDREQ+=" libnfdump-devel"
 fi
 
 AM_CONDITIONAL(HAVE_LIBNF, test x${libnf} = xyes && test x${withnfreader} = xyes)

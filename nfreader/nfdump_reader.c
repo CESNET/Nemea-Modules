@@ -60,11 +60,7 @@
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
-#ifdef HAVE_LIBNFDUMP
-#include <libnfdump.h>
-#else
 #include <libnf.h>
-#endif /* HAVE_LIBNFDUMP */
 #include <nemea-common.h>
 
 #include <real_time_sending.h>
@@ -123,23 +119,6 @@ enum module_states{
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 
-#ifdef HAVE_LIBNFDUMP
-void set_actual_timestamps(master_record_t *src_rec, void *out_rec, ur_template_t *tmplt)
-{
-   time_t act_time;
-   uint64_t first;
-   uint64_t last;
-
-   time(&act_time);
-
-   first = ur_time_from_sec_msec(act_time - (src_rec->last - src_rec->first), src_rec->msec_first);
-   last = ur_time_from_sec_msec(act_time , src_rec->msec_last);
-
-   ur_set(tmplt, out_rec, F_TIME_FIRST, first);
-   ur_set(tmplt, out_rec, F_TIME_LAST, last);
-}
-#else
-
 void set_actual_timestamps(lnf_brec1_t *brec, void *out_rec, ur_template_t *tmplt){
    time_t act_time;
    uint64_t first;
@@ -153,7 +132,6 @@ void set_actual_timestamps(lnf_brec1_t *brec, void *out_rec, ur_template_t *tmpl
    ur_set(tmplt, out_rec, F_TIME_FIRST, first);
    ur_set(tmplt, out_rec, F_TIME_LAST, last);
 }
-#endif /* HAVE_LIBNFDUMP */
 
 void delay_sending_rate(struct timeval *sr_start)
 {
@@ -194,11 +172,6 @@ int main(int argc, char **argv)
    uint8_t rt_sending = 0;
    rt_state_t rt_sending_state;
    //---------------------------------------------------------------------------
-
-#ifndef HAVE_LIBNFDUMP
-   lnf_brec1_t brec;
-   lnf_filter_t * filterp;
-#endif /* HAVE_LIBNFDUMP */
 
    // Let TRAP library parse command-line arguments and extract its parameters
    ret = trap_parse_params(&argc, argv, &ifc_spec);
@@ -320,133 +293,47 @@ int main(int argc, char **argv)
       printf("Sending records ...\n");
    }
 
-#ifndef HAVE_LIBNFDUMP
-   lnf_rec_t * recp;
-   lnf_file_t * filep;
-#endif /* HAVE_LIBNFDUMP */
-
    // For all input files...
    do {
-#ifdef HAVE_LIBNFDUMP
-      nfdump_iter_t iter;
-#endif /* HAVE_LIBNFDUMP */
-
       // Open nfdump file
       if (verbose) {
          printf("Reading file %s\n", argv[optind]);
       }
 
-#ifdef HAVE_LIBNFDUMP
-      ret = nfdump_iter_start(&iter, argv[optind], filter);
-      if (ret != 0) {
-         fprintf(stderr, "Error when trying to open file \"%s\"\n", argv[optind]);
-         module_state = STATE_ERR;
-         goto exit;
-      }
-#else
       ret = lnf_open(&filep, argv[optind], LNF_READ, NULL);
       if (ret != LNF_OK) {
          fprintf(stderr, "Error when trying to open file \"%s\"\n", argv[optind]);
          module_state = STATE_ERR;
          goto exit;
       }
-#endif /* HAVE_LIBNFDUMP */
 
       if (sending_rate) {
          gettimeofday(&sr_start, NULL);
       }
 
-#ifndef HAVE_LIBNFDUMP
-      lnf_rec_init(&recp);
-
-      if (filter != NULL && lnf_filter_init(&filterp, filter) != LNF_OK) {
-         fprintf(stderr, "Can not init filter '%s'\n", filter);
-         module_state = STATE_ERR;
-         goto exit;
-      }
-#endif /* HAVE_LIBNFDUMP */
-
        // For all records in the file...
       while (!stop && (max_records == 0 || record_counter < max_records)) {
-#ifdef HAVE_LIBNFDUMP
-         master_record_t *src_rec;
-         ret = nfdump_iter_next(&iter, &src_rec);
-#else
          ret = lnf_read(filep, recp);
          if (filter != NULL && !lnf_filter_match(filterp, recp)) {
             continue;
          }
-#endif /* HAVE_LIBNFDUMP */
 
          // Read a record from the file
-#ifdef HAVE_LIBNFDUMP
-         if (ret != 0) {
-            if (ret == NFDUMP_EOF) { // no more records
-               break;
-            }
-#else
          if (ret != LNF_OK) {
             if (ret == LNF_EOF) {
                break;
             }
-#endif /* HAVE_LIBNFDUMP */
 
             fprintf(stderr, "Error during reading file (%i).\n", ret);
-#ifdef HAVE_LIBNFDUMP
-            nfdump_iter_end(&iter);
-#else
             lnf_close(filep);
-#endif /* HAVE_LIBNFDUMP */
             module_state = STATE_ERR;
             goto exit;
          }
 
-#ifdef HAVE_LIBNFDUMP
-         // Copy data from master_record_t to UniRec record
-         if (src_rec->flags & 0x01) { // IPv6
-            uint64_t tmp_ip_v6_addr;
-            // Swap IPv6 halves
-            tmp_ip_v6_addr = src_rec->ip_union._v6.srcaddr[0];
-            src_rec->ip_union._v6.srcaddr[0] = src_rec->ip_union._v6.srcaddr[1];
-            src_rec->ip_union._v6.srcaddr[1] = tmp_ip_v6_addr;
-            tmp_ip_v6_addr = src_rec->ip_union._v6.dstaddr[0];
-            src_rec->ip_union._v6.dstaddr[0] = src_rec->ip_union._v6.dstaddr[1];
-            src_rec->ip_union._v6.dstaddr[1] = tmp_ip_v6_addr;
-            ur_set(tmplt, rec_out, F_SRC_IP, ip_from_16_bytes_le((char *)src_rec->ip_union._v6.srcaddr));
-            ur_set(tmplt, rec_out, F_DST_IP, ip_from_16_bytes_le((char *)src_rec->ip_union._v6.dstaddr));
-         } else { // IPv4
-            ur_set(tmplt, rec_out, F_SRC_IP, ip_from_4_bytes_le((char *)&src_rec->ip_union._v4.srcaddr));
-            ur_set(tmplt, rec_out, F_DST_IP, ip_from_4_bytes_le((char *)&src_rec->ip_union._v4.dstaddr));
-         }
-         ur_set(tmplt, rec_out, F_SRC_PORT, src_rec->srcport);
-         ur_set(tmplt, rec_out, F_DST_PORT, src_rec->dstport);
-         ur_set(tmplt, rec_out, F_PROTOCOL, src_rec->prot);
-         ur_set(tmplt, rec_out, F_TCP_FLAGS, src_rec->tcp_flags);
-         ur_set(tmplt, rec_out, F_PACKETS, src_rec->dPkts);
-         ur_set(tmplt, rec_out, F_BYTES, src_rec->dOctets);
-         ur_set(tmplt, rec_out, F_LINK_BIT_FIELD, ur_get_link_mask(links));
-         if (set_dir_bit_field) {
-            if (src_rec->input > 0) {
-               ur_set(tmplt, rec_out, F_DIR_BIT_FIELD, (1 << src_rec->input));
-            } else {
-               ur_set(tmplt, rec_out, F_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
-            }
-         } else {
-            ur_set(tmplt, rec_out, F_DIR_BIT_FIELD, DEFAULT_DIR_BIT_FIELD);
-         }
-         ur_set(tmplt, rec_out, F_TIME_FIRST, ur_time_from_sec_msec(src_rec->first, src_rec->msec_first));
-         ur_set(tmplt, rec_out, F_TIME_LAST, ur_time_from_sec_msec(src_rec->last, src_rec->msec_last));
-
-         if (rt_sending) {
-            RT_CHECK_DELAY(record_counter, src_rec->last, rt_sending_state);
-         }
-
-         if (actual_timestamps) {
-            set_actual_timestamps(src_rec, rec_out, tmplt);
-         }
-#else
          lnf_rec_fget(recp, LNF_FLD_BREC1, &brec);
-         if (!IN6_IS_ADDR_V4COMPAT(brec.srcaddr.data)) {
+         // Copy data from master_record_t to UniRec record
+         if (!IN6_IS_ADDR_V4COMPAT(brec.srcaddr.data)) { //IPv6
+            // Swap IPv6 halves
             uint64_t tmp_ip_v6_addr;
             tmp_ip_v6_addr = brec.srcaddr.data[0];
             brec.srcaddr.data[0] = brec.srcaddr.data[1];
@@ -456,7 +343,7 @@ int main(int argc, char **argv)
             brec.dstaddr.data[1] = tmp_ip_v6_addr;
             ur_set(tmplt, rec_out, F_SRC_IP, ip_from_16_bytes_be((char *)&brec.srcaddr.data));
             ur_set(tmplt, rec_out, F_DST_IP, ip_from_16_bytes_be((char *)&brec.dstaddr.data));
-         } else {
+         } else { //IPv4
             ur_set(tmplt, rec_out, F_SRC_IP, ip_from_4_bytes_be((char *)&(brec.srcaddr.data[3])));
             ur_set(tmplt, rec_out, F_DST_IP, ip_from_4_bytes_be((char *)&(brec.dstaddr.data[3])));
          }
@@ -493,7 +380,6 @@ int main(int argc, char **argv)
          if (actual_timestamps) {
             set_actual_timestamps(&brec, rec_out, tmplt);
          }
-#endif /* HAVE_LIBNFDUMP */
 
          // Send data to output interface
          trap_send(0, rec_out, ur_rec_fixlen_size(tmplt));
@@ -513,15 +399,11 @@ int main(int argc, char **argv)
       if (verbose) {
          printf("done.\n");
       }
-#ifdef HAVE_LIBNFDUMP
-      nfdump_iter_end(&iter);
-#else
       lnf_rec_free(recp);
       lnf_close(filep);
       if (filter != NULL) {
          lnf_filter_free(filterp);
       }
-#endif /* HAVE_LIBNFDUMP */
    } while (!stop && ++optind < argc); // For all input files
 
    NMCM_PROGRESS_NEWLINE;
