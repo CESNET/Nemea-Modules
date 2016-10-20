@@ -66,10 +66,9 @@ TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
  * \param [in] ptr Pointer to memory.
  * \param [in] size Number of bytes to swap.
  */
-inline void swap_bytes(char *ptr, size_t size) {
-   char a;
+static inline void swap_bytes(char *ptr, size_t size) {
    for (int i = 0; i < size / 2; i++) {
-      a = ptr[i];
+      char a = ptr[i];
       ptr[i] = ptr[size - i - 1];
       ptr[size - i - 1] = a;
    }
