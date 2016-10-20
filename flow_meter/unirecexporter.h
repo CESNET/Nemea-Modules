@@ -5,9 +5,10 @@
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
  * \date 2014
  * \date 2015
+ * \date 2016
  */
 /*
- * Copyright (C) 2014-2015 CESNET
+ * Copyright (C) 2014-2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -64,7 +65,7 @@ using namespace std;
 class UnirecExporter : public FlowExporter
 {
 public:
-   UnirecExporter();
+   UnirecExporter(bool send_eof);
    int init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, int basic_ifc_num);
    void close();
    int export_flow(FlowRecord &flow);
@@ -75,11 +76,13 @@ private:
    void fill_packet_fields(Packet &pkt, ur_template_t *tmplt_ptr, void *record_ptr);
    void free_unirec_resources();
 
-   int out_ifc_cnt; /**< Number of output interfaces. */
-   int basic_ifc_num; /**< Basic output interface number. */
-   map<int, int> ifc_mapping; /**< Contain extension id -> output interface number mapping. */
-   ur_template_t **tmplt; /**< Pointer to unirec templates. */
-   void **record;         /**< Pointer to unirec records. */
+   int out_ifc_cnt;           /**< Number of output interfaces. */
+   int basic_ifc_num;         /**< Basic output interface number. */
+   int *ifc_mapping;          /**< Contain extension id (as index) -> output interface number mapping. */
+   bool *ifc_to_export;       /**< Contain interfaces to export. */
+   ur_template_t **tmplt;     /**< Pointer to unirec templates. */
+   void **record;             /**< Pointer to unirec records. */
+   bool eof;                  /**< Send eof when module exits. */
 };
 
 #endif

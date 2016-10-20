@@ -5,9 +5,10 @@
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
  * \date 2014
  * \date 2015
+ * \date 2016
  */
 /*
- * Copyright (C) 2014-2015 CESNET
+ * Copyright (C) 2014-2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -47,10 +48,10 @@
 #define FLOWCACHEPLUGIN_H
 
 #include <string>
+#include <vector>
 
 #include "packet.h"
 #include "flowifc.h"
-#include <vector>
 
 /**
  * \brief Tell FlowCache to flush (immediately export) current flow.
@@ -64,6 +65,8 @@
  * This return value has only effect when called from pre_create method.
  */
 #define EXPORT_PACKET   (0x1 << 1)
+
+#define MAX_PAYLOAD_LENGTH MAXPCKTSIZE
 
 using namespace std;
 
@@ -174,7 +177,7 @@ public:
     * \brief Get unirec template string from plugin.
     * \return Unirec template string.
     */
-   virtual std::string get_unirec_field_string()
+   virtual string get_unirec_field_string()
    {
       return "";
    }
@@ -195,6 +198,11 @@ public:
    vector<plugin_opt> &get_options()
    {
       return options;
+   }
+
+   virtual uint32_t max_payload_length()
+   {
+      return MAX_PAYLOAD_LENGTH;
    }
 
    vector<plugin_opt> options; /**< Plugin options. */

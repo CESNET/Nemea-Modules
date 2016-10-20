@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-modules], [2.4.1], [traffic-analysis@cesnet.cz])
+AC_INIT([nemea-modules], [2.4.3], [traffic-analysis@cesnet.cz])
 AC_CONFIG_SRCDIR([flowcounter/flowcounter.c])
 AC_CONFIG_HEADERS([config.h])
-RELEASE=2
+RELEASE=1
 AC_SUBST(RELEASE)
 USERNAME=`git config --get user.name`
 USERMAIL=`git config --get user.email`
@@ -95,6 +95,12 @@ AC_ARG_WITH([flowcachesize],
 	AC_HELP_STRING([--with-flowcachesize=NUMBER],[Set size of flow cache for flow_meter module in number of flow records. Size must be divisible by 32. Default is 65536.]),
 	[
 	CPPFLAGS="$CPPFLAGS -DFLOW_CACHE_SIZE=$withval"
+	]
+)
+AC_ARG_WITH([flowcachestats],
+	AC_HELP_STRING([--with-flowcachestats],[Enable print of flow cache stats when module exits.]),
+	[
+	CPPFLAGS="$CPPFLAGS -DFLOW_CACHE_STATS"
 	]
 )
 
@@ -192,6 +198,7 @@ AC_CONFIG_FILES([Makefile
                  email_reporter/Makefile
                  flowcounter/Makefile
                  flow_meter/Makefile
+                 flow_meter/tests/Makefile
                  json_dump/Makefile
                  json_replay/Makefile
                  logger/Makefile
@@ -203,6 +210,7 @@ AC_CONFIG_FILES([Makefile
                  traffic_repeater/Makefile
                  unirecfilter/Makefile
                  endiverter/Makefile
+                 nfwriter/Makefile
                ])
 
 AC_SUBST(RPM_REQUIRES)

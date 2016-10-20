@@ -52,6 +52,18 @@
 #include "packet.h"
 #include "packetreceiver.h"
 
+using namespace std;
+
+/*
+ * \brief Minimum snapshot length of pcap handle.
+ */
+#define MIN_SNAPLEN  120
+
+/*
+ * \brief Maximum snapshot length of pcap handle.
+ */
+#define MAX_SNAPLEN  65535
+
 /**
  * \brief Class for reading packets from file or network interface.
  */
@@ -62,13 +74,16 @@ public:
    PcapReader(const options_t &options);
    ~PcapReader();
 
-   int open_file(const std::string &file);
-   int init_interface(const std::string &interface);
+   int open_file(const string &file, bool parse_every_pkt);
+   int init_interface(const string &interface, int snaplen, bool parse_every_pkt);
+   void print_stats();
    void close();
    int get_pkt(Packet &packet);
 private:
-   pcap_t *handle; /**< libpcap file handler. */
-   bool live_capture; /**< PcapReader is capturing from network interface. */
+   pcap_t *handle;                  /**< libpcap file handler. */
+   bool live_capture;               /**< PcapReader is capturing from network interface. */
+   bool print_pcap_stats;           /**< Print pcap handle stats. */
+   struct timeval last_ts;          /**< Last timestamp. */
 };
 
 void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data);

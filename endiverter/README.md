@@ -28,5 +28,40 @@ Fields of received unirec message are iterated and endianness is changed for tho
 - `DOUBLE`
 - `TIME`
 
+and for metadata of the following types:
+
+- `BYTES`
+- `STRING`
+
 Then the altered unirec message is sent to output interface.
+
+## Use case
+For instance, `endiverter` can be used when exporting and reading flow from `OpenWrt` router, where `OpenWrt`
+uses different byte order.
+
+```
+   +----------------------+         +----------------------+
+   |                      |         |                      |
+   |        OpenWrt       |         |         linux        |
+   |                      |         |                      |
+   |         MIPS         |         |         x86          |
+   |      big endian      |         |     little endian    |
+   |                      |         |                      |
+   |                      |         |                      |
+   |   +--------------+   |         |   +--------------+   |
+   |   |              |   |   msg   |   |              |   |
+   |   |  flow_meter  +----------------->  endiverter  |   |
+   |   |              |   |         |   |              |   |
+   |   +--------------+   |         |   +-------+------+   |
+   |                      |         |           |          |
+   +----------------------+         | converted | msg      |
+                                    |           |          |
+                                    |   +-------v------+   |
+                                    |   |              |   |
+                                    |   |    logger    |   |
+                                    |   |              |   |
+                                    |   +--------------+   |
+                                    |                      |
+                                    +----------------------+
+```
 

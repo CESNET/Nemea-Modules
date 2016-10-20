@@ -14,7 +14,7 @@ import re
 MODULE_NAME = "hoststats2idea"
 MODULE_DESC = "Converts output of HostStatsNemea module to IDEA."
 REQ_TYPE = pytrap.FMT_UNIREC
-REQ_FORMAT = "uint8 EVENT_TYPE,time TIME_FIRST,time TIME_LAST,ipaddr SRC_IP,ipaddr DST_IP,uint16 SRC_PORT,uint16 DST_PORT,uint8 PROTOCOL,uint32 EVENT_SCALE,string NOTE"
+REQ_FORMAT = "uint8 EVENT_TYPE,time TIME_FIRST,time TIME_LAST,ipaddr SRC_IP,ipaddr DST_IP,uint8 PROTOCOL,uint32 EVENT_SCALE,string NOTE"
 
 # Event type contants (from old "unirec/fields" file)
 EVT_T_PORTSCAN                    =  1  # Portscan (unspecified type)
@@ -81,13 +81,13 @@ def convert_to_idea(rec, opts=None):
     elif rec.EVENT_TYPE == EVT_T_DNSAMP:
         idea['Category'] = ['Availability.DoS']
         
-        if rec.DST_IP != 0:
+        if rec.DST_IP:
             idea['Target'] = [{
                 'Proto': ['udp', 'dns'],
             }]
             setAddr(idea['Target'][0], rec.DST_IP)
             idea['Description'] = str(rec.DST_IP)+' received abnormally high number of large DNS replies - probably a victim of DNS amplification DoS attack'
-        if rec.SRC_IP != 0:
+        if rec.SRC_IP:
             idea['Source'] = [{
                 'Type': ['Backscatter'],
                 'Port': [53],
@@ -102,13 +102,13 @@ def convert_to_idea(rec, opts=None):
     elif rec.EVENT_TYPE == EVT_T_DOS:
         idea['Category'] = ['Availability.DoS']
          
-        if rec.DST_IP != 0:
+        if rec.DST_IP:
             idea['Target'] = [{}]
             setAddr(idea['Target'][0], rec.DST_IP)
             if rec.PROTOCOL in proto_conv:
                 idea['Target'][0]['Proto'] = [proto_conv[rec.PROTOCOL]]
          
-        if rec.SRC_IP != 0:
+        if rec.SRC_IP:
             idea['Source'] = [{}]
             setAddr(idea['Source'][0], rec.SRC_IP)
             if rec.PROTOCOL in proto_conv:
@@ -167,9 +167,9 @@ def convert_to_idea(rec, opts=None):
             'Port': [22],
             'Proto': ['tcp','ssh'],
         }]
-        if rec.DST_IP != 0:
+        if rec.DST_IP:
             setAddr(idea['Target'][0], rec.DST_IP)
-        if rec.SRC_IP != 0:
+        if rec.SRC_IP:
             idea['Source'] = [{}]
             setAddr(idea['Source'][0], rec.SRC_IP)
          

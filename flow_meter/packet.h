@@ -5,9 +5,10 @@
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
  * \date 2014
  * \date 2015
+ * \date 2016
  */
 /*
- * Copyright (C) 2014-2015 CESNET
+ * Copyright (C) 2014-2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -54,7 +55,7 @@
 
 #define MAXPCKTSIZE 1600
 
-// Values of field presence indicator flags (packetFieldIndicator)
+// Values of field presence indicator flags (field_indicator)
 // (Names of the fields are inspired by IPFIX specification)
 #define PCKT_PACKETFIELDINDICATOR               (0x1 << 0)
 #define PCKT_TIMESTAMP                          (0x1 << 1)
@@ -77,6 +78,7 @@
 
 // Some common sets of flags
 #define PCKT_PCAP_MASK (PCKT_TIMESTAMP) // Bit 0
+
 #define PCKT_INFO_MASK (\
    PCKT_HASH | \
    PCKT_KEY \
@@ -128,32 +130,32 @@
  * \brief Structure for storing parsed packets up to transport layer.
  */
 struct Packet : public Record {
-   uint64_t    packetFieldIndicator;
+   uint64_t    field_indicator;
    struct timeval timestamp;
 
    uint16_t    ethertype;
 
-   uint8_t     ipVersion;
-   uint16_t    ipLength;
-   uint8_t     ipTtl;
-   uint8_t     protocolIdentifier;
-   uint8_t     ipClassOfService;
-   ipaddr_t    sourceIPAddress;
-   ipaddr_t    destinationIPAddress;
+   uint8_t     ip_version;
+   uint16_t    ip_length;
+   uint8_t     ip_ttl;
+   uint8_t     ip_proto;
+   uint8_t     ip_tos;
+   ipaddr_t    src_ip;
+   ipaddr_t    dst_ip;
 
-   uint16_t    sourceTransportPort;
-   uint16_t    destinationTransportPort;
-   uint8_t     tcpControlBits;
+   uint16_t    src_port;
+   uint16_t    dst_port;
+   uint8_t     tcp_control_bits;
 
-   uint16_t    packetTotalLength;
+   uint16_t    total_length;
    char        *packet; /**< Array containing whole packet. */
-   uint16_t    transportPayloadPacketSectionSize;
-   char        *transportPayloadPacketSection; /**< Pointer to packet payload section. */
+   uint16_t    payload_length;
+   char        *payload; /**< Pointer to packet payload section. */
 
    /**
     * \brief Constructor.
     */
-   Packet() : packet(NULL), transportPayloadPacketSection(NULL)
+   Packet() : total_length(0), packet(NULL), payload_length(0), payload(NULL)
    {
    }
 };

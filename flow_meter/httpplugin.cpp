@@ -3,9 +3,10 @@
  * \brief Plugin for parsing HTTP traffic
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
  * \date 2015
+ * \date 2016
  */
 /*
- * Copyright (C) 2014-2015 CESNET
+ * Copyright (C) 2014-2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -69,8 +70,8 @@ using namespace std;
 #endif
 
 #define HTTP_UNIREC_TEMPLATE  "HTTP_METHOD,HTTP_HOST,HTTP_URL,HTTP_USER_AGENT,HTTP_REFERER,HTTP_RESPONSE_CODE,HTTP_CONTENT_TYPE"
-#define HTTP_LINE_DELIMITER   "\r\n"
-#define HTTP_HEADER_DELIMITER ':'
+#define HTTP_LINE_DELIMITER   '\n'
+#define HTTP_KEYVAL_DELIMITER ':'
 
 UR_FIELDS (
    string HTTP_METHOD,
@@ -87,22 +88,30 @@ UR_FIELDS (
  * \brief Constructor.
  * \param [in] options Module options.
  */
-HTTPPlugin::HTTPPlugin(const options_t &module_options) : statsout(module_options.statsout), requests(0), responses(0), total(0)
+HTTPPlugin::HTTPPlugin(const options_t &module_options)
 {
+   print_stats = module_options.print_stats;
+   requests = 0;
+   responses = 0;
+   total = 0;
    flush_flow = false;
 }
 
-HTTPPlugin::HTTPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options) : FlowCachePlugin(plugin_options), statsout(module_options.statsout), requests(0), responses(0), total(0)
+HTTPPlugin::HTTPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options) : FlowCachePlugin(plugin_options)
 {
+   print_stats = module_options.print_stats;
+   requests = 0;
+   responses = 0;
+   total = 0;
    flush_flow = false;
 }
 
 int HTTPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 {
-   if (pkt.sourceTransportPort == 80) {
-      return add_ext_http_response(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
-   } else if (pkt.destinationTransportPort == 80) {
-      return add_ext_http_request(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
+   if (pkt.src_port == 80) {
+      return add_ext_http_response(pkt.payload, pkt.payload_length, rec);
+   } else if (pkt.dst_port == 80) {
+      return add_ext_http_request(pkt.payload, pkt.payload_length, rec);
    }
 
    return 0;
@@ -111,24 +120,24 @@ int HTTPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 int HTTPPlugin::pre_update(FlowRecord &rec, Packet &pkt)
 {
    RecordExt *ext = NULL;
-   if (pkt.sourceTransportPort == 80) {
+   if (pkt.src_port == 80) {
       ext = rec.getExtension(http_response);
-      if (ext == NULL) { // Check if header is present in flow.
-         return add_ext_http_response(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
+      if (ext == NULL) { /* Check if header is present in flow. */
+         return add_ext_http_response(pkt.payload, pkt.payload_length, rec);
       }
 
-      parse_http_response(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, dynamic_cast<RecordExtHTTPResp *>(ext), false);
+      parse_http_response(pkt.payload, pkt.payload_length, dynamic_cast<RecordExtHTTPResp *>(ext), false);
       if (flush_flow) {
          flush_flow = false;
          return FLOW_FLUSH;
       }
-   } else if (pkt.destinationTransportPort == 80) {
+   } else if (pkt.dst_port == 80) {
       ext = rec.getExtension(http_request);
-      if(ext == NULL) { // Check if header is present in flow.
-         return add_ext_http_request(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, rec);
+      if(ext == NULL) { /* Check if header is present in flow. */
+         return add_ext_http_request(pkt.payload, pkt.payload_length, rec);
       }
 
-      parse_http_request(pkt.transportPayloadPacketSection, pkt.transportPayloadPacketSectionSize, dynamic_cast<RecordExtHTTPReq *>(ext), false);
+      parse_http_request(pkt.payload, pkt.payload_length, dynamic_cast<RecordExtHTTPReq *>(ext), false);
       if (flush_flow) {
          flush_flow = false;
          return FLOW_FLUSH;
@@ -140,29 +149,41 @@ int HTTPPlugin::pre_update(FlowRecord &rec, Packet &pkt)
 
 void HTTPPlugin::finish()
 {
-   if (!statsout) {
+   if (print_stats) {
       cout << "HTTP plugin stats:" << endl;
-      cout << "Parsed http requests: " << requests << endl;
-      cout << "Parsed http responses: " << responses << endl;
-      cout << "Total http packets processed: " << total << endl;
+      cout << "   Parsed http requests: " << requests << endl;
+      cout << "   Parsed http responses: " << responses << endl;
+      cout << "   Total http packets processed: " << total << endl;
    }
 }
 
-std::string HTTPPlugin::get_unirec_field_string()
+string HTTPPlugin::get_unirec_field_string()
 {
    return HTTP_UNIREC_TEMPLATE;
 }
 
 /**
  * \brief Copy string and append \0 character.
+ * NOTE: function removes any CR chars at the end of string.
+ * \param [in] dst Destination buffer.
+ * \param [in] size Size of destination buffer.
+ * \param [in] begin Ptr to begin of source string.
+ * \param [in] end Ptr to end of source string.
  */
-#define STRCPY(destination, source, begin, end)\
-   len = end - (begin);\
-   if (len >= (int)sizeof(destination)) {\
-      len = sizeof(destination) - 1;\
-   }\
-   strncpy(destination, source + begin, len);\
-   destination[len] = 0;
+void copy_str(char *dst, ssize_t size, const char *begin, const char *end)
+{
+   ssize_t len = end - begin;
+   if (len >= size) {
+      len = size - 1;
+   }
+
+   memcpy(dst, begin, len);
+
+   if (len != 0 && dst[len - 1] == '\r') {
+      len--;
+   }
+   dst[len] = 0;
+}
 
 #ifdef DEBUG_HTTP
 static uint32_t s_requests = 0, s_responses = 0;
@@ -178,33 +199,47 @@ static uint32_t s_requests = 0, s_responses = 0;
  */
 bool HTTPPlugin::parse_http_request(const char *data, int payload_len, RecordExtHTTPReq *rec, bool create)
 {
+   char buffer[64];
+   const char *begin, *end, *keyval_delimiter;
+
    total++;
 
    DEBUG_MSG("---------- http parser #%u ----------\n", total);
    DEBUG_MSG("Parsing request number: %u\n", ++s_requests);
-   DEBUG_MSG("Payload length: %u\n\n", payload_len);
+   DEBUG_MSG("Payload length: %u\n\n",       payload_len);
 
    if (payload_len == 0) {
       DEBUG_MSG("Parser quits:\tpayload length = 0\n");
       return false;
    }
 
-   char buf[64];
-   int line_begin = strchr(data, ' ') - data, line_end, keyval_delimiter, len = 0;
-   if (line_begin < 0 || line_begin > 10) {
+   /* Request line:
+    *
+    * METHOD URI VERSION
+    * |     |   |
+    * |     |   -------- end
+    * |     ------------ begin
+    * ----- ------------ data
+    */
+
+   /* Find begin of URI. */
+   begin = strchr(data, ' ');
+   if (begin == NULL) {
       DEBUG_MSG("Parser quits:\tnot a http request header\n");
       return false;
    }
 
-   line_end = strchr(data + line_begin + 1, ' ') - data;
-   if (line_end < 0) {
+   /* Find end of URI. */
+   end = strchr(begin + 1, ' ');
+   if (end == NULL) {
       DEBUG_MSG("Parser quits:\trequest is fragmented\n");
       return false;
    }
 
-   STRCPY(buf, data, 0, line_begin);
-   if (!valid_http_method(buf)) {
-      DEBUG_MSG("Parser quits:\tundefined http method: %s\n", buf);
+   /* Copy and check HTTP method */
+   copy_str(rec->method, sizeof(rec->method), data, begin);
+   if (!valid_http_method(rec->method)) {
+      DEBUG_MSG("Parser quits:\tundefined http method: %s\n", rec->method);
       return false;
    }
 
@@ -215,39 +250,58 @@ bool HTTPPlugin::parse_http_request(const char *data, int payload_len, RecordExt
       return false;
    }
 
-   STRCPY(rec->httpReqMethod, buf, 0, line_begin);
-   STRCPY(rec->httpReqUrl, data, line_begin + 1, line_end);
+   copy_str(rec->uri, sizeof(rec->uri), begin + 1, end);
+   DEBUG_MSG("\tMethod: %s\n",   rec->method);
+   DEBUG_MSG("\tURI: %s\n",      rec->uri);
 
-   DEBUG_MSG("\tMethod: %s\n", buf);
-   DEBUG_MSG("\tUrl: %s\n", rec->httpReqUrl);
+   /* Find begin of next line after request line. */
+   begin = strchr(end, HTTP_LINE_DELIMITER);
+   if (begin == NULL) {
+      DEBUG_MSG("Parser quits:\tNo line delim after request line\n");
+      return false;
+   }
+   begin++;
 
-   line_begin = strstr(data + line_end, HTTP_LINE_DELIMITER) - data + 2;
-   while (line_begin < payload_len) { // Process http fields.
-      line_end = strstr(data + line_begin, HTTP_LINE_DELIMITER) - data;
-      keyval_delimiter = strchr(data + line_begin, HTTP_HEADER_DELIMITER) - data;
+   /* Header:
+    *
+    * REQ-FIELD: VALUE
+    * |        |      |
+    * |        |      ----- end
+    * |        ------------ keyval_delimiter
+    * --------------------- begin
+    */
 
-      if (line_end == line_begin) {
-         break;
-      } else if (line_end < 0 || keyval_delimiter < 0) {
+   /* Process headers. */
+   while (begin - data < payload_len) {
+      end = strchr(begin, HTTP_LINE_DELIMITER);
+      keyval_delimiter = strchr(begin, HTTP_KEYVAL_DELIMITER);
+
+      int tmp = end - begin;
+      if (tmp == 0 || tmp == 1) { /* Check for blank line with \r\n or \n ending. */
+         break; /* Double LF found - end of header section. */
+      } else if (end == NULL || keyval_delimiter == NULL) {
          DEBUG_MSG("Parser quits:\theader is fragmented\n");
          return  false;
       }
 
-      STRCPY(buf, data, line_begin, keyval_delimiter);
+      /* Copy field name. */
+      copy_str(buffer, sizeof(buffer), begin, keyval_delimiter);
 
-      DEBUG_CODE(char debug_buff[4096]);
-      DEBUG_CODE(STRCPY(debug_buff, data, keyval_delimiter + 2, line_end));
-      DEBUG_MSG("\t%s: %s\n", buf, debug_buff);
+      DEBUG_CODE(char debug_buffer[4096]);
+      DEBUG_CODE(copy_str(debug_buffer, sizeof(debug_buffer), keyval_delimiter + 2, end));
+      DEBUG_MSG("\t%s: %s\n", buffer, debug_buffer);
 
-      if (strcmp(buf, "Host") == 0) { // Copy interesting field values.
-         STRCPY(rec->httpReqHost, data, keyval_delimiter + 2, line_end);
-      } else if (strcmp(buf, "User-Agent") == 0) {
-         STRCPY(rec->httpReqUserAgent, data, keyval_delimiter + 2, line_end);
-      } else if (strcmp(buf, "Referer") == 0) {
-         STRCPY(rec->httpReqReferer, data, keyval_delimiter + 2, line_end);
+      /* Copy interesting field values. */
+      if (!strcmp(buffer, "Host")) {
+         copy_str(rec->host, sizeof(rec->host), keyval_delimiter + 2, end);
+      } else if (!strcmp(buffer, "User-Agent")) {
+         copy_str(rec->user_agent, sizeof(rec->user_agent), keyval_delimiter + 2, end);
+      } else if (!strcmp(buffer, "Referer")) {
+         copy_str(rec->referer, sizeof(rec->referer), keyval_delimiter + 2, end);
       }
 
-      line_begin = line_end + 2;
+      /* Go to next line. */
+      begin = end + 1 ;
    }
 
    DEBUG_MSG("Parser quits:\tend of header section\n");
@@ -265,44 +319,58 @@ bool HTTPPlugin::parse_http_request(const char *data, int payload_len, RecordExt
  */
 bool HTTPPlugin::parse_http_response(const char *data, int payload_len, RecordExtHTTPResp *rec, bool create)
 {
+   char buffer[64];
+   const char *begin, *end, *keyval_delimiter;
+
    total++;
 
    DEBUG_MSG("---------- http parser #%u ----------\n", total);
-   DEBUG_MSG("Parsing response number: %u\n", ++s_responses);
-   DEBUG_MSG("Payload length: %u\n\n", payload_len);
+   DEBUG_MSG("Parsing response number: %u\n",   ++s_responses);
+   DEBUG_MSG("Payload length: %u\n\n",          payload_len);
 
    if (payload_len == 0) {
       DEBUG_MSG("Parser quits:\tpayload length = 0\n");
       return false;
    }
 
-   char buf[64];
-   int line_begin, line_end, keyval_delimiter, len = 0;
-
-   STRCPY(buf, data, 0, 4);
-   if (strcmp(buf, "HTTP") != 0) {
+   /* Check begin of response header. */
+   if (memcmp(data, "HTTP", 4)) {
       DEBUG_MSG("Parser quits:\tpacket contains http response data\n");
       return false;
    }
 
-   line_begin = strchr(data, ' ') - data;
-   if (line_begin < 0 || line_begin > 10) {
+   /* Response line:
+    *
+    * VERSION CODE REASON
+    * |      |    |
+    * |      |    --------- end
+    * |      -------------- begin
+    * --------------------- data
+    */
+
+   /* Find begin of status code. */
+   begin = strchr(data, ' ');
+   if (begin == NULL) {
       DEBUG_MSG("Parser quits:\tnot a http response header\n");
       return false;
    }
 
-   line_end = strchr(data + line_begin + 1, ' ') - data;
-   if (line_end < 0) {
+   /* Find end of status code. */
+   end = strchr(begin + 1, ' ');
+   if (end == NULL) {
       DEBUG_MSG("Parser quits:\tresponse is fragmented\n");
       return false;
    }
 
-   STRCPY(buf, data, line_begin + 1, line_end);
-   int code = atoi(buf);
-   if (code <= 0) {
-      DEBUG_MSG("Parser quits:\twrong response code: %d\n", code);
+   /* Copy and check HTTP response code. */
+   copy_str(buffer, sizeof(buffer), begin + 1, end);
+   rec->code = atoi(buffer);
+   if (rec->code <= 0) {
+      DEBUG_MSG("Parser quits:\twrong response code: %d\n", rec->code);
       return false;
    }
+
+   DEBUG_MSG("\tCode: %d\n", rec->code);
 
    if (!create) {
       flush_flow = true;
@@ -311,32 +379,50 @@ bool HTTPPlugin::parse_http_response(const char *data, int payload_len, RecordEx
       return false;
    }
 
-   rec->httpRespCode = code;
-   DEBUG_MSG("\tCode: %d\n", code);
+   /* Find begin of next line after request line. */
+   begin = strchr(end, HTTP_LINE_DELIMITER);
+   if (begin == NULL) {
+      DEBUG_MSG("Parser quits:\tNo line delim after request line\n");
+      return false;
+   }
+   begin++;
 
-   line_begin = strstr(data + line_end, HTTP_LINE_DELIMITER) - data + 2;
-   while (line_begin < payload_len) { // Process http header fields.
-      line_end = strstr(data + line_begin, HTTP_LINE_DELIMITER) - data;
-      keyval_delimiter = strchr(data + line_begin, HTTP_HEADER_DELIMITER) - data;
+   /* Header:
+    *
+    * REQ-FIELD: VALUE
+    * |        |      |
+    * |        |      ----- end
+    * |        ------------ keyval_delimiter
+    * --------------------- begin
+    */
 
-      if (line_end == line_begin) {
-         break;
-      } else if (line_end < 0 || keyval_delimiter < 0) {
+   /* Process headers. */
+   while (begin - data < payload_len) {
+      end = strchr(begin, HTTP_LINE_DELIMITER);
+      keyval_delimiter = strchr(begin, HTTP_KEYVAL_DELIMITER);
+
+      int tmp = end - begin;
+      if (tmp == 0 || tmp == 1) { /* Check for blank line with \r\n or \n ending. */
+         break; /* Double LF found - end of header section. */
+      } else if (end == NULL || keyval_delimiter == NULL) {
          DEBUG_MSG("Parser quits:\theader is fragmented\n");
          return  false;
       }
 
-      STRCPY(buf, data, line_begin, keyval_delimiter);
+      /* Copy field name. */
+      copy_str(buffer, sizeof(buffer), begin, keyval_delimiter);
 
-      DEBUG_CODE(char debug_buff[4096]);
-      DEBUG_CODE(STRCPY(debug_buff, data, keyval_delimiter + 2, line_end));
-      DEBUG_MSG("\t%s: %s\n", buf, debug_buff);
+      DEBUG_CODE(char debug_buffer[4096]);
+      DEBUG_CODE(copy_str(debug_buffer, sizeof(debug_buffer), keyval_delimiter + 2, end));
+      DEBUG_MSG("\t%s: %s\n", buffer, debug_buffer);
 
-      if (strcmp(buf, "Content-Type") == 0) { // Copy interesting field values.
-         STRCPY(rec->httpRespContentType, data, keyval_delimiter + 2, line_end);
+      /* Copy interesting field values. */
+      if (!strcmp(buffer, "Content-Type")) {
+         copy_str(rec->content_type, sizeof(rec->content_type), keyval_delimiter + 2, end);
       }
 
-      line_begin = line_end + 2;
+      /* Go to next line. */
+      begin = end + 1 ;
    }
 
    DEBUG_MSG("Parser quits:\tend of header section\n");
@@ -351,9 +437,9 @@ bool HTTPPlugin::parse_http_response(const char *data, int payload_len, RecordEx
  */
 bool HTTPPlugin::valid_http_method(const char *method) const
 {
-   return (!strcmp(method, "GET") || !strcmp(method, "POST") ||
-         !strcmp(method, "PUT") || !strcmp(method, "HEAD") ||
-         !strcmp(method, "DELETE") || !strcmp(method, "TRACE") ||
+   return (!strcmp(method, "GET")   || !strcmp(method, "POST")    ||
+         !strcmp(method, "PUT")     || !strcmp(method, "HEAD")    ||
+         !strcmp(method, "DELETE")  || !strcmp(method, "TRACE")   ||
          !strcmp(method, "OPTIONS") || !strcmp(method, "CONNECT") ||
          !strcmp(method, "PATCH"));
 }

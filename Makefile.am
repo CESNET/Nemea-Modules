@@ -18,6 +18,11 @@ EXTRA_DIST = AUTHORS COPYING ChangeLog INSTALL NEWS README.md nfreader
 
 if HAVE_LIBNF
 SUBDIRS += nfreader
+SUBDIRS += nfwriter
+else
+if HAVE_LIBNFDUMP
+SUBDIRS += nfreader
+endif
 endif
 
 if HAVE_BISON

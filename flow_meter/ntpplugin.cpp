@@ -88,12 +88,20 @@ UR_FIELDS (
  * \brief Constructor.
  * \param [in] options Module options.
  */
-NTPPlugin::NTPPlugin(const options_t &module_options) : statsout(module_options.statsout), requests(0), responses(0), total(0)
+NTPPlugin::NTPPlugin(const options_t &module_options)
 {
+   print_stats = module_options.print_stats;
+   requests = 0;
+   responses = 0;
+   total = 0;
 }
 
-NTPPlugin::NTPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options) : FlowCachePlugin(plugin_options), statsout(module_options.statsout), requests(0), responses(0), total(0)
+NTPPlugin::NTPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options) : FlowCachePlugin(plugin_options)
 {
+   print_stats = module_options.print_stats;
+   requests = 0;
+   responses = 0;
+   total = 0;
 }
 
 /**
@@ -104,7 +112,7 @@ NTPPlugin::NTPPlugin(const options_t &module_options, vector<plugin_opt> plugin_
  */
 int NTPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 {
-   if (pkt.destinationTransportPort == 123 || pkt.sourceTransportPort == 123) {
+   if (pkt.dst_port == 123 || pkt.src_port == 123) {
       add_ext_ntp(rec, pkt);
       return FLOW_FLUSH;
    }
@@ -117,11 +125,11 @@ int NTPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
  */
 void NTPPlugin::finish()
 {
-   if (!statsout) {
+   if (print_stats) {
       cout << "NTP plugin stats:" << endl;
-      cout << "Parsed NTP requests: " << requests << endl;
-      cout << "Parsed NTP responses: " << responses << endl;
-      cout << "Total NTP packets processed: " << total << endl;
+      cout << "   Parsed NTP requests: " << requests << endl;
+      cout << "   Parsed NTP responses: " << responses << endl;
+      cout << "   Total NTP packets processed: " << total << endl;
    }
 }
 
@@ -163,10 +171,10 @@ bool NTPPlugin::parse_ntp(const Packet &pkt, RecordExtNTP *ntp_data_ext)
    unsigned char aux = '.';
    string result = "", result2 = "";
    ostringstream convert, convert2;
-   std::string str;
-   payload = (unsigned char *) pkt.transportPayloadPacketSection;
+   string str;
+   payload = (unsigned char *) pkt.payload;
 
-   if (pkt.transportPayloadPacketSectionSize == 0) {
+   if (pkt.payload_length == 0) {
       DEBUG_MSG("Parser quits:\tpayload length = 0\n");
       return false; /*Don't add extension to  paket.*/
    }
@@ -252,12 +260,12 @@ bool NTPPlugin::parse_ntp(const Packet &pkt, RecordExtNTP *ntp_data_ext)
       result = convert.str();
       for (i = 0; i < convert.str().length(); i++) {
          ntp_data_ext->reference_id[ch_counter] = result[i];
-    ch_counter++;
+         ch_counter++;
       }
       ntp_data_ext->reference_id[ch_counter] = '.';
       ch_counter++;
       result = "";
-      std::stringstream ss;
+      stringstream ss;
       convert.str(".");
 
       /*********************************
@@ -305,7 +313,7 @@ bool NTPPlugin::parse_ntp(const Packet &pkt, RecordExtNTP *ntp_data_ext)
          if (strcmp (ntp_data_ext->reference_id, NTP_RefID_INIT) == 0) { strcpy (ntp_data_ext->reference_id, INIT); }
          if (strcmp (ntp_data_ext->reference_id, NTP_RefID_STEP) == 0) { strcpy (ntp_data_ext->reference_id, STEP); }
          if (strcmp (ntp_data_ext->reference_id, NTP_RefID_DENY) == 0) { strcpy (ntp_data_ext->reference_id, DENY); }
-    if (strcmp (ntp_data_ext->reference_id, NTP_RefID_RATE) == 0) { strcpy (ntp_data_ext->reference_id, RATE); }
+         if (strcmp (ntp_data_ext->reference_id, NTP_RefID_RATE) == 0) { strcpy (ntp_data_ext->reference_id, RATE); }
       }
       DEBUG_MSG("\tntp reference id:\t\t%s\n", ntp_data_ext->reference_id);
 
@@ -394,20 +402,20 @@ bool NTPPlugin::parse_ntp(const Packet &pkt, RecordExtNTP *ntp_data_ext)
 *\param [in] P8: Index of Payload where the Fourth octect of the Fraction timestamp starts.
 *\return String of timestamp.
 */
-std::string  NTPPlugin::parse_timestamp(const Packet &pkt, int p1, int p4, int p5, int p8)
+string NTPPlugin::parse_timestamp(const Packet &pkt, int p1, int p4, int p5, int p8)
 {
    uint8_t i = 0, j = 0, k = 0;
    int number = 0;
    const unsigned char *payload = NULL;
    string result = "", result2 = "";
    ostringstream convert, convert2;
-   std::string str;
+   string str;
    uint32_t time = 0;
    uint32_t highestbit = 0x80000000;
    float fract = 0.0f;
    uint32_t tmp = 0;
    float curfract = 0.5;
-   payload = (unsigned char *) pkt.transportPayloadPacketSection;
+   payload = (unsigned char *) pkt.payload;
 
       /* ********************
       * SECONDS CALCULATION.*
@@ -423,9 +431,9 @@ std::string  NTPPlugin::parse_timestamp(const Packet &pkt, int p1, int p4, int p
    result = convert.str();
    str = result;
    const char *c = str.c_str();
-   time = std::strtol(c, 0, 16);
+   time = strtoul(c, 0, 16);
    convert2 << time;
-   DEBUG_MSG("\t\ttimestamp seconds:\t\t\t%d\n", time);
+   DEBUG_MSG("\t\ttimestamp seconds:\t\t\t%u\n", time);
 
       /* *********************
       * FRACTION CALCULATION.*
@@ -440,7 +448,7 @@ std::string  NTPPlugin::parse_timestamp(const Packet &pkt, int p1, int p4, int p
    result = convert.str();
    str = result;
    const char *c2 = str.c_str();
-   time = std::strtol(c2, 0, 16);
+   time = strtoul(c2, 0, 16);
    j = 0;
    tmp = time;
    for (i = 1; i <= 32; i++) {
@@ -463,4 +471,5 @@ std::string  NTPPlugin::parse_timestamp(const Packet &pkt, int p1, int p4, int p
    }
    result2.resize(result2.length() - 1);
    return result2;
-};
+}
+

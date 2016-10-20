@@ -5,9 +5,10 @@
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
  * \date 2014
  * \date 2015
+ * \date 2016
  */
 /*
- * Copyright (C) 2014-2015 CESNET
+ * Copyright (C) 2014-2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -55,7 +56,7 @@
 #include "ipaddr.h"
 #include "fields.h"
 
-// Values of field presence indicator flags (flowFieldIndicator)
+// Values of field presence indicator flags (field_indicator)
 // (Names of the fields are inspired by IPFIX specification)
 #define FLW_FLOWFIELDINDICATOR       (0x1 << 0)
 #define FLW_HASH                     (0x1 << 1)
@@ -127,8 +128,10 @@ enum extTypeEnum {
    http_response,
    dns,
    sip,
-   ntp
+   ntp,
+   arp,
    /* Add extension header identifiers for your plugins here */
+   EXTENSION_CNT
 };
 
 /**
@@ -245,20 +248,20 @@ struct Record {
  * \brief Flow record struct constaining basic flow record data and extension headers.
  */
 struct FlowRecord : public Record {
-   uint64_t flowFieldIndicator;
-   struct timeval flowStartTimestamp;
-   struct timeval flowEndTimestamp;
-   uint8_t  ipVersion;
-   uint8_t  protocolIdentifier;
-   uint8_t  ipClassOfService;
-   uint8_t  ipTtl;
-   ipaddr_t sourceIPAddress;
-   ipaddr_t destinationIPAddress;
-   uint16_t sourceTransportPort;
-   uint16_t destinationTransportPort;
-   uint32_t packetTotalCount;
-   uint64_t octetTotalLength;
-   uint8_t  tcpControlBits;
+   uint64_t field_indicator;
+   struct timeval start_timestamp;
+   struct timeval end_timestamp;
+   uint8_t  ip_version;
+   uint8_t  ip_proto;
+   uint8_t  ip_tos;
+   uint8_t  ip_ttl;
+   ipaddr_t src_ip;
+   ipaddr_t dst_ip;
+   uint16_t src_port;
+   uint16_t dst_port;
+   uint32_t pkt_total_cnt;
+   uint64_t octet_total_length;
+   uint8_t  tcp_control_bits;
 };
 
 #endif

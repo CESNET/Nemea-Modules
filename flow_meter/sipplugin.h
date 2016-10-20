@@ -2,9 +2,10 @@
  * \file sipplugin.cpp
  * \author Tomas Jansky <janskto1@fit.cvut.cz>
  * \date 2015
+ * \date 2016
  */
 /*
- * Copyright (C) 2015 CESNET
+ * Copyright (C) 2015-2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -53,6 +54,8 @@
 #include "flowcacheplugin.h"
 #include "packet.h"
 #include "flow_meter.h"
+
+using namespace std;
 
 #define SIP_FIELD_LEN				256
 
@@ -386,7 +389,7 @@ public:
    int post_create(FlowRecord &rec, const Packet &pkt);
    int pre_update(FlowRecord &rec, Packet &pkt);
    void finish();
-   std::string get_unirec_field_string();
+   string get_unirec_field_string();
 
 private:
    uint16_t parse_msg_type(const Packet &pkt);
@@ -395,7 +398,7 @@ private:
    void parser_field_uri(const unsigned char *line, int linelen, int skip, char *dst, unsigned int dstlen);
    void parser_field_value(const unsigned char *line, int linelen, int skip, char *dst, unsigned int dstlen);
 
-   bool statsout;
+   bool print_stats;
    bool flush_flow;
    uint32_t requests;
    uint32_t responses;

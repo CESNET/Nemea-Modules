@@ -6,9 +6,10 @@
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
  * \date 2014
  * \date 2015
+ * \date 2016
  */
 /*
- * Copyright (C) 2014-2015 CESNET
+ * Copyright (C) 2014-2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -46,27 +47,30 @@
 #ifndef NHTFLOWCACHE_H
 #define NHTFLOWCACHE_H
 
+#include <string>
+
 #include "flow_meter.h"
 #include "flowcache.h"
 #include "flowifc.h"
 #include "flowexporter.h"
-#include <string>
 
-#define MAX_KEYLENGTH 40
+using namespace std;
+
+#define MAX_KEY_LENGTH 40
 
 class Flow
 {
    uint64_t hash;
-   char key[MAX_KEYLENGTH];
+   char key[MAX_KEY_LENGTH];
 
 public:
    bool empty_flow;
-   FlowRecord flowrecord;
+   FlowRecord flow_record;
 
    void erase()
    {
-      flowrecord.removeExtensions();
-      memset(&flowrecord, 0, sizeof(flowrecord));
+      flow_record.removeExtensions();
+      memset(&flow_record, 0, sizeof(flow_record));
       empty_flow = true;
    }
 
@@ -78,75 +82,63 @@ public:
    {
    };
 
-   inline bool isempty() const;
+   inline bool is_empty() const;
    bool belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len) const;
-   void create(Packet pkt, uint64_t pkt_hash, char *pkt_key, uint8_t key_len);
-   void update(Packet pkt);
+   void create(const Packet &pkt, uint64_t pkt_hash, char *pkt_key, uint8_t key_len);
+   void update(const Packet &pkt);
 };
-
-typedef std::vector<int> replacementvector_t;
-typedef replacementvector_t::iterator replacementvectoriter_t;
-
-typedef std::vector<Flow *> ptrflowvector_t;
-typedef ptrflowvector_t::iterator ptrflowvectoriter_t;
 
 class NHTFlowCache : public FlowCache
 {
-   bool statsout;
+   bool print_stats;
    uint8_t key_len;
-   int linesize;
+   int line_size;
    int size;
-   int insertpos;
-   long empty;
-   long notempty;
-   long hits;
-   long expired;
-   long flushed;
-   long lookups;
-   long lookups2;
-   struct timeval currtimestamp;
-   struct timeval lasttimestamp;
+#ifdef FLOW_CACHE_STATS
+   uint64_t empty;
+   uint64_t not_empty;
+   uint64_t hits;
+   uint64_t expired;
+   uint64_t flushed;
+   uint64_t lookups;
+   uint64_t lookups2;
+#endif /* FLOW_CACHE_STATS */
+   struct timeval current_ts;
+   struct timeval last_ts;
    struct timeval active;
    struct timeval inactive;
-   char key[MAX_KEYLENGTH];
-   std::string policy;
-   replacementvector_t rpl;
-   ptrflowvector_t flowexportqueue;
-   Flow **flowarray;
+   char key[MAX_KEY_LENGTH];
+   Flow **flow_array;
 
 public:
    NHTFlowCache(const options_t &options)
    {
-      this->linesize = options.flowlinesize;
-      this->empty = 0;
-      this->notempty = 0;
-      this->hits = 0;
-      this->expired = 0;
-      this->flushed = 0;
-      this->size = options.flowcachesize;
-      this->lookups = 0;
-      this->lookups2 = 0;
-      this->policy = options.replacementstring;
-      this->statsout = options.statsout;
-      this->active = options.activetimeout;
-      this->inactive = options.inactivetimeout;
+      line_size = options.flow_line_size;
+      size = options.flow_cache_size;
+#ifdef FLOW_CACHE_STATS
+      empty = 0;
+      not_empty = 0;
+      hits = 0;
+      expired = 0;
+      flushed = 0;
+      lookups = 0;
+      lookups2 = 0;
+#endif /* FLOW_CACHE_STATS */
+      print_stats = options.print_stats;
+      active = options.active_timeout;
+      inactive = options.inactive_timeout;
 
-      flowarray = new Flow*[size];
+      flow_array = new Flow*[size];
       for (int i = 0; i < size; i++) {
-         flowarray[i] = new Flow();
+         flow_array[i] = new Flow();
       }
    };
    ~NHTFlowCache()
    {
       for (int i = 0; i < size; i++) {
-         delete flowarray[i];
+         delete flow_array[i];
       }
-      delete [] flowarray;
-
-      while (!flowexportqueue.empty()) {
-         delete flowexportqueue.back();
-         flowexportqueue.pop_back();
-      }
+      delete [] flow_array;
    };
 
 // Put packet into the cache (i.e. update corresponding flow record or create a new one)
@@ -154,14 +146,11 @@ public:
    virtual void init();
    virtual void finish();
 
-   int exportexpired(bool exportall);
+   int export_expired(bool export_all);
 
 protected:
-   void parsereplacementstring();
-   bool createhashkey(Packet pkt);
-   long calculatehash();
-   int flushflows();
-   void endreport();
+   bool create_hash_key(Packet &pkt);
+   void print_report();
 };
 
 #endif
