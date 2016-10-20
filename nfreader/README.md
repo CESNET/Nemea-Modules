@@ -29,5 +29,4 @@ The NEMEA module reads nfdump files and sends flow records in UniRec format on i
 ## Usage
 `./nfdump_reader -i IFC_SPEC [-f FILTER] [-c N] [-n] FILE [FILE...]`
 
-- _Note: libnfdump LIBRARY IS NEEDED TO COMPILE AND USE THIS MODULE!_
-- _Note2: In output format, not all fields are filled!_
+- _Note: In output format, not all fields are filled!_
