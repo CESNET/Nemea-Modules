@@ -173,6 +173,9 @@ int main(int argc, char **argv)
    rt_state_t rt_sending_state;
    //---------------------------------------------------------------------------
 
+   lnf_brec1_t brec;
+   lnf_filter_t *filterp;
+
    // Let TRAP library parse command-line arguments and extract its parameters
    ret = trap_parse_params(&argc, argv, &ifc_spec);
    if (ret != TRAP_E_OK) {
@@ -293,6 +296,9 @@ int main(int argc, char **argv)
       printf("Sending records ...\n");
    }
 
+   lnf_rec_t *recp;
+   lnf_file_t *filep;
+
    // For all input files...
    do {
       // Open nfdump file
@@ -309,6 +315,14 @@ int main(int argc, char **argv)
 
       if (sending_rate) {
          gettimeofday(&sr_start, NULL);
+      }
+
+      lnf_rec_init(&recp);
+
+      if (filter != NULL && lnf_filter_init(&filterp, filter) != LNF_OK) {
+         fprintf(stderr, "Can not init filter '%s'\n", filter);
+         module_state = STATE_ERR;
+         goto exit;
       }
 
        // For all records in the file...

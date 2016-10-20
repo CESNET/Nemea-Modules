@@ -56,13 +56,15 @@
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 
-#  ifdef __cplusplus
+#ifdef __cplusplus
 extern "C" {
-#  endif
-#  include <libnf.h>
-#  ifdef __cplusplus
+#endif
+
+#include <libnf.h>
+
+#ifdef __cplusplus
 }
-#  endif
+#endif
 
 #include "fields.h"
 
@@ -110,8 +112,8 @@ int main(int argc, char **argv)
 {
    int ret;
    lnf_brec1_t brec;
-   lnf_rec_t * recp;
-   lnf_file_t * filep;
+   lnf_rec_t *recp;
+   lnf_file_t *filep;
    trap_ifc_spec_t ifc_spec;
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
@@ -164,6 +166,8 @@ int main(int argc, char **argv)
    vector<UniRecSpaceholder> records;
    unsigned cnt_rec = 0;
    srand(time(NULL));
+
+   lnf_rec_init(&recp);
 
    cout << "Loading data from file..." << endl;
    while (1) {
