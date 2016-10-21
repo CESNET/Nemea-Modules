@@ -207,7 +207,8 @@ int main(int argc, char **argv)
       tmp = ur_get(tmplt, ur_rec, F_PACKETS);
       lnf_rec_fset(rec, LNF_FLD_DPKTS, &tmp);
       lnf_rec_fset(rec, LNF_FLD_DOCTETS, ur_get_ptr(tmplt, ur_rec, F_BYTES));
-      lnf_rec_fset(rec, LNF_FLD_INPUT, ur_get_ptr(tmplt, ur_rec, F_LINK_BIT_FIELD));
+      uint8_t link_bit_fld = ur_get(tmplt, ur_rec, F_LINK_BIT_FIELD);
+      lnf_rec_fset(rec, LNF_FLD_ENGINE_ID, &link_bit_fld);
       lnf_rec_fset(rec, LNF_FLD_SRCPORT, ur_get_ptr(tmplt, ur_rec, F_SRC_PORT));
       lnf_rec_fset(rec, LNF_FLD_DSTPORT, ur_get_ptr(tmplt, ur_rec, F_DST_PORT));
       lnf_rec_fset(rec, LNF_FLD_DIR, ur_get_ptr(tmplt, ur_rec, F_DIR_BIT_FIELD));
