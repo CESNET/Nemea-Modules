@@ -99,6 +99,8 @@ int main(int argc, char *argv[])
          break;
       default:
          fprintf(stderr, "endiverter: Error: invalid arguments\n");
+         TRAP_DEFAULT_FINALIZATION();
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          return 1;
       }
    }
