@@ -21,7 +21,6 @@ This module reads flow records in UniRec format from its input TRAP interface an
 - `-vv`              Be more verbose.
 - `-vvv`             Be even more verbose.
 
-## Usage
-`./nfwriter -i IFC_SPEC -f FILE [-a] [-b | -l]
+## Notes
+- You will need `libnf` library in order to compile this module.
 
-- Note: libnf LIBRARY IS NEEDED TO COMPILE AND USE THIS MODULE!_
