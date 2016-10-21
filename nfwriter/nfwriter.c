@@ -171,7 +171,7 @@ int main(int argc, char **argv)
       /* Receive message. */
       ret = trap_recv(0, &ur_rec, &ur_rec_size);
       if (ret != TRAP_E_OK) {
-         TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
+         TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, module_status = 1; break);
       }
 
       /* Check for null record. */
