@@ -87,7 +87,6 @@ int main(int argc, char *argv[])
 
    // Unset data format on input and output interface.
    trap_set_required_fmt(0, TRAP_FMT_UNIREC, NULL);
-   trap_set_data_fmt(0, TRAP_FMT_UNIREC, NULL);
 
    // Main loop.
    while (!stop) {
