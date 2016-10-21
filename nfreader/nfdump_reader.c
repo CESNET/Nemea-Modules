@@ -347,14 +347,6 @@ int main(int argc, char **argv)
          lnf_rec_fget(recp, LNF_FLD_BREC1, &brec);
          // Copy data from master_record_t to UniRec record
          if (!IN6_IS_ADDR_V4COMPAT(brec.srcaddr.data)) { //IPv6
-            // Swap IPv6 halves
-            uint64_t tmp_ip_v6_addr;
-            tmp_ip_v6_addr = brec.srcaddr.data[0];
-            brec.srcaddr.data[0] = brec.srcaddr.data[1];
-            brec.srcaddr.data[1] = tmp_ip_v6_addr;
-            tmp_ip_v6_addr = brec.dstaddr.data[0];
-            brec.dstaddr.data[0] = brec.dstaddr.data[1];
-            brec.dstaddr.data[1] = tmp_ip_v6_addr;
             ur_set(tmplt, rec_out, F_SRC_IP, ip_from_16_bytes_be((char *)&brec.srcaddr.data));
             ur_set(tmplt, rec_out, F_DST_IP, ip_from_16_bytes_be((char *)&brec.dstaddr.data));
          } else { //IPv4
