@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
          eof = 0;
          break;
       default:
-         fprintf(stderr, "Error: Invalid arguments.\n");
+         fprintf(stderr, "endiverter: Error: invalid arguments\n");
          return 1;
       }
    }
@@ -115,14 +115,14 @@ int main(int argc, char *argv[])
 
          /* Get new data format used on input interface. */
          if (trap_get_data_fmt(TRAPIFC_INPUT, 0, &data_fmt, &spec) != TRAP_E_OK) {
-            fprintf(stderr, "Error: Data format was not loaded.\n");
+            fprintf(stderr, "endiverter: Error: data format was not loaded\n");
             module_status = 1;
             break;
          } else {
             /* Update input / output template. */
             tmplt = ur_define_fields_and_update_template(spec, tmplt);
             if (tmplt == NULL) {
-               fprintf(stderr, "Error: Template could not be created.\n");
+               fprintf(stderr, "endiverter: Error: template could not be created\n");
                module_status = 1;
                break;
             }
