@@ -76,7 +76,7 @@ static inline void swap_bytes(char *ptr, size_t size) {
 
 int main(int argc, char *argv[])
 {
-   int ret;
+   int ret, module_status = 0;
    uint8_t data_fmt = TRAP_FMT_UNKNOWN;
    ur_template_t *tmplt = NULL; // Template storage for input / output ifc.
 
@@ -102,19 +102,21 @@ int main(int argc, char *argv[])
          // Get new data format used on input interface.
          if (trap_get_data_fmt(TRAPIFC_INPUT, 0, &data_fmt, &spec) != TRAP_E_OK) {
             fprintf(stderr, "Error: Data format was not loaded.\n");
+            module_status = 1;
             break;
          } else {
             // Update input / output template.
             tmplt = ur_define_fields_and_update_template(spec, tmplt);
             if (tmplt == NULL) {
                fprintf(stderr, "Error: Template could not be created.\n");
+               module_status = 1;
                break;
             }
             // Set new data format for output interface.
             trap_set_data_fmt(0, TRAP_FMT_UNIREC, spec);
          }
       } else if (ret != TRAP_E_OK) {
-         TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
+         TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, module_status = 1; break);
       }
 
       // Check for null record.
@@ -189,5 +191,5 @@ int main(int argc, char *argv[])
    TRAP_DEFAULT_FINALIZATION();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
 
-   return EXIT_SUCCESS;
+   return module_status;
 }
