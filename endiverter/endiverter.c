@@ -78,19 +78,19 @@ static inline void swap_bytes(char *ptr, size_t size) {
 
 int main(int argc, char *argv[])
 {
-   int ret, module_status = 0, eof = 1;
+   int ret, module_status = 0, eof = 1; /* eof - send EOF message on exit. */
    uint8_t data_fmt = TRAP_FMT_UNKNOWN;
-   ur_template_t *tmplt = NULL; // Template storage for input / output ifc.
+   ur_template_t *tmplt = NULL; /* Template storage for input / output ifc. */
 
-   // TRAP initialization.
+   /* TRAP initialization. */
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
-   // Unset data format on input and output interface.
+   /* Unset data format on input and output interface. */
    trap_set_required_fmt(0, TRAP_FMT_UNIREC, NULL);
 
-   // Parse parameters.
+   /* Parse parameters. */
    signed char opt;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
@@ -103,39 +103,39 @@ int main(int argc, char *argv[])
       }
    }
 
-   // Main loop.
+   /* Main loop. */
    while (!stop) {
       const void *rec;
       uint16_t rec_size;
 
-      // Receive message.
+      /* Receive message. */
       ret = trap_recv(0, &rec, &rec_size);
       if (ret == TRAP_E_FORMAT_CHANGED) {
          const char *spec;
 
-         // Get new data format used on input interface.
+         /* Get new data format used on input interface. */
          if (trap_get_data_fmt(TRAPIFC_INPUT, 0, &data_fmt, &spec) != TRAP_E_OK) {
             fprintf(stderr, "Error: Data format was not loaded.\n");
             module_status = 1;
             break;
          } else {
-            // Update input / output template.
+            /* Update input / output template. */
             tmplt = ur_define_fields_and_update_template(spec, tmplt);
             if (tmplt == NULL) {
                fprintf(stderr, "Error: Template could not be created.\n");
                module_status = 1;
                break;
             }
-            // Set new data format for output interface.
+            /* Set new data format for output interface. */
             trap_set_data_fmt(0, TRAP_FMT_UNIREC, spec);
          }
       } else if (ret != TRAP_E_OK) {
          TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, module_status = 1; break);
       }
 
-      // Check for null record.
+      /* Check for null record. */
       if (rec_size <= 1) {
-         // Forward null record to output interface.
+         /* Forward null record to output interface. */
          if (eof) {
             trap_send(0, "", 1);
          }
@@ -143,15 +143,15 @@ int main(int argc, char *argv[])
       }
 
 
-      // Iterate fields in received unirec message.
+      /* Iterate fields in received unirec message. */
       ur_field_id_t id = UR_ITER_BEGIN;
       int i = 0;
       while ((id = ur_iter_fields_record_order(tmplt, i++)) != UR_ITER_END) {
          if (ur_is_present(tmplt, id)) {
-            // Get pointer to currently processed field.
+            /* Get pointer to currently processed field. */
             void *ptr = ur_get_ptr_by_id(tmplt, rec, id);
 
-            // Switch byte order for specific fields.
+            /* Switch byte order for specific fields. */
             switch(ur_get_type(id)) {
                case UR_TYPE_TIME:
                   swap_bytes((char *) ptr, sizeof(ur_time_t));
@@ -176,10 +176,10 @@ int main(int argc, char *argv[])
                   break;
                case UR_TYPE_STRING:
                case UR_TYPE_BYTES:
-                  // Switch metadata byteorder:
-                  // Swap field offset bytes.
+                  /* Switch metadata byteorder:
+                   * Swap field offset bytes. */
                   swap_bytes(((char *) rec + tmplt->offset[id]), sizeof(uint16_t));
-                  // Swap field length bytes.
+                  /* Swap field length bytes. */
                   swap_bytes(((char *) rec + tmplt->offset[id] + 2), sizeof(uint16_t));
                   break;
                case UR_TYPE_FLOAT:
@@ -194,11 +194,11 @@ int main(int argc, char *argv[])
          }
       }
 
-      // Send altered message to output interface.
+      /* Send altered message to output interface. */
       trap_send(0, rec, rec_size);
    }
 
-   // Cleanup.
+   /* Cleanup. */
    if (tmplt != NULL) {
       ur_free_template(tmplt);
    }
