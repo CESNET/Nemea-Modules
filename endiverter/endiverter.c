@@ -41,6 +41,7 @@
  *
  */
 
+#include <config.h>
 #include <stdio.h>
 #include <getopt.h>
 #include <signal.h>
@@ -55,7 +56,8 @@ trap_module_info_t *module_info = NULL;
 #define MODULE_BASIC_INFO(BASIC) \
   BASIC("Endianness converter", "Switch byte order of fields in unirec messages.", 1, 1)
 
-#define MODULE_PARAMS(PARAM)
+#define MODULE_PARAMS(PARAM) \
+  PARAM('n', "no_eof", "Don't forward EOF message.", no_argument, "none")
 
 static int stop = 0;
 
@@ -76,7 +78,7 @@ static inline void swap_bytes(char *ptr, size_t size) {
 
 int main(int argc, char *argv[])
 {
-   int ret, module_status = 0;
+   int ret, module_status = 0, eof = 1;
    uint8_t data_fmt = TRAP_FMT_UNKNOWN;
    ur_template_t *tmplt = NULL; // Template storage for input / output ifc.
 
@@ -87,6 +89,19 @@ int main(int argc, char *argv[])
 
    // Unset data format on input and output interface.
    trap_set_required_fmt(0, TRAP_FMT_UNIREC, NULL);
+
+   // Parse parameters.
+   signed char opt;
+   while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
+      switch (opt) {
+      case 'n':
+         eof = 0;
+         break;
+      default:
+         fprintf(stderr, "Error: Invalid arguments.\n");
+         return 1;
+      }
+   }
 
    // Main loop.
    while (!stop) {
@@ -121,7 +136,9 @@ int main(int argc, char *argv[])
       // Check for null record.
       if (rec_size <= 1) {
          // Forward null record to output interface.
-         trap_send(0, "", 1);
+         if (eof) {
+            trap_send(0, "", 1);
+         }
          break;
       }
 

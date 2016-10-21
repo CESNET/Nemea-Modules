@@ -8,6 +8,9 @@ This NEMEA module switch byte order of fields in unirec messages received on inp
 - Output: 1
 
 ## Parameters
+### Module specific parameters
+- `-n`               Don't forward EOF message.
+
 ### Common TRAP parameters
 - `-h [trap,1]`      Print help message for this module / for libtrap specific parameters.
 - `-i IFC_SPEC`      Specification of interface types and their parameters.
