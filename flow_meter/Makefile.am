@@ -1,6 +1,6 @@
 include ../aminclude.am
 
-SUBDIRS=tests
+SUBDIRS=. tests
 
 bin_PROGRAMS=flow_meter
 flow_meter_SOURCES=flow_meter.cpp \
@@ -38,4 +38,5 @@ flow_meter_LDADD=-ltrap -lunirec -lnemea-common -lpcap
 flow_meter_CXXFLAGS=-O2 -std=c++98 -Wno-write-strings
 pkgdocdir=${docdir}/flow_meter
 pkgdoc_DATA=README.md
-EXTRA_DIST=README.md
+EXTRA_DIST=README.md traffic-samples/arp-sample.pcap traffic-samples/dns-sample.pcap traffic-samples/http-sample.pcap traffic-samples/ntp-sample.pcap traffic-samples/sip-sample.pcap
+
