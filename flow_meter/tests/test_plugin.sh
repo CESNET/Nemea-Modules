@@ -1,11 +1,16 @@
 #!/bin/bash
 
+export LC_ALL=C
+export LANG=C
+
+test -z "$srcdir" && export srcdir=.
+
 flow_meter_bin=../flow_meter
 logger_bin=../../logger/logger
 
-pcap_dir=../traffic-samples
-ref_dir=test_reference
-output_dir=test_output
+pcap_dir=$srcdir/../traffic-samples
+ref_dir=$srcdir/test_reference
+output_dir=./test_output
 file_out="$$.data"
 
 # Usage: run_plugin_test <plugin> <data file>
@@ -28,7 +33,11 @@ run_plugin_test() {
    "$logger_bin"     -i f:"$output_dir/$file_out" -t | sort > "$output_dir/$1"
    rm "$output_dir/$file_out"
 
-   if ! diff "$ref_dir/$1" "$output_dir/$1" >/dev/null; then
+   sort "$ref_dir/$1" | diff -u "$output_dir/$1" -
+   if [ $? -eq 0 ]; then
+      echo "$1 plugin test OK"
+   else
+      echo "$1 plugin test FAILED"
       return 1
    fi
 }
