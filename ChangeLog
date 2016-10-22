@@ -1,3 +1,15 @@
+2016-10-23 Nemea-modules-2.5.0
+	* added aggregator with liburfilter (by Miroslav Kalina)
+	* changed unirecfilter to link liburfilter (by Miroslav Kalina)
+	* added nfwriter (by Jiri Havranek)
+		the module receives UniRec and stores nfdump files
+	* removed libnfdump dependency from source codes
+	* flow_meter:
+		add support: IPv6 extension headers
+		add support: double tagged frames (VLAN)
+		optimizations
+		bugfixes
+
 2016-10-07 Nemea-modules-2.4.3
         * added sipbf2idea reporter
 

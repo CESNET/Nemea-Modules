@@ -15,11 +15,20 @@ Provides: nemea-modules
 
 %description
 
+%package devel
+Summary: Nemea-modules development package contains files for liburfilter
+Group: Liberouter
+Requires: nemea-modules = %{version}-%{release} libxml2-devel
+Provides: nemea-modules-devel
+
+%description devel
+This package contains header file for liburfilter.
+
 %prep
 %setup
 
 %build
-./configure --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir}/nemea -q --docdir=%{_docdir}/nemea-modules --enable-silent-rules --disable-repobuild;
+./configure --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir}/nemea -q --docdir=%{_docdir}/nemea-modules --includedir=%{_includedir} --enable-silent-rules --disable-repobuild;
 make -j5
 
 %install
@@ -27,8 +36,10 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 
 %post
 test -x %{_bindir}/nemea/flow_meter && setcap "CAP_NET_RAW+eip" %{_bindir}/nemea/flow_meter || true
+ldconfig
 
 %files
+%{_bindir}/nemea/aggregator
 %{_bindir}/nemea/amplification2idea.py
 %{_bindir}/nemea/anonymizer
 %{_bindir}/nemea/bruteforce2idea.py
@@ -51,6 +62,7 @@ test -x %{_bindir}/nemea/flow_meter && setcap "CAP_NET_RAW+eip" %{_bindir}/nemea
 %{_bindir}/nemea/minerdetector2idea.py
 %{_bindir}/nemea/nfdump_reader
 %{_bindir}/nemea/nfdump_reader_test
+%{_bindir}/nemea/nfwriter
 %{_bindir}/nemea/sipbf2idea.py
 %{_bindir}/nemea/svm-tools
 %{_bindir}/nemea/traffic_repeater
@@ -61,6 +73,12 @@ test -x %{_bindir}/nemea/flow_meter && setcap "CAP_NET_RAW+eip" %{_bindir}/nemea
 %config(noreplace) %{_sysconfdir}/nemea/email_reporter/example.cfg
 %config(noreplace) %{_sysconfdir}/nemea/email_reporter/generic.cfg
 %{_datadir}/nemea/*
+%{_libdir}/liburfilter.so.*
 
-
+%files devel
+%{_includedir}/liburfilter.h
+%{_libdir}/liburfilter.a
+%{_libdir}/liburfilter.la
+%{_libdir}/liburfilter.so
+%{_libdir}/pkgconfig/liburfilter.pc
 
