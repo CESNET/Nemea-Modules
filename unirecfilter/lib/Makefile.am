@@ -1,6 +1,7 @@
 FLEX = flex
 BISON = bison
 include ../../aminclude.am
+EXTRA_DIST=parser.y scanner.l
 
 lib_LTLIBRARIES = liburfilter.la
 include_HEADERS = liburfilter.h

@@ -8,7 +8,8 @@ unirecfilter_SOURCES=unirecfilter.c \
                      fields.c \
                      fields.h
 unirecfilter_LDADD=-ltrap -lunirec -lurfilter
-unirecfilter_CPPFLAGS=-I./lib
-unirecfilter_LDFLAGS=-L./lib
+unirecfilter_CPPFLAGS=-I${top_srcdir}/unirecfilter/lib
+unirecfilter_LDFLAGS=-L${top_builddir}/unirecfilter/lib
 pkgdocdir=${docdir}/unirecfilter
 pkgdoc_DATA=README.md
+EXTRA_DIST=README.md
