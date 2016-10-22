@@ -79,7 +79,7 @@ typedef struct time_series_s {
     time_t end;
     double sum;
     uint32_t count;
-    void *b_plus_tree;
+    bpt_t *b_plus_tree;
 } time_series_t;
 
 /*!

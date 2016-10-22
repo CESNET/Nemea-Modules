@@ -239,7 +239,7 @@ void timedb_init_tree(timedb_t *timedb, ur_field_type_t value_type) {
             timedb->b_tree_key_size = 16;
             break;
          }
-         timedb->data[i]->b_plus_tree = b_plus_tree_initialize(TIMEDB__B_PLUS_TREE__LEAF_ITEM_NUMBER, timedb->b_tree_compare, 0, timedb->b_tree_key_size);
+         timedb->data[i]->b_plus_tree = bpt_init(TIMEDB__B_PLUS_TREE__LEAF_ITEM_NUMBER, timedb->b_tree_compare, 0, timedb->b_tree_key_size);
       }
       timedb->initialized = 1;
    }
@@ -339,7 +339,7 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
          }
          
          if (timedb->count_uniq) { // we want to count only unique values
-            void *item = b_plus_tree_insert_or_find_item(rolling_data(timedb, i)->b_plus_tree, value_ptr);
+            void *item = bpt_search_or_insert(rolling_data(timedb, i)->b_plus_tree, value_ptr);
             if (item == NULL) {
                fprintf(stderr, "Error: Could not allocate leaf node of the B+ tree. Perhaps out of memory?\n");
                return TIMEDB_SAVE_ERROR;
@@ -371,7 +371,7 @@ void timedb_roll_db(timedb_t * timedb, time_t *time, double *sum, uint32_t *coun
    *time = rolling_data(timedb, 0)->begin;
    *sum = rolling_data(timedb, 0)->sum;
    if (timedb->count_uniq) {
-      *count = (uint32_t) b_plus_tree_get_count_of_values(rolling_data(timedb, 0)->b_plus_tree);
+      *count = (uint32_t) bpt_item_cnt(rolling_data(timedb, 0)->b_plus_tree);
    } else {
       *count = rolling_data(timedb, 0)->count;
    }
@@ -382,8 +382,8 @@ void timedb_roll_db(timedb_t * timedb, time_t *time, double *sum, uint32_t *coun
    rolling_data(timedb, 0)->sum = 0;
    rolling_data(timedb, 0)->count = 0;
    if (timedb->count_uniq) {
-      b_plus_tree_destroy(rolling_data(timedb, 0)->b_plus_tree);
-      rolling_data(timedb, 0)->b_plus_tree = b_plus_tree_initialize(TIMEDB__B_PLUS_TREE__LEAF_ITEM_NUMBER, timedb->b_tree_compare, 0, timedb->b_tree_key_size);
+      bpt_clean(rolling_data(timedb, 0)->b_plus_tree);
+      rolling_data(timedb, 0)->b_plus_tree = bpt_init(TIMEDB__B_PLUS_TREE__LEAF_ITEM_NUMBER, timedb->b_tree_compare, 0, timedb->b_tree_key_size);
    }
 
    // jump step forward
@@ -398,7 +398,7 @@ void timedb_free(timedb_t * timedb)
       if (timedb->data) {
          for (int i=0; i<timedb->size; i++) {
             if (timedb->data[i]->b_plus_tree) {
-               b_plus_tree_destroy(timedb->data[i]->b_plus_tree);
+               bpt_clean(timedb->data[i]->b_plus_tree);
             }
             free(timedb->data[i]);
          }
