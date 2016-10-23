@@ -75,7 +75,7 @@ esac], [repobuild=true])
 
 AX_C_BIGENDIAN_CROSS
 
-AX_OPENMP([], [AC_MSG_ERROR([OpenMP was not found. Some modules need it (e.g. logger and merger)])])
+AX_OPENMP([], [AC_MSG_ERROR([OpenMP was not found. Some modules need it (e.g. merger)])])
 AC_SUBST(OPENMP_CFLAGS)
 
 AX_LIBTRAP_CHECK
