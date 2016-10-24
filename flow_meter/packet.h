@@ -75,6 +75,7 @@
 #define PCKT_TCPCONTROLBITS                     (0x1 << 15)
 #define PCKT_TRANSPORTPAYLOADPACKETSECTIONSIZE  (0x1 << 16)
 #define PCKT_TRANSPORTPAYLOADPACKETSECTION      (0x1 << 17)
+#define PCKT_ICMP                               (0x1 << 18)
 
 // Some common sets of flags
 #define PCKT_PCAP_MASK (PCKT_TIMESTAMP) // Bit 0
