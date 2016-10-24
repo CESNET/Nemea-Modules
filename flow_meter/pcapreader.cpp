@@ -310,6 +310,46 @@ inline uint16_t parse_udp_hdr(const u_char *data_ptr, Packet *pkt)
 }
 
 /**
+ * \brief Parse specific fields from ICMP header.
+ * \param [in] data_ptr Pointer to begin of header.
+ * \param [out] pkt Pointer to Packet structure where parsed fields will be stored.
+ * \return Size of header in bytes.
+ */
+inline uint16_t process_icmp_hdr(const u_char *data_ptr, Packet *pkt)
+{
+   struct icmphdr *icmp = (struct icmphdr *) data_ptr;
+   pkt->dst_port = icmp->type * 256 + icmp->code;
+
+   DEBUG_MSG("ICMP header:\n");
+   DEBUG_MSG("\tType:\t\t%u\n",     icmp->type);
+   DEBUG_MSG("\tCode:\t\t%u\n",     icmp->code);
+   DEBUG_MSG("\tChecksum:\t%#06x\n",ntohs(icmp->checksum));
+   DEBUG_MSG("\tRest:\t\t%#06x\n",  ntohl(*(uint32_t *) &icmp->un));
+
+   return 0;
+}
+
+/**
+ * \brief Parse specific fields from ICMPv6 header.
+ * \param [in] data_ptr Pointer to begin of header.
+ * \param [out] pkt Pointer to Packet structure where parsed fields will be stored.
+ * \return Size of header in bytes.
+ */
+inline uint16_t process_icmpv6_hdr(const u_char *data_ptr, Packet *pkt)
+{
+   struct icmp6_hdr *icmp6 = (struct icmp6_hdr *) data_ptr;
+   pkt->dst_port = icmp6->icmp6_type * 256 + icmp6->icmp6_code;
+
+   DEBUG_MSG("ICMPv6 header:\n");
+   DEBUG_MSG("\tType:\t\t%u\n",     icmp6->icmp6_type);
+   DEBUG_MSG("\tCode:\t\t%u\n",     icmp6->icmp6_code);
+   DEBUG_MSG("\tChecksum:\t%#x\n",  ntohs(icmp6->icmp6_cksum));
+   DEBUG_MSG("\tBody:\t\t%#x\n",    ntohs(*(uint32_t *) &icmp6->icmp6_dataun));
+
+   return 0;
+}
+
+/**
  * \brief Parsing callback function for pcap_dispatch() call. Parse packets up to transport layer.
  * \param [in,out] arg Serves for passing pointer to Packet structure into callback function.
  * \param [in] h Contains timestamp and packet size.
