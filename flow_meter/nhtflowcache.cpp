@@ -135,6 +135,10 @@ void Flow::create(const Packet &pkt, uint64_t pkt_hash, char *pkt_key, uint8_t k
       flow_record.src_port                  = pkt.src_port;
       flow_record.dst_port                  = pkt.dst_port;
       flow_record.field_indicator          |= FLW_UDP_MASK;
+   } else if (pkt.field_indicator & PCKT_ICMP) {
+      flow_record.src_port                  = pkt.src_port;
+      flow_record.dst_port                  = pkt.dst_port;
+      flow_record.field_indicator          |= FLW_ICMP;
    }
 
    empty_flow = false;

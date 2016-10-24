@@ -75,6 +75,7 @@
 #define FLW_PACKETTOTALCOUNT         (0x1 << 14)
 #define FLW_OCTETTOTALLENGTH         (0x1 << 15)
 #define FLW_TCPCONTROLBITS           (0x1 << 16)
+#define FLW_ICMP                     (0x1 << 17)
 
 // Some common sets of flags
 #define FLW_IPV4_MASK (\

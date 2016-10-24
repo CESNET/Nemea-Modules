@@ -315,10 +315,11 @@ inline uint16_t parse_udp_hdr(const u_char *data_ptr, Packet *pkt)
  * \param [out] pkt Pointer to Packet structure where parsed fields will be stored.
  * \return Size of header in bytes.
  */
-inline uint16_t process_icmp_hdr(const u_char *data_ptr, Packet *pkt)
+inline uint16_t parse_icmp_hdr(const u_char *data_ptr, Packet *pkt)
 {
    struct icmphdr *icmp = (struct icmphdr *) data_ptr;
    pkt->dst_port = icmp->type * 256 + icmp->code;
+   pkt->field_indicator |= PCKT_ICMP;
 
    DEBUG_MSG("ICMP header:\n");
    DEBUG_MSG("\tType:\t\t%u\n",     icmp->type);
@@ -335,10 +336,11 @@ inline uint16_t process_icmp_hdr(const u_char *data_ptr, Packet *pkt)
  * \param [out] pkt Pointer to Packet structure where parsed fields will be stored.
  * \return Size of header in bytes.
  */
-inline uint16_t process_icmpv6_hdr(const u_char *data_ptr, Packet *pkt)
+inline uint16_t parse_icmpv6_hdr(const u_char *data_ptr, Packet *pkt)
 {
    struct icmp6_hdr *icmp6 = (struct icmp6_hdr *) data_ptr;
    pkt->dst_port = icmp6->icmp6_type * 256 + icmp6->icmp6_code;
+   pkt->field_indicator |= PCKT_ICMP;
 
    DEBUG_MSG("ICMPv6 header:\n");
    DEBUG_MSG("\tType:\t\t%u\n",     icmp6->icmp6_type);
@@ -389,7 +391,11 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
       data_offset += parse_tcp_hdr(data + data_offset, pkt);
    } else if (pkt->ip_proto == IPPROTO_UDP) {
       data_offset += parse_udp_hdr(data + data_offset, pkt);
-   } else if (!parse_all && pkt->ip_proto != IPPROTO_ICMP && pkt->ip_proto != IPPROTO_ICMPV6) {
+   } else if (pkt->ip_proto == IPPROTO_ICMP) {
+      data_offset += parse_icmp_hdr(data + data_offset, pkt);
+   } else if (pkt->ip_proto == IPPROTO_ICMPV6) {
+      data_offset += parse_icmpv6_hdr(data + data_offset, pkt);
+   } else if (!parse_all) {
       DEBUG_MSG("Unknown transport protocol %x\n", pkt->ip_proto);
       return;
    }
