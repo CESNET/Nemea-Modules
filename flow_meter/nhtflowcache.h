@@ -56,7 +56,7 @@
 
 using namespace std;
 
-#define MAX_KEY_LENGTH 40
+#define MAX_KEY_LENGTH 37
 
 class Flow
 {
