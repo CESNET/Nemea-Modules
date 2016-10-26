@@ -115,6 +115,7 @@ public:
    {
       line_size = options.flow_line_size;
       size = options.flow_cache_size;
+      last_ts.tv_sec = 0;
 #ifdef FLOW_CACHE_STATS
       empty = 0;
       not_empty = 0;
