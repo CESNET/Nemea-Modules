@@ -533,8 +533,14 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp, 
          if (i == 0) { // Copy only first question.
             rec->qtype = ntohs(question->qtype);
             rec->qclass = ntohs(question->qclass);
-            memcpy(rec->qname, name.c_str(), name.length());
-            rec->qname[name.length()] = 0;
+
+            size_t length = name.length();
+            if (length >= sizeof(rec->qname)) {
+               DEBUG_MSG("Truncating qname (length = %lu) to %lu.\n", length, sizeof(rec->qname) - 1);
+               length = sizeof(rec->qname) - 1;
+            }
+            memcpy(rec->qname, name.c_str(), length);
+            rec->qname[length] = 0;
          }
          DEBUG_MSG("\tType:\t\t\t%u\n",               ntohs(question->qtype));
          DEBUG_MSG("\tClass:\t\t\t%u\n",              ntohs(question->qclass));
@@ -574,14 +580,14 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp, 
          if (i == 0) { // Copy only first answer.
             rec->rr_ttl = ntohl(answer->ttl);
 
-            size_t tmp = rdata.str().length();
-            if (tmp >= sizeof(rec->data)) {
-               DEBUG_MSG("Truncating rdata (length = %lu) to %lu.\n", tmp, sizeof(rec->data) - 1);
-               tmp = sizeof(rec->data) - 1;
+            size_t length = rdata.str().length();
+            if (length >= sizeof(rec->data)) {
+               DEBUG_MSG("Truncating rdata (length = %lu) to %lu.\n", length, sizeof(rec->data) - 1);
+               length = sizeof(rec->data) - 1;
             }
-            memcpy(rec->data, rdata.str().c_str(), tmp); // Copy processed rdata.
-            rec->data[tmp] = 0; // Add terminating '\0' char.
-            rec->rlength = tmp; // Report length.
+            memcpy(rec->data, rdata.str().c_str(), length); // Copy processed rdata.
+            rec->data[length] = 0; // Add terminating '\0' char.
+            rec->rlength = length; // Report length.
          }
          data += rdlength;
       }
