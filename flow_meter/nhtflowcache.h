@@ -92,8 +92,9 @@ class NHTFlowCache : public FlowCache
 {
    bool print_stats;
    uint8_t key_len;
-   int line_size;
-   int size;
+   uint32_t line_size;
+   uint32_t size;
+   uint32_t line_size_mask;
 #ifdef FLOW_CACHE_STATS
    uint64_t empty;
    uint64_t not_empty;
@@ -117,6 +118,7 @@ public:
       line_size = options.flow_line_size;
       size = options.flow_cache_size;
       last_ts.tv_sec = 0;
+      line_size_mask = ~(line_size - 1);
 #ifdef FLOW_CACHE_STATS
       empty = 0;
       not_empty = 0;
@@ -132,7 +134,7 @@ public:
 
       flow_array = new Flow*[size];
       flow_records = new Flow[size];
-      for (int i = 0; i < size; i++) {
+      for (unsigned int i = 0; i < size; i++) {
          flow_array[i] = flow_records + i;
       }
    };

@@ -194,8 +194,8 @@ int NHTFlowCache::put_pkt(Packet &pkt)
 
    uint32_t hashval = SuperFastHash(key, key_len); /* Calculates hash value from key created before. */
 
-   int line_index = ((hashval % size) / line_size) * line_size; /* Find place for packet. */
-   int flow_index = 0, next_line = line_index + line_size;
+   uint32_t line_index = (hashval % size) & line_size_mask; /* Find place for packet. */
+   uint32_t flow_index = 0, next_line = line_index + line_size;
 
    bool found = false;
 
@@ -321,7 +321,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
 int NHTFlowCache::export_expired(bool export_all)
 {
    int exported = 0;
-   for (int i = 0; i < size; i++) {
+   for (unsigned int i = 0; i < size; i++) {
       if (is_expired(flow_array[i], current_ts, active, inactive) ||
          (export_all && !flow_array[i]->is_empty())) {
          plugins_pre_export(flow_array[i]->flow_record);
