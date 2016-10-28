@@ -1,6 +1,6 @@
 #!/bin/sh
 
-. ./test_plugin.sh
+. ./test.sh
 
-test_plugin arp "$pcap_dir/arp-sample.pcap"
+run_plugin_test arp "$pcap_dir/arp-sample.pcap"
 

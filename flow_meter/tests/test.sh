@@ -8,16 +8,16 @@ ref_dir=test_reference
 output_dir=test_output
 file_out="$$.data"
 
-# Usage: test_plugin <plugin name> <data file>
-test_plugin() {
+# Usage: run_plugin_test <plugin> <data file>
+run_plugin_test() {
    if ! [ -f "$flow_meter_bin" ]; then
       echo "flow_meter not compiled"
-      return 1
+      return 77
    fi
 
    if ! [ -f "$logger_bin" ]; then
       echo "logger not compiled"
-      return 1
+      return 77
    fi
 
    if ! [ -d "$output_dir" ]; then
@@ -28,10 +28,7 @@ test_plugin() {
    "$logger_bin"     -i f:"$output_dir/$file_out" -t | sort > "$output_dir/$1"
    rm "$output_dir/$file_out"
 
-   if diff "$ref_dir/$1" "$output_dir/$1" >/dev/null; then
-      echo "$1 plugin test OK"
-   else
-      echo "$1 plugin test FAILED"
+   if ! diff "$ref_dir/$1" "$output_dir/$1" >/dev/null; then
       return 1
    fi
 }
