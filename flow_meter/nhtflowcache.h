@@ -109,6 +109,7 @@ class NHTFlowCache : public FlowCache
    struct timeval inactive;
    char key[MAX_KEY_LENGTH];
    Flow **flow_array;
+   Flow *flow_records;
 
 public:
    NHTFlowCache(const options_t &options)
@@ -130,15 +131,14 @@ public:
       inactive = options.inactive_timeout;
 
       flow_array = new Flow*[size];
+      flow_records = new Flow[size];
       for (int i = 0; i < size; i++) {
-         flow_array[i] = new Flow();
+         flow_array[i] = flow_records + i;
       }
    };
    ~NHTFlowCache()
    {
-      for (int i = 0; i < size; i++) {
-         delete flow_array[i];
-      }
+      delete [] flow_records;
       delete [] flow_array;
    };
 
