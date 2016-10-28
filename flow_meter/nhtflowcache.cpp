@@ -66,8 +66,7 @@ using namespace std;
 inline bool is_expired(const Flow *flow, const struct timeval &current_ts,
                        const struct timeval &active, const struct timeval &inactive)
 {
-   if (!flow->is_empty() && ( current_ts.tv_sec - flow->flow_record.start_timestamp.tv_sec >= active.tv_sec ||
-      current_ts.tv_sec - flow->flow_record.end_timestamp.tv_sec >= inactive.tv_sec)) {
+   if (!flow->is_empty() && current_ts.tv_sec - flow->flow_record.end_timestamp.tv_sec >= inactive.tv_sec) {
       return true;
    } else {
       return false;
@@ -298,6 +297,16 @@ int NHTFlowCache::put_pkt(Packet &pkt)
 
             return put_pkt(pkt);
          }
+      }
+
+      /* Check if flow record is expired. */
+      if (current_ts.tv_sec - flow_array[flow_index]->flow_record.start_timestamp.tv_sec >= active.tv_sec) {
+         plugins_pre_export(flow_array[flow_index]->flow_record);
+         exporter->export_flow(flow_array[flow_index]->flow_record);
+         flow_array[flow_index]->erase();
+#ifdef FLOW_CACHE_STATS
+         expired++;
+#endif /* FLOW_CACHE_STATS */
       }
    }
 
