@@ -345,7 +345,6 @@ bool NHTFlowCache::create_hash_key(Packet &pkt)
       k += sizeof(pkt.src_port);
       *(uint16_t *) k = pkt.dst_port;
       k += sizeof(pkt.dst_port);
-      *k = '\0';
       key_len = 13;
    } else if ((pkt.field_indicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
       *(uint8_t *) k = pkt.ip_proto;
@@ -358,7 +357,6 @@ bool NHTFlowCache::create_hash_key(Packet &pkt)
       k += sizeof(pkt.src_port);
       *(uint16_t *) k = pkt.dst_port;
       k += sizeof(pkt.dst_port);
-      *k = '\0';
       key_len = 37;
    } else {
       return false;
