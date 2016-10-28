@@ -405,9 +405,7 @@ int main(int argc, char *argv[])
    }
 
    if (options.flow_cache_size % options.flow_line_size != 0) {
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-      TRAP_DEFAULT_FINALIZATION();
-      return error("Size of flow line (32 by default) must divide size of flow cache.");
+      options.flow_cache_size += options.flow_line_size - (options.flow_cache_size % options.flow_line_size);
    }
 
    bool parse_every_pkt = false;
