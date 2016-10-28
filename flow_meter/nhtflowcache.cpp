@@ -196,8 +196,8 @@ int NHTFlowCache::put_pkt(Packet &pkt)
 
    uint32_t line_index = (hashval % size) & line_size_mask; /* Find place for packet. */
    uint32_t flow_index = 0, next_line = line_index + line_size;
-
    bool found = false;
+   Flow *flow; /* Pointer to flow we will be working with. */
 
    /* Find existing flow record in flow cache. */
    for (flow_index = line_index; flow_index < next_line; flow_index++) {
@@ -215,12 +215,12 @@ int NHTFlowCache::put_pkt(Packet &pkt)
 #endif /* FLOW_CACHE_STATS */
       int flow_index_start = line_index;
 
-      Flow *ptr_flow = flow_array[flow_index];
+      flow = flow_array[flow_index];
       for (int j = flow_index; j > flow_index_start; j--) {
          flow_array[j] = flow_array[j - 1];
       }
 
-      flow_array[flow_index_start] = ptr_flow;
+      flow_array[flow_index_start] = flow;
       flow_index = flow_index_start;
 #ifdef FLOW_CACHE_STATS
       hits++;
@@ -246,13 +246,13 @@ int NHTFlowCache::put_pkt(Packet &pkt)
          expired++;
 #endif /* FLOW_CACHE_STATS */
          int flow_index_start = line_index + 13;
-         Flow *ptr_flow = flow_array[flow_index];
-         ptr_flow->erase();
+         flow = flow_array[flow_index];
+         flow->erase();
          for (int j = flow_index; j > flow_index_start; j--) {
             flow_array[j] = flow_array[j - 1];
          }
          flow_index = flow_index_start;
-         flow_array[flow_index] = ptr_flow;
+         flow_array[flow_index] = flow;
 #ifdef FLOW_CACHE_STATS
          not_empty++;
       } else {
@@ -262,48 +262,49 @@ int NHTFlowCache::put_pkt(Packet &pkt)
    }
 
    current_ts = pkt.timestamp;
-   if (flow_array[flow_index]->is_empty()) {
-      flow_array[flow_index]->create(pkt, hashval, key, key_len);
-      ret = plugins_post_create(flow_array[flow_index]->flow_record, pkt);
+   flow = flow_array[flow_index];
+   if (flow->is_empty()) {
+      flow->create(pkt, hashval, key, key_len);
+      ret = plugins_post_create(flow->flow_record, pkt);
 
       if (ret & FLOW_FLUSH) {
-         exporter->export_flow(flow_array[flow_index]->flow_record);
+         exporter->export_flow(flow->flow_record);
 #ifdef FLOW_CACHE_STATS
          flushed++;
 #endif /* FLOW_CACHE_STATS */
-         flow_array[flow_index]->erase();
+         flow->erase();
       }
    } else {
-      ret = plugins_pre_update(flow_array[flow_index]->flow_record, pkt);
+      ret = plugins_pre_update(flow->flow_record, pkt);
 
       if (ret & FLOW_FLUSH) {
-         exporter->export_flow(flow_array[flow_index]->flow_record);
+         exporter->export_flow(flow->flow_record);
 #ifdef FLOW_CACHE_STATS
          flushed++;
 #endif /* FLOW_CACHE_STATS */
-         flow_array[flow_index]->erase();
+         flow->erase();
 
          return put_pkt(pkt);
       } else {
-         flow_array[flow_index]->update(pkt);
-         ret = plugins_post_update(flow_array[flow_index]->flow_record, pkt);
+         flow->update(pkt);
+         ret = plugins_post_update(flow->flow_record, pkt);
 
          if (ret & FLOW_FLUSH) {
-            exporter->export_flow(flow_array[flow_index]->flow_record);
+            exporter->export_flow(flow->flow_record);
 #ifdef FLOW_CACHE_STATS
             flushed++;
 #endif /* FLOW_CACHE_STATS */
-            flow_array[flow_index]->erase();
+            flow->erase();
 
             return put_pkt(pkt);
          }
       }
 
       /* Check if flow record is expired. */
-      if (current_ts.tv_sec - flow_array[flow_index]->flow_record.start_timestamp.tv_sec >= active.tv_sec) {
-         plugins_pre_export(flow_array[flow_index]->flow_record);
-         exporter->export_flow(flow_array[flow_index]->flow_record);
-         flow_array[flow_index]->erase();
+      if (current_ts.tv_sec - flow->flow_record.start_timestamp.tv_sec >= active.tv_sec) {
+         plugins_pre_export(flow->flow_record);
+         exporter->export_flow(flow->flow_record);
+         flow->erase();
 #ifdef FLOW_CACHE_STATS
          expired++;
 #endif /* FLOW_CACHE_STATS */
