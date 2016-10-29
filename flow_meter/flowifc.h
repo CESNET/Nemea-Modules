@@ -174,15 +174,6 @@ struct Record {
    RecordExt *exts; /**< Extension headers. */
 
    /**
-    * \brief Fill unirec record with basic flow fields.
-    * \param [in] tmplt_ptr Pointer to unirec template.
-    * \param [out] record_ptr Pointer to unirec record.
-    */
-   virtual void fillUnirec(ur_template_t *tmplt_ptr, void *record_ptr)
-   {
-   }
-
-   /**
     * \brief Add new extension header.
     * \param [in] ext Pointer to the extension header.
     */
