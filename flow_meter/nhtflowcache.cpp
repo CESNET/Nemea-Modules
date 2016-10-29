@@ -66,7 +66,7 @@ using namespace std;
 inline bool is_expired(const FlowRecord *flow_rec, const struct timeval &current_ts,
                        const struct timeval &active, const struct timeval &inactive)
 {
-   if (!flow_rec->is_empty() && current_ts.tv_sec - flow_rec->flow.end_timestamp.tv_sec >= inactive.tv_sec) {
+   if (!flow_rec->is_empty() && current_ts.tv_sec - flow_rec->flow.time_last.tv_sec >= inactive.tv_sec) {
       return true;
    } else {
       return false;
@@ -101,8 +101,8 @@ void FlowRecord::create(const Packet &pkt, uint64_t pkt_hash, char *pkt_key, uin
    }
 
    if ((pkt.field_indicator & PCKT_PCAP_MASK) == PCKT_PCAP_MASK) {
-      flow.start_timestamp          = pkt.timestamp;
-      flow.end_timestamp            = pkt.timestamp;
+      flow.time_first               = pkt.timestamp;
+      flow.time_last                = pkt.timestamp;
       flow.field_indicator         |= FLW_TIMESTAMPS_MASK;
    }
 
@@ -147,7 +147,7 @@ void FlowRecord::update(const Packet &pkt)
 {
    flow.pkt_total_cnt += 1;
    if ((pkt.field_indicator & PCKT_PCAP_MASK) == PCKT_PCAP_MASK) {
-      flow.end_timestamp = pkt.timestamp;
+      flow.time_last = pkt.timestamp;
    }
    if ((pkt.field_indicator & PCKT_IPV4_MASK) == PCKT_IPV4_MASK) {
       flow.octet_total_length += pkt.ip_length;
@@ -301,7 +301,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       }
 
       /* Check if flow record is expired. */
-      if (current_ts.tv_sec - flow->flow.start_timestamp.tv_sec >= active.tv_sec) {
+      if (current_ts.tv_sec - flow->flow.time_first.tv_sec >= active.tv_sec) {
          plugins_pre_export(flow->flow);
          exporter->export_flow(flow->flow);
          flow->erase();

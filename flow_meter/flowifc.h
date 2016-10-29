@@ -241,8 +241,8 @@ struct Record {
  */
 struct Flow : public Record {
    uint64_t field_indicator;
-   struct timeval start_timestamp;
-   struct timeval end_timestamp;
+   struct timeval time_first;
+   struct timeval time_last;
    uint8_t  ip_version;
    uint8_t  ip_proto;
    uint8_t  ip_tos;
