@@ -3,6 +3,10 @@
 ## Description
 This NEMEA module creates flows from input PCAP file / network interface and exports them to output interface.
 
+## Requirements
+- To compile this module you will need libpcap development library installed.
+- Root priviliges are needed when capturing from network interface.
+
 ## Interfaces
 - Input: PCAP file or network interface
 - Output interfaces: Unirec containing `<COLLECTOR_FLOW>` + fields added by active plugins
@@ -38,6 +42,9 @@ There are already some existing plugins that export e.g. `DNS`, `HTTP`, `SIP`, `
 ## Adding new plugin
 To create new plugin use [create_plugin.sh](create_plugin.sh) script. This interactive script will generate .cpp and .h
 file template and will also print `TODO` guide what needs to be done.
+
+## Exporting packets
+It is possible to export single packet with additional information using plugins (`ARP`).
 
 ## Simplified function diagram
 Diagram below shows how `flow_meter` works.
