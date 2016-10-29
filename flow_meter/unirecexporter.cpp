@@ -262,7 +262,7 @@ int UnirecExporter::export_packet(Packet &pkt)
    return 0;
 }
 
-int UnirecExporter::export_flow(FlowRecord &flow)
+int UnirecExporter::export_flow(Flow &flow)
 {
    RecordExt *ext = flow.exts;
    ur_template_t *tmplt_ptr = NULL;
@@ -313,7 +313,7 @@ int UnirecExporter::export_flow(FlowRecord &flow)
  * \param [in] tmplt_ptr Pointer to unirec template.
  * \param [out] record_ptr Pointer to unirec record.
  */
-void UnirecExporter::fill_basic_flow(FlowRecord &flow, ur_template_t *tmplt_ptr, void *record_ptr)
+void UnirecExporter::fill_basic_flow(Flow &flow, ur_template_t *tmplt_ptr, void *record_ptr)
 {
    ur_time_t tmp_time;
 

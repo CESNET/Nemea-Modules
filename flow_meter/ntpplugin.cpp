@@ -110,7 +110,7 @@ NTPPlugin::NTPPlugin(const options_t &module_options, vector<plugin_opt> plugin_
  *\param [in] pkt Parsed packet.
  *\return 0 on success or FLOW_FLUSH option.
  */
-int NTPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
+int NTPPlugin::post_create(Flow &rec, const Packet &pkt)
 {
    if (pkt.dst_port == 123 || pkt.src_port == 123) {
       add_ext_ntp(rec, pkt);
@@ -143,11 +143,11 @@ string NTPPlugin::get_unirec_field_string()
 }
 
 /**
- *\brief Add new extension NTP header into FlowRecord.
+ *\brief Add new extension NTP header into Flow.
  *\param [in] packet.
- *\param [out] rec Destination FlowRecord.
+ *\param [out] rec Destination Flow.
  */
-void NTPPlugin::add_ext_ntp(FlowRecord &rec, const Packet &pkt)
+void NTPPlugin::add_ext_ntp(Flow &rec, const Packet &pkt)
 {
    RecordExtNTP *ntp_data_ext = new RecordExtNTP();
    if (!parse_ntp(pkt, ntp_data_ext)) {
@@ -160,7 +160,7 @@ void NTPPlugin::add_ext_ntp(FlowRecord &rec, const Packet &pkt)
 /**
  *\brief Parse and store NTP packet.
  *\param [in] Packet, and then take data Pointer to packet payload section.
- *\param [out] rec Output FlowRecord extension header RecordExtNTP.
+ *\param [out] rec Output Flow extension header RecordExtNTP.
  *\return True if NTP was parsed.
  */
 bool NTPPlugin::parse_ntp(const Packet &pkt, RecordExtNTP *ntp_data_ext)

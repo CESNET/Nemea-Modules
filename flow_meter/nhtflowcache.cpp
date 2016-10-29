@@ -63,22 +63,22 @@ using namespace std;
  * \param [in] inactive Inactive timeout.
  * \return True if flow is expired, false otherwise.
  */
-inline bool is_expired(const Flow *flow, const struct timeval &current_ts,
+inline bool is_expired(const FlowRecord *flow_rec, const struct timeval &current_ts,
                        const struct timeval &active, const struct timeval &inactive)
 {
-   if (!flow->is_empty() && current_ts.tv_sec - flow->flow_record.end_timestamp.tv_sec >= inactive.tv_sec) {
+   if (!flow_rec->is_empty() && current_ts.tv_sec - flow_rec->flow.end_timestamp.tv_sec >= inactive.tv_sec) {
       return true;
    } else {
       return false;
    }
 }
 
-inline bool Flow::is_empty() const
+inline bool FlowRecord::is_empty() const
 {
    return empty_flow;
 }
 
-bool Flow::belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len) const
+bool FlowRecord::belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len) const
 {
    if (is_empty() || (pkt_hash != hash)) {
       return false;
@@ -87,76 +87,76 @@ bool Flow::belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len) const
    }
 }
 
-void Flow::create(const Packet &pkt, uint64_t pkt_hash, char *pkt_key, uint8_t key_len)
+void FlowRecord::create(const Packet &pkt, uint64_t pkt_hash, char *pkt_key, uint8_t key_len)
 {
-   flow_record.field_indicator    = FLW_FLOWFIELDINDICATOR;
-   flow_record.pkt_total_cnt      = 1;
-   flow_record.field_indicator   |= FLW_PACKETTOTALCOUNT;
+   flow.field_indicator    = FLW_FLOWFIELDINDICATOR;
+   flow.pkt_total_cnt      = 1;
+   flow.field_indicator   |= FLW_PACKETTOTALCOUNT;
 
    hash = pkt_hash;
    memcpy(key, pkt_key, key_len);
 
    if ((pkt.field_indicator & PCKT_INFO_MASK) == PCKT_INFO_MASK) {
-      flow_record.field_indicator |= FLW_HASH;
+      flow.field_indicator |= FLW_HASH;
    }
 
    if ((pkt.field_indicator & PCKT_PCAP_MASK) == PCKT_PCAP_MASK) {
-      flow_record.start_timestamp          = pkt.timestamp;
-      flow_record.end_timestamp            = pkt.timestamp;
-      flow_record.field_indicator         |= FLW_TIMESTAMPS_MASK;
+      flow.start_timestamp          = pkt.timestamp;
+      flow.end_timestamp            = pkt.timestamp;
+      flow.field_indicator         |= FLW_TIMESTAMPS_MASK;
    }
 
    if ((pkt.field_indicator & PCKT_IPV4_MASK) == PCKT_IPV4_MASK) {
-      flow_record.ip_version               = pkt.ip_version;
-      flow_record.ip_proto                 = pkt.ip_proto;
-      flow_record.ip_tos                   = pkt.ip_tos;
-      flow_record.ip_ttl                   = pkt.ip_ttl;
-      flow_record.src_ip.v4                = pkt.src_ip.v4;
-      flow_record.dst_ip.v4                = pkt.dst_ip.v4;
-      flow_record.octet_total_length       = pkt.ip_length;
-      flow_record.field_indicator         |= (FLW_IPV4_MASK | FLW_IPSTAT_MASK);
+      flow.ip_version               = pkt.ip_version;
+      flow.ip_proto                 = pkt.ip_proto;
+      flow.ip_tos                   = pkt.ip_tos;
+      flow.ip_ttl                   = pkt.ip_ttl;
+      flow.src_ip.v4                = pkt.src_ip.v4;
+      flow.dst_ip.v4                = pkt.dst_ip.v4;
+      flow.octet_total_length       = pkt.ip_length;
+      flow.field_indicator         |= (FLW_IPV4_MASK | FLW_IPSTAT_MASK);
    } else if ((pkt.field_indicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
-      flow_record.ip_version               = pkt.ip_version;
-      flow_record.ip_proto                 = pkt.ip_proto;
-      flow_record.ip_tos                   = pkt.ip_tos;
-      memcpy(flow_record.src_ip.v6, pkt.src_ip.v6, 16);
-      memcpy(flow_record.dst_ip.v6, pkt.dst_ip.v6, 16);
-      flow_record.octet_total_length         = pkt.ip_length;
-      flow_record.field_indicator           |= (FLW_IPV6_MASK | FLW_IPSTAT_MASK);
+      flow.ip_version               = pkt.ip_version;
+      flow.ip_proto                 = pkt.ip_proto;
+      flow.ip_tos                   = pkt.ip_tos;
+      memcpy(flow.src_ip.v6, pkt.src_ip.v6, 16);
+      memcpy(flow.dst_ip.v6, pkt.dst_ip.v6, 16);
+      flow.octet_total_length         = pkt.ip_length;
+      flow.field_indicator           |= (FLW_IPV6_MASK | FLW_IPSTAT_MASK);
    }
 
    if ((pkt.field_indicator & PCKT_TCP_MASK) == PCKT_TCP_MASK) {
-      flow_record.src_port                  = pkt.src_port;
-      flow_record.dst_port                  = pkt.dst_port;
-      flow_record.tcp_control_bits          = pkt.tcp_control_bits;
-      flow_record.field_indicator          |= FLW_TCP_MASK;
+      flow.src_port                  = pkt.src_port;
+      flow.dst_port                  = pkt.dst_port;
+      flow.tcp_control_bits          = pkt.tcp_control_bits;
+      flow.field_indicator          |= FLW_TCP_MASK;
    } else if ((pkt.field_indicator & PCKT_UDP_MASK) == PCKT_UDP_MASK) {
-      flow_record.src_port                  = pkt.src_port;
-      flow_record.dst_port                  = pkt.dst_port;
-      flow_record.field_indicator          |= FLW_UDP_MASK;
+      flow.src_port                  = pkt.src_port;
+      flow.dst_port                  = pkt.dst_port;
+      flow.field_indicator          |= FLW_UDP_MASK;
    } else if (pkt.field_indicator & PCKT_ICMP) {
-      flow_record.src_port                  = pkt.src_port;
-      flow_record.dst_port                  = pkt.dst_port;
-      flow_record.field_indicator          |= FLW_ICMP;
+      flow.src_port                  = pkt.src_port;
+      flow.dst_port                  = pkt.dst_port;
+      flow.field_indicator          |= FLW_ICMP;
    }
 
    empty_flow = false;
 }
 
-void Flow::update(const Packet &pkt)
+void FlowRecord::update(const Packet &pkt)
 {
-   flow_record.pkt_total_cnt += 1;
+   flow.pkt_total_cnt += 1;
    if ((pkt.field_indicator & PCKT_PCAP_MASK) == PCKT_PCAP_MASK) {
-      flow_record.end_timestamp = pkt.timestamp;
+      flow.end_timestamp = pkt.timestamp;
    }
    if ((pkt.field_indicator & PCKT_IPV4_MASK) == PCKT_IPV4_MASK) {
-      flow_record.octet_total_length += pkt.ip_length;
+      flow.octet_total_length += pkt.ip_length;
    }
    if ((pkt.field_indicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
-      flow_record.octet_total_length += pkt.ip_length;
+      flow.octet_total_length += pkt.ip_length;
    }
    if ((pkt.field_indicator & PCKT_TCP_MASK) == PCKT_TCP_MASK) {
-      flow_record.tcp_control_bits |= pkt.tcp_control_bits;
+      flow.tcp_control_bits |= pkt.tcp_control_bits;
    }
 }
 
@@ -197,7 +197,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
    uint32_t line_index = (hashval % size) & line_size_mask; /* Find place for packet. */
    uint32_t flow_index = 0, next_line = line_index + line_size;
    bool found = false;
-   Flow *flow; /* Pointer to flow we will be working with. */
+   FlowRecord *flow; /* Pointer to flow we will be working with. */
 
    /* Find existing flow record in flow cache. */
    for (flow_index = line_index; flow_index < next_line; flow_index++) {
@@ -239,8 +239,8 @@ int NHTFlowCache::put_pkt(Packet &pkt)
          flow_index = next_line - 1;
 
          // Export flow
-         plugins_pre_export(flow_array[flow_index]->flow_record);
-         exporter->export_flow(flow_array[flow_index]->flow_record);
+         plugins_pre_export(flow_array[flow_index]->flow);
+         exporter->export_flow(flow_array[flow_index]->flow);
 
 #ifdef FLOW_CACHE_STATS
          expired++;
@@ -265,20 +265,20 @@ int NHTFlowCache::put_pkt(Packet &pkt)
    flow = flow_array[flow_index];
    if (flow->is_empty()) {
       flow->create(pkt, hashval, key, key_len);
-      ret = plugins_post_create(flow->flow_record, pkt);
+      ret = plugins_post_create(flow->flow, pkt);
 
       if (ret & FLOW_FLUSH) {
-         exporter->export_flow(flow->flow_record);
+         exporter->export_flow(flow->flow);
 #ifdef FLOW_CACHE_STATS
          flushed++;
 #endif /* FLOW_CACHE_STATS */
          flow->erase();
       }
    } else {
-      ret = plugins_pre_update(flow->flow_record, pkt);
+      ret = plugins_pre_update(flow->flow, pkt);
 
       if (ret & FLOW_FLUSH) {
-         exporter->export_flow(flow->flow_record);
+         exporter->export_flow(flow->flow);
 #ifdef FLOW_CACHE_STATS
          flushed++;
 #endif /* FLOW_CACHE_STATS */
@@ -287,10 +287,10 @@ int NHTFlowCache::put_pkt(Packet &pkt)
          return put_pkt(pkt);
       } else {
          flow->update(pkt);
-         ret = plugins_post_update(flow->flow_record, pkt);
+         ret = plugins_post_update(flow->flow, pkt);
 
          if (ret & FLOW_FLUSH) {
-            exporter->export_flow(flow->flow_record);
+            exporter->export_flow(flow->flow);
 #ifdef FLOW_CACHE_STATS
             flushed++;
 #endif /* FLOW_CACHE_STATS */
@@ -301,9 +301,9 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       }
 
       /* Check if flow record is expired. */
-      if (current_ts.tv_sec - flow->flow_record.start_timestamp.tv_sec >= active.tv_sec) {
-         plugins_pre_export(flow->flow_record);
-         exporter->export_flow(flow->flow_record);
+      if (current_ts.tv_sec - flow->flow.start_timestamp.tv_sec >= active.tv_sec) {
+         plugins_pre_export(flow->flow);
+         exporter->export_flow(flow->flow);
          flow->erase();
 #ifdef FLOW_CACHE_STATS
          expired++;
@@ -325,8 +325,8 @@ int NHTFlowCache::export_expired(bool export_all)
    for (unsigned int i = 0; i < size; i++) {
       if (is_expired(flow_array[i], current_ts, active, inactive) ||
          (export_all && !flow_array[i]->is_empty())) {
-         plugins_pre_export(flow_array[i]->flow_record);
-         exporter->export_flow(flow_array[i]->flow_record);
+         plugins_pre_export(flow_array[i]->flow);
+         exporter->export_flow(flow_array[i]->flow);
 
          flow_array[i]->erase();
 #ifdef FLOW_CACHE_STATS

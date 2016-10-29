@@ -239,7 +239,7 @@ struct Record {
 /**
  * \brief Flow record struct constaining basic flow record data and extension headers.
  */
-struct FlowRecord : public Record {
+struct Flow : public Record {
    uint64_t field_indicator;
    struct timeval start_timestamp;
    struct timeval end_timestamp;

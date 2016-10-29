@@ -167,7 +167,7 @@ protected:
     * \param [in] pkt Input parsed packet.
     * \return Options for flow cache.
     */
-   int plugins_post_create(FlowRecord &rec, const Packet &pkt)
+   int plugins_post_create(Flow &rec, const Packet &pkt)
    {
       int ret = 0;
       for (unsigned int i = 0; i < plugin_cnt; i++) {
@@ -182,7 +182,7 @@ protected:
     * \param [in] pkt Input parsed packet.
     * \return Options for flow cache.
     */
-   int plugins_pre_update(FlowRecord &rec, Packet &pkt)
+   int plugins_pre_update(Flow &rec, Packet &pkt)
    {
       int ret = 0;
       for (unsigned int i = 0; i < plugin_cnt; i++) {
@@ -196,7 +196,7 @@ protected:
     * \param [in,out] rec Stored flow record.
     * \param [in] pkt Input parsed packet.
     */
-   int plugins_post_update(FlowRecord &rec, const Packet &pkt)
+   int plugins_post_update(Flow &rec, const Packet &pkt)
    {
       int ret = 0;
       for (unsigned int i = 0; i < plugin_cnt; i++) {
@@ -209,7 +209,7 @@ protected:
     * \brief Call pre_export function for each added plugin.
     * \param [in,out] rec Stored flow record.
     */
-   void plugins_pre_export(FlowRecord &rec)
+   void plugins_pre_export(Flow &rec)
    {
       for (unsigned int i = 0; i < plugin_cnt; i++) {
          plugins[i]->pre_export(rec);

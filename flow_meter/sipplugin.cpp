@@ -84,7 +84,7 @@ SIPPlugin::SIPPlugin(const options_t &module_options, vector<plugin_opt> plugin_
    flush_flow = true;
 }
 
-int SIPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
+int SIPPlugin::post_create(Flow &rec, const Packet &pkt)
 {
    uint16_t msg_type;
 
@@ -100,7 +100,7 @@ int SIPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 
    return 0;
 }
-int SIPPlugin::pre_update(FlowRecord &rec, Packet &pkt)
+int SIPPlugin::pre_update(Flow &rec, Packet &pkt)
 {
    uint16_t msg_type;
 

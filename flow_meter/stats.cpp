@@ -67,7 +67,7 @@ void StatsPlugin::init()
    print_header();
 }
 
-int StatsPlugin::post_create(FlowRecord &rec, const Packet &pkt)
+int StatsPlugin::post_create(Flow &rec, const Packet &pkt)
 {
    packets += 1;
    new_flows += 1;
@@ -76,7 +76,7 @@ int StatsPlugin::post_create(FlowRecord &rec, const Packet &pkt)
    return 0;
 }
 
-int StatsPlugin::post_update(FlowRecord &rec, const Packet &pkt)
+int StatsPlugin::post_update(Flow &rec, const Packet &pkt)
 {
    packets += 1;
    cache_hits += 1;
@@ -84,7 +84,7 @@ int StatsPlugin::post_update(FlowRecord &rec, const Packet &pkt)
    return 0;
 }
 
-void StatsPlugin::pre_export(FlowRecord &rec)
+void StatsPlugin::pre_export(Flow &rec)
 {
    flows_in_cache -= 1;
 }

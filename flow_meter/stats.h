@@ -72,9 +72,9 @@ public:
    StatsPlugin(struct timeval interval, ostream &out);
 
    void init();
-   int post_create(FlowRecord &rec, const Packet &pkt);
-   int post_update(FlowRecord &rec, const Packet &pkt);
-   void pre_export(FlowRecord &rec);
+   int post_create(Flow &rec, const Packet &pkt);
+   int post_update(Flow &rec, const Packet &pkt);
+   void pre_export(Flow &rec);
    void finish();
 };
 

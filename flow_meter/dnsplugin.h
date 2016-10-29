@@ -265,14 +265,14 @@ class DNSPlugin : public FlowCachePlugin
 public:
    DNSPlugin(const options_t &module_options);
    DNSPlugin(const options_t &module_options, vector<plugin_opt> plugin_options);
-   int post_create(FlowRecord &rec, const Packet &pkt);
-   int pre_update(FlowRecord &rec, Packet &pkt);
+   int post_create(Flow &rec, const Packet &pkt);
+   int pre_update(Flow &rec, Packet &pkt);
    void finish();
    string get_unirec_field_string();
 
 private:
    bool parse_dns(const char *data, unsigned int payload_len, bool tcp, RecordExtDNS *rec);
-   int  add_ext_dns(const char *data, unsigned int payload_len, bool tcp, FlowRecord &rec);
+   int  add_ext_dns(const char *data, unsigned int payload_len, bool tcp, Flow &rec);
    void process_srv(string &str) const;
    void process_rdata(const char *record_begin, const char *data, ostringstream &rdata, uint16_t type, size_t length) const;
 

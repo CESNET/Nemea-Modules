@@ -99,10 +99,10 @@ public:
    ${PLUGIN_UPPER}Plugin(const options_t &module_options);
    ${PLUGIN_UPPER}Plugin(const options_t &module_options, vector<plugin_opt> plugin_options);
    int pre_create(Packet &pkt);
-   int post_create(FlowRecord &rec, const Packet &pkt);
-   int pre_update(FlowRecord &rec, Packet &pkt);
-   int post_update(FlowRecord &rec, const Packet &pkt);
-   void pre_export(FlowRecord &rec);
+   int post_create(Flow &rec, const Packet &pkt);
+   int pre_update(Flow &rec, Packet &pkt);
+   int post_update(Flow &rec, const Packet &pkt);
+   void pre_export(Flow &rec);
    void finish();
    string get_unirec_field_string();
    bool include_basic_flow_fields();
@@ -147,22 +147,22 @@ int ${PLUGIN_UPPER}Plugin::pre_create(Packet &pkt)
    return 0;
 }
 
-int ${PLUGIN_UPPER}Plugin::post_create(FlowRecord &rec, const Packet &pkt)
+int ${PLUGIN_UPPER}Plugin::post_create(Flow &rec, const Packet &pkt)
 {
    return 0;
 }
 
-int ${PLUGIN_UPPER}Plugin::pre_update(FlowRecord &rec, Packet &pkt)
+int ${PLUGIN_UPPER}Plugin::pre_update(Flow &rec, Packet &pkt)
 {
    return 0;
 }
 
-int ${PLUGIN_UPPER}Plugin::post_update(FlowRecord &rec, const Packet &pkt)
+int ${PLUGIN_UPPER}Plugin::post_update(Flow &rec, const Packet &pkt)
 {
    return 0;
 }
 
-void ${PLUGIN_UPPER}Plugin::pre_export(FlowRecord &rec)
+void ${PLUGIN_UPPER}Plugin::pre_export(Flow &rec)
 {
 }
 

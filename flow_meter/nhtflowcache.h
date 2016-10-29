@@ -58,42 +58,42 @@ using namespace std;
 
 #define MAX_KEY_LENGTH 37
 
-class Flow
+class FlowRecord
 {
    uint64_t hash;
    char key[MAX_KEY_LENGTH];
 
 public:
    bool empty_flow;
-   FlowRecord flow_record;
+   Flow flow;
 
    void erase()
    {
-      flow_record.removeExtensions();
+      flow.removeExtensions();
 
-      flow_record.field_indicator = 0;
-      memset(&flow_record.start_timestamp, 0, sizeof(flow_record.start_timestamp));
-      memset(&flow_record.end_timestamp, 0, sizeof(flow_record.end_timestamp));
-      flow_record.ip_version = 0;
-      flow_record.ip_proto = 0;
-      flow_record.ip_tos = 0;
-      flow_record.ip_ttl = 0;
-      memset(&flow_record.src_ip, 0, sizeof(flow_record.src_ip));
-      memset(&flow_record.dst_ip, 0, sizeof(flow_record.dst_ip));
-      flow_record.src_port = 0;
-      flow_record.dst_port = 0;
-      flow_record.pkt_total_cnt = 0;
-      flow_record.octet_total_length = 0;
-      flow_record.tcp_control_bits = 0;
+      flow.field_indicator = 0;
+      memset(&flow.start_timestamp, 0, sizeof(flow.start_timestamp));
+      memset(&flow.end_timestamp, 0, sizeof(flow.end_timestamp));
+      flow.ip_version = 0;
+      flow.ip_proto = 0;
+      flow.ip_tos = 0;
+      flow.ip_ttl = 0;
+      memset(&flow.src_ip, 0, sizeof(flow.src_ip));
+      memset(&flow.dst_ip, 0, sizeof(flow.dst_ip));
+      flow.src_port = 0;
+      flow.dst_port = 0;
+      flow.pkt_total_cnt = 0;
+      flow.octet_total_length = 0;
+      flow.tcp_control_bits = 0;
 
       empty_flow = true;
    }
 
-   Flow()
+   FlowRecord()
    {
       erase();
    };
-   ~Flow()
+   ~FlowRecord()
    {
    };
 
@@ -124,8 +124,8 @@ class NHTFlowCache : public FlowCache
    struct timeval active;
    struct timeval inactive;
    char key[MAX_KEY_LENGTH];
-   Flow **flow_array;
-   Flow *flow_records;
+   FlowRecord **flow_array;
+   FlowRecord *flow_records;
 
 public:
    NHTFlowCache(const options_t &options)
@@ -147,8 +147,8 @@ public:
       active = options.active_timeout;
       inactive = options.inactive_timeout;
 
-      flow_array = new Flow*[size];
-      flow_records = new Flow[size];
+      flow_array = new FlowRecord*[size];
+      flow_records = new FlowRecord[size];
       for (unsigned int i = 0; i < size; i++) {
          flow_array[i] = flow_records + i;
       }
