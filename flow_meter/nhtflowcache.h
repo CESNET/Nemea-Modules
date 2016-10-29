@@ -70,7 +70,22 @@ public:
    void erase()
    {
       flow_record.removeExtensions();
-      memset(&flow_record, 0, sizeof(flow_record));
+
+      flow_record.field_indicator = 0;
+      memset(&flow_record.start_timestamp, 0, sizeof(flow_record.start_timestamp));
+      memset(&flow_record.end_timestamp, 0, sizeof(flow_record.end_timestamp));
+      flow_record.ip_version = 0;
+      flow_record.ip_proto = 0;
+      flow_record.ip_tos = 0;
+      flow_record.ip_ttl = 0;
+      memset(&flow_record.src_ip, 0, sizeof(flow_record.src_ip));
+      memset(&flow_record.dst_ip, 0, sizeof(flow_record.dst_ip));
+      flow_record.src_port = 0;
+      flow_record.dst_port = 0;
+      flow_record.pkt_total_cnt = 0;
+      flow_record.octet_total_length = 0;
+      flow_record.tcp_control_bits = 0;
+
       empty_flow = true;
    }
 
