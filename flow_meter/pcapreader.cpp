@@ -499,6 +499,12 @@ int PcapReader::init_interface(const string &interface, int snaplen, bool parse_
       fprintf(stderr, "%s\n", errbuf); // Print warning.
    }
 
+   if (pcap_datalink(handle) != DLT_EN10MB) {
+      error_msg = "Unsupported data link type.";
+      close();
+      return 3;
+   }
+
    if (print_pcap_stats) {
       /* Print stats header. */
       printf("# recv   - number of packets received\n");
