@@ -276,10 +276,6 @@ int main(int argc, char *argv[])
    signal(SIGTERM, signal_handler);
    signal(SIGINT, signal_handler);
 
-   for (int i = 0; i < module_info->num_ifc_out; i++) {
-      trap_ifcctl(TRAPIFC_OUTPUT, i, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
-   }
-
    signed char opt;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
