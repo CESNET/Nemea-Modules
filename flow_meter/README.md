@@ -4,7 +4,7 @@
 This NEMEA module creates flows from input PCAP file / network interface and exports them to output interface.
 
 ## Requirements
-- To compile this module you will need libpcap development library installed.
+- To compile this module you will need [libpcap](http://www.tcpdump.org/) development library installed.
 - Root priviliges are needed when capturing from network interface.
 
 ## Interfaces
@@ -45,6 +45,14 @@ file template and will also print `TODO` guide what needs to be done.
 
 ## Exporting packets
 It is possible to export single packet with additional information using plugins (`ARP`).
+
+## Possible issues
+### Flows are not send to output interface when reading small pcap file
+Turn off message buffering using `buffer=off` option on output interfaces.
+
+```
+./flow_meter -i u:abc:buffer=off -r traffic.pcap
+```
 
 ## Simplified function diagram
 Diagram below shows how `flow_meter` works.
