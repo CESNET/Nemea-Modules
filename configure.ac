@@ -92,7 +92,7 @@ RPM_BUILDREQ+=" libidn-devel"
 fi
 
 AC_ARG_WITH([flowcachesize],
-	AC_HELP_STRING([--with-flowcachesize=NUMBER],[Set size of flow cache for flow_meter module in number of flow records. Size must be divisible by 32. Default is 65536.]),
+	AC_HELP_STRING([--with-flowcachesize=NUMBER],[Set default size of flow cache for flow_meter module in number of flow records.]),
 	[
 	CPPFLAGS="$CPPFLAGS -DFLOW_CACHE_SIZE=$withval"
 	]
