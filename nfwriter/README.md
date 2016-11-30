@@ -1,4 +1,4 @@
-# nfreader - README
+# nfwriter - README
 
 ## Description
 This module reads flow records in UniRec format from its input TRAP interface and writes them to nfdump file.
