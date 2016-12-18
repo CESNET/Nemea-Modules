@@ -32,11 +32,12 @@ def convert_to_idea(rec, opts=None):
     #if rec.WARDEN_TYPE != 2:
     #    # this alert is not bruteforce
     #    return None
+    time = getIDEAtime();
     idea = {
         "Format": "IDEA0",
         "ID": getRandomId(),
-        "DetectTime": getIDEAtime(),
-        "CreateTime": getIDEAtime(),
+        "DetectTime": time,
+        "CreateTime": time,
         "EventTime": getIDEAtime(rec.SBFD_EVENT_TIME),
         "CeaseTime": getIDEAtime(rec.SBFD_CEASE_TIME),
         "ConnCount": rec.SBFD_ATTEMPTS,
