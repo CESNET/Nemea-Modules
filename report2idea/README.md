@@ -527,6 +527,9 @@ Each reporting module can store its output into file or send alerts into [Warden
     "EventTime": "2016-12-10T18:08:20Z",
     "Target": [
         {
+            "Port": [
+                54321
+            ],
             "Proto": [
                 "tcp"
             ]
@@ -536,6 +539,9 @@ Each reporting module can store its output into file or send alerts into [Warden
         {
             "IP4": [
                 "1.1.1.1"
+            ],
+            "Port": [
+                12345
             ],
             "Proto": [
                 "tcp"
