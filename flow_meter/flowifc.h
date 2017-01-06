@@ -56,7 +56,7 @@
 #include "ipaddr.h"
 #include "fields.h"
 
-// Values of field presence indicator flags (flowFieldIndicator)
+// Values of field presence indicator flags (field_indicator)
 // (Names of the fields are inspired by IPFIX specification)
 #define FLW_FLOWFIELDINDICATOR       (0x1 << 0)
 #define FLW_HASH                     (0x1 << 1)
@@ -75,6 +75,7 @@
 #define FLW_PACKETTOTALCOUNT         (0x1 << 14)
 #define FLW_OCTETTOTALLENGTH         (0x1 << 15)
 #define FLW_TCPCONTROLBITS           (0x1 << 16)
+#define FLW_ICMP                     (0x1 << 17)
 
 // Some common sets of flags
 #define FLW_IPV4_MASK (\
@@ -128,8 +129,10 @@ enum extTypeEnum {
    http_response,
    dns,
    sip,
-   ntp
+   ntp,
+   arp,
    /* Add extension header identifiers for your plugins here */
+   EXTENSION_CNT
 };
 
 /**
@@ -169,15 +172,6 @@ struct RecordExt {
 
 struct Record {
    RecordExt *exts; /**< Extension headers. */
-
-   /**
-    * \brief Fill unirec record with basic flow fields.
-    * \param [in] tmplt_ptr Pointer to unirec template.
-    * \param [out] record_ptr Pointer to unirec record.
-    */
-   virtual void fillUnirec(ur_template_t *tmplt_ptr, void *record_ptr)
-   {
-   }
 
    /**
     * \brief Add new extension header.
@@ -245,21 +239,21 @@ struct Record {
 /**
  * \brief Flow record struct constaining basic flow record data and extension headers.
  */
-struct FlowRecord : public Record {
-   uint64_t flowFieldIndicator;
-   struct timeval flowStartTimestamp;
-   struct timeval flowEndTimestamp;
-   uint8_t  ipVersion;
-   uint8_t  protocolIdentifier;
-   uint8_t  ipClassOfService;
-   uint8_t  ipTtl;
-   ipaddr_t sourceIPAddress;
-   ipaddr_t destinationIPAddress;
-   uint16_t sourceTransportPort;
-   uint16_t destinationTransportPort;
-   uint32_t packetTotalCount;
-   uint64_t octetTotalLength;
-   uint8_t  tcpControlBits;
+struct Flow : public Record {
+   uint64_t field_indicator;
+   struct timeval time_first;
+   struct timeval time_last;
+   uint8_t  ip_version;
+   uint8_t  ip_proto;
+   uint8_t  ip_tos;
+   uint8_t  ip_ttl;
+   ipaddr_t src_ip;
+   ipaddr_t dst_ip;
+   uint16_t src_port;
+   uint16_t dst_port;
+   uint32_t pkt_total_cnt;
+   uint64_t octet_total_length;
+   uint8_t  tcp_control_bits;
 };
 
 #endif

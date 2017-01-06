@@ -3,22 +3,26 @@
 ## Description
 This NEMEA module creates flows from input PCAP file / network interface and exports them to output interface.
 
+## Requirements
+- To compile this module you will need [libpcap](http://www.tcpdump.org/) development library installed.
+- Root priviliges are needed when capturing from network interface.
+
 ## Interfaces
 - Input: PCAP file or network interface
 - Output interfaces: Unirec containing `<COLLECTOR_FLOW>` + fields added by active plugins
 
 ## Parameters
 ### Module specific parameters
-- `-p STRING`        Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. For example: '-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,dns,sip,ntp,basic
+- `-p STRING`        Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. For example: '-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,dns,sip,ntp,basic,arp
 - `-c NUMBER`        Quit after `NUMBER` of packets are captured.
 - `-I STRING`        Capture from given network interface. Parameter require interface name (eth0 for example).
 - `-r STRING`        Pcap file to read. `-` to read from stdin.
-- `-t NUM:NUM`       Active and inactive timeout in seconds. (DEFAULT: 300.0:30.0)
-- `-s NUMBER`        Size of flow cache in number of flow records. Each flow record has 186 bytes. (DEFAULT: 65536)
+- `-n`               Don't send eof when flow_meter exits.
+- `-l NUMBER`        Snapshot length when reading packets. Set value between `120`-`65535` .
+- `-t NUM:NUM`       Active and inactive timeout in seconds. Format: DOUBLE:DOUBLE. Value default means use default value 300.0:30.0.
+- `-s STRING`        Size of flow cache in number of flow records. Each flow record has 176 bytes. default means use value 65536.
 - `-S NUMBER`        Print flow cache statistics. `NUMBER` specifies interval between prints.
 - `-P`               Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.
-- `-m NUMBER`        Sampling probability. `NUMBER` in 100 (DEFAULT: 100)
-- `-V STRING`        Replacement vector. 1+32 NUMBERS.
 
 ### Common TRAP parameters
 - `-h [trap,1]`      Print help message for this module / for libtrap specific parameters.
@@ -38,6 +42,17 @@ There are already some existing plugins that export e.g. `DNS`, `HTTP`, `SIP`, `
 ## Adding new plugin
 To create new plugin use [create_plugin.sh](create_plugin.sh) script. This interactive script will generate .cpp and .h
 file template and will also print `TODO` guide what needs to be done.
+
+## Exporting packets
+It is possible to export single packet with additional information using plugins (`ARP`).
+
+## Possible issues
+### Flows are not send to output interface when reading small pcap file
+Turn off message buffering using `buffer=off` option on output interfaces.
+
+```
+./flow_meter -i u:abc:buffer=off -r traffic.pcap
+```
 
 ## Simplified function diagram
 Diagram below shows how `flow_meter` works.

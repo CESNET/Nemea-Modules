@@ -503,6 +503,62 @@ Each reporting module can store its output into file or send alerts into [Warden
 }
 ```
 
+### Alerts from the [haddrscan_detector](https://github.com/CESNET/Nemea-Detectors/tree/master/haddrscan_detector) module:
+
+```json
+{
+    "Category": [
+        "Recon.Scanning"
+    ],
+    "Node": [
+        {
+            "AggrWin": "00:10:00",
+            "Type": [
+                "Flow",
+                "Statistical"
+            ],
+            "SW": [
+                "Nemea",
+                "haddrscan_detector"
+            ],
+            "Name": "haddrscan"
+        }
+    ],
+    "EventTime": "2016-12-10T18:08:20Z",
+    "Target": [
+        {
+            "Port": [
+                54321
+            ],
+            "Proto": [
+                "tcp"
+            ]
+        }
+    ],
+    "Source": [
+        {
+            "IP4": [
+                "1.1.1.1"
+            ],
+            "Port": [
+                12345
+            ],
+            "Proto": [
+                "tcp"
+            ]
+        }
+    ],
+    "ID": "43ead176-e3a2-46f3-a92c-dfdddefc2bcf",
+    "DetectTime": "2016-12-10T18:21:08Z",
+    "Description": "Horizontal scan using TCP SYN",
+    "Format": "IDEA0",
+    "CeaseTime": "2016-12-10T18:21:08Z",
+    "FlowCount": 250,
+    "CreateTime": "2017-01-01T23:26:30Z"
+}
+```
+
+
 ## (D)DoS
 
 ### Alerts from the [hoststatsnemea](https://github.com/CESNET/Nemea-Detectors/tree/master/hoststatsnemea) module:

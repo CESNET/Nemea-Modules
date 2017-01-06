@@ -54,10 +54,10 @@ using namespace std;
 
 class StatsPlugin : public FlowCachePlugin
 {
-   unsigned long packets;
-   unsigned long new_flows;
-   unsigned long cache_hits;
-   unsigned long flows_in_cache;
+   uint64_t packets;
+   uint64_t new_flows;
+   uint64_t cache_hits;
+   uint64_t flows_in_cache;
 
    struct timeval interval;
    struct timeval last_ts;
@@ -72,9 +72,9 @@ public:
    StatsPlugin(struct timeval interval, ostream &out);
 
    void init();
-   int post_create(FlowRecord &rec, const Packet &pkt);
-   int post_update(FlowRecord &rec, const Packet &pkt);
-   void pre_export(FlowRecord &rec);
+   int post_create(Flow &rec, const Packet &pkt);
+   int post_update(Flow &rec, const Packet &pkt);
+   void pre_export(Flow &rec);
    void finish();
 };
 

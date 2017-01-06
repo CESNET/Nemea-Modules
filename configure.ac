@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-modules], [2.4.1], [traffic-analysis@cesnet.cz])
+AC_INIT([nemea-modules], [2.4.3], [traffic-analysis@cesnet.cz])
 AC_CONFIG_SRCDIR([flowcounter/flowcounter.c])
 AC_CONFIG_HEADERS([config.h])
-RELEASE=2
+RELEASE=1
 AC_SUBST(RELEASE)
 USERNAME=`git config --get user.name`
 USERMAIL=`git config --get user.email`
@@ -75,7 +75,7 @@ esac], [repobuild=true])
 
 AX_C_BIGENDIAN_CROSS
 
-AX_OPENMP([], [AC_MSG_ERROR([OpenMP was not found. Some modules need it (e.g. logger and merger)])])
+AX_OPENMP([], [AC_MSG_ERROR([OpenMP was not found. Some modules need it (e.g. merger)])])
 AC_SUBST(OPENMP_CFLAGS)
 
 AX_LIBTRAP_CHECK
@@ -92,9 +92,15 @@ RPM_BUILDREQ+=" libidn-devel"
 fi
 
 AC_ARG_WITH([flowcachesize],
-	AC_HELP_STRING([--with-flowcachesize=NUMBER],[Set size of flow cache for flow_meter module in number of flow records. Size must be divisible by 32. Default is 65536.]),
+	AC_HELP_STRING([--with-flowcachesize=NUMBER],[Set default size of flow cache for flow_meter module in number of flow records.]),
 	[
 	CPPFLAGS="$CPPFLAGS -DFLOW_CACHE_SIZE=$withval"
+	]
+)
+AC_ARG_WITH([flowcachestats],
+	AC_HELP_STRING([--with-flowcachestats],[Enable print of flow cache stats when module exits.]),
+	[
+	CPPFLAGS="$CPPFLAGS -DFLOW_CACHE_STATS"
 	]
 )
 
@@ -109,16 +115,9 @@ AC_ARG_WITH([nfreader],
 if test x${withnfreader} = xyes; then
 	# Checks for libraries.
 	AC_CHECK_LIB(nf, lnf_open, [libnf=yes],
-	  [AC_CHECK_LIB(nfdump, nfdump_init, [libnfdump=yes],
-	    [AC_MSG_WARN([libnf and libnfdump not found. The nfreader module will not be compiled.])]
-	  )]
+	  [AC_MSG_WARN([libnf not found. The nfreader module will not be compiled.])]
 	)
 
-fi
-AM_CONDITIONAL(HAVE_LIBNFDUMP, test x${libnfdump} = xyes && test x${withnfreader} = xyes)
-if [[ -z "$HAVE_LIBNFDUMP_TRUE" ]]; then
-RPM_REQUIRES+=" libnfdump"
-RPM_BUILDREQ+=" libnfdump-devel"
 fi
 
 AM_CONDITIONAL(HAVE_LIBNF, test x${libnf} = xyes && test x${withnfreader} = xyes)
@@ -211,6 +210,7 @@ AC_CONFIG_FILES([Makefile
                  traffic_repeater/Makefile
                  unirecfilter/Makefile
                  endiverter/Makefile
+                 nfwriter/Makefile
                ])
 
 AC_SUBST(RPM_REQUIRES)

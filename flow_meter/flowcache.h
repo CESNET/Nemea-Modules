@@ -47,7 +47,6 @@
 #ifndef FLOWCACHE_H
 #define FLOWCACHE_H
 
-#include <vector>
 #include <cstring>
 
 #include "packet.h"
@@ -65,9 +64,21 @@ class FlowCache
 protected:
    FlowExporter *exporter; /**< Instance of FlowExporter used to export flows. */
 private:
-   vector<FlowCachePlugin *> plugins; /**< Array of plugins. */
+   FlowCachePlugin **plugins; /**< Array of plugins. */
+   uint32_t plugin_cnt;
 
 public:
+   FlowCache() : plugins(NULL), plugin_cnt(0)
+   {
+   }
+
+   ~FlowCache()
+   {
+      if (plugins != NULL) {
+         delete [] plugins;
+      }
+   }
+
    /**
     * \brief Put packet into the cache (i.e. update corresponding flow record or create a new one)
     * \param [in] pkt Input parsed packet.
@@ -107,7 +118,20 @@ public:
     */
    void add_plugin(FlowCachePlugin *plugin)
    {
-      plugins.push_back(plugin);
+      if (plugins == NULL) {
+         plugins = new FlowCachePlugin*[8];
+      } else {
+         if (plugin_cnt % 8 == 0) {
+            FlowCachePlugin **tmp = new FlowCachePlugin*[plugin_cnt + 8];
+            for (unsigned int i = 0; i < plugin_cnt; i++) {
+               tmp[i] = plugins[i];
+            }
+            delete [] plugins;
+            plugins = tmp;
+
+         }
+      }
+      plugins[plugin_cnt++] = plugin;
    }
 
 protected:
@@ -118,7 +142,7 @@ protected:
     */
    void plugins_init()
    {
-      for (unsigned int i = 0; i < plugins.size(); i++) {
+      for (unsigned int i = 0; i < plugin_cnt; i++) {
          plugins[i]->init();
       }
    }
@@ -131,7 +155,7 @@ protected:
    int plugins_pre_create(Packet &pkt)
    {
       int ret = 0;
-      for (unsigned int i = 0; i < plugins.size(); i++) {
+      for (unsigned int i = 0; i < plugin_cnt; i++) {
          ret |= plugins[i]->pre_create(pkt);
       }
       return ret;
@@ -143,10 +167,10 @@ protected:
     * \param [in] pkt Input parsed packet.
     * \return Options for flow cache.
     */
-   int plugins_post_create(FlowRecord &rec, const Packet &pkt)
+   int plugins_post_create(Flow &rec, const Packet &pkt)
    {
       int ret = 0;
-      for (unsigned int i = 0; i < plugins.size(); i++) {
+      for (unsigned int i = 0; i < plugin_cnt; i++) {
          ret |= plugins[i]->post_create(rec, pkt);
       }
       return ret;
@@ -158,10 +182,10 @@ protected:
     * \param [in] pkt Input parsed packet.
     * \return Options for flow cache.
     */
-   int plugins_pre_update(FlowRecord &rec, Packet &pkt)
+   int plugins_pre_update(Flow &rec, Packet &pkt)
    {
       int ret = 0;
-      for (unsigned int i = 0; i < plugins.size(); i++) {
+      for (unsigned int i = 0; i < plugin_cnt; i++) {
          ret |= plugins[i]->pre_update(rec, pkt);
       }
       return ret;
@@ -172,10 +196,10 @@ protected:
     * \param [in,out] rec Stored flow record.
     * \param [in] pkt Input parsed packet.
     */
-   int plugins_post_update(FlowRecord &rec, const Packet &pkt)
+   int plugins_post_update(Flow &rec, const Packet &pkt)
    {
       int ret = 0;
-      for (unsigned int i = 0; i < plugins.size(); i++) {
+      for (unsigned int i = 0; i < plugin_cnt; i++) {
          ret |= plugins[i]->post_update(rec, pkt);
       }
       return ret;
@@ -185,9 +209,9 @@ protected:
     * \brief Call pre_export function for each added plugin.
     * \param [in,out] rec Stored flow record.
     */
-   void plugins_pre_export(FlowRecord &rec)
+   void plugins_pre_export(Flow &rec)
    {
-      for (unsigned int i = 0; i < plugins.size(); i++) {
+      for (unsigned int i = 0; i < plugin_cnt; i++) {
          plugins[i]->pre_export(rec);
       }
    }
@@ -197,7 +221,7 @@ protected:
     */
    void plugins_finish()
    {
-      for (unsigned int i = 0; i < plugins.size(); i++) {
+      for (unsigned int i = 0; i < plugin_cnt; i++) {
          plugins[i]->finish();
       }
    }

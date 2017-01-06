@@ -386,8 +386,8 @@ class SIPPlugin : public FlowCachePlugin {
 public:
    SIPPlugin(const options_t &module_options);
    SIPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options);
-   int post_create(FlowRecord &rec, const Packet &pkt);
-   int pre_update(FlowRecord &rec, Packet &pkt);
+   int post_create(Flow &rec, const Packet &pkt);
+   int pre_update(Flow &rec, Packet &pkt);
    void finish();
    string get_unirec_field_string();
 

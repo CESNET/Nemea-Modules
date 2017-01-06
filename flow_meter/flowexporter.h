@@ -61,7 +61,7 @@ public:
     * \param [in] flow Flow to send.
     * \return 0 on success
     */
-   virtual int export_flow(FlowRecord &flow) = 0;
+   virtual int export_flow(Flow &flow) = 0;
 
    /**
     * \brief Send packet to output interface.

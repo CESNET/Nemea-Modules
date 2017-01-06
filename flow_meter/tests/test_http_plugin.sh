@@ -1,6 +1,6 @@
 #!/bin/sh
 
-. ./test_plugin.sh
+. ./test.sh
 
-test_plugin http "$pcap_dir/http-sample.pcap"
+run_plugin_test http "$pcap_dir/http-sample.pcap"
 

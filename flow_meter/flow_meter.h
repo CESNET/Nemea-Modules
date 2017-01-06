@@ -62,24 +62,23 @@ const unsigned int DEFAULT_FLOW_CACHE_SIZE = FLOW_CACHE_SIZE;
 const unsigned int DEFAULT_FLOW_LINE_SIZE = 32;
 const double DEFAULT_INACTIVE_TIMEOUT = 30.0;
 const double DEFAULT_ACTIVE_TIMEOUT = 300.0;
-const string DEFAULT_REPLACEMENT_STRING = \
-   "13,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0";
 
 /**
  * \brief Struct containing module settings.
  */
 struct options_t {
    int basic_ifc_num;
+   bool eof;
    bool print_stats;
    bool print_pcap_stats;
    uint32_t flow_cache_size;
    uint32_t flow_line_size;
+   uint32_t snaplen;
    struct timeval inactive_timeout;
    struct timeval active_timeout;
    struct timeval cache_stats_interval;
    string interface;
    string pcap_file;
-   string replacement_string;
 };
 
 /**

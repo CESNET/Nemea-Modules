@@ -56,29 +56,44 @@
 
 using namespace std;
 
-#define MAX_KEY_LENGTH 40
+#define MAX_KEY_LENGTH 37
 
-class Flow
+class FlowRecord
 {
    uint64_t hash;
    char key[MAX_KEY_LENGTH];
 
 public:
    bool empty_flow;
-   FlowRecord flow_record;
+   Flow flow;
 
    void erase()
    {
-      flow_record.removeExtensions();
-      memset(&flow_record, 0, sizeof(flow_record));
+      flow.removeExtensions();
+
+      flow.field_indicator = 0;
+      memset(&flow.time_first, 0, sizeof(flow.time_first));
+      memset(&flow.time_last, 0, sizeof(flow.time_last));
+      flow.ip_version = 0;
+      flow.ip_proto = 0;
+      flow.ip_tos = 0;
+      flow.ip_ttl = 0;
+      memset(&flow.src_ip, 0, sizeof(flow.src_ip));
+      memset(&flow.dst_ip, 0, sizeof(flow.dst_ip));
+      flow.src_port = 0;
+      flow.dst_port = 0;
+      flow.pkt_total_cnt = 0;
+      flow.octet_total_length = 0;
+      flow.tcp_control_bits = 0;
+
       empty_flow = true;
    }
 
-   Flow()
+   FlowRecord()
    {
       erase();
    };
-   ~Flow()
+   ~FlowRecord()
    {
    };
 
@@ -88,59 +103,59 @@ public:
    void update(const Packet &pkt);
 };
 
-typedef vector<int> replacementvector_t;
-typedef replacementvector_t::iterator replacementvectoriter_t;
-
 class NHTFlowCache : public FlowCache
 {
    bool print_stats;
    uint8_t key_len;
-   int line_size;
-   int size;
-   int insertpos;
-   long empty;
-   long not_empty;
-   long hits;
-   long expired;
-   long flushed;
-   long lookups;
-   long lookups2;
+   uint32_t line_size;
+   uint32_t size;
+   uint32_t line_size_mask;
+#ifdef FLOW_CACHE_STATS
+   uint64_t empty;
+   uint64_t not_empty;
+   uint64_t hits;
+   uint64_t expired;
+   uint64_t flushed;
+   uint64_t lookups;
+   uint64_t lookups2;
+#endif /* FLOW_CACHE_STATS */
    struct timeval current_ts;
    struct timeval last_ts;
    struct timeval active;
    struct timeval inactive;
    char key[MAX_KEY_LENGTH];
-   string policy;
-   replacementvector_t rpl;
-   Flow **flow_array;
+   FlowRecord **flow_array;
+   FlowRecord *flow_records;
 
 public:
    NHTFlowCache(const options_t &options)
    {
       line_size = options.flow_line_size;
+      size = options.flow_cache_size;
+      last_ts.tv_sec = 0;
+      line_size_mask = ~(line_size - 1);
+#ifdef FLOW_CACHE_STATS
       empty = 0;
       not_empty = 0;
       hits = 0;
       expired = 0;
       flushed = 0;
-      size = options.flow_cache_size;
       lookups = 0;
       lookups2 = 0;
-      policy = options.replacement_string;
+#endif /* FLOW_CACHE_STATS */
       print_stats = options.print_stats;
       active = options.active_timeout;
       inactive = options.inactive_timeout;
 
-      flow_array = new Flow*[size];
-      for (int i = 0; i < size; i++) {
-         flow_array[i] = new Flow();
+      flow_array = new FlowRecord*[size];
+      flow_records = new FlowRecord[size];
+      for (unsigned int i = 0; i < size; i++) {
+         flow_array[i] = flow_records + i;
       }
    };
    ~NHTFlowCache()
    {
-      for (int i = 0; i < size; i++) {
-         delete flow_array[i];
-      }
+      delete [] flow_records;
       delete [] flow_array;
    };
 
@@ -152,7 +167,6 @@ public:
    int export_expired(bool export_all);
 
 protected:
-   void parse_replacement_string();
    bool create_hash_key(Packet &pkt);
    void print_report();
 };

@@ -211,48 +211,48 @@ struct __attribute__ ((packed)) dns_dnskey {
  * \brief Flow record extension header for storing parsed DNS packets.
  */
 struct RecordExtDNS : RecordExt {
-   uint16_t dns_id;
-   uint16_t dns_answers;
-   uint8_t dns_rcode;
-   char dns_qname[128];
-   uint16_t dns_qtype;
-   uint16_t dns_qclass;
-   uint32_t dns_rr_ttl;
-   uint16_t dns_rlength;
-   char dns_data[160];
-   uint16_t dns_psize;
+   uint16_t id;
+   uint16_t answers;
+   uint8_t rcode;
+   char qname[128];
+   uint16_t qtype;
+   uint16_t qclass;
+   uint32_t rr_ttl;
+   uint16_t rlength;
+   char data[160];
+   uint16_t psize;
    uint8_t dns_do;
 
    /**
     * \brief Constructor.
     */
-   RecordExtDNS() : RecordExt(dns), dns_qtype(0)
+   RecordExtDNS() : RecordExt(dns)
    {
-      dns_id = 0;
-      dns_answers = 0;
-      dns_rcode = 0;
-      dns_qname[0] = 0;
-      dns_qtype = 0;
-      dns_qclass = 0;
-      dns_rr_ttl = 0;
-      dns_rlength = 0;
-      dns_data[0] = 0;
-      dns_psize = 0;
+      id = 0;
+      answers = 0;
+      rcode = 0;
+      qname[0] = 0;
+      qtype = 0;
+      qclass = 0;
+      rr_ttl = 0;
+      rlength = 0;
+      data[0] = 0;
+      psize = 0;
       dns_do = 0;
    }
 
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
-         ur_set(tmplt, record, F_DNS_ID, dns_id);
-         ur_set(tmplt, record, F_DNS_ANSWERS, dns_answers);
-         ur_set(tmplt, record, F_DNS_RCODE, dns_rcode);
-         ur_set_string(tmplt, record, F_DNS_NAME, dns_qname);
-         ur_set(tmplt, record, F_DNS_QTYPE, dns_qtype);
-         ur_set(tmplt, record, F_DNS_CLASS, dns_qclass);
-         ur_set(tmplt, record, F_DNS_RR_TTL, dns_rr_ttl);
-         ur_set(tmplt, record, F_DNS_RLENGTH, dns_rlength);
-         ur_set_var(tmplt, record, F_DNS_RDATA, dns_data, dns_rlength);
-         ur_set(tmplt, record, F_DNS_PSIZE, dns_psize);
+         ur_set(tmplt, record, F_DNS_ID, id);
+         ur_set(tmplt, record, F_DNS_ANSWERS, answers);
+         ur_set(tmplt, record, F_DNS_RCODE, rcode);
+         ur_set_string(tmplt, record, F_DNS_NAME, qname);
+         ur_set(tmplt, record, F_DNS_QTYPE, qtype);
+         ur_set(tmplt, record, F_DNS_CLASS, qclass);
+         ur_set(tmplt, record, F_DNS_RR_TTL, rr_ttl);
+         ur_set(tmplt, record, F_DNS_RLENGTH, rlength);
+         ur_set_var(tmplt, record, F_DNS_RDATA, data, rlength);
+         ur_set(tmplt, record, F_DNS_PSIZE, psize);
          ur_set(tmplt, record, F_DNS_DO, dns_do);
    }
 };
@@ -265,14 +265,14 @@ class DNSPlugin : public FlowCachePlugin
 public:
    DNSPlugin(const options_t &module_options);
    DNSPlugin(const options_t &module_options, vector<plugin_opt> plugin_options);
-   int post_create(FlowRecord &rec, const Packet &pkt);
-   int pre_update(FlowRecord &rec, Packet &pkt);
+   int post_create(Flow &rec, const Packet &pkt);
+   int pre_update(Flow &rec, Packet &pkt);
    void finish();
    string get_unirec_field_string();
 
 private:
-   bool parse_dns(const char *data, unsigned int payload_len, RecordExtDNS *rec);
-   int  add_ext_dns(const char *data, unsigned int payload_len, FlowRecord &rec);
+   bool parse_dns(const char *data, unsigned int payload_len, bool tcp, RecordExtDNS *rec);
+   int  add_ext_dns(const char *data, unsigned int payload_len, bool tcp, Flow &rec);
    void process_srv(string &str) const;
    void process_rdata(const char *record_begin, const char *data, ostringstream &rdata, uint16_t type, size_t length) const;
 

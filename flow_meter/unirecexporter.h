@@ -65,22 +65,24 @@ using namespace std;
 class UnirecExporter : public FlowExporter
 {
 public:
-   UnirecExporter();
+   UnirecExporter(bool send_eof);
    int init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, int basic_ifc_num);
    void close();
-   int export_flow(FlowRecord &flow);
+   int export_flow(Flow &flow);
    int export_packet(Packet &pkt);
 
 private:
-   void fill_basic_flow(FlowRecord &flow, ur_template_t *tmplt_ptr, void *record_ptr);
+   void fill_basic_flow(Flow &flow, ur_template_t *tmplt_ptr, void *record_ptr);
    void fill_packet_fields(Packet &pkt, ur_template_t *tmplt_ptr, void *record_ptr);
    void free_unirec_resources();
 
    int out_ifc_cnt;           /**< Number of output interfaces. */
    int basic_ifc_num;         /**< Basic output interface number. */
-   map<int, int> ifc_mapping; /**< Contain extension id -> output interface number mapping. */
+   int *ifc_mapping;          /**< Contain extension id (as index) -> output interface number mapping. */
+   bool *ifc_to_export;       /**< Contain interfaces to export. */
    ur_template_t **tmplt;     /**< Pointer to unirec templates. */
    void **record;             /**< Pointer to unirec records. */
+   bool eof;                  /**< Send eof when module exits. */
 };
 
 #endif

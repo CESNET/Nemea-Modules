@@ -53,7 +53,8 @@
 #include <cstring>
 #include <signal.h>
 #include <stdlib.h>
-#include <time.h>
+#include <limits>
+#include <errno.h>
 
 #include "flow_meter.h"
 #include "packet.h"
@@ -68,6 +69,7 @@
 #include "dnsplugin.h"
 #include "sipplugin.h"
 #include "ntpplugin.h"
+#include "arpplugin.h"
 
 using namespace std;
 
@@ -80,16 +82,16 @@ static int stop = 0;
 #define MODULE_PARAMS(PARAM) \
   PARAM('p', "plugins", "Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. "\
   "For example: \'-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter"\
-  " will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,dns,sip,ntp,basic", required_argument, "string")\
+  " will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,dns,sip,ntp,basic,arp", required_argument, "string")\
   PARAM('c', "count", "Quit after number of packets are captured.", required_argument, "uint32")\
   PARAM('I', "interface", "Capture from given network interface. Parameter require interface name (eth0 for example).", required_argument, "string")\
-  PARAM('r', "file", "Pcap file to read. - to read from stdin", required_argument, "string") \
-  PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: FLOAT:FLOAT. (DEFAULT: 300.0:30.0)", required_argument, "string") \
-  PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 168 bytes. (DEFAULT: 65536)", required_argument, "uint32") \
+  PARAM('r', "file", "Pcap file to read. - to read from stdin.", required_argument, "string") \
+  PARAM('n', "no_eof", "Don't send EOF message when flow_meter exits.", no_argument, "none") \
+  PARAM('l', "snapshot_len", "Snapshot length when reading packets. Set value between 120-65535.", required_argument, "uint32") \
+  PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: DOUBLE:DOUBLE. Value default means use default value 300.0:30.0.", required_argument, "string") \
+  PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 176 bytes. default means use value 65536.", required_argument, "string") \
   PARAM('S', "cache-statistics", "Print flow cache statistics. NUMBER specifies interval between prints.", required_argument, "float") \
-  PARAM('P', "pcap-statistics", "Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.", no_argument, "none") \
-  PARAM('m', "sample", "Sampling probability. NUMBER in 100 (DEFAULT: 100)", required_argument, "int32") \
-  PARAM('V', "vector", "Replacement vector. 1+32 NUMBERS.", required_argument, "string")
+  PARAM('P', "pcap-statistics", "Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.", no_argument, "none")
 
 /**
  * \brief Parse input plugin settings.
@@ -135,6 +137,11 @@ int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plu
          tmp.push_back(plugin_opt("ntp", ntp, ifc_num++));
 
          plugins.push_back(new NTPPlugin(module_options, tmp));
+      } else if (proto == "arp"){
+         vector<plugin_opt> tmp;
+         tmp.push_back(plugin_opt("arp", arp, ifc_num++));
+
+         plugins.push_back(new ARPPlugin(module_options, tmp));
       } else {
          fprintf(stderr, "Unsupported plugin: \"%s\"\n", proto.c_str());
          return -1;
@@ -171,6 +178,46 @@ int count_ifc_interfaces(int argc, char *argv[])
    }
 
    return int_cnt;
+}
+
+/**
+ * \brief Provides conversion from string to uint32_t.
+ * \param [in] str String representation of value.
+ * \param [out] dst Destination variable.
+ * \return True on success, false otherwise.
+ */
+bool str_to_uint32(const char *str, uint32_t &dst)
+{
+   char *check;
+   errno = 0;
+   unsigned long long value = strtoull(str, &check, 10);
+   if (errno == ERANGE || str[0] == '-' || *check ||
+      value < numeric_limits<uint32_t>::min() ||
+      value > numeric_limits<uint32_t>::max()) {
+      return false;
+   }
+
+   dst = value;
+   return true;
+}
+
+/**
+ * \brief Provides conversion from string to double.
+ * \param [in] str String representation of value.
+ * \param [out] dst Destination variable.
+ * \return True on success, false otherwise.
+ */
+bool str_to_double(const char *str, double &dst)
+{
+   char *check;
+   errno = 0;
+   double value = strtod(str, &check);
+   if (errno == ERANGE || *check || str[0] == '\0') {
+      return false;
+   }
+
+   dst = value;
+   return true;
 }
 
 /**
@@ -212,15 +259,14 @@ int main(int argc, char *argv[])
    options.flow_line_size = DEFAULT_FLOW_LINE_SIZE;
    double_to_timeval(DEFAULT_INACTIVE_TIMEOUT, options.inactive_timeout);
    double_to_timeval(DEFAULT_ACTIVE_TIMEOUT, options.active_timeout);
-   options.replacement_string = DEFAULT_REPLACEMENT_STRING;
    options.print_stats = true; /* Plugins, FlowCache stats ON. */
    options.print_pcap_stats = false;
    options.interface = "";
    options.basic_ifc_num = 0;
+   options.snaplen = 0;
+   options.eof = true;
 
    uint32_t pkt_limit = 0; // Limit of packets for packet parser. 0 = no limit
-   int sampling = 100;
-   srand(time(NULL));
 
    // ***** TRAP initialization *****
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
@@ -230,12 +276,7 @@ int main(int argc, char *argv[])
    signal(SIGTERM, signal_handler);
    signal(SIGINT, signal_handler);
 
-   for (int i = 0; i < module_info->num_ifc_out; i++) {
-      trap_ifcctl(TRAPIFC_OUTPUT, i, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
-   }
-
-   int opt;
-   char *cptr;
+   signed char opt;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
       case 'p':
@@ -255,45 +296,92 @@ int main(int argc, char *argv[])
          }
          break;
       case 'c':
-         pkt_limit = strtoul(optarg, NULL, 10);
+         {
+            uint32_t tmp;
+            if (!str_to_uint32(optarg, tmp)) {
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               TRAP_DEFAULT_FINALIZATION();
+               return error("Invalid argument for option -c");
+            }
+            pkt_limit = tmp;
+         }
          break;
       case 'I':
          options.interface = string(optarg);
          break;
       case 't':
-         cptr = strchr(optarg, ':');
-         if (cptr == NULL) {
-            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-            TRAP_DEFAULT_FINALIZATION();
-            return error("Invalid argument for option -t");
+         {
+            if (!strcmp(optarg, "default")) {
+               break;
+            }
+
+            char *check;
+            check = strchr(optarg, ':');
+            if (check == NULL) {
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               TRAP_DEFAULT_FINALIZATION();
+               return error("Invalid argument for option -t");
+            }
+
+            *check = '\0';
+            double tmp1, tmp2;
+            if (!str_to_double(optarg, tmp1) || !str_to_double(check + 1, tmp2) || tmp1 < 0 || tmp2 < 0) {
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               TRAP_DEFAULT_FINALIZATION();
+               return error("Invalid argument for option -t");
+            }
+
+            double_to_timeval(tmp1, options.active_timeout);
+            double_to_timeval(tmp2, options.inactive_timeout);
          }
-         *cptr = '\0';
-         double_to_timeval(atof(optarg), options.active_timeout);
-         double_to_timeval(atof(cptr + 1), options.inactive_timeout);
          break;
       case 'r':
          options.pcap_file = string(optarg);
          break;
+      case 'n':
+         options.eof = false;
+         break;
+      case 'l':
+         if (!str_to_uint32(optarg, options.snaplen)) {
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+            TRAP_DEFAULT_FINALIZATION();
+            return error("Invalid argument for option -l");
+         }
+         if (options.snaplen < MIN_SNAPLEN) {
+            printf("Setting snapshot length to minimum value %d.\n", MIN_SNAPLEN);
+            options.snaplen = MIN_SNAPLEN;
+         } else if (options.snaplen > MAX_SNAPLEN) {
+            printf("Setting snapshot length to maximum value %d.\n", MAX_SNAPLEN);
+            options.snaplen = MAX_SNAPLEN;
+         }
+         break;
       case 's':
-         options.flow_cache_size = atoi(optarg);
+         if (strcmp(optarg, "default")) {
+            uint32_t tmp;
+            if (!str_to_uint32(optarg, tmp) || tmp == 0) {
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               TRAP_DEFAULT_FINALIZATION();
+               return error("Invalid argument for option -s");
+            }
+            options.flow_cache_size = tmp;
+         } else {
+            options.flow_cache_size = DEFAULT_FLOW_CACHE_SIZE;
+         }
          break;
       case 'S':
-         double_to_timeval(atof(optarg), options.cache_stats_interval);
-         options.print_stats = false; /* Plugins, FlowCache stats OFF.*/
+         {
+            double tmp;
+            if (!str_to_double(optarg, tmp)) {
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               TRAP_DEFAULT_FINALIZATION();
+               return error("Invalid argument for option -S");
+            }
+            double_to_timeval(tmp, options.cache_stats_interval);
+            options.print_stats = false; /* Plugins, FlowCache stats OFF.*/
+         }
          break;
       case 'P':
          options.print_pcap_stats = true;
-         break;
-      case 'm':
-         sampling = atoi(optarg);
-         if (sampling < 0 || sampling > 100) {
-            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-            TRAP_DEFAULT_FINALIZATION();
-            return error("Invalid argument for option -m: interval needs to be between 0-100");
-         }
-         break;
-      case 'V':
-         options.replacement_string = optarg;
          break;
       default:
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
@@ -313,20 +401,40 @@ int main(int argc, char *argv[])
    }
 
    if (options.flow_cache_size % options.flow_line_size != 0) {
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-      TRAP_DEFAULT_FINALIZATION();
-      return error("Size of flow line (32 by default) must divide size of flow cache.");
+      options.flow_cache_size += options.flow_line_size - (options.flow_cache_size % options.flow_line_size);
+   }
+
+   bool parse_every_pkt = false;
+   uint32_t max_payload_size = 0;
+
+   for (unsigned int i = 0; i < plugin_wrapper.plugins.size(); i++) {
+      /* Check if plugins need all packets. */
+      if (!plugin_wrapper.plugins[i]->include_basic_flow_fields()) {
+         parse_every_pkt = true;
+      }
+      /* Get max payload size from plugins. */
+      if (max_payload_size < plugin_wrapper.plugins[i]->max_payload_length()) {
+         max_payload_size = plugin_wrapper.plugins[i]->max_payload_length();
+      }
+   }
+
+   if (options.snaplen == 0) { /* Check if user specified snapshot length. */
+      int max_snaplen = max_payload_size + MIN_SNAPLEN;
+      if (max_snaplen > MAXPCKTSIZE) {
+         max_snaplen = MAXPCKTSIZE;
+      }
+      options.snaplen = max_snaplen;
    }
 
    PcapReader packetloader(options);
    if (options.interface == "") {
-      if (packetloader.open_file(options.pcap_file) != 0) {
+      if (packetloader.open_file(options.pcap_file, parse_every_pkt) != 0) {
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
          return error("Can't open input file: " + options.pcap_file);
       }
    } else {
-      if (packetloader.init_interface(options.interface) != 0) {
+      if (packetloader.init_interface(options.interface, options.snaplen, parse_every_pkt) != 0) {
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
          return error("Unable to initialize libpcap: " + packetloader.error_msg);
@@ -334,7 +442,7 @@ int main(int argc, char *argv[])
    }
 
    NHTFlowCache flowcache(options);
-   UnirecExporter flowwriter;
+   UnirecExporter flowwriter(options.eof);
 
    if (flowwriter.init(plugin_wrapper.plugins, module_info->num_ifc_out, options.basic_ifc_num) != 0) {
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
@@ -358,19 +466,19 @@ int main(int argc, char *argv[])
    uint32_t pkt_total = 0, pkt_parsed = 0;
    packet.packet = new char[MAXPCKTSIZE + 1];
 
-   // Main packet capture loop.
+   /* Main packet capture loop. */
    while (!stop && (ret = packetloader.get_pkt(packet)) > 0) {
-      if (ret == 3) { // Process timeout
+      if (ret == 3) { /* Process timeout. */
          flowcache.export_expired(false);
          continue;
       }
 
       pkt_total++;
-      if (ret == 2 && (sampling == 100 || ((rand() % 100) + 1) <= sampling)) {
+      if (ret == 2) {
          flowcache.put_pkt(packet);
          pkt_parsed++;
 
-         // Check if packet limit is reached.
+         /* Check if packet limit is reached. */
          if (pkt_limit != 0 && pkt_parsed >= pkt_limit) {
             break;
          }
@@ -391,7 +499,7 @@ int main(int argc, char *argv[])
       cout << "Packet headers parsed: "<< pkt_parsed << endl;
    }
 
-   // Cleanup
+   /* Cleanup. */
    flowcache.finish();
    flowwriter.close();
    packetloader.close();

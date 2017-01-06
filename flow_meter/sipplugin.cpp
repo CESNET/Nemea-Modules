@@ -84,7 +84,7 @@ SIPPlugin::SIPPlugin(const options_t &module_options, vector<plugin_opt> plugin_
    flush_flow = true;
 }
 
-int SIPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
+int SIPPlugin::post_create(Flow &rec, const Packet &pkt)
 {
    uint16_t msg_type;
 
@@ -100,7 +100,7 @@ int SIPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
 
    return 0;
 }
-int SIPPlugin::pre_update(FlowRecord &rec, Packet &pkt)
+int SIPPlugin::pre_update(Flow &rec, Packet &pkt)
 {
    uint16_t msg_type;
 
@@ -115,9 +115,9 @@ void SIPPlugin::finish()
 {
    if (print_stats) {
       cout << "SIP plugin stats:" << endl;
-      cout << "Parsed sip requests: " << requests << endl;
-      cout << "Parsed sip responses: " << responses << endl;
-      cout << "Total sip packets processed: " << total << endl;
+      cout << "   Parsed sip requests: " << requests << endl;
+      cout << "   Parsed sip responses: " << responses << endl;
+      cout << "   Total sip packets processed: " << total << endl;
    }
 }
 string SIPPlugin::get_unirec_field_string()
@@ -127,7 +127,7 @@ string SIPPlugin::get_unirec_field_string()
 
 uint16_t SIPPlugin::parse_msg_type(const Packet &pkt)
 {
-   if ((pkt.packetFieldIndicator & PCKT_PAYLOAD_MASK) != PCKT_PAYLOAD_MASK) { // If payload is not present, return.
+   if ((pkt.field_indicator & PCKT_PAYLOAD_MASK) != PCKT_PAYLOAD_MASK) { // If payload is not present, return.
       return SIP_MSG_TYPE_INVALID;
    }
 
@@ -135,12 +135,12 @@ uint16_t SIPPlugin::parse_msg_type(const Packet &pkt)
    uint32_t check;
 
    /* Is there any payload to process? */
-   if (pkt.transportPayloadPacketSectionSize < SIP_MIN_MSG_LEN) {
+   if (pkt.payload_length < SIP_MIN_MSG_LEN) {
       return SIP_MSG_TYPE_INVALID;
    }
 
    /* Get first four bytes of the packet and compare them against the patterns: */
-   first_bytes = (uint32_t *) pkt.transportPayloadPacketSection;
+   first_bytes = (uint32_t *) pkt.payload;
 
    /* Apply the pattern on the packet: */
    check = *first_bytes ^ SIP_TEST_1;
@@ -463,8 +463,8 @@ int SIPPlugin::parser_process_sip(const Packet &pkt, RecordExtSIP *sip_data)
    uint32_t first_bytes2;
 
    /* Skip the packet headers: */
-   payload = (unsigned char *)pkt.transportPayloadPacketSection;
-   caplen = pkt.transportPayloadPacketSectionSize;
+   payload = (unsigned char *)pkt.payload;
+   caplen = pkt.payload_length;
 
    /* Grab the first line of the payload: */
    line = parser_strtok(payload, caplen, '\n', &line_len, &line_parser);

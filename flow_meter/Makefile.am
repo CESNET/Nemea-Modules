@@ -29,11 +29,13 @@ flow_meter_SOURCES=flow_meter.cpp \
 		    dnsplugin.h \
 		    ntpplugin.cpp \
 		    ntpplugin.h \
-		    ipaddr.h
+		    ipaddr.h \
+		    arpplugin.cpp \
+		    arpplugin.h
 
 
 flow_meter_LDADD=-ltrap -lunirec -lnemea-common -lpcap
-flow_meter_CXXFLAGS=-O2 -std=c++98 -Wno-write-strings
+flow_meter_CXXFLAGS=-std=c++98 -Wno-write-strings
 pkgdocdir=${docdir}/flow_meter
 pkgdoc_DATA=README.md
 EXTRA_DIST=README.md
