@@ -242,8 +242,8 @@ int main(int argc, char **argv)
          printf("Initializing TRAP library ...\n");
       }
       ctx = trap_ctx_init(module_info, ifc_spec);
-      if (ret != TRAP_E_OK) {
-         fprintf(stderr, "ERROR in TRAP initialization: %s\n", trap_last_error_msg);
+      if (ctx == NULL) {
+         fprintf(stderr, "ERROR in TRAP initialization.\n");
          ret = 2;
          goto exit;
       }
