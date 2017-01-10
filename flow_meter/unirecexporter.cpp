@@ -97,12 +97,16 @@ tmplt(NULL), record(NULL), eof(send_eof)
  * \param [in] plugins Active plugins.
  * \param [in] ifc_cnt Output interface count.
  * \param [in] basic_ifc_num Basic output interface number.
+ * \param [in] link Link bit field value.
+ * \param [in] dir Direction bit field value.
  * \return 0 on success or negative value when error occur.
  */
-int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, int basic_ifc_number)
+int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, int basic_ifc_number, uint64_t link = 0, uint8_t dir = 0)
 {
    out_ifc_cnt = ifc_cnt;
    basic_ifc_num = basic_ifc_number;
+   link_bit_field = link;
+   dir_bit_field = dir;
 
    tmplt = new ur_template_t*[out_ifc_cnt];
    record = new void*[out_ifc_cnt];
@@ -273,7 +277,6 @@ int UnirecExporter::export_flow(Flow &flow)
       record_ptr = record[basic_ifc_num];
 
       ur_clear_varlen(tmplt_ptr, record_ptr);
-      memset(record_ptr, 0, ur_rec_fixlen_size(tmplt_ptr));
 
       fill_basic_flow(flow, tmplt_ptr, record_ptr);
       ifc_to_export[basic_ifc_num] = true;
@@ -340,8 +343,8 @@ void UnirecExporter::fill_basic_flow(Flow &flow, ur_template_t *tmplt_ptr, void 
    ur_set(tmplt_ptr, record_ptr, F_TOS, flow.ip_tos);
    ur_set(tmplt_ptr, record_ptr, F_TTL, flow.ip_ttl);
 
-   //ur_set(tmplt_ptr, record_ptr, F_DIR_BIT_FIELD, 0);
-   //ur_set(tmplt_ptr, record_ptr, F_LINK_BIT_FIELD, 0);
+   ur_set(tmplt_ptr, record_ptr, F_DIR_BIT_FIELD, dir_bit_field);
+   ur_set(tmplt_ptr, record_ptr, F_LINK_BIT_FIELD, link_bit_field);
 }
 
 
