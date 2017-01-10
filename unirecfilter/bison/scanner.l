@@ -28,19 +28,21 @@ IPv6    ({h16}:){6}{ls32}|::({h16}:){5}{ls32}|({h16})?::({h16}:){4}{ls32}|(({h16
 %%
 
 ">"|"<"|"=<"|"<="|">="|"=>"                              { yylval.string = copyString(yytext, yyleng); return CMP; }
-"="|"=="|"!="|"<>"|"=~"|"~="                             { yylval.string = copyString(yytext, yyleng); return EQ; }
+"="|"=="|"!="|"<>"                                       { yylval.string = copyString(yytext, yyleng); return EQ; }
+"=~"|"~="                                                { yylval.string = copyString(yytext, yyleng); return REGEX; }
 "!"|"NOT"                                                { return NOT; }
 "||"|"OR"                                                { return OR; }
 "&&"|"AND"                                               { return AND; }
-[0-9]+\.[0-9]+                                           { sscanf(yytext, "%lf", &yylval.floating); return FLOAT; }
+-?[0-9]+\.[0-9]+                                         { sscanf(yytext, "%lf", &yylval.floating); return FLOAT; }
 -[0-9]+                                                  { sscanf(yytext, "%" SCNi64, &yylval.number); return SIGNED; }
 [0-9]+                                                   { sscanf(yytext, "%" SCNi64, &yylval.number); return UNSIGNED; }
 {IPv4}                                                   { yylval.string = copyString(yytext, yyleng); return IP; }
 \"?{IPv6}\"?                                             { yylval.string = cutString(yytext, yyleng); return IP; }
 "PROTOCOL"                                               { return PROTOCOL; }
-"TCP"|"ICMP"|"UDP"                                       { yylval.string = copyString(yytext, yyleng); return VAL; }
+"TCP"|"ICMP"|"UDP"                                       { yylval.string = copyString(yytext, yyleng); return PROTO_NAME; }
 [a-zA-Z_]+                                               { yylval.string = copyString(yytext, yyleng); return COLUMN; }
 \"(\\.|[^"])*\"                                          { yylval.string = cutString(yytext, yyleng); return STRING; }
+'(\\.|[^"])*'                                            { yylval.string = cutString(yytext, yyleng); return STRING; }
 "("                                                      { return LEFT; }
 ")"                                                      { return RIGHT; }
 " "+|\t+|\n+                                             { /* skip whitespaces */ }

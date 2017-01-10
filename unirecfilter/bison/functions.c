@@ -124,6 +124,17 @@ struct ast *newExpression(char *column, char *cmp, int64_t number, int is_signed
       printf("Warning: %s is not present in input format.\n", column);
       newast->id = UR_INVALID_FIELD;
    }
+   else if (ur_get_type(id) != UR_TYPE_INT8 &&
+            ur_get_type(id) != UR_TYPE_UINT8 &&
+            ur_get_type(id) != UR_TYPE_INT16 &&
+            ur_get_type(id) != UR_TYPE_UINT16 &&
+            ur_get_type(id) != UR_TYPE_INT32 &&
+            ur_get_type(id) != UR_TYPE_UINT32 &&
+            ur_get_type(id) != UR_TYPE_INT64 &&
+            ur_get_type(id) != UR_TYPE_UINT64) {
+      printf("Warning: Type of %s is not integer.\n", column);
+      newast->id = UR_INVALID_FIELD;
+   }
    else {
       newast->id = id;
    }
@@ -144,6 +155,11 @@ struct ast *newExpressionFP(char *column, char *cmp, double number)
    if (id == UR_E_INVALID_NAME) {
       printf("Warning: %s is not present in input format.\n", column);
       newast->id = UR_INVALID_FIELD;
+   }
+   else if (ur_get_type(id) != UR_TYPE_FLOAT &&
+            ur_get_type(id) != UR_TYPE_DOUBLE) {
+     printf("Warning: Type of %s is not float.\n", column);
+     newast->id = UR_INVALID_FIELD;
    }
    else {
       newast->id = id;
@@ -177,11 +193,13 @@ struct ast *newIP(char *column, char *cmp, char *ipAddr)
    if (id == UR_E_INVALID_NAME) {
       printf("Warning: %s is not present in input format.\n", column);
       newast->id = UR_INVALID_FIELD;
-   } else {
-      newast->id = id;
    }
-   if (ur_get_type(newast->id) != UR_TYPE_IP) {
+   else if (ur_get_type(id) != UR_TYPE_IP) {
       printf("Warning: Type of %s is not IP address.\n", column);
+      newast->id = UR_INVALID_FIELD;
+   }
+   else {
+      newast->id = id;
    }
    return (struct ast *) newast;
 }
@@ -213,7 +231,14 @@ struct ast *newString(char *column, char *cmp, char *s)
    if (id == UR_E_INVALID_NAME) {
       printf("Warning: %s is not present in input format.\n", column);
       newast->id = UR_INVALID_FIELD;
-   } else {
+   }
+   else if (ur_get_type(id) != UR_TYPE_STRING && 
+            ur_get_type(id) != UR_TYPE_BYTES &&
+            ur_get_type(id) != UR_TYPE_CHAR) {
+      printf("Warning: Type of %s is not string.\n", column);
+      newast->id = UR_INVALID_FIELD;
+   }
+   else {
       newast->id = id;
    }
    return (struct ast *) newast;
@@ -445,7 +470,7 @@ int compareUnsigned(uint64_t a, uint64_t b, cmp_op op) {
       case OP_EQ:
          return a == b;
       default:
-         fprintf(stderr, "Warning: Invalid comparisson operator.\n");
+         fprintf(stderr, "Warning: Invalid comparison operator.\n");
          return 0;
    }
    return 0;
@@ -466,7 +491,7 @@ int compareSigned(int64_t a, int64_t b, cmp_op op) {
       case OP_EQ:
          return a == b;
       default:
-         fprintf(stderr, "Warning: Invalid comparisson operator.\n");
+         fprintf(stderr, "Warning: Invalid comparison operator.\n");
          return 0;
    }
    return 0;
@@ -488,7 +513,7 @@ int compareFloating(double a, double b, cmp_op op) {
       case OP_EQ:
          return abs(a - b) < EPS;
       default:
-         fprintf(stderr, "Warning: Invalid comparisson operator.\n");
+         fprintf(stderr, "Warning: Invalid comparison operator.\n");
          return 0;
    }
    return 0;
