@@ -201,6 +201,7 @@ AC_CONFIG_FILES([Makefile
                  flow_meter/tests/Makefile
                  json_dump/Makefile
                  json_replay/Makefile
+                 link_traffic/Makefile
                  logger/Makefile
                  logreplay/Makefile
                  merger/Makefile

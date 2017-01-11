@@ -7,6 +7,7 @@ email_reporter \
 flowcounter \
 json_dump \
 json_replay \
+link_traffic \
 logger \
 logreplay \
 merger \
