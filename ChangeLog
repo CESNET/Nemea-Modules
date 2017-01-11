@@ -1,3 +1,12 @@
+2017-01-11 Nemea-modules-2.5.1
+	* unirecfilter:
+		fixes of the PROTOCOL field - allow numbers
+		allow negative float numbers
+		checking IP addresses
+		allow apostrophe
+	* link_traffic:
+		add new module (experimental), can export data into munin
+
 2016-10-07 Nemea-modules-2.5.0
 	* report2idea:
 		haddrscan2idea and sipbf2idea now also exports SRC and DST ports
