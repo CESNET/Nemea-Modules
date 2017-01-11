@@ -19,7 +19,7 @@ Provides: nemea-modules
 %setup
 
 %build
-./configure --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir}/nemea -q --docdir=%{_docdir}/nemea-modules --enable-silent-rules --disable-repobuild;
+./configure --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir}/nemea -q --docdir=%{_docdir}/nemea-modules --enable-silent-rules --disable-repobuild --datadir=%{_datadir};
 make -j5
 
 %install
@@ -45,6 +45,7 @@ test -x %{_bindir}/nemea/flow_meter && setcap "CAP_NET_RAW+eip" %{_bindir}/nemea
 %{_bindir}/nemea/ipblacklist2idea.py
 %{_bindir}/nemea/json_dump.py
 %{_bindir}/nemea/json_replay.py
+%{_bindir}/nemea/link_traffic
 %{_bindir}/nemea/logger
 %{_bindir}/nemea/logreplay
 %{_bindir}/nemea/merger
@@ -61,6 +62,7 @@ test -x %{_bindir}/nemea/flow_meter && setcap "CAP_NET_RAW+eip" %{_bindir}/nemea
 %{_docdir}/nemea-modules/*/*
 %config(noreplace) %{_sysconfdir}/nemea/email_reporter/example.cfg
 %config(noreplace) %{_sysconfdir}/nemea/email_reporter/generic.cfg
+%{_datadir}/munin/plugins/link_traffic_
 %{_datadir}/nemea/*
 
 
