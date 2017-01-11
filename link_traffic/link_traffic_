@@ -1,0 +1,72 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*- 
+import socket
+import sys
+import os
+
+SOCKET_PATH = '/var/run/libtrap/munin_link_traffic'
+
+#connecting to socket if created by C module link_flows
+def getData():
+	sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+	try:
+		sock.connect(SOCKET_PATH)
+	except socket.error as msg:
+		sys.stderr.write(str(msg))
+		sys.exit(1)
+
+	data = ""
+	while True:
+		tmp = sock.recv(4096)
+		data += tmp
+		if tmp == "":
+			break
+
+	return data
+
+#configures munin graph for the munin-node
+def getConfig():
+	headers = ["nix2-in-%s" % suffix, "nix2-out-%s" % suffix, "nix3-in-%s" % suffix, "nix3-out-%s" % suffix, "telia-in-%s" % suffix, "telia-out-%s" % suffix, "geant-in-%s" % suffix, "geant-out-%s" % suffix, "amsix-in-%s" % suffix, "amsix-out-%s" % suffix, "sanet-in-%s" % suffix, "sanet-out-%s" % suffix, "aconet-in-%s" % suffix, "aconet-out-%s" % suffix, "pioneer-in-%s" % suffix, "pioneer-out-%s" % suffix]
+	config = """graph_title Traffic L4 Link Load Flows
+graph_args -l 0
+graph_category traffic-monitoring
+graph_data_size custom 1051200, 288 3650, 8640 120, 105120 10
+graph_vlabel flows/second
+graph_info The number of flows per second specified with link number in 5 minute interval.
+graph_order"""
+	
+	for key in headers:
+		config += " " + key
+
+	for key in headers:
+		config += "\n" + key + ".label " + key
+		config += "\n" + key + ".info " + key
+		config += "\n" + key + ".draw AREASTACK"
+		config += "\n" + key + ".type DERIVE"
+		config += "\n" + key + ".min 0"
+
+	print(config)
+
+#parses text recieved by getData(), splits it to two lines and createds dict
+def getValues(data):
+	headers = ["nix2-in-%s" % suffix, "nix2-out-%s" % suffix, "nix3-in-%s" % suffix, "nix3-out-%s" % suffix, "telia-in-%s" % suffix, "telia-out-%s" % suffix, "geant-in-%s" % suffix, "geant-out-%s" % suffix, "amsix-in-%s" % suffix, "amsix-out-%s" % suffix, "sanet-in-%s" % suffix, "sanet-out-%s" % suffix, "aconet-in-%s" % suffix, "aconet-out-%s" % suffix, "pioneer-in-%s" % suffix, "pioneer-out-%s" % suffix]
+	data = data.split('\n')
+	data = dict(zip(data[0].split(','), data[1].split(',')))
+	for key in headers:
+		print("{0}.value {1}".format(key, data[key]))
+
+#suffix is the part after last '_' can be flows, packets, bytes
+suffix = sys.argv[0].split("_")[-1]
+
+#communication with munin-node
+if len(sys.argv) == 2 and sys.argv[1] == "autoconf":
+	print("yes")
+elif len(sys.argv) == 2 and sys.argv[1] == "config":
+	getConfig()
+elif len(sys.argv) == 2 and sys.argv[1] == "suggest":
+	print("packets")
+	print("flows")
+	print("bytes")
+else:
+	data = getData()
+	getValues(data)
