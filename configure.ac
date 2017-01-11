@@ -202,6 +202,7 @@ AC_CONFIG_FILES([Makefile
                  json_dump/Makefile
                  json_replay/Makefile
                  link_traffic/Makefile
+                 link_traffic/munin/Makefile
                  logger/Makefile
                  logreplay/Makefile
                  merger/Makefile
