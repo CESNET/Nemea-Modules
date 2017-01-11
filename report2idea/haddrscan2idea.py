@@ -12,7 +12,7 @@ from report2idea import *
 MODULE_NAME = "haddrscan2idea"
 MODULE_DESC = "Converts output of haddrscan detector (horizontal scans) to IDEA."
 REQ_TYPE = pytrap.FMT_UNIREC
-REQ_FORMAT = "ipaddr SRC_IP,uint32 ADDR_CNT,time TIME_FIRST,time TIME_LAST,uint8 EVENT_TYPE,uint8 PROTOCOL"
+REQ_FORMAT = "ipaddr SRC_IP,uint32 ADDR_CNT,time TIME_FIRST,time TIME_LAST,uint16 DST_PORT,uint16 SRC_PORT,uint8 EVENT_TYPE,uint8 PROTOCOL"
 
 # Main conversion function
 def convert_to_idea(rec, opts=None):
@@ -28,10 +28,12 @@ def convert_to_idea(rec, opts=None):
        "FlowCount": int(rec.ADDR_CNT),
        "Description": "Horizontal scan using TCP SYN",
        "Source": [{
-             "Proto": ["tcp"]
+             "Proto": ["tcp"],
+             "Port": [rec.SRC_PORT]
         }],
        "Target": [{
              "Proto": ["tcp"],
+             "Port": [rec.DST_PORT]
        }],
        'Node': [{
           'Name': 'undefined',
