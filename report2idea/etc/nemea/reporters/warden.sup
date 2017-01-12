@@ -1,0 +1,157 @@
+<module>
+  <name>warden_hoststats2idea</name>
+  <enabled>true</enabled>
+  <path>/usr/bin/nemea/hoststats2idea.py</path>
+  <params>--dstwhitelist-file=/data/hoststats_dst_whitelist.txt --name=cz.cesnet.nemea.hoststats --warden=/etc/warden/hoststats/config.cfg</params>
+  <trapinterfaces>
+    <interface>
+      <type>TCP</type>
+      <direction>IN</direction>
+      <params>12002</params>
+    </interface>
+  </trapinterfaces>
+</module>
+
+<module>
+  <name>reporter_leaktest</name>
+  <enabled>true</enabled>
+  <path>/usr/bin/nemea/hoststats2idea.py</path>
+  <params>--name=cz.cesnet.nemea.hoststats --file=/dev/null</params>
+  <trapinterfaces>
+    <interface>
+      <type>TCP</type>
+      <direction>IN</direction>
+      <params>12002</params>
+    </interface>
+  </trapinterfaces>
+</module>
+
+<module>
+  <name>warden_amplification2idea</name>
+  <enabled>true</enabled>
+  <path>/usr/bin/nemea/amplification2idea.py</path>
+  <params>--dstwhitelist-file=/data/amplification_dst_whitelist.txt --name=cz.cesnet.nemea.amplificationdetector --warden=/etc/warden/amplificationdetector/config.cfg</params>
+  <trapinterfaces>
+    <interface>
+      <type>TCP</type>
+      <direction>IN</direction>
+      <params>12001</params>
+    </interface>
+  </trapinterfaces>
+</module>
+
+<module>
+  <name>warden_ipblacklist2idea</name>
+  <enabled>true</enabled>
+  <path>/usr/bin/nemea/ipblacklist2idea.py</path>
+  <params>--name=cz.cesnet.nemea.ipblacklist --warden=/etc/warden/ipblacklist/config.cfg --test</params>
+  <trapinterfaces>
+    <interface>
+      <type>TCP</type>
+      <direction>IN</direction>
+      <params>12006</params>
+    </interface>
+  </trapinterfaces>
+</module>
+
+<module>
+  <name>warden_vportscan2idea</name>
+  <enabled>true</enabled>
+  <path>/usr/bin/nemea/vportscan2idea.py</path>
+  <params>--srcwhitelist-file=/data/vportscan_src_whitelist.txt --name=cz.cesnet.nemea.vportscan --warden=/etc/warden/vportscan/config.cfg</params>
+  <trapinterfaces>
+    <interface>
+      <type>TCP</type>
+      <direction>IN</direction>
+      <params>12005</params>
+    </interface>
+  </trapinterfaces>
+</module>
+
+<module>
+  <name>warden_bruteforce2idea</name>
+  <enabled>true</enabled>
+  <path>/usr/bin/nemea/bruteforce2idea.py</path>
+  <params>--name=cz.cesnet.nemea.bruteforce --warden=/etc/warden/bruteforce/config.cfg --test</params>
+  <trapinterfaces>
+    <interface>
+      <type>TCP</type>
+      <direction>IN</direction>
+      <params>12007</params>
+    </interface>
+  </trapinterfaces>
+</module>
+
+<module>
+<name>warden_booterfilter2idea</name>
+<enabled>true</enabled>
+<path>/usr/bin/nemea/booterfilter2idea.py</path>
+<params>--name=cz.cesnet.nemea.booterfilter --warden=/etc/warden/booterfilter/config.cfg --test</params>
+<trapinterfaces>
+<interface>
+  <type>UNIXSOCKET</type>
+  <direction>IN</direction>
+  <params>bootertraffic</params>
+</interface>
+</trapinterfaces>
+</module>
+
+<module>
+  <name>warden_haddrscan2idea</name>
+  <enabled>false</enabled>
+  <path>/usr/bin/nemea/haddrscan2idea.py</path>
+  <params>--name=cz.cesnet.nemea.haddrscan --warden=/etc/warden/haddrscan/config.cfg --test</params>
+  <trapinterfaces>
+    <interface>
+      <type>TCP</type>
+      <direction>IN</direction>
+      <params>12008</params>
+    </interface>
+  </trapinterfaces>
+</module>
+
+<module>
+  <name>warden_sipbruteforce2idea</name>
+  <enabled>true</enabled>
+  <path>/usr/bin/nemea/sipbf2idea.py</path>
+  <params>--name=cz.cesnet.nemea.sipbruteforce --warden=/etc/warden/sipbruteforce/config.cfg --test</params>
+  <trapinterfaces>
+    <interface>
+      <type>TCP</type>
+      <direction>IN</direction>
+      <params>12009</params>
+    </interface>
+  </trapinterfaces>
+</module>
+
+<!--
+This will not report yet:
+<module>
+  <name>warden_voipfraud2idea</name>
+  <enabled>false</enabled>
+  <path>/usr/bin/nemea/voipfraud2idea.py</path>
+  <params>- - name=cz.cesnet.nemea.voipfraud_detection - - warden=/etc/warden/</params>
+  <trapinterfaces>
+    <interface>
+      <type>TCP</type>
+      <direction>IN</direction>
+      <params>12003</params>
+    </interface>
+  </trapinterfaces>
+</module>
+
+<module>
+  <name>warden_dnstunnel2idea</name>
+  <enabled>false</enabled>
+  <path>/usr/bin/nemea/dnstunnel2idea.py</path>
+  <params>- - name=cz.cesnet.nemea.dnstunnel - - warden=/etc/warden/</params>
+  <trapinterfaces>
+    <interface>
+      <type>TCP</type>
+      <direction>IN</direction>
+      <params>12004</params>
+    </interface>
+  </trapinterfaces>
+</module>
+-->
+
