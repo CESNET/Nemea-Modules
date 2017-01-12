@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-modules], [2.5.0], [traffic-analysis@cesnet.cz])
+AC_INIT([nemea-modules], [2.5.1], [nemea@cesnet.cz])
 AC_CONFIG_SRCDIR([flowcounter/flowcounter.c])
 AC_CONFIG_HEADERS([config.h])
 RELEASE=1
@@ -201,6 +201,8 @@ AC_CONFIG_FILES([Makefile
                  flow_meter/tests/Makefile
                  json_dump/Makefile
                  json_replay/Makefile
+                 link_traffic/Makefile
+                 link_traffic/munin/Makefile
                  logger/Makefile
                  logreplay/Makefile
                  merger/Makefile
