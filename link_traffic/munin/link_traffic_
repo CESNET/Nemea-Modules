@@ -36,11 +36,11 @@ graph_info The number of %s per second specified with link number in 5 minute in
 graph_order""" % (suffix, suffix, suffix)
 	
 	for key in headers:
-		config += " " + key + "_%s" % suffix
+		config += " " + key
 
 	for key in headers:
-		config += "\n" + key + ".label " + key + "_%s" % suffix
-		config += "\n" + key + ".info " + key + "_%s" % suffix
+		config += "\n" + key + ".label " + key.split('-')[0] + "-" + key.split('-')[1]
+		config += "\n" + key + ".info " + key.split('-')[0] + "-" + key.split('-')[1]
 		config += "\n" + key + ".draw AREASTACK"
 		config += "\n" + key + ".type DERIVE"
 		config += "\n" + key + ".min 0"
