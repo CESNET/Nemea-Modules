@@ -91,7 +91,9 @@ static int stop = 0;
   PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: DOUBLE:DOUBLE. Value default means use default value 300.0:30.0.", required_argument, "string") \
   PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 176 bytes. default means use value 65536.", required_argument, "string") \
   PARAM('S', "cache-statistics", "Print flow cache statistics. NUMBER specifies interval between prints.", required_argument, "float") \
-  PARAM('P', "pcap-statistics", "Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.", no_argument, "none")
+  PARAM('P', "pcap-statistics", "Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.", no_argument, "none") \
+  PARAM('L', "link_bit_field", "Link bit field value.", required_argument, "uint64") \
+  PARAM('D', "dir_bit_field", "Direction bit field value.", required_argument, "uint8")
 
 /**
  * \brief Parse input plugin settings.
@@ -181,6 +183,27 @@ int count_ifc_interfaces(int argc, char *argv[])
 }
 
 /**
+ * \brief Provides conversion from string to uint64_t.
+ * \param [in] str String representation of value.
+ * \param [out] dst Destination variable.
+ * \return True on success, false otherwise.
+ */
+bool str_to_uint64(const char *str, uint64_t &dst)
+{
+   char *check;
+   errno = 0;
+   unsigned long long value = strtoull(str, &check, 10);
+   if (errno == ERANGE || str[0] == '-' || *check ||
+      value < numeric_limits<uint64_t>::min() ||
+      value > numeric_limits<uint64_t>::max()) {
+      return false;
+   }
+
+   dst = value;
+   return true;
+}
+
+/**
  * \brief Provides conversion from string to uint32_t.
  * \param [in] str String representation of value.
  * \param [out] dst Destination variable.
@@ -194,6 +217,27 @@ bool str_to_uint32(const char *str, uint32_t &dst)
    if (errno == ERANGE || str[0] == '-' || *check ||
       value < numeric_limits<uint32_t>::min() ||
       value > numeric_limits<uint32_t>::max()) {
+      return false;
+   }
+
+   dst = value;
+   return true;
+}
+
+/**
+ * \brief Provides conversion from string to uint8_t.
+ * \param [in] str String representation of value.
+ * \param [out] dst Destination variable.
+ * \return True on success, false otherwise.
+ */
+bool str_to_uint8(const char *str, uint8_t &dst)
+{
+   char *check;
+   errno = 0;
+   unsigned long long value = strtoull(str, &check, 10);
+   if (errno == ERANGE || str[0] == '-' || *check ||
+      value < numeric_limits<uint8_t>::min() ||
+      value > numeric_limits<uint8_t>::max()) {
       return false;
    }
 
@@ -267,6 +311,8 @@ int main(int argc, char *argv[])
    options.eof = true;
 
    uint32_t pkt_limit = 0; // Limit of packets for packet parser. 0 = no limit
+   uint64_t link = 0;
+   uint8_t dir = 0;
 
    // ***** TRAP initialization *****
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
@@ -383,6 +429,20 @@ int main(int argc, char *argv[])
       case 'P':
          options.print_pcap_stats = true;
          break;
+      case 'L':
+         if (!str_to_uint64(optarg, link)) {
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+            TRAP_DEFAULT_FINALIZATION();
+            return error("Invalid argument for option -L");
+         }
+         break;
+      case 'D':
+         if (!str_to_uint8(optarg, dir)) {
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+            TRAP_DEFAULT_FINALIZATION();
+            return error("Invalid argument for option -D");
+         }
+         break;
       default:
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
@@ -444,7 +504,7 @@ int main(int argc, char *argv[])
    NHTFlowCache flowcache(options);
    UnirecExporter flowwriter(options.eof);
 
-   if (flowwriter.init(plugin_wrapper.plugins, module_info->num_ifc_out, options.basic_ifc_num) != 0) {
+   if (flowwriter.init(plugin_wrapper.plugins, module_info->num_ifc_out, options.basic_ifc_num, link, dir) != 0) {
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       TRAP_DEFAULT_FINALIZATION();
       return error("Unable to initialize UnirecExporter.");
