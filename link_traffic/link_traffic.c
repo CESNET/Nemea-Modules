@@ -177,14 +177,14 @@ void *accept_clients(void *arg)
          "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32","
          "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32","
          "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32"\n",
-         stats[0].flows_in, stats[0].bytes_in, stats[0].packets_in, stats[0].flows_out, stats[0].bytes_out, stats[0].packets_out,
-         stats[1].flows_in, stats[1].bytes_in, stats[1].packets_in, stats[1].flows_out, stats[1].bytes_out, stats[1].packets_out, 
-         stats[2].flows_in, stats[2].bytes_in, stats[2].packets_in, stats[2].flows_out, stats[2].bytes_out, stats[2].packets_out, 
-         stats[3].flows_in, stats[3].bytes_in, stats[3].packets_in, stats[3].flows_out, stats[3].bytes_out, stats[3].packets_out, 
-         stats[4].flows_in, stats[4].bytes_in, stats[4].packets_in, stats[4].flows_out, stats[4].bytes_out, stats[4].packets_out, 
-         stats[5].flows_in, stats[5].bytes_in, stats[5].packets_in, stats[5].flows_out, stats[5].bytes_out, stats[5].packets_out, 
-         stats[6].flows_in, stats[6].bytes_in, stats[6].packets_in, stats[6].flows_out, stats[6].bytes_out, stats[6].packets_out, 
-         stats[7].flows_in, stats[7].bytes_in, stats[7].packets_in, stats[7].flows_out, stats[7].bytes_out, stats[7].packets_out);
+         stats[0].bytes_in, stats[0].flows_in, stats[0].packets_in, stats[0].bytes_out, stats[0].flows_out, stats[0].packets_out,
+         stats[1].bytes_in, stats[1].flows_in, stats[1].packets_in, stats[1].bytes_out, stats[1].flows_out, stats[1].packets_out,
+         stats[2].bytes_in, stats[2].flows_in, stats[2].packets_in, stats[2].bytes_out, stats[2].flows_out, stats[2].packets_out,
+         stats[3].bytes_in, stats[3].flows_in, stats[3].packets_in, stats[3].bytes_out, stats[3].flows_out, stats[3].packets_out,
+         stats[4].bytes_in, stats[4].flows_in, stats[4].packets_in, stats[4].bytes_out, stats[4].flows_out, stats[4].packets_out,
+         stats[5].bytes_in, stats[5].flows_in, stats[5].packets_in, stats[5].bytes_out, stats[5].flows_out, stats[5].packets_out,
+         stats[6].bytes_in, stats[6].flows_in, stats[6].packets_in, stats[6].bytes_out, stats[6].flows_out, stats[6].packets_out,
+         stats[7].bytes_in, stats[7].flows_in, stats[7].packets_in, stats[7].bytes_out, stats[7].flows_out, stats[7].packets_out);
       if (size > 0) {
          send(client_fd, str, size, 0);
          free(str);
