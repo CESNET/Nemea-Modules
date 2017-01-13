@@ -70,9 +70,9 @@ def getConfig():
     config = """graph_title Link traffic - %s
 graph_args -l 0
 graph_category traffic-monitoring
-graph_vlabel %s out (-) / %s in (+) second
+graph_vlabel %s out (-) / in (+) per second
 graph_info The number of %s per second specified with link number in 5 minute interval.
-""" % (suffix, suffix, suffix, suffix)
+""" % (suffix, suffix, suffix)
     data = getData()
     links = set()
     for key in data[0].split(","):
