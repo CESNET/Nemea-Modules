@@ -155,12 +155,12 @@ int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plu
 }
 
 /**
- * \brief Count ifc interfaces.
+ * \brief Count trap interfaces.
  * \param [in] argc Number of parameters.
  * \param [in] argv Pointer to parameters.
- * \return Number of ifc interfaces.
+ * \return Number of trap interfaces.
  */
-int count_ifc_interfaces(int argc, char *argv[])
+int count_trap_interfaces(int argc, char *argv[])
 {
    char *interfaces = NULL;
    for (int i = 1; i < argc; i++) { // Find argument for param -i.
@@ -169,17 +169,27 @@ int count_ifc_interfaces(int argc, char *argv[])
       }
    }
 
-   int int_cnt = 1;
+   int ifc_cnt = 1;
    if (interfaces != NULL) {
       while(*interfaces) { // Count number of specified interfaces.
          if (*(interfaces++) == ',') {
-            int_cnt++;
+            ifc_cnt++;
          }
       }
-      return int_cnt;
+      return ifc_cnt;
    }
 
-   return int_cnt;
+   return ifc_cnt;
+}
+
+/**
+ * \brief Remove whitespaces from beginning and end of string.
+ * \param [in,out] str String to be trimmed.
+ */
+void trim_str(string &str)
+{
+   str.erase(0, str.find_first_not_of(" \t\n\r"));
+   str.erase(str.find_last_not_of(" \t\n\r") + 1);
 }
 
 /**
@@ -188,13 +198,13 @@ int count_ifc_interfaces(int argc, char *argv[])
  * \param [out] dst Destination variable.
  * \return True on success, false otherwise.
  */
-bool str_to_uint64(const char *str, uint64_t &dst)
+bool str_to_uint64(string str, uint64_t &dst)
 {
    char *check;
    errno = 0;
-   unsigned long long value = strtoull(str, &check, 10);
-   if (errno == ERANGE || str[0] == '-' || *check ||
-      value < numeric_limits<uint64_t>::min() ||
+   trim_str(str);
+   unsigned long long value = strtoull(str.c_str(), &check, 0);
+   if (errno == ERANGE || str[0] == '-' || str[0] == '\0' || *check ||
       value > numeric_limits<uint64_t>::max()) {
       return false;
    }
@@ -209,13 +219,13 @@ bool str_to_uint64(const char *str, uint64_t &dst)
  * \param [out] dst Destination variable.
  * \return True on success, false otherwise.
  */
-bool str_to_uint32(const char *str, uint32_t &dst)
+bool str_to_uint32(string str, uint32_t &dst)
 {
    char *check;
    errno = 0;
-   unsigned long long value = strtoull(str, &check, 10);
-   if (errno == ERANGE || str[0] == '-' || *check ||
-      value < numeric_limits<uint32_t>::min() ||
+   trim_str(str);
+   unsigned long long value = strtoull(str.c_str(), &check, 0);
+   if (errno == ERANGE || str[0] == '-' || str[0] == '\0' || *check ||
       value > numeric_limits<uint32_t>::max()) {
       return false;
    }
@@ -230,13 +240,13 @@ bool str_to_uint32(const char *str, uint32_t &dst)
  * \param [out] dst Destination variable.
  * \return True on success, false otherwise.
  */
-bool str_to_uint8(const char *str, uint8_t &dst)
+bool str_to_uint8(string str, uint8_t &dst)
 {
    char *check;
    errno = 0;
-   unsigned long long value = strtoull(str, &check, 10);
-   if (errno == ERANGE || str[0] == '-' || *check ||
-      value < numeric_limits<uint8_t>::min() ||
+   trim_str(str);
+   unsigned long long value = strtoull(str.c_str(), &check, 0);
+   if (errno == ERANGE || str[0] == '-' || str[0] == '\0' || *check ||
       value > numeric_limits<uint8_t>::max()) {
       return false;
    }
@@ -251,11 +261,12 @@ bool str_to_uint8(const char *str, uint8_t &dst)
  * \param [out] dst Destination variable.
  * \return True on success, false otherwise.
  */
-bool str_to_double(const char *str, double &dst)
+bool str_to_double(string str, double &dst)
 {
    char *check;
    errno = 0;
-   double value = strtod(str, &check);
+   trim_str(str);
+   double value = strtod(str.c_str(), &check);
    if (errno == ERANGE || *check || str[0] == '\0') {
       return false;
    }
@@ -316,7 +327,7 @@ int main(int argc, char *argv[])
 
    // ***** TRAP initialization *****
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-   module_info->num_ifc_out = count_ifc_interfaces(argc, argv);
+   module_info->num_ifc_out = count_trap_interfaces(argc, argv);
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
 
    signal(SIGTERM, signal_handler);
