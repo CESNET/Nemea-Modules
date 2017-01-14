@@ -65,12 +65,25 @@ receiveData().
         data = data.split("\n")
     return data
 
+# Color settings (name of link: color in RRGGBB)
+col = {
+    "aconet":  "490099",
+    "geant":   "008000",
+    "nix2":    "99a0A9",
+    "nix3":    "af69bc",
+    "pioneer": "ff0000",
+    "sanet":   "1e90ff",
+    "telia":   "776655",
+    "telia2":  "bc9269",
+    "amsix":   "af99dc"
+}
+
 #configures munin graph for the munin-node
 def getConfig():
     config = """graph_title Link traffic - %s
 graph_args -l 0
 graph_category traffic-monitoring
-graph_vlabel %s out (-) / in (+) per second
+graph_vlabel %s out (-)/in (+) per sec.
 graph_info The number of %s per second specified with link number in 5 minute interval.
 """ % (suffix, suffix, suffix)
     data = getData()
@@ -84,12 +97,13 @@ graph_info The number of %s per second specified with link number in 5 minute in
     for link in links:
         config += link + "in.label " + link + "\n"
         config += link + "in.graph no\n"
-        config += link + "in.draw AREA\n"
         config += link + "in.type DERIVE" + "\n"
         config += link + "in.min 0" + "\n"
+        if link in col:
+            config += link + "in.colour " + col[link] + "\n"
+            config += link + "out.colour " + col[link] + "\n"
         config += link + "out.label " + link + "\n"
         config += link + "out.negative {0}in".format(link) + "\n"
-        config += link + "out.draw AREA\n"
         config += link + "out.type DERIVE" + "\n"
         config += link + "out.min 0" + "\n"
 
