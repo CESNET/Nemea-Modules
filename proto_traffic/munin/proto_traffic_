@@ -103,7 +103,7 @@ def getValues():
     data.sort()
     for key, val in data:
         if key.endswith(suffix):
-            print("{0}.value {1}".format("".join(key.split("-")[:2]), val))
+            print("{0}.value {1}".format(key.split("-")[0], val))
 
 #suffix is the part after last '_' can be flows, packets, bytes
 suffix = sys.argv[0].split("_")[-1]

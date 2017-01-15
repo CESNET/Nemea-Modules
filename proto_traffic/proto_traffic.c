@@ -186,7 +186,7 @@ void *accept_clients(void *arg)
             FOREACH_PROTOCOLS(STRING_PCKTS) "others-packets\n"
             FOREACH_PROTOCOLS(STRING_VALUE) "%" PRIu64 ","
             FOREACH_PROTOCOLS(STRING_VALUE) "%" PRIu64 ","
-            FOREACH_PROTOCOLS(STRING_VALUE) "%" PRIu64,
+            FOREACH_PROTOCOLS(STRING_VALUE) "%" PRIu64 "\n",
             FOREACH_PROTOCOLS(FLOWS_STATS) flows.others,
             FOREACH_PROTOCOLS(BYTES_STATS) bytes.others,
             FOREACH_PROTOCOLS(PCKTS_STATS) bytes.others
