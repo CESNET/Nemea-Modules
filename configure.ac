@@ -208,6 +208,8 @@ AC_CONFIG_FILES([Makefile
                  merger/Makefile
                  nemea-modules.spec
                  nfreader/Makefile
+                 proto_traffic/Makefile
+                 proto_traffic/munin/Makefile
                  report2idea/Makefile
                  traffic_repeater/Makefile
                  unirecfilter/Makefile

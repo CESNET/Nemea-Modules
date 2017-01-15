@@ -64,5 +64,7 @@ AC_DEFUN([AX_LIBTRAP_CHECK], [
   else
     AC_MSG_ERROR([Libtrap was not found.])
   fi
+  nemeasupdir=${sysconfdir}
+  AC_SUBST(nemeasupdir)
 ])
 

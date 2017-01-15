@@ -11,6 +11,7 @@ link_traffic \
 logger \
 logreplay \
 merger \
+proto_traffic \
 report2idea \
 traffic_repeater \
 endiverter
