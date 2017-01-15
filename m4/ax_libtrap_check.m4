@@ -27,7 +27,6 @@ AC_DEFUN([AX_LIBTRAP_CHECK], [
 
   TRAPLIB=""
   if test "${repobuild}" = "false"; then
-  echo "do pkgconfig"
     PKG_CHECK_MODULES([libtrap], [libtrap], [TRAPLIB="yes"])
   fi
   if test "${TRAPLIB}" != "yes"; then
