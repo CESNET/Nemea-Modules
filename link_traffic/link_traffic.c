@@ -194,6 +194,7 @@ void *accept_clients(void *arg)
    }
    
    close(fd);
+   pthread_exit(0);
 }
 
 /* adds data to global array of link_stats_t structures "statistics[]" */   
@@ -215,7 +216,6 @@ int main(int argc, char **argv)
    int ret;
    signed char opt;
    ur_template_t *in_tmplt = NULL;
-   char *sock_path = NULL;
    
    pthread_t accept_thread;
    pthread_attr_t thrAttr; 
