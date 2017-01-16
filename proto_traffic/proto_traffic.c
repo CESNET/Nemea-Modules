@@ -103,6 +103,7 @@ TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 	A(tcp, 6) \
 	A(udp, 17) \
 	A(icmp6, 58) \
+	A(esp, 50) \
 	A(gre, 47)
 
 #define FOREACH_PROTOCOLS(A) PROTOCOLS(A)
@@ -189,7 +190,7 @@ void *accept_clients(void *arg)
             FOREACH_PROTOCOLS(STRING_VALUE) "%" PRIu64 "\n",
             FOREACH_PROTOCOLS(FLOWS_STATS) flows.others,
             FOREACH_PROTOCOLS(BYTES_STATS) bytes.others,
-            FOREACH_PROTOCOLS(PCKTS_STATS) bytes.others
+            FOREACH_PROTOCOLS(PCKTS_STATS) pckts.others
             );
 
       if (size > 0) {
@@ -261,6 +262,9 @@ int main(int argc, char **argv)
    }
 
    /* **** Main processing loop **** */
+   memset(&flows, 0, sizeof(flows));
+   memset(&bytes, 0, sizeof(bytes));
+   memset(&pckts, 0, sizeof(pckts));
 
    // Read data from input, process them and write to output
    while (!stop) {
