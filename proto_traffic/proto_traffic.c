@@ -3,10 +3,10 @@
  * \brief Example module used for counting statistics used in Munin.
  * \author Tomas Jansky <janskto1@fit.cvut.cz>
  * \author Tomas Cejka <cejkat@cesnet.cz>
- * \date 2016
+ * \date 2017
  */
 /*
- * Copyright (C) 2016 CESNET
+ * Copyright (C) 2017 CESNET
  *
  * LICENSE TERMS
  *
