@@ -105,7 +105,9 @@ trap_module_info_t *module_info = NULL;
    PARAM('l', "link_mask", "Use link mask m for LINK_BIT_FIELD. m is 8-bit hexadecimal number e.g. m should be 1, c2, AB,...", required_argument, "string") \
    PARAM('p', "print", "Show progress - print a dot every N flows.", required_argument, "uint64") \
    PARAM('r', "rate", "Rate limiting. Limiting sending flow rate to N records/sec.", required_argument, "uint64") \
-   PARAM('R', "resend", "Real time re-sending. Resending records from given files in real time, respecting original timestamps (seconds). Since this mode is timestamp order dependent, real time re-sending is done only at approximate time.", no_argument, "none")
+   PARAM('R', "resend", "Real time re-sending. Resending records from given files in real time, respecting original timestamps (seconds). Since this mode is timestamp order dependent, real time re-sending is done only at approximate time.", no_argument, "none") \
+   PARAM('-', "", "Input files - one or more nfdump files to read.", required_argument, "string")
+
 
 static int stop = 0;
 
