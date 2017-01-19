@@ -237,6 +237,7 @@ echo
 echo "Documentation..........: ${build_doc}"
 echo
 echo "UniRec processor.......: $UNIRECPROC"
+echo "trap2man.sh............: $TRAP2MAN"
 echo "Compilation............: make (or gmake)"
 echo "  CPPFLAGS.............: $CPPFLAGS"
 echo "  CFLAGS...............: $CFLAGS"
