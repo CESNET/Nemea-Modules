@@ -68,7 +68,7 @@ UR_FIELDS(
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Anonymizer module","Module for anonymizing incoming flow records.",1,1)
+  BASIC("anonymizer","Module for anonymizing incoming flow records.",1,1)
 
 #define MODULE_PARAMS(PARAM) \
    PARAM('k', "key", "Specify secret key, the key must be 32 characters long string or 32B sized hex string starting with 0x", required_argument, "string") \

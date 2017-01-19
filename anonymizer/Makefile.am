@@ -14,3 +14,10 @@ anonymizer_CFLAGS=-fno-strict-aliasing
 anonymizer_LDADD=-ltrap -lunirec -lnemea-common
 pkgdocdir=${docdir}/anonymizer
 pkgdoc_DATA=README
+
+anonymizer.1: anonymizer.cpp
+	$(TRAP2MAN) anonymizer.c > anonymizer.1
+
+man_MANS=anonymizer.1
+
+CLEANFILES+=anonymizer.1

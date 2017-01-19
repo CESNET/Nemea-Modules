@@ -10,6 +10,12 @@ LDADD=-lunirec -ltrap -lnf
 nfdump_reader_test_CXXFLAGS=-Wno-write-strings
 
 EXTRA_DIST=README.md
-pkgdocdir=${docdir}/nfreader
+pkgdocdir=${docdir}/nfdump_reader
 pkgdoc_DATA=README.md
 
+nfdump_reader.1: nfdump_reader.c
+	$(TRAP2MAN) nfdump_reader.c > nfdump_reader.1
+
+man_MANS=nfdump_reader.1
+
+CLEANFILES+=nfdump_reader.1

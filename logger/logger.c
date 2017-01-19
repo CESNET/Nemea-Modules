@@ -68,7 +68,7 @@ UR_FIELDS()
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Logger","This module logs all incoming UniRec records to standard output or into a specified file. Each record is written as one line containing values of its fields in human-readable format separated by chosen delimiters (CSV format). If you use more than one input interface you have to specify output format by parameter \"-o\".",-1,0)
+  BASIC("logger","This module logs all incoming UniRec records to standard output or into a specified file. Each record is written as one line containing values of its fields in human-readable format separated by chosen delimiters (CSV format). If you use more than one input interface you have to specify output format by parameter \"-o\".",-1,0)
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('w', "write", "Write output to FILE instead of stdout (rewrite the file).", required_argument, "string") \

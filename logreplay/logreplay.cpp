@@ -72,7 +72,7 @@ UR_FIELDS(
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("LogReplay","This module converts CSV from logger and sends it in UniRec. The first row of CSV file has to be data format of fields.",0,1)
+  BASIC("logreplay","This module converts CSV from logger and sends it in UniRec. The first row of CSV file has to be data format of fields.",0,1)
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('f', "file", "Specify path to a file to be read.", required_argument, "string") \

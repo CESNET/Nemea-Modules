@@ -77,7 +77,7 @@ UR_FIELDS (
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("nfwriter module" ,"This module write flows from input ifc to file in nfdump format.", 1, 0)
+  BASIC("nfwriter" ,"This module write flows from input ifc to file in nfdump format.", 1, 0)
 
 #define MODULE_PARAMS(PARAM) \
    PARAM('f', "file", "Output nfdump file.", required_argument, "string") \
