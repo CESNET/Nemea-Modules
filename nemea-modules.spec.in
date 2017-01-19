@@ -19,7 +19,7 @@ Provides: nemea-modules
 %setup
 
 %build
-./configure --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir}/nemea -q --docdir=%{_docdir}/nemea-modules --enable-silent-rules --disable-repobuild --datadir=%{_datadir};
+./configure --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir}/nemea -q --docdir=%{_docdir}/nemea-modules --mandir=%{_mandir} --enable-silent-rules --disable-repobuild --datadir=%{_datadir};
 make -j5
 
 %install
@@ -69,6 +69,7 @@ test -x %{_bindir}/nemea/flow_meter && setcap "CAP_NET_RAW+eip" %{_bindir}/nemea
 %{_datadir}/munin/plugins/link_traffic_
 %{_datadir}/munin/plugins/proto_traffic_
 %{_datadir}/nemea/*
+%{_mandir}/man1/*.1.gz
 
 
 
