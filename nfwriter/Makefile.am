@@ -10,3 +10,9 @@ EXTRA_DIST=README.md
 pkgdocdir=${docdir}/nfwriter
 pkgdoc_DATA=README.md
 
+nfwriter.1: nfwriter.c
+	$(TRAP2MAN) nfwriter.c > nfwriter.1
+
+man_MANS=nfwriter.1
+
+CLEANFILES+=nfwriter.1

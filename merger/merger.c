@@ -78,7 +78,7 @@ UR_FIELDS (
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("module_name","module_description",-1,1)
+  BASIC("merger","This module merges traffic from multiple input interfaces to one output stream (on one interface).",-1,1)
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('F', "time_first", "(timestamp aware version) Sorts timestamps based on TIME_FIRST field, instead of TIME_LAST (default).", no_argument, "none") \
