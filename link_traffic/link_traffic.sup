@@ -1,0 +1,14 @@
+<module>
+<name>link_traffic</name>
+<enabled>true</enabled>
+<path>/usr/bin/nemea/link_traffic</path>
+<params> </params>
+<trapinterfaces>
+<interface>
+  <type>UNIXSOCKET</type>
+  <direction>IN</direction>
+  <params>flow_data_source</params>
+</interface>
+</trapinterfaces>
+</module>
+

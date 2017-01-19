@@ -39,3 +39,10 @@ flow_meter_CXXFLAGS=-std=c++98 -Wno-write-strings
 pkgdocdir=${docdir}/flow_meter
 pkgdoc_DATA=README.md
 EXTRA_DIST=README.md
+
+flow_meter.1: flow_meter.cpp
+	$(TRAP2MAN) flow_meter.cpp > flow_meter.1
+
+man_MANS=flow_meter.1
+
+CLEANFILES+=flow_meter.1

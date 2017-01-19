@@ -9,15 +9,17 @@ import sys
 import os
 import time
 
-SOCKET_PATH = '/var/run/libtrap/munin_link_traffic'
+SOCKET_PATH = '/var/run/libtrap/munin_proto_traffic'
 
 # temporary file with downloaded data
-data_temp_file = "/tmp/munin_link_traffic_data.txt"
+data_temp_file = "/tmp/munin_proto_traffic_data.txt"
 
 # munin interval, if data file is older then munin_interval, get newer
 munin_interval = 3
 
-#connecting to socket if created by C module link_flows
+headers = ["tcp", "udp", "icmp", "icmp6", "gre", "other"]
+
+#connecting to socket if created by C module proto_traffic
 def receiveData():
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:
@@ -43,7 +45,6 @@ The data is received by receiveData() and stored into a cache file data_temp_fil
 If data_temp_file is new enough, data is loaded from the cache file instead of calling
 receiveData().
 """
-
     current_time = time.time()
     last_time = 0
     data = ""
@@ -65,47 +66,28 @@ receiveData().
         data = data.split("\n")
     return data
 
-# Color settings (name of link: color in RRGGBB)
-col = {
-    "aconet":  "490099",
-    "geant":   "008000",
-    "nix2":    "99a0A9",
-    "nix3":    "af69bc",
-    "pioneer": "ff0000",
-    "sanet":   "1e90ff",
-    "telia":   "776655",
-    "telia2":  "bc9269",
-    "amsix":   "af99dc"
-}
-
 #configures munin graph for the munin-node
 def getConfig():
-    config = """graph_title Link traffic - %s
+    config = """graph_title Traffic L4 protocol - %s
 graph_args -l 0
 graph_category traffic-monitoring
-graph_vlabel %s out (-)/in (+) per sec.
-graph_info The number of %s per second specified with link number in 5 minute interval.
+graph_vlabel %s/second
+graph_info The number of %s per second per L4 protocol.
 """ % (suffix, suffix, suffix)
+
     data = getData()
-    links = set()
+    stats = set()
     for key in data[0].split(","):
         if not key.endswith(suffix):
             continue
-        link = key.split('-')[:2]
-        links.add(link[0])
+        stat = key.split('-')[:2]
+        stats.add(stat[0])
 
-    for link in links:
-        config += link + "in.label " + link + "\n"
-        config += link + "in.graph no\n"
-        config += link + "in.type DERIVE" + "\n"
-        config += link + "in.min 0" + "\n"
-        if link in col:
-            config += link + "in.colour " + col[link] + "\n"
-            config += link + "out.colour " + col[link] + "\n"
-        config += link + "out.label " + link + "\n"
-        config += link + "out.negative {0}in".format(link) + "\n"
-        config += link + "out.type DERIVE" + "\n"
-        config += link + "out.min 0" + "\n"
+    for stat in stats:
+        config += stat + ".label " + stat.upper() + "\n"
+        config += stat + ".type DERIVE\n"
+        config += stat + ".draw AREASTACK\n"
+        config += stat + ".min 0" + "\n"
 
     print(config)
 
@@ -121,7 +103,7 @@ def getValues():
     data.sort()
     for key, val in data:
         if key.endswith(suffix):
-            print("{0}.value {1}".format("".join(key.split("-")[:2]), val))
+            print("{0}.value {1}".format(key.split("-")[0], val))
 
 #suffix is the part after last '_' can be flows, packets, bytes
 suffix = sys.argv[0].split("_")[-1]

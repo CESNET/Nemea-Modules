@@ -11,8 +11,10 @@ link_traffic \
 logger \
 logreplay \
 merger \
+proto_traffic \
 report2idea \
 traffic_repeater \
+unirec2json \
 endiverter
 
 EXTRA_DIST = AUTHORS COPYING ChangeLog INSTALL NEWS README.md nfreader

@@ -1,7 +1,7 @@
-# Link_traffic module - README
+# Proto_traffic module - README
 
 ## Description
-This module processes flow data (sums flows, bytes, packets for each LINK_BIT_FIELD). Munin plugin then connects to it via UNIX socket to create graphs.
+This module processes flow data (sums flows, bytes, packets based on PROTOCOL). Munin plugin then connects to it via UNIX socket to create graphs.
 
 ## Interfaces
 - Input: 1
@@ -16,13 +16,13 @@ This module processes flow data (sums flows, bytes, packets for each LINK_BIT_FI
 - `-vvv`             Be even more verbose.
 
 ## Algorithm
-Module collects statistics about flows according to LINK_BIT_FIELD. Running module creates a UNIX socket (/var/run/libtrap/munin_link_traffic). Munin plugin then connects to this socket and gets formatted string with data. The format is the following (the number of headers is not limited):
+Module collects statistics about flows according to PROTOCOL field. Running module creates a UNIX socket (/var/run/libtrap/munin_proto_traffic). Munin plugin then connects to this socket and gets formatted string with data. The format is the following (the number of headers is not limited):
 
 ```
 "header1, header2, header3\n
 value1, value2, value3"
 ```
-When munin plugin starts it checks /tmp/munin_link_traffic_data.txt. If it is actual enough it uses cached data, if its not actual it connects to UNIX socket and creates new cache file.
+When munin plugin starts it checks /tmp/munin_proto_traffic_data.txt. If it is actual enough it uses cached data, if its not actual it connects to UNIX socket and creates new cache file.
 
 ## Install Munin script
 

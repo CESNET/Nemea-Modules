@@ -1,8 +1,8 @@
 /**
- * \file link_traffic.c
- * \brief Module used for counting statistics used in Munin.
+ * \file prot_flows.c
+ * \brief Example module used for counting statistics used in Munin.
  * \author Tomas Jansky <janskto1@fit.cvut.cz>
- * \author Jaroslav Hlavac <hlavaj20@fit.cvut.cz>
+ * \author Tomas Cejka <cejkat@cesnet.cz>
  * \date 2017
  */
 /*
@@ -60,17 +60,15 @@
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <unistd.h>
-#include <stdlib.h>
 #include "fields.h"
 
 /**
  * Definition of fields used in unirec templates (for both input and output interfaces)
  */
 UR_FIELDS (
+   uint8 PROTOCOL,
    uint64 BYTES,
-   uint64 LINK_BIT_FIELD,
-   uint32 PACKETS,
-   uint8 DIR_BIT_FIELD
+   uint32 PACKETS
 )
 
 trap_module_info_t *module_info = NULL;
@@ -80,7 +78,7 @@ trap_module_info_t *module_info = NULL;
  * Definition of basic module information - module name, module description, number of input and output interfaces
  */
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Link Flows Counter","This module counts statistics according to link and direction.", 1, 0)
+  BASIC("Protocol Flows Counter","This module counts statistics of protocol usage in flows. (TCP/UDP/ICMP...)", 1, 0)
 
 
 /**
@@ -91,25 +89,39 @@ trap_module_info_t *module_info = NULL;
  */
 #define MODULE_PARAMS(PARAM)
 
-#define DEF_SOCKET_PATH "/var/run/libtrap/munin_link_traffic"
+#define DEF_SOCKET_PATH "/var/run/libtrap/munin_proto_traffic"
 
-static volatile int stop = 0;
+static int stop = 0;
 
 /**
  * Function to handle SIGTERM and SIGINT signals (used to stop the module)
  */
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
-typedef struct link_stats {
-   volatile uint64_t flows_in;
-   volatile uint32_t packets_in;
-   volatile uint64_t bytes_in;
-   volatile uint64_t flows_out;
-   volatile uint32_t packets_out;
-   volatile uint64_t bytes_out;
-} link_stats_t;
+#define PROTOCOLS(A) \
+	A(icmp, 1) \
+	A(tcp, 6) \
+	A(udp, 17) \
+	A(icmp6, 58) \
+	A(esp, 50) \
+	A(gre, 47)
 
-link_stats_t stats[8];
+#define FOREACH_PROTOCOLS(A) PROTOCOLS(A)
+
+#define ENUMS(name, number)	name = number,
+
+enum protocols {
+FOREACH_PROTOCOLS(ENUMS)
+ENUMS(others, -1)
+};
+
+#define STATS(name, number)	volatile uint64_t name;
+typedef struct statistics {
+FOREACH_PROTOCOLS(STATS)
+STATS(others, -1)
+} statistics_t;
+
+statistics_t flows, bytes, pckts;
 
 void *accept_clients(void *arg)
 {
@@ -124,13 +136,13 @@ void *accept_clients(void *arg)
       stop = 1;
       pthread_exit(0);
    }
-
+    
    struct sockaddr_un address;
    bzero(&address, sizeof(address)); 
    address.sun_family = AF_UNIX;
    strcpy(address.sun_path, DEF_SOCKET_PATH);
    unlink(DEF_SOCKET_PATH);
-   
+    
    if (bind(fd, (struct sockaddr *) &address, sizeof(address)) < 0) {
       close(fd);
       fprintf(stderr, "Error: Bind failed.\n");
@@ -142,7 +154,7 @@ void *accept_clients(void *arg)
    if (chmod(DEF_SOCKET_PATH, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH) != 0) {
       fprintf(stderr, "Error: Changing permissions failed.\n");
    }
-   
+
    if (listen(fd, 5) < 0) {
       close(fd);
       fprintf(stderr, "Error: Listen failed.\n");
@@ -159,32 +171,28 @@ void *accept_clients(void *arg)
       if (client_fd < 0) {
          fprintf(stderr, "Error: Accept failed.\n");
          continue;
-      } 
-      /* creating formated text to be forwarded and parsed by munin_link_flows script */
-      size = asprintf(&str,"nix2-in-bytes,nix2-in-flows,nix2-in-packets,nix2-out-bytes,nix2-out-flows,nix2-out-packets,"
-         "nix3-in-bytes,nix3-in-flows,nix3-in-packets,nix3-out-bytes,nix3-out-flows,nix3-out-packets,"
-         "telia-in-bytes,telia-in-flows,telia-in-packets,telia-out-bytes,telia-out-flows,telia-out-packets,"
-         "geant-in-bytes,geant-in-flows,geant-in-packets,geant-out-bytes,geant-out-flows,geant-out-packets,"
-         "amsix-in-bytes,amsix-in-flows,amsix-in-packets,amsix-out-bytes,amsix-out-flows,amsix-out-packets,"
-         "sanet-in-bytes,sanet-in-flows,sanet-in-packets,sanet-out-bytes,sanet-out-flows,sanet-out-packets,"
-         "aconet-in-bytes,aconet-in-flows,aconet-in-packets,aconet-out-bytes,aconet-out-flows,aconet-out-packets,"
-         "pioneer-in-bytes,pioneer-in-flows,pioneer-in-packets,pioneer-out-bytes,pioneer-out-flows,pioneer-out-packets\n"
-         "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32","
-         "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32","
-         "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32","
-         "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32","
-         "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32","
-         "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32","
-         "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32","
-         "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32"\n",
-         stats[0].bytes_in, stats[0].flows_in, stats[0].packets_in, stats[0].bytes_out, stats[0].flows_out, stats[0].packets_out,
-         stats[1].bytes_in, stats[1].flows_in, stats[1].packets_in, stats[1].bytes_out, stats[1].flows_out, stats[1].packets_out,
-         stats[2].bytes_in, stats[2].flows_in, stats[2].packets_in, stats[2].bytes_out, stats[2].flows_out, stats[2].packets_out,
-         stats[3].bytes_in, stats[3].flows_in, stats[3].packets_in, stats[3].bytes_out, stats[3].flows_out, stats[3].packets_out,
-         stats[4].bytes_in, stats[4].flows_in, stats[4].packets_in, stats[4].bytes_out, stats[4].flows_out, stats[4].packets_out,
-         stats[5].bytes_in, stats[5].flows_in, stats[5].packets_in, stats[5].bytes_out, stats[5].flows_out, stats[5].packets_out,
-         stats[6].bytes_in, stats[6].flows_in, stats[6].packets_in, stats[6].bytes_out, stats[6].flows_out, stats[6].packets_out,
-         stats[7].bytes_in, stats[7].flows_in, stats[7].packets_in, stats[7].bytes_out, stats[7].flows_out, stats[7].packets_out);
+      }
+
+#define STRING_FLOWS(name, value) #name "-flows,"
+#define STRING_BYTES(name, value) #name "-bytes,"
+#define STRING_PCKTS(name, value) #name "-packets,"
+#define STRING_VALUE(name, value) "%" PRIu64 ","
+#define FLOWS_STATS(name, value) flows.name,
+#define BYTES_STATS(name, value) bytes.name,
+#define PCKTS_STATS(name, value) pckts.name,
+
+      size = asprintf(&str,
+            FOREACH_PROTOCOLS(STRING_FLOWS) "others-flows,"
+            FOREACH_PROTOCOLS(STRING_BYTES) "others-bytes,"
+            FOREACH_PROTOCOLS(STRING_PCKTS) "others-packets\n"
+            FOREACH_PROTOCOLS(STRING_VALUE) "%" PRIu64 ","
+            FOREACH_PROTOCOLS(STRING_VALUE) "%" PRIu64 ","
+            FOREACH_PROTOCOLS(STRING_VALUE) "%" PRIu64 "\n",
+            FOREACH_PROTOCOLS(FLOWS_STATS) flows.others,
+            FOREACH_PROTOCOLS(BYTES_STATS) bytes.others,
+            FOREACH_PROTOCOLS(PCKTS_STATS) pckts.others
+            );
+
       if (size > 0) {
          send(client_fd, str, size, 0);
          free(str);
@@ -195,20 +203,6 @@ void *accept_clients(void *arg)
    
    close(fd);
    pthread_exit(0);
-}
-
-/* adds data to global array of link_stats_t structures "statistics[]" */   
-void count_stats (uint64_t link, uint8_t direction, ur_template_t *in_tmplt, const void *in_rec) {
-   if (direction == 0) {
-      stats[link].flows_in++;
-      stats[link].bytes_in += ur_get(in_tmplt, in_rec, F_BYTES);
-      stats[link].packets_in += ur_get(in_tmplt, in_rec, F_PACKETS);
-   } else if (direction == 1) {
-      stats[link].flows_out++;
-      stats[link].bytes_out += ur_get(in_tmplt, in_rec, F_BYTES);
-      stats[link].packets_out += ur_get(in_tmplt, in_rec, F_PACKETS);
-   }
-   return;
 }
 
 int main(int argc, char **argv)
@@ -226,7 +220,7 @@ int main(int argc, char **argv)
 
    /**
     * Macro allocates and initializes module_info structure according to MODULE_BASIC_INFO and MODULE_PARAMS
-    * definitions earlier in this file. It also creates a string with short_opt letters for getopt
+    * definitions on the lines 69 and 77 of this file. It also creates a string with short_opt letters for getopt
     * function called "module_getopt_string" and long_options field for getopt_long function in variable "long_options"
     */
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
@@ -254,7 +248,7 @@ int main(int argc, char **argv)
    }
 
    /* **** Create UniRec templates **** */
-   in_tmplt = ur_create_input_template(0, "BYTES,LINK_BIT_FIELD,PACKETS,DIR_BIT_FIELD", NULL);
+   in_tmplt = ur_create_input_template(0, "PROTOCOL,BYTES,PACKETS", NULL);
    if (!in_tmplt){
       fprintf(stderr, "Error: Input template could not be created.\n");
       goto cleanup;
@@ -265,25 +259,26 @@ int main(int argc, char **argv)
    if (ret) {
       fprintf(stderr, "Error: Thread creation failed.\n");
       goto cleanup;     
-   } 
+   }
 
    /* **** Main processing loop **** */
-   
-   /* reading data from input and calling count_stats function to save processed data */
+   memset(&flows, 0, sizeof(flows));
+   memset(&bytes, 0, sizeof(bytes));
+   memset(&pckts, 0, sizeof(pckts));
+
+   // Read data from input, process them and write to output
    while (!stop) {
       const void *in_rec;
       uint16_t in_rec_size;
-      uint64_t link_index;
-      uint8_t direction;
 
-      /* Receive data from input interface 0. */
-      /* Block if data are not available immediately (unless a timeout is set using trap_ifcctl) */
+      // Receive data from input interface 0.
+      // Block if data are not available immediately (unless a timeout is set using trap_ifcctl)
       ret = TRAP_RECEIVE(0, in_rec, in_rec_size, in_tmplt);
 
-      /* Handling possible errors. */
+      // Handle possible errors
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
 
-      /* Checking size of received data */
+      // Check size of received data
       if (in_rec_size < ur_rec_fixlen_size(in_tmplt)) {
          if (in_rec_size <= 1) {
             break; // End of data (used for testing purposes)
@@ -293,11 +288,26 @@ int main(int argc, char **argv)
             break;
          }
       }
-      /* get from what collecto data came and in what direction the flow was comming */
-      link_index = __builtin_ctzll(ur_get(in_tmplt, in_rec, F_LINK_BIT_FIELD));
-      direction = ur_get(in_tmplt, in_rec, F_DIR_BIT_FIELD);
-      /* save data according to information got by the code above */
-      count_stats(link_index, direction, in_tmplt, in_rec);
+
+      // PROCESS THE DATA
+      uint8_t prot = ur_get(in_tmplt, in_rec, F_PROTOCOL);
+      uint64_t cur_bytes = ur_get(in_tmplt, in_rec, F_BYTES);
+      uint64_t cur_pckts = ur_get(in_tmplt, in_rec, F_PACKETS);
+
+#define PROTOCOL_CASE(name, value) case value: \
+   flows.name++; \
+   bytes.name += cur_bytes; \
+   pckts.name += cur_pckts; \
+   break;
+
+      switch (prot) {
+         FOREACH_PROTOCOLS(PROTOCOL_CASE)
+         default:
+            flows.others++;
+            bytes.others += cur_bytes;
+            pckts.others += cur_pckts;
+            break;
+      }
    }
 
    /* **** Cleanup **** */
