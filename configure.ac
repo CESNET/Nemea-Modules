@@ -5,7 +5,7 @@ AC_PREREQ([2.63])
 AC_INIT([nemea-modules], [2.5.1], [nemea@cesnet.cz])
 AC_CONFIG_SRCDIR([flowcounter/flowcounter.c])
 AC_CONFIG_HEADERS([config.h])
-RELEASE=7
+RELEASE=8
 AC_SUBST(RELEASE)
 USERNAME=`git config --get user.name`
 USERMAIL=`git config --get user.email`
