@@ -64,5 +64,8 @@ AC_DEFUN([AX_LIBTRAP_CHECK], [
   else
     AC_MSG_ERROR([Libtrap was not found.])
   fi
+	nemeasupdir=${sysconfdir}
+	AC_SUBST(nemeasupdir)
+	AC_PATH_PROG([TRAP2MAN], [trap2man.sh], [], [/usr/bin/nemea/$PATH_SEPARATOR$PATH$PATH_SEPARATOR../nemea-framework/libtrap/tools/])
 ])
 

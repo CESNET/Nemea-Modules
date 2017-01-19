@@ -15,7 +15,7 @@ anonymizer_LDADD=-ltrap -lunirec -lnemea-common
 pkgdocdir=${docdir}/anonymizer
 pkgdoc_DATA=README
 
-anonymizer.1: anonymizer.cpp
+anonymizer.1: anonymizer.c
 	$(TRAP2MAN) anonymizer.c > anonymizer.1
 
 man_MANS=anonymizer.1
