@@ -7,8 +7,10 @@ pkgdocdir=${docdir}/flowcounter
 pkgdoc_DATA=README.md
 EXTRA_DIST=README.md
 
-flowcounter.1: flowcounter.c
-	$(TRAP2MAN) flowcounter.c > flowcounter.1
+
+mansources := $(addprefix $(srcdir)/,$(flowcounter_SOURCES))
+flowcounter.1: $(mansources)
+	$(TRAP2MAN) $^ > $@
 
 man_MANS=flowcounter.1
 

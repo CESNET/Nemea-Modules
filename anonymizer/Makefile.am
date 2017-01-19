@@ -15,9 +15,11 @@ anonymizer_LDADD=-ltrap -lunirec -lnemea-common
 pkgdocdir=${docdir}/anonymizer
 pkgdoc_DATA=README
 
-anonymizer.1: anonymizer.c
-	$(TRAP2MAN) anonymizer.c > anonymizer.1
+mansources := $(addprefix $(srcdir)/,$(anonymizer_SOURCES))
+anonymizer.1: $(mansources)
+	$(TRAP2MAN) $^ > $@
 
 man_MANS=anonymizer.1
 
 CLEANFILES+=anonymizer.1
+

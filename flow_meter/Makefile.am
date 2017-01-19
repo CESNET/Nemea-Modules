@@ -40,8 +40,9 @@ pkgdocdir=${docdir}/flow_meter
 pkgdoc_DATA=README.md
 EXTRA_DIST=README.md
 
-flow_meter.1: flow_meter.cpp
-	$(TRAP2MAN) flow_meter.cpp > flow_meter.1
+mansources := $(addprefix $(srcdir)/,$(flow_meter_SOURCES))
+flow_meter.1: $(mansources)
+	$(TRAP2MAN) $^ > $@
 
 man_MANS=flow_meter.1
 

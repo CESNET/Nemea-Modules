@@ -30,8 +30,9 @@ parser.tab.c: bison/parser.y
 clean-local:
 	rm -f lex.yy.c parser.tab.c parser.tab.h parser fiedls.c fields.h
 
-unirecfilter.1: unirecfilter.c
-	$(TRAP2MAN) unirecfilter.c > unirecfilter.1
+mansources := $(addprefix $(srcdir)/,$(unirecfilter_SOURCES))
+unirecfilter.1: $(mansources)
+	$(TRAP2MAN) $^ > $@
 
 man_MANS=unirecfilter.1
 

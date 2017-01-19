@@ -8,8 +8,9 @@ pkgdocdir=${docdir}/logreplay
 pkgdoc_DATA=README.md
 EXTRA_DIST=README.md
 
-logreplay.1: logreplay.cpp
-	$(TRAP2MAN) logreplay.cpp > logreplay.1
+mansources := $(addprefix $(srcdir)/,$(logreplay_SOURCES))
+logreplay.1: $(mansources)
+	$(TRAP2MAN) $^ > $@
 
 man_MANS=logreplay.1
 

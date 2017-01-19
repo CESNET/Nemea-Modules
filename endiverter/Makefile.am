@@ -6,8 +6,9 @@ endiverter_SOURCES=endiverter.c
 endiverter_LDADD=-ltrap -lunirec
 endiverter_CFLAGS=-Wall
 
-endiverter.1: endiverter.c
-	$(TRAP2MAN) endiverter.c > endiverter.1
+mansources := $(addprefix $(srcdir)/,$(endiverter_SOURCES))
+endiverter.1: $(mansources)
+	$(TRAP2MAN) $^ > $@
 
 man_MANS=endiverter.1
 

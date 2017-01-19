@@ -9,8 +9,9 @@ EXTRA_DIST=README.md
 pkgdocdir=${docdir}/merger
 pkgdoc_DATA=README.md
 
-merger.1: merger.c
-	$(TRAP2MAN) merger.c > merger.1
+mansources := $(addprefix $(srcdir)/,$(merger_SOURCES))
+merger.1: $(mansources)
+	$(TRAP2MAN) $^ > $@
 
 man_MANS=merger.1
 

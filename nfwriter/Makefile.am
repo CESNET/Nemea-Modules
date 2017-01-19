@@ -10,8 +10,9 @@ EXTRA_DIST=README.md
 pkgdocdir=${docdir}/nfwriter
 pkgdoc_DATA=README.md
 
-nfwriter.1: nfwriter.c
-	$(TRAP2MAN) nfwriter.c > nfwriter.1
+mansources := $(addprefix $(srcdir)/,$(nfwriter_SOURCES))
+nfwriter.1: $(mansources)
+	$(TRAP2MAN) $^ > $@
 
 man_MANS=nfwriter.1
 
