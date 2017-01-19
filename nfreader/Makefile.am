@@ -10,7 +10,7 @@ LDADD=-lunirec -ltrap -lnf
 nfdump_reader_test_CXXFLAGS=-Wno-write-strings
 
 EXTRA_DIST=README.md
-pkgdocdir=${docdir}/nfdump_reader
+pkgdocdir=${docdir}/nfreader
 pkgdoc_DATA=README.md
 
 nfdump_reader.1: nfdump_reader.c
