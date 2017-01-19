@@ -9,4 +9,4 @@ traffic_repeater.1: traffic_repeater.c
 
 man_MANS=traffic_repeater.1
 
-CLEANFILES+=traffic_repeater.1
+CLEANFILES=traffic_repeater.1
