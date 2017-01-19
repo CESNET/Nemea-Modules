@@ -77,7 +77,7 @@ trap_module_info_t *module_info = NULL;
 static int stop = 0;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Flow meter module", "Convert packets from PCAP file or network interface into flow records.", 0, -1)
+  BASIC("flow_meter", "Convert packets from PCAP file or network interface into flow records.", 0, -1)
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('p', "plugins", "Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. "\
