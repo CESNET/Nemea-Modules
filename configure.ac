@@ -34,9 +34,14 @@ PKGDATADIR=$(eval echo $(eval echo ${pkgdatadir}))
 AC_SUBST(PKGDATADIR)
 AC_SUBST(pkgdatadir)
 AC_DEFINE_DIR(PKGDATADIR, [pkgdatadir], [Path to configuration files])
-AC_DEFINE_DIR(SYSCONFDIR, [sysconfdir], [Path to configuration files])
+pkgsysconfdir=${sysconfdir}/nemea
+AC_SUBST(pkgsysconfdir)
+AC_DEFINE_DIR(SYSCONFDIR, [pkgsysconfdir], [Path to configuration files])
 AC_DEFINE_DIR(BINDIR, [bindir], [Path to executable files])
 AC_SUBST(BINDIR)
+
+bashcompldir=${sysconfdir}/bash_completion.d
+AC_SUBST(bashcompldir)
 
 deviceclassifierdatadir=${pkgdatadir}/device_classifier
 AC_DEFINE_DIR(DEVICECLASSIFIERDATADIR, [deviceclassifierdatadir], [Path to SVM data files])

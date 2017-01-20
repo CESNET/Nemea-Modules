@@ -19,7 +19,7 @@ Provides: nemea-modules
 %setup
 
 %build
-./configure --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir}/nemea -q --docdir=%{_docdir}/nemea-modules --mandir=%{_mandir} --enable-silent-rules --disable-repobuild --datadir=%{_datadir};
+./configure -q --enable-silent-rules --disable-repobuild --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir} --docdir=%{_docdir}/nemea-modules --mandir=%{_mandir} --datadir=%{_datadir};
 make -j5
 
 %install

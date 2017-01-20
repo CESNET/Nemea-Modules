@@ -5,6 +5,6 @@ pkgdoc_DATA=README
 
 bin_SCRIPTS=email_reporter.py
 
-pkgsysconfdir=${sysconfdir}/email_reporter
-pkgsysconf_DATA=example.cfg generic.cfg
+confdir=${pkgsysconfdir}/email_reporter
+conf_DATA=example.cfg generic.cfg
 

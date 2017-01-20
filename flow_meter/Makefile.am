@@ -48,6 +48,5 @@ man_MANS=flow_meter.1
 
 CLEANFILES+=flow_meter.1
 
-bashcompldir=${prefix}/etc/bash_completion.d/
 bashcompl_DATA=flow_meter.bash
 
