@@ -66,6 +66,7 @@ test -x %{_bindir}/nemea/flow_meter && setcap "CAP_NET_RAW+eip" %{_bindir}/nemea
 %config(noreplace) %{_sysconfdir}/nemea/email_reporter/generic.cfg
 %config(noreplace) %{_sysconfdir}/nemea/munin/link_traffic.sup
 %config(noreplace) %{_sysconfdir}/nemea/munin/proto_traffic.sup
+%config(noreplace) %{_sysconfdir}/bash_completion.d/flow_meter.bash
 %{_datadir}/munin/plugins/link_traffic_
 %{_datadir}/munin/plugins/proto_traffic_
 %{_datadir}/nemea/*
