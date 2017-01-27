@@ -211,6 +211,7 @@ AC_CONFIG_FILES([Makefile
                  proto_traffic/Makefile
                  proto_traffic/munin/Makefile
                  report2idea/Makefile
+                 topn/Makefile
                  traffic_repeater/Makefile
                  unirec2json/Makefile
                  unirecfilter/Makefile
