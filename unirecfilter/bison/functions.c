@@ -48,6 +48,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include "../unirecfilter.h"
 
 // get numbers of protocols and services
@@ -59,6 +60,9 @@
 #include <sys/types.h>
 #include <regex.h>
 #include "fields.h"
+
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
 
 struct ast *main_tree = NULL;
 
@@ -121,7 +125,18 @@ struct ast *newExpression(char *column, char *cmp, int64_t number, int is_signed
    free(cmp);
 
    if (id == UR_E_INVALID_NAME) {
-      printf("Warning: %s is not present in input format.\n", column);
+      printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
+      newast->id = UR_INVALID_FIELD;
+   }
+   else if (ur_get_type(id) != UR_TYPE_INT8 &&
+            ur_get_type(id) != UR_TYPE_UINT8 &&
+            ur_get_type(id) != UR_TYPE_INT16 &&
+            ur_get_type(id) != UR_TYPE_UINT16 &&
+            ur_get_type(id) != UR_TYPE_INT32 &&
+            ur_get_type(id) != UR_TYPE_UINT32 &&
+            ur_get_type(id) != UR_TYPE_INT64 &&
+            ur_get_type(id) != UR_TYPE_UINT64) {
+      printf("Warning: Type of %s is not integer. Corresponding rule will always evaluate false.\n", column);
       newast->id = UR_INVALID_FIELD;
    }
    else {
@@ -142,8 +157,13 @@ struct ast *newExpressionFP(char *column, char *cmp, double number)
    free(cmp);
 
    if (id == UR_E_INVALID_NAME) {
-      printf("Warning: %s is not present in input format.\n", column);
+      printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
       newast->id = UR_INVALID_FIELD;
+   }
+   else if (ur_get_type(id) != UR_TYPE_FLOAT &&
+            ur_get_type(id) != UR_TYPE_DOUBLE) {
+     printf("Warning: Type of %s is not float. Corresponding rule will always evaluate false.\n", column);
+     newast->id = UR_INVALID_FIELD;
    }
    else {
       newast->id = id;
@@ -169,19 +189,24 @@ struct ast *newIP(char *column, char *cmp, char *ipAddr)
    free(cmp);
 
    if (!ip_from_str(ipAddr, &(newast->ipAddr))) {
-      printf("Warning: %s is not a valid IP address.\n", ipAddr);
+      printf("Warning: %s is not a valid IP address. Corresponding rule will always evaluate false.\n", ipAddr);
+      newast->id = UR_INVALID_FIELD;
+      free(ipAddr);
+      return (struct ast *) newast;
    }
    free(ipAddr);
 
    int id = ur_get_id_by_name(column);
    if (id == UR_E_INVALID_NAME) {
-      printf("Warning: %s is not present in input format.\n", column);
+      printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
       newast->id = UR_INVALID_FIELD;
-   } else {
-      newast->id = id;
    }
-   if (ur_get_type(newast->id) != UR_TYPE_IP) {
-      printf("Warning: Type of %s is not IP address.\n", column);
+   else if (ur_get_type(id) != UR_TYPE_IP) {
+      printf("Warning: Type of %s is not IP address. Corresponding rule will always evaluate false.\n", column);
+      newast->id = UR_INVALID_FIELD;
+   }
+   else {
+      newast->id = id;
    }
    return (struct ast *) newast;
 }
@@ -204,6 +229,9 @@ struct ast *newString(char *column, char *cmp, char *s)
          regerror(retval, &newast->re, errb, 1023);
          printf("Regexp error: %s\n", errb);
          regfree(&newast->re);
+         free(s);
+         newast->id = UR_INVALID_FIELD;
+         return (struct ast *) newast;
       }
       free(s);
    } else {
@@ -211,9 +239,16 @@ struct ast *newString(char *column, char *cmp, char *s)
    }
    int id = ur_get_id_by_name(column);
    if (id == UR_E_INVALID_NAME) {
-      printf("Warning: %s is not present in input format.\n", column);
+      printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
       newast->id = UR_INVALID_FIELD;
-   } else {
+   }
+   else if (ur_get_type(id) != UR_TYPE_STRING && 
+            ur_get_type(id) != UR_TYPE_BYTES &&
+            ur_get_type(id) != UR_TYPE_CHAR) {
+      printf("Warning: Type of %s is not string. Corresponding rule will always evaluate false.\n", column);
+      newast->id = UR_INVALID_FIELD;
+   }
+   else {
       newast->id = id;
    }
    return (struct ast *) newast;
@@ -237,10 +272,17 @@ struct ast *newNegation(struct ast *b)
 
 void printAST(struct ast *ast)
 {
+   char *TTY_RED = "";
+   char *TTY_RESET = "";
+   if (isatty(fileno(stdout))) {
+      TTY_RED = ANSI_COLOR_RED;
+      TTY_RESET = ANSI_COLOR_RESET;
+   }
    if (ast == NULL) {
-      puts("No syntax tree for printing");
+      puts(ANSI_COLOR_RED "SYNTAX ERROR" ANSI_COLOR_RESET);
       return;
    }
+   
    switch (ast->type) {
    case NODE_T_AST:
       printAST(ast->l);
@@ -254,7 +296,11 @@ void printAST(struct ast *ast)
          printAST(ast->r);
       }
       break;
+
    case NODE_T_EXPRESSION:
+      if (((struct expression*) ast)->id == UR_INVALID_FIELD) { // There was error with this expr., print it in red color
+         printf("%s", TTY_RED);
+      }
       printf("%s", ((struct expression*) ast)->column);
 
       switch (((struct ip*) ast)->cmp) {
@@ -287,8 +333,15 @@ void printAST(struct ast *ast)
       } else {
          printf("%" PRIu64, (uint64_t) ((struct expression*) ast)->number);
       }
+      if (((struct expression*) ast)->id == UR_INVALID_FIELD) {
+         printf("%s", TTY_RESET);
+      }
       break;
+
    case NODE_T_EXPRESSION_FP:
+      if (((struct expression_fp*) ast)->id == UR_INVALID_FIELD) { // There was error with this expr., print it in red color
+         printf("%s", TTY_RED);
+      }
       printf("%s", ((struct expression_fp*) ast)->column);
 
       switch (((struct ip*) ast)->cmp) {
@@ -317,13 +370,21 @@ void printAST(struct ast *ast)
          printf(" <invalid operator> ");
       }
       printf("%lf", ((struct expression_fp*) ast)->number);
+      if (((struct expression_fp*) ast)->id == UR_INVALID_FIELD) {
+         printf("%s", TTY_RESET);
+      }
       break;
+
    case NODE_T_PROTOCOL:
       printf("PROTOCOL %s %s",
             ((struct protocol*) ast)->cmp,
             ((struct protocol*) ast)->data);
       break;
+
    case NODE_T_IP: {
+      if (((struct ip*) ast)->id == UR_INVALID_FIELD) { // There was error with this expr., print it in red color
+         printf("%s", TTY_RED);
+      }
       char str[46];
       ip_to_str(&(((struct ip*) ast)->ipAddr), str);
 
@@ -353,10 +414,17 @@ void printAST(struct ast *ast)
          printf(" <invalid operator> ");
       }
       printf("%s", str);
+      if (((struct ip*) ast)->id == UR_INVALID_FIELD) {
+         printf("%s", TTY_RESET);
+      }
 
       break;
       }
+
    case NODE_T_STRING:
+      if (((struct str*) ast)->id == UR_INVALID_FIELD) { // There was error with this expr., print it in red color
+         printf("%s", TTY_RED);
+      }
       printf("%s", ((struct str*) ast)->column);
       switch (((struct ip*) ast)->cmp) {
       case (OP_EQ):
@@ -372,12 +440,17 @@ void printAST(struct ast *ast)
          printf(" <invalid operator> ");
       }
       printf("\"%s\"", ((struct str*) ast)->s);
+      if (((struct str*) ast)->id == UR_INVALID_FIELD) {
+         printf("%s", TTY_RESET);
+      }
       break;
+
    case NODE_T_BRACKET:
       printf("( ");
       printAST(((struct brack*) ast)->b);
       printf(" )");
       break;
+
    case NODE_T_NEGATION:
       printf("! ( ");
       printAST(((struct brack*) ast)->b);
@@ -445,7 +518,7 @@ int compareUnsigned(uint64_t a, uint64_t b, cmp_op op) {
       case OP_EQ:
          return a == b;
       default:
-         fprintf(stderr, "Warning: Invalid comparisson operator.\n");
+         fprintf(stderr, "Warning: Invalid comparison operator.\n");
          return 0;
    }
    return 0;
@@ -466,7 +539,7 @@ int compareSigned(int64_t a, int64_t b, cmp_op op) {
       case OP_EQ:
          return a == b;
       default:
-         fprintf(stderr, "Warning: Invalid comparisson operator.\n");
+         fprintf(stderr, "Warning: Invalid comparison operator.\n");
          return 0;
    }
    return 0;
@@ -488,7 +561,7 @@ int compareFloating(double a, double b, cmp_op op) {
       case OP_EQ:
          return abs(a - b) < EPS;
       default:
-         fprintf(stderr, "Warning: Invalid comparisson operator.\n");
+         fprintf(stderr, "Warning: Invalid comparison operator.\n");
          return 0;
    }
    return 0;

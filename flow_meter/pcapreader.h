@@ -54,6 +54,10 @@
 
 using namespace std;
 
+#ifndef ETH_P_8021AD
+#define ETH_P_8021AD	0x88A8          /* 802.1ad Service VLAN*/
+#endif
+
 /*
  * \brief Minimum snapshot length of pcap handle.
  */

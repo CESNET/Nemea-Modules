@@ -32,11 +32,12 @@ def convert_to_idea(rec, opts=None):
     if rec.EVENT_TYPE != 40:
         # skip other alerts
         return None
+    time = getIDEAtime()
     idea = {
         "Format": "IDEA0",
         "ID": getRandomId(),
-        "CreateTime": getIDEAtime(),
-        "DetectTime": getIDEAtime(rec.DETECTION_TIME),
+        "CreateTime": time,
+        "DetectTime": time,
         "EventTime": getIDEAtime(rec.TIME_FIRST),
         "Category": [ "Attempt.Login" ],
         "Description": "SIP Dial-plan guessing",

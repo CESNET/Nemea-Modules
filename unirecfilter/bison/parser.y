@@ -33,7 +33,8 @@
 %token <string> COLUMN
 %token <string> EQ
 %token <string> CMP
-%token <string> VAL
+%token <string> REGEX
+%token <string> PROTO_NAME
 %token <string> IP
 %token <string> STRING
 %token AND OR
@@ -62,11 +63,14 @@ exp:
     COLUMN CMP SIGNED { $$ = newExpression($1, $2, $3, 1); }
     | COLUMN CMP UNSIGNED { $$ = newExpression($1, $2, $3, 0); }
     | COLUMN CMP FLOAT { $$ = newExpressionFP($1, $2, $3); }
-    | PROTOCOL EQ VAL { $$ = (struct ast *) newProtocol($2, $3); }
+    | PROTOCOL CMP UNSIGNED { $$ = newExpression("PROTOCOL", $2, $3, 0); }
+    | PROTOCOL EQ UNSIGNED { $$ = newExpression("PROTOCOL", $2, $3, 0); }
+    | PROTOCOL EQ PROTO_NAME { $$ = (struct ast *) newProtocol($2, $3); }
     | PROTOCOL EQ STRING { $$ = (struct ast *) newProtocol($2, $3); }
     | COLUMN EQ IP { $$ = (struct ast *) newIP($1, $2, $3); }
     | COLUMN CMP IP { $$ = (struct ast *) newIP($1, $2, $3); }
     | COLUMN EQ STRING { $$ = (struct ast *) newString($1, $2, $3); }
+    | COLUMN REGEX STRING { $$ = (struct ast *) newString($1, $2, $3); }
     | COLUMN EQ SIGNED { $$ = newExpression($1, $2, $3, 1); }
     | COLUMN EQ UNSIGNED { $$ = newExpression($1, $2, $3, 0); }
     | COLUMN EQ FLOAT { $$ = newExpressionFP($1, $2, $3); }

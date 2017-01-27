@@ -19,7 +19,7 @@ Provides: nemea-modules
 %setup
 
 %build
-./configure --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir}/nemea -q --docdir=%{_docdir}/nemea-modules --enable-silent-rules --disable-repobuild;
+./configure -q --enable-silent-rules --disable-repobuild --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir} --docdir=%{_docdir}/nemea-modules --mandir=%{_mandir} --datadir=%{_datadir};
 make -j5
 
 %install
@@ -45,22 +45,32 @@ test -x %{_bindir}/nemea/flow_meter && setcap "CAP_NET_RAW+eip" %{_bindir}/nemea
 %{_bindir}/nemea/ipblacklist2idea.py
 %{_bindir}/nemea/json_dump.py
 %{_bindir}/nemea/json_replay.py
+%{_bindir}/nemea/link_traffic
 %{_bindir}/nemea/logger
 %{_bindir}/nemea/logreplay
 %{_bindir}/nemea/merger
 %{_bindir}/nemea/minerdetector2idea.py
 %{_bindir}/nemea/nfdump_reader
 %{_bindir}/nemea/nfdump_reader_test
+%{_bindir}/nemea/nfwriter
+%{_bindir}/nemea/proto_traffic
 %{_bindir}/nemea/sipbf2idea.py
 %{_bindir}/nemea/svm-tools
 %{_bindir}/nemea/traffic_repeater
+%{_bindir}/nemea/unirec2json.py
 %{_bindir}/nemea/unirecfilter
 %{_bindir}/nemea/voipfraud2idea.py
 %{_bindir}/nemea/vportscan2idea.py
 %{_docdir}/nemea-modules/*/*
 %config(noreplace) %{_sysconfdir}/nemea/email_reporter/example.cfg
 %config(noreplace) %{_sysconfdir}/nemea/email_reporter/generic.cfg
+%config(noreplace) %{_sysconfdir}/nemea/munin/link_traffic.sup
+%config(noreplace) %{_sysconfdir}/nemea/munin/proto_traffic.sup
+%config(noreplace) %{_sysconfdir}/bash_completion.d/flow_meter.bash
+%{_datadir}/munin/plugins/link_traffic_
+%{_datadir}/munin/plugins/proto_traffic_
 %{_datadir}/nemea/*
+%{_mandir}/man1/*.1.gz
 
 
 

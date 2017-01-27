@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-modules], [2.4.3], [traffic-analysis@cesnet.cz])
+AC_INIT([nemea-modules], [2.5.1], [nemea@cesnet.cz])
 AC_CONFIG_SRCDIR([flowcounter/flowcounter.c])
 AC_CONFIG_HEADERS([config.h])
-RELEASE=1
+RELEASE=8
 AC_SUBST(RELEASE)
 USERNAME=`git config --get user.name`
 USERMAIL=`git config --get user.email`
@@ -34,9 +34,14 @@ PKGDATADIR=$(eval echo $(eval echo ${pkgdatadir}))
 AC_SUBST(PKGDATADIR)
 AC_SUBST(pkgdatadir)
 AC_DEFINE_DIR(PKGDATADIR, [pkgdatadir], [Path to configuration files])
-AC_DEFINE_DIR(SYSCONFDIR, [sysconfdir], [Path to configuration files])
+pkgsysconfdir=${sysconfdir}/nemea
+AC_SUBST(pkgsysconfdir)
+AC_DEFINE_DIR(SYSCONFDIR, [pkgsysconfdir], [Path to configuration files])
 AC_DEFINE_DIR(BINDIR, [bindir], [Path to executable files])
 AC_SUBST(BINDIR)
+
+bashcompldir=${sysconfdir}/bash_completion.d
+AC_SUBST(bashcompldir)
 
 deviceclassifierdatadir=${pkgdatadir}/device_classifier
 AC_DEFINE_DIR(DEVICECLASSIFIERDATADIR, [deviceclassifierdatadir], [Path to SVM data files])
@@ -198,16 +203,22 @@ AC_CONFIG_FILES([Makefile
                  email_reporter/Makefile
                  flowcounter/Makefile
                  flow_meter/Makefile
+                 flow_meter/flow_meter.bash
                  flow_meter/tests/Makefile
                  json_dump/Makefile
                  json_replay/Makefile
+                 link_traffic/Makefile
+                 link_traffic/munin/Makefile
                  logger/Makefile
                  logreplay/Makefile
                  merger/Makefile
                  nemea-modules.spec
                  nfreader/Makefile
+                 proto_traffic/Makefile
+                 proto_traffic/munin/Makefile
                  report2idea/Makefile
                  traffic_repeater/Makefile
+                 unirec2json/Makefile
                  unirecfilter/Makefile
                  endiverter/Makefile
                  nfwriter/Makefile
@@ -232,6 +243,7 @@ echo
 echo "Documentation..........: ${build_doc}"
 echo
 echo "UniRec processor.......: $UNIRECPROC"
+echo "trap2man.sh............: $TRAP2MAN"
 echo "Compilation............: make (or gmake)"
 echo "  CPPFLAGS.............: $CPPFLAGS"
 echo "  CFLAGS...............: $CFLAGS"

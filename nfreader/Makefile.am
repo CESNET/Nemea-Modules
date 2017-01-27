@@ -13,3 +13,10 @@ EXTRA_DIST=README.md
 pkgdocdir=${docdir}/nfreader
 pkgdoc_DATA=README.md
 
+mansources := $(addprefix $(srcdir)/,$(nfdump_reader_SOURCES))
+nfdump_reader.1: $(mansources)
+	$(TRAP2MAN) $^ > $@
+
+man_MANS=nfdump_reader.1
+
+CLEANFILES+=nfdump_reader.1

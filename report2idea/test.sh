@@ -137,6 +137,21 @@ x98Kv4ni5JjoAjORjZGJHWTiXRW2xKDlhWFVQLFmDpCJCkgmWuoZWhoA9aHy8ZvCI06kKYwMAFPH
 08ewAQAA
 '
 
+sipbf="
+H4sIAMaRdlgAA2NiAAFGucyCxJSUIoVgJzeX+GD/0CBnVx1koRDHIHfXEJ2SzNxUiIBTkKujs0d8
+iKevK5Kos6tjsCtEsDQzr8TMBCLsGubqFxLv6YKkEiKEodLH08873skzJN7N09XHBSxlbASRcgwJ
+cfUNCAlGFQxzR5UwNFNwCQ6JD/APCoHxg4OcEXwLFOsjA1yRRQOC/EP8nf19dIpLijLz0iGCocGu
+QcAgKmbIY4CCzC7+xf+BAMZvWH+nCJkPAg75eREO0ZtXc047wwTiT8kD8qFyMoIQfETYWIQBSIsw
+mFpamDoYGlnoGZqb6hkZGegZGpowMDIAAEL0sCmdAQAA
+"
+
+miner="
+H4sIANzTd1gAA2NiAIPYzILElJQiBZfgkHjPAB0oLzjIGcQrycxNVQjx9HWNd/MMCg5B4vs4Arml
+mXklxkYKrmGufiHxwc6OPq5gIUMzsGkB/kEhQAtWM5gxQIGokozQfyCA8XlZVBhhfA2BsggQLStY
+FsEOpFl5EfpauM10kfUpmEjMh/F38kP0PQfql0fTh26fSJe5GYzfDLVPDmgfK0QfIwMAACTyOhQB
+AAA=
+"
+
 # output data:
 hsout="
 H4sIACLZzVYAA9WWTUvDQBCG7/6Ksme77FeyaW/SD9pLEVsQlB6WuNRAu1uSraKl/92d1YsgZIm1
@@ -232,6 +247,25 @@ Gq/8qPS6buDQiePLQTwvnsbpHzj0mCfRb+ZwlvDqMdwPoqj5SClah5CMWkPwk+7/APgGp9Q9XQ0G
 AAA=
 '
 
+sipbfout="
+H4sIALlSd1gAA3WQy2rDMBBF9/0KoXViJL/rVdM8IFCCwYZCSwiKMzGG2DLyuCWE/Hs18qqBoIWk
+ucO5M/fGlwqh1ubKM/bNF4jQ9uh96Lrp+H7G+E6fgKQbL6+9e/HNRf9yKxWosBmwqdTFtRafTt5B
+C4r0oxkRDmdtKjicAKFCbSamaonEh6Y/nvmdSusf6LBsprovZDIXci6iUsaZCLMg/iJgqUwNOE2T
+a+NekYgFAbZ56Nyln3oyiTzfF56UofPLjUbtVOvI986w0KOd64ElE/mPJSJPBpZnrzh4hqLDVzBU
+pumx0R1tUGxz9k7rb2h7dqE4mZrCnbFxAMNUVemxw4xFr2n09ji2RS511y2pxQLDIBW2ZGmtoj/f
+rtYL4bpADfAkuCTzUwru/vIHjImcducBAAA=
+"
+minerout="
+H4sIAEnVd1gAA9VUwWrcMBC99yuEzonwSFbX8a3dJLCHhoVdKLTkoGinXlHbMpacEJb990pyCG7T
+DdmkFGJfJN7MezOjx+zoXHmsbH9PS/KdrgbXGW3s4NgX02JPr08IvbIbjOiOru+7dKKXtb2jAfpc
+K/2zNs6nwNXXBF5hgyqiTaTYoEft7QOVaiLBH8g+Qhe32Pq1GXGewew0g1OANWSlPCsl/xYZ16qv
+0I/FLJZ5kuPARM54waBIGsveepsQrzt6vR9b8Il3ZYdeI1ksCQiWM/GRAWlMtfXkBokiqSwWhcbA
+34UeUw7JxJ+eo9O96byxbVQ8rHMSzloNDonxRNu2DcPADfGWTDoqRfjI3dboLTGO/KhVVYUg5UYW
+01aks7YmDvvbh9LngWpuhzaOaRbul7ZvVLzQxfnFpyyFoHL4t1lDmYlSztKs4xtPePYfdu/CK0WZ
+wUGvgOAMgMmc5fIIs4QsyRnPGcizl/tlmnWMZZ5VO+yaaW9vtI2A1/gmE098E4nehXFCA1By8Y+X
+DM8YiIJJGV7l5b6ZZh3jm2fV/se2ka/aNsUT18homl9vuSj/mgYAAA==
+"
+
 # The Test:
 data=$(mktemp)
 errors=0
@@ -313,6 +347,28 @@ echo -n "$bf" | base64 -d | gunzip > "$data"
    # compare it with prepared expected data (previously base64 encoded and gzipped)
    diff -u - <(echo -n "$bfout" | base64 -d | gunzip) ||
    { echo "bruteforce2idea FAILED :-("; ((errors++)); }
+
+# TEST OF SIPBF
+# prepare stored input
+echo -n "$sipbf" | base64 -d | gunzip > "$data"
+# generate output
+./$srcdir/sipbf2idea.py -i "f:$data" -n sipbf --file /dev/stdout | tee sipbruteforce.idea |
+   # clean it from variable info
+   sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
+   # compare it with prepared expected data (previously base64 encoded and gzipped)
+   diff -u - <(echo -n "$sipbfout" | base64 -d | gunzip) ||
+   { echo "sipbf2idea FAILED :-("; ((errors++)); }
+
+# TEST OF MINERDETECTOR
+# prepare stored input
+echo -n "$miner" | base64 -d | gunzip > "$data"
+# generate output
+./$srcdir/minerdetector2idea.py -i "f:$data" -n minerdetector --file /dev/stdout | tee minerdetector.idea |
+   # clean it from variable info
+   sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
+   # compare it with prepared expected data (previously base64 encoded and gzipped)
+   diff -u - <(echo -n "$minerout" | base64 -d | gunzip) ||
+   { echo "minerdetector2idea FAILED :-("; ((errors++)); }
 
 # cleanup
 rm "$data"
