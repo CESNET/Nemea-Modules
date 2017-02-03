@@ -207,6 +207,63 @@ Each reporting module can store its output into file or send alerts into [Warden
 }
 ```
 
+### Alerts from the [sip_bf_detector](https://github.com/CESNET/Nemea-Detectors/tree/master/sip_bf_detector) module:
+
+```json
+{
+   "Category": [
+      "Attempt.Login"
+   ],
+   "Node": [
+      {
+         "Type": [
+            "Flow",
+            "Statistical"
+         ],
+         "SW": [
+            "Nemea",
+            "brute_force_detector"
+         ],
+         "Name": "sipbf"
+      }
+   ],
+   "EventTime": "2017-01-05T16:04:36Z",
+   "Target": [
+      {
+         "Port": [
+            5060
+         ],
+         "IP4": [
+            "128.175.220.114"
+         ],
+         "Proto": [
+            "sip"
+         ]
+      }
+   ],
+   "Source": [
+      {
+         "Port": [
+            5171
+         ],
+         "IP4": [
+            "105.138.15.163"
+         ],
+         "Proto": [
+            "sip"
+         ]
+      }
+   ],
+   "ID": "0f2e00f5-f1e0-4464-99ec-963bf055aba8",
+   "DetectTime": "2017-02-03T18:43:50Z",
+   "Description": "SIP BruteForce login attempt, user account: 5985@128.175.220.114",
+   "ConnCount": 4380,
+   "Format": "IDEA0",
+   "CeaseTime": "2017-01-05T16:07:28Z",
+   "CreateTime": "2017-02-03T18:43:50Z"
+}
+```
+
 ### Alerts from the [hoststatsnemea](https://github.com/CESNET/Nemea-Detectors/tree/master/hoststatsnemea) module:
 
 ```json
