@@ -1361,6 +1361,8 @@ int compare_bytes (const void *a, const void *b)
 		return 0;
 	}
    if (((port_t *) a)->bytes > ((port_t *) b)->bytes) {
+		return -1;
+	}
 }
 
 int compare_flows_table (const void *a, const void *b)
