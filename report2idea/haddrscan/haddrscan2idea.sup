@@ -1,0 +1,13 @@
+<module>
+  <name>warden_haddrscan2idea</name>
+  <enabled>false</enabled>
+  <path>/usr/bin/nemea/haddrscan2idea.py</path>
+  <params>--name=cz.cesnet.nemea.haddrscan --warden=/etc/warden/haddrscan/config.cfg --test</params>
+  <trapinterfaces>
+    <interface>
+      <type>TCP</type>
+      <direction>IN</direction>
+      <params>12008</params>
+    </interface>
+  </trapinterfaces>
+</module>

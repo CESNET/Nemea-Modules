@@ -1,0 +1,13 @@
+<module>
+  <name>warden_sipbruteforce2idea</name>
+  <enabled>true</enabled>
+  <path>/usr/bin/nemea/sipbf2idea.py</path>
+  <params>--name=cz.cesnet.nemea.sipbruteforce --warden=/etc/warden/sipbruteforce/config.cfg --test</params>
+  <trapinterfaces>
+    <interface>
+      <type>TCP</type>
+      <direction>IN</direction>
+      <params>12009</params>
+    </interface>
+  </trapinterfaces>
+</module>

@@ -1,0 +1,13 @@
+<module>
+  <name>warden_voipfraud2idea</name>
+  <enabled>false</enabled>
+  <path>/usr/bin/nemea/voipfraud2idea.py</path>
+  <params>- - name=cz.cesnet.nemea.voipfraud_detection - - warden=/etc/warden/</params>
+  <trapinterfaces>
+    <interface>
+      <type>TCP</type>
+      <direction>IN</direction>
+      <params>12003</params>
+    </interface>
+  </trapinterfaces>
+</module>

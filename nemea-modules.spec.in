@@ -64,9 +64,33 @@ test -x %{_bindir}/nemea/flow_meter && setcap "CAP_NET_RAW+eip" %{_bindir}/nemea
 %{_docdir}/nemea-modules/*/*
 %config(noreplace) %{_sysconfdir}/nemea/email_reporter/example.cfg
 %config(noreplace) %{_sysconfdir}/nemea/email_reporter/generic.cfg
-%config(noreplace) %{_sysconfdir}/nemea/munin/link_traffic.sup
-%config(noreplace) %{_sysconfdir}/nemea/munin/proto_traffic.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/munin/link_traffic.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/munin/proto_traffic.sup
 %config(noreplace) %{_sysconfdir}/bash_completion.d/flow_meter.bash
+
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/amplification2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/booterfilter2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/bruteforce2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/dnstunnel2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/haddrscan2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/hoststats2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/ipblacklist2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/sipbf2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/voipfraud2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/vportscan2idea.sup
+
+%config(noreplace) %{_sysconfdir}/warden/amplificationdetector/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/booterfilter/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/bruteforce/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/dnstunnel/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/haddrscan/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/hoststats/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/ipblacklist/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/minerdetector/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/sipbruteforce/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/vportscan/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/voipfraud/config.cfg
+
 %{_datadir}/munin/plugins/link_traffic_
 %{_datadir}/munin/plugins/proto_traffic_
 %{_datadir}/nemea/*
