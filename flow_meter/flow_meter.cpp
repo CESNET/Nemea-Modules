@@ -93,7 +93,8 @@ static int stop = 0;
   PARAM('S', "cache-statistics", "Print flow cache statistics. NUMBER specifies interval between prints.", required_argument, "float") \
   PARAM('P', "pcap-statistics", "Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.", no_argument, "none") \
   PARAM('L', "link_bit_field", "Link bit field value.", required_argument, "uint64") \
-  PARAM('D', "dir_bit_field", "Direction bit field value.", required_argument, "uint8")
+  PARAM('D', "dir_bit_field", "Direction bit field value.", required_argument, "uint8") \
+  PARAM('F', "filter", "String containing filter expression to filter traffic. See man pcap-filter.", required_argument, "string")
 
 /**
  * \brief Parse input plugin settings.
@@ -321,6 +322,7 @@ int main(int argc, char *argv[])
    options.snaplen = 0;
    options.eof = true;
 
+   string filter = "";
    uint32_t pkt_limit = 0; // Limit of packets for packet parser. 0 = no limit
    uint64_t link = 0;
    uint8_t dir = 0;
@@ -454,6 +456,9 @@ int main(int argc, char *argv[])
             return error("Invalid argument for option -D");
          }
          break;
+      case 'F':
+         filter = string(optarg);
+         break;
       default:
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
@@ -509,6 +514,14 @@ int main(int argc, char *argv[])
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
          return error("Unable to initialize libpcap: " + packetloader.error_msg);
+      }
+   }
+
+   if (filter != "") {
+      if (packetloader.set_filter(filter) != 0) {
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+         TRAP_DEFAULT_FINALIZATION();
+         return error(packetloader.error_msg);
       }
    }
 

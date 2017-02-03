@@ -420,7 +420,7 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
 /**
  * \brief Constructor.
  */
-PcapReader::PcapReader() : handle(NULL), print_pcap_stats(false)
+PcapReader::PcapReader() : handle(NULL), print_pcap_stats(false), netmask(PCAP_NETMASK_UNKNOWN)
 {
 }
 
@@ -428,7 +428,7 @@ PcapReader::PcapReader() : handle(NULL), print_pcap_stats(false)
  * \brief Constructor.
  * \param [in] options Module options.
  */
-PcapReader::PcapReader(const options_t &options) : handle(NULL)
+PcapReader::PcapReader(const options_t &options) : handle(NULL), netmask(PCAP_NETMASK_UNKNOWN)
 {
    print_pcap_stats = options.print_pcap_stats;
    last_ts.tv_sec = 0;
@@ -505,6 +505,11 @@ int PcapReader::init_interface(const string &interface, int snaplen, bool parse_
       return 3;
    }
 
+   bpf_u_int32 net;
+   if (pcap_lookupnet(interface.c_str(), &net, &netmask, errbuf) != 0) {
+      netmask = PCAP_NETMASK_UNKNOWN;
+   }
+
    if (print_pcap_stats) {
       /* Print stats header. */
       printf("# recv   - number of packets received\n");
@@ -516,6 +521,33 @@ int PcapReader::init_interface(const string &interface, int snaplen, bool parse_
    live_capture = true;
    parse_all = parse_every_pkt;
    error_msg = "";
+   return 0;
+}
+
+/**
+ * \brief Install BPF filter to pcap handle.
+ * \param [in] filter_str String containing program.
+ * \return 0 on success, non 0 on failure.
+ */
+int PcapReader::set_filter(const string &filter_str)
+{
+   if (handle == NULL) {
+      error_msg = "No live capture or file opened.";
+      return 1;
+   }
+
+   struct bpf_program filter;
+   if (pcap_compile(handle, &filter, filter_str.c_str(), 0, netmask) == -1) {
+      error_msg = "Couldn't parse filter " + string(filter_str) + ": " + string(pcap_geterr(handle));
+      return 1;
+   }
+   if (pcap_setfilter(handle, &filter) == -1) {
+      pcap_freecode(&filter);
+      error_msg = "Couldn't install filter " + string(filter_str) + ": " + string(pcap_geterr(handle));
+      return 1;
+   }
+
+   pcap_freecode(&filter);
    return 0;
 }
 

@@ -25,6 +25,7 @@ This NEMEA module creates flows from input PCAP file / network interface and exp
 - `-P`               Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.
 - `-L NUMBER`        Link bit field value.
 - `-D NUMBER`        Direction bit field value.
+- `-F STRING`        String containing filter expression to filter traffic. See man pcap-filter.
 
 ### Common TRAP parameters
 - `-h [trap,1]`      Print help message for this module / for libtrap specific parameters.
