@@ -510,6 +510,10 @@ int main(int argc, char *argv[])
          return error("Can't open input file: " + options.pcap_file);
       }
    } else {
+      for (int i = 0; i < module_info->num_ifc_out; i++) {
+         trap_ifcctl(TRAPIFC_OUTPUT, i, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT);
+      }
+
       if (packetloader.init_interface(options.interface, options.snaplen, parse_every_pkt) != 0) {
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
