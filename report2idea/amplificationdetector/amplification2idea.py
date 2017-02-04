@@ -2,9 +2,9 @@
 
 from __future__ import absolute_import
 
-# In case we are in nemea/modules/report2idea/ and we want to import from repo:
+# In case we are in nemea/modules/report2idea/amplificationdetector and we want to import from repo:
 import os, sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "nemea-framework", "pycommon"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "nemea-framework", "pycommon"))
 
 import argparse
 
