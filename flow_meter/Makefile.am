@@ -49,4 +49,3 @@ man_MANS=flow_meter.1
 CLEANFILES+=flow_meter.1
 
 bashcompl_DATA=flow_meter.bash
-
