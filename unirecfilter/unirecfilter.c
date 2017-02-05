@@ -358,7 +358,7 @@ float, double, ipaddr, string, bytes\n");
       }
 
       // Get Abstract syntax tree from filter
-      output_specifiers[i]->filter = urfilter_create(output_specifiers[i]->filter_str);
+      output_specifiers[i]->filter = urfilter_create(output_specifiers[i]->filter_str, port_numbers[i]);
 
       // Calculate maximum needed memory for dynamic fields
       ur_field_id_t field_id = UR_ITER_BEGIN;
@@ -623,7 +623,11 @@ int main(int argc, char **argv)
 
       // PROCESS THE DATA
       for (i = 0; i < n_outputs; i++) {
-         if (!output_specifiers[i]->filter || urfilter_match(output_specifiers[i]->filter, in_tmplt, in_rec)) {
+         ret = urfilter_match(output_specifiers[i]->filter, in_tmplt, in_rec);
+         if (ret == URFILTER_ERROR) {
+            stop = 1;
+            break;
+         } else if (ret == URFILTER_TRUE) {
             if (verbose >= 1) {
                printf("ADVANCED VERBOSE: Record %ud accepted on interface %d\n", num_records, i);
             }
@@ -659,7 +663,7 @@ int main(int argc, char **argv)
             TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, continue, {stop=1; break;});
          } else {
             if (verbose >= 1) {
-                  printf("ADVANCED VERBOSE: Record %ud declined on interface %d\n", num_records, i);
+               printf("ADVANCED VERBOSE: Record %ud declined on interface %d\n", num_records, i);
             }
          }
       }

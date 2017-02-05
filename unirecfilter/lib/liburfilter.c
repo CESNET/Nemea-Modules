@@ -54,37 +54,43 @@
 #include "functions.h"
 #include "liburfilter.h"
 
-urfilter_t * urfilter_create(const char * filter_str)
+urfilter_t *urfilter_create(const char *filter_str, const char *ifc_identifier)
 {
    // allocate filter structure
-   urfilter_t * unirec_filter = (urfilter_t *) calloc(1, sizeof (urfilter_t));
+   urfilter_t *unirec_filter = (urfilter_t *) calloc(1, sizeof (urfilter_t));
 
-   if(filter_str) {
+   if (filter_str) {
       unirec_filter->filter = strdup(filter_str);
+      unirec_filter->ifc_identifier = ifc_identifier;
    }
 
    return unirec_filter;
 }
 
-int urfilter_compile(urfilter_t * unirec_filter)
+int urfilter_compile(urfilter_t *unirec_filter)
 {
    // @TODO Verify if template is present in global context (filter keywords MUST be known before compile)
 
    if (unirec_filter->filter) {
       // parse string filter into AST
-      unirec_filter->tree = (void *) getTree(unirec_filter->filter);
-
-      return 1;
+      unirec_filter->tree = (void *) getTree(unirec_filter->filter, unirec_filter->ifc_identifier);
+      if (unirec_filter->tree == NULL) {
+         return URFILTER_ERROR;
+      } else {
+         return URFILTER_TRUE;
+      }
    }
 
    printf("[URFilter] Unable to compile filter rule. No string filter given.\n");
-   return 0;
+   return URFILTER_ERROR;
 }
 
-int urfilter_match(urfilter_t * unirec_filter, const ur_template_t * template, const void * record)
+int urfilter_match(urfilter_t *unirec_filter, const ur_template_t *template, const void *record)
 {
    if (!unirec_filter->tree && unirec_filter->filter) {
-      urfilter_compile(unirec_filter);
+      if (urfilter_compile(unirec_filter) == 0) {
+         return URFILTER_ERROR;
+      }
    }
    
    // empty filter means always TRUE
@@ -100,7 +106,7 @@ int urfilter_match(urfilter_t * unirec_filter, const ur_template_t * template, c
    return 0;
 }
 
-void urfilter_destroy(urfilter_t * object)
+void urfilter_destroy(urfilter_t *object)
 {
    if (object) {
       free(object->filter);

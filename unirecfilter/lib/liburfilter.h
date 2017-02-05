@@ -51,17 +51,35 @@
 
 #include <unirec/unirec.h>
 
+#define URFILTER_TRUE 1
+#define URFILTER_FALSE 0
+#define URFILTER_ERROR (-1)
+
 typedef struct urfilter_s {
-   char * filter;
-   void * tree;
+   char *filter;
+   void *tree;
+   const char *ifc_identifier;
 } urfilter_t;
 
-urfilter_t * urfilter_create(const char * filter_str);
+/**
+ *
+ * \param[in] ifc_identifier Identification of TRAP IFC where the filter is used.
+ * \return Pointer to urfilter internal memory, NULL on error.
+ */
+urfilter_t *urfilter_create(const char *filter_str, const char *ifc_identifier);
 
-int urfilter_compile(urfilter_t * unirec_filter);
+/**
+ *
+ * \return URFILTER_TRUE on success and URFILTER_ERROR on syntax error.
+ */
+int urfilter_compile(urfilter_t *unirec_filter);
 
-int urfilter_match(urfilter_t * unirec_filter, const ur_template_t * template, const void * record);
+/**
+ *
+ * \return Result of condition eval: URFILTER_TRUE/URFILTER_FALSE. URFILTER_ERROR on syntax error.
+ */
+int urfilter_match(urfilter_t *unirec_filter, const ur_template_t *template, const void *record);
 
-void urfilter_destroy(urfilter_t * object);
+void urfilter_destroy(urfilter_t *object);
 
 #endif /* LIBUNIRECFILTER_H */
