@@ -23,7 +23,9 @@ j2mwhn9jZ79m4vIeIjNMCbBmInLnS8lDfrOHtO98Z99DSGDtXZtEekhKO58Q/0nXNPOUcZ7FesiX
 rj8AD6TlLTgOAAA=
 '
 
-. ../test.sh
+test -z "$srcdir" && export srcdir=.
+
+. $srcdir/../test.sh
 
 test_conversion "hoststats" "hoststats" "$in" "$out"
 

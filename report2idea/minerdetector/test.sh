@@ -20,7 +20,9 @@ wUGvgOAMgMmc5fIIs4QsyRnPGcizl/tlmnWMZZ5VO+yaaW9vtI2A1/gmE098E4nehXFCA1By8Y+X
 DM8YiIJJGV7l5b6ZZh3jm2fV/se2ka/aNsUT18homl9vuSj/mgYAAA==
 '
 
-. ../test.sh
+test -z "$srcdir" && export srcdir=.
+
+. $srcdir/../test.sh
 
 test_conversion "minerdetector" "minerdetector" "$in" "$out"
 

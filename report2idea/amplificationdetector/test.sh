@@ -40,7 +40,9 @@ rM6dS3DaNvH+DiwGfeGwmW90MVLagWkXnj+WEKf7wkES5jpwUPZ8BIvMscRWpkTR13f/ATa2UDZk
 HgAA
 '
 
-. ../test.sh
+test -z "$srcdir" && export srcdir=.
+
+. $srcdir/../test.sh
 
 test_conversion "amplification" "amplification" "$in" "$out"
 

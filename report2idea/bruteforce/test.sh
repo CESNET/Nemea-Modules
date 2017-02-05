@@ -20,7 +20,9 @@ Gq/8qPS6buDQiePLQTwvnsbpHzj0mCfRb+ZwlvDqMdwPoqj5SClah5CMWkPwk+7/APgGp9Q9XQ0G
 AAA=
 '
 
-. ../test.sh
+test -z "$srcdir" && export srcdir=.
+
+. $srcdir/../test.sh
 
 test_conversion "bruteforce" "cz.cesnet.nemea.brute_force_detector" "$in" "$out"
 

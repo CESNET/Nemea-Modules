@@ -20,7 +20,9 @@ KW8pT4NZGsMsuD5cHIeH8/+ClwEhHp6bnRelSU49PEc7j+YpeHhudh7FAH7bdBUexf7McxVenKVJ
 4uG5CY8C8Wees/Bo5OG5etukOQb/q+Bo50UJTT08R+FRmvnbpqvwYkywa533A2mPe+qZFgAA
 '
 
-. ../test.sh
+test -z "$srcdir" && export srcdir=.
+
+. $srcdir/../test.sh
 
 test_conversion "haddrscan" "haddrscan" "$in" "$out"
 

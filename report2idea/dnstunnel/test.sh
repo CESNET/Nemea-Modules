@@ -20,7 +20,9 @@ J7Bkud0TfHNgT8F6sG3hYwDnXZRco9XCR/5muZpPUukgHPzfTMHrPE/NxA9b4GAiNasmI3J9+AEU
 jVKp/QEAAA==
 '
 
-. ../test.sh
+test -z "$srcdir" && export srcdir=.
+
+. $srcdir/../test.sh
 
 test_conversion "dnstunnel" "cz.cesnet.nemea.dnstunnel" "$in" "$out"
 

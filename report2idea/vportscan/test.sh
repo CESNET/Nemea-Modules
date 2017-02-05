@@ -25,7 +25,9 @@ RDbglU1hQzw+L+73eVp4w4N99Dt4pcMJlk+DF+Ynqi8+an0N+2E2kX545PlVpN4GOc1HnV+sHG70
 +/r6C3eawvjiEAAA
 '
 
-. ../test.sh
+test -z "$srcdir" && export srcdir=.
+
+. $srcdir/../test.sh
 
 test_conversion "vportscan" "vportscan" "$in" "$out"
 

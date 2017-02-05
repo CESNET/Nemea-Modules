@@ -96,7 +96,7 @@ test_conversion()
    # prepare stored input
    echo -n "$3" | base64 -d | gunzip > "$data"
    # generate output
-   ./"${1}2idea.py" -i "f:$data" -n "$2" --file /dev/stdout | tee "$1.idea" |
+   "$srcdir/${1}2idea.py" -i "f:$data" -n "$2" --file /dev/stdout | tee "$1.idea" |
       # clean it from variable info
       sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
       # compare it with prepared expected data (previously base64 encoded and gzipped)

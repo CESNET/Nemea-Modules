@@ -19,7 +19,9 @@ pumx0R1tUGxz9k7rb2h7dqE4mZrCnbFxAMNUVemxw4xFr2n09ji2RS511y2pxQLDIBW2ZGmtoj/f
 rtYL4bpADfAkuCTzUwru/vIHjImcducBAAA=
 '
 
-. ../test.sh
+test -z "$srcdir" && export srcdir=.
+
+. $srcdir/../test.sh
 
 test_conversion "sipbf" "sipbf" "$in" "$out"
 

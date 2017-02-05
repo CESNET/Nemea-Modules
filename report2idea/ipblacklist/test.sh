@@ -25,7 +25,9 @@ wBKJk2/PEom2f0kTSzFFlHZRGiEWH00Zq4fsJ42MRt3/KI31rhyStd2N1LSxR0+QtYo2HgKzTwCx
 lzh+SG2IWdqAWUueDieP72NGCSOOs796SYiVMw4AAA==
 '
 
-. ../test.sh
+test -z "$srcdir" && export srcdir=.
+
+. $srcdir/../test.sh
 
 test_conversion "ipblacklist" "cz.cesnet.nemea.ipblacklistfilter" "$in" "$out"
 

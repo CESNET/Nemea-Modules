@@ -29,7 +29,9 @@ xmfYZoTnCscvtKB9hkh2LSh+K2yQP8NGcu7VY3/PMfbVg76h6kGPBuOYloMyOjpJy/EK2cDZ9NQO
 AAA=
 '
 
-. ../test.sh
+test -z "$srcdir" && export srcdir=.
+
+. $srcdir/../test.sh
 
 test_conversion "voipfraud" "cz.cesnet.nemea.voipfrauddetection" "$in" "$out"
 
