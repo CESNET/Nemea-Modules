@@ -117,7 +117,7 @@ struct ast *newExpression(char *column, char *cmp, int64_t number, int is_signed
    struct expression *newast = (struct expression *) malloc(sizeof(struct expression));
 
    newast->type = NODE_T_EXPRESSION;
-   newast->column = column;
+   newast->column = strdup(column);
    newast->number = number;
    int id = ur_get_id_by_name(column);
    newast->is_signed = is_signed;
@@ -148,7 +148,7 @@ struct ast *newExpressionFP(char *column, char *cmp, double number)
    struct expression_fp *newast = (struct expression_fp *) malloc(sizeof(struct expression_fp));
 
    newast->type = NODE_T_EXPRESSION_FP;
-   newast->column = column;
+   newast->column = strdup(column);
    newast->number = number;
    int id = ur_get_id_by_name(column);
    newast->cmp = get_op_type(cmp);
