@@ -15,6 +15,15 @@ Provides: nemea-modules
 
 %description
 
+%package devel
+Summary: Nemea-modules development package contains files for liburfilter
+Group: Liberouter
+Requires: nemea-modules = %{version}-%{release} libxml2-devel
+Provides: nemea-modules-devel
+
+%description devel
+This package contains header file for liburfilter.
+
 %prep
 %setup
 
@@ -27,8 +36,10 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 
 %post
 test -x %{_bindir}/nemea/flow_meter && setcap "CAP_NET_RAW+eip" %{_bindir}/nemea/flow_meter || true
+ldconfig
 
 %files
+%{_bindir}/nemea/aggregator
 %{_bindir}/nemea/amplification2idea.py
 %{_bindir}/nemea/anonymizer
 %{_bindir}/nemea/bruteforce2idea.py
@@ -94,7 +105,13 @@ test -x %{_bindir}/nemea/flow_meter && setcap "CAP_NET_RAW+eip" %{_bindir}/nemea
 %{_datadir}/munin/plugins/link_traffic_
 %{_datadir}/munin/plugins/proto_traffic_
 %{_datadir}/nemea/*
+%{_libdir}/liburfilter.so.*
 %{_mandir}/man1/*.1.gz
 
-
+%files devel
+%{_includedir}/liburfilter.h
+%{_libdir}/liburfilter.a
+%{_libdir}/liburfilter.la
+%{_libdir}/liburfilter.so
+%{_libdir}/pkgconfig/liburfilter.pc
 

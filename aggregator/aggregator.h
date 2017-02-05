@@ -1,16 +1,11 @@
 /**
- * \file unirecfilter.h
- * \brief NEMEA module selecting records and sending specified fields.
- * \author Zdenek Kasner <kasnezde@fit.cvut.cz>
- * \author Tomas Cejka <cejkat@cesnet.cz>
+ * \file aggregator.c
+ * \brief 
  * \author Miroslav Kalina <kalinmi2@fit.cvut.cz>
- * \date 2013
- * \date 2014
- * \date 2015
  * \date 2016
  */
 /*
- * Copyright (C) 2013-2015 CESNET
+ * Copyright (C) 2016 CESNET
  *
  * LICENSE TERMS
  *
@@ -18,14 +13,14 @@
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *   notice, this list of conditions and the following disclaimer.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
- *   notice, this list of conditions and the following disclaimer in
- *   the documentation and/or other materials provided with the
- *   distribution.
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
  * 3. Neither the name of the Company nor the names of its contributors
- *   may be used to endorse or promote products derived from this
- *   software without specific prior written permission.
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
  *
  * ALTERNATIVELY, provided that this notice is retained in full, this
  * product may be distributed under the terms of the GNU General Public
@@ -45,19 +40,51 @@
  * if advised of the possibility of such damage.
  *
  */
-#ifndef UNIRECFILTER_H
-#define UNIRECFILTER_H
+
+#ifndef AGGREGATOR_H
+#define AGGREGATOR_H
+
+#include <stdint.h>
 
 #include <unirec/unirec.h>
-#include <sys/types.h>
-#include <regex.h>
+#include "../unirecfilter/lib/liburfilter.h"
+#include "timedb.h"
 
-#define DYN_FIELD_MAX_SIZE 1024 // Maximal size of dynamic field, longer fields will be cutted to this size
+// types of aggregation function
+typedef enum {
+   AGG_SUM, AGG_AVG, AGG_COUNT, AGG_RATE, AGG_COUNT_UNIQ
+} agg_function;
 
-#define SET_NULL(field_id, tmpl, data) \
-memset(ur_get_ptr_by_id(tmpl, data, field_id), 0, ur_get_size(field_id));
+// aggregation rule structure
+typedef struct rule_s {
+   char *name;
+   urfilter_t *filter;
+   agg_function agg;
+   char *agg_arg;
+   ur_field_type_t agg_arg_field;
+   timedb_t *timedb;
+} rule_t;
 
-extern char * str_buffer;
+void rule_init(rule_t *rule, ur_template_t *tpl, const void *data);
+rule_t *rule_create(const char *specifier, int step, int size, int inactive_timeout);
+void rule_destroy(rule_t *object);
 
-#endif
+// output interface structure
+typedef struct output_s {
+   int interface;
+   ur_template_t *tpl;
+   void *out_rec;
+   rule_t **rules;
+   int rules_count;
+} output_t;
+
+output_t *create_output(int interface);
+void destroy_output(output_t *object);
+
+// internal functions
+int flush_aggregation_counters();
+
+// public interface - suppose to be empty
+
+#endif /* AGGREGATOR_H */
 

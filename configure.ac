@@ -191,6 +191,7 @@ AM_CONDITIONAL(MAKE_RPMS, test x$RPMBUILD != x)
 
 # list of all *.in (and Makefile.am) files to process by configure script
 AC_CONFIG_FILES([Makefile
+                 aggregator/Makefile
                  anonymizer/Makefile
                  debug_sender/Makefile
                  device_classifier/Makefile
@@ -230,6 +231,8 @@ AC_CONFIG_FILES([Makefile
                  report2idea/vportscan/Makefile
                  traffic_repeater/Makefile
                  unirec2json/Makefile
+                 unirecfilter/lib/Makefile
+                 unirecfilter/lib/liburfilter.pc
                  unirecfilter/Makefile
                  endiverter/Makefile
                  nfwriter/Makefile

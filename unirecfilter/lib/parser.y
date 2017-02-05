@@ -1,7 +1,7 @@
 %{
     #include <stdio.h>
     #include <stdlib.h>
-    #include "unirecfilter.h"
+    #include "functions.h"
 
     extern struct ast *main_tree;
 
