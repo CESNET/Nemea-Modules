@@ -1,0 +1,13 @@
+<module>
+  <name>warden_bruteforce2idea</name>
+  <enabled>true</enabled>
+  <path>/usr/bin/nemea/bruteforce2idea.py</path>
+  <params>--name=cz.cesnet.nemea.bruteforce --warden=/etc/warden/bruteforce/config.cfg --test</params>
+  <trapinterfaces>
+    <interface>
+      <type>TCP</type>
+      <direction>IN</direction>
+      <params>12007</params>
+    </interface>
+  </trapinterfaces>
+</module>

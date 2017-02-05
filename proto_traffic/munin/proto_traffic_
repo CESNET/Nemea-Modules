@@ -1,0 +1,121 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+#%# family=auto
+#%# capabilities=autoconf suggest
+
+import socket
+import sys
+import os
+import time
+
+SOCKET_PATH = '/var/run/libtrap/munin_proto_traffic'
+
+# temporary file with downloaded data
+data_temp_file = "/tmp/munin_proto_traffic_data.txt"
+
+# munin interval, if data file is older then munin_interval, get newer
+munin_interval = 3
+
+headers = ["tcp", "udp", "icmp", "icmp6", "gre", "other"]
+
+#connecting to socket if created by C module proto_traffic
+def receiveData():
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        sock.connect(SOCKET_PATH)
+    except socket.error as msg:
+        sys.stderr.write(SOCKET_PATH + " " + str(msg) + "\n")
+        sys.exit(1)
+
+    data = ""
+    while True:
+        tmp = sock.recv(4096)
+        data += tmp
+        if tmp == "":
+            break
+    return data
+
+def getData():
+    """Returns the list of strings (lines).
+
+There should be 2 lines: the first one with header, the second one with values.
+
+The data is received by receiveData() and stored into a cache file data_temp_file.
+If data_temp_file is new enough, data is loaded from the cache file instead of calling
+receiveData().
+"""
+    current_time = time.time()
+    last_time = 0
+    data = ""
+    try:
+        last_time = os.stat(data_temp_file).st_mtime
+    except:
+        sys.stderr.write("%s not found or cannot read info.\n" % data_temp_file)
+        pass
+    if (current_time - last_time) > munin_interval:
+        data = receiveData()
+        sys.stderr.write("Reading from socket\n")
+        with open(data_temp_file, "w") as f:
+            f.write(data)
+        data = data.split("\n")
+    else:
+        sys.stderr.write("Reading from file\n")
+        with open(data_temp_file, "r") as f:
+            data = f.read()
+        data = data.split("\n")
+    return data
+
+#configures munin graph for the munin-node
+def getConfig():
+    config = """graph_title Traffic L4 protocol - %s
+graph_args -l 0
+graph_category traffic-monitoring
+graph_vlabel %s/second
+graph_info The number of %s per second per L4 protocol.
+""" % (suffix, suffix, suffix)
+
+    data = getData()
+    stats = set()
+    for key in data[0].split(","):
+        if not key.endswith(suffix):
+            continue
+        stat = key.split('-')[:2]
+        stats.add(stat[0])
+
+    for stat in stats:
+        config += stat + ".label " + stat.upper() + "\n"
+        config += stat + ".type DERIVE\n"
+        config += stat + ".draw AREASTACK\n"
+        config += stat + ".min 0" + "\n"
+
+    print(config)
+
+#parses text recieved by getData(), splits it to two lines and createds dict
+def getValues():
+    data = getData()
+    head = data[0].split(',')
+    vals = data[1].split(',')
+    if len(head) != len(vals):
+        sys.stderr.write("wrong number of columns!!!\n")
+        sys.exit(1)
+    data = zip(head, vals)
+    data.sort()
+    for key, val in data:
+        if key.endswith(suffix):
+            print("{0}.value {1}".format(key.split("-")[0], val))
+
+#suffix is the part after last '_' can be flows, packets, bytes
+suffix = sys.argv[0].split("_")[-1]
+
+#communication with munin-node
+if len(sys.argv) == 2 and sys.argv[1] == "autoconf":
+    print("yes")
+elif len(sys.argv) == 2 and sys.argv[1] == "config":
+    getConfig()
+elif len(sys.argv) == 2 and sys.argv[1] == "suggest":
+    for i in ["packets", "flows", "bytes"]:
+        print(i)
+else:
+    getValues()
+

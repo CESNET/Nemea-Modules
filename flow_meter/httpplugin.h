@@ -120,16 +120,16 @@ class HTTPPlugin : public FlowCachePlugin
 public:
    HTTPPlugin(const options_t &module_options);
    HTTPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options);
-   int post_create(FlowRecord &rec, const Packet &pkt);
-   int pre_update(FlowRecord &rec, Packet &pkt);
+   int post_create(Flow &rec, const Packet &pkt);
+   int pre_update(Flow &rec, Packet &pkt);
    void finish();
    string get_unirec_field_string();
 
 private:
    bool parse_http_request(const char *data, int payload_len, RecordExtHTTPReq *rec, bool create);
    bool parse_http_response(const char *data, int payload_len, RecordExtHTTPResp *rec, bool create);
-   int add_ext_http_request(const char *data, int payload_len, FlowRecord &rec);
-   int add_ext_http_response(const char *data, int payload_len, FlowRecord &rec);
+   int add_ext_http_request(const char *data, int payload_len, Flow &rec);
+   int add_ext_http_response(const char *data, int payload_len, Flow &rec);
    bool valid_http_method(const char *method) const;
 
    bool print_stats;       /**< Print stats when flow cache is finishing. */

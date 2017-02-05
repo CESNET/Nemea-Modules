@@ -75,6 +75,7 @@
 #define FLW_PACKETTOTALCOUNT         (0x1 << 14)
 #define FLW_OCTETTOTALLENGTH         (0x1 << 15)
 #define FLW_TCPCONTROLBITS           (0x1 << 16)
+#define FLW_ICMP                     (0x1 << 17)
 
 // Some common sets of flags
 #define FLW_IPV4_MASK (\
@@ -173,15 +174,6 @@ struct Record {
    RecordExt *exts; /**< Extension headers. */
 
    /**
-    * \brief Fill unirec record with basic flow fields.
-    * \param [in] tmplt_ptr Pointer to unirec template.
-    * \param [out] record_ptr Pointer to unirec record.
-    */
-   virtual void fillUnirec(ur_template_t *tmplt_ptr, void *record_ptr)
-   {
-   }
-
-   /**
     * \brief Add new extension header.
     * \param [in] ext Pointer to the extension header.
     */
@@ -247,10 +239,10 @@ struct Record {
 /**
  * \brief Flow record struct constaining basic flow record data and extension headers.
  */
-struct FlowRecord : public Record {
+struct Flow : public Record {
    uint64_t field_indicator;
-   struct timeval start_timestamp;
-   struct timeval end_timestamp;
+   struct timeval time_first;
+   struct timeval time_last;
    uint8_t  ip_version;
    uint8_t  ip_proto;
    uint8_t  ip_tos;

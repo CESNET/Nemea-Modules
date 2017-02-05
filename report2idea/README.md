@@ -207,6 +207,63 @@ Each reporting module can store its output into file or send alerts into [Warden
 }
 ```
 
+### Alerts from the [sip_bf_detector](https://github.com/CESNET/Nemea-Detectors/tree/master/sip_bf_detector) module:
+
+```json
+{
+   "Category": [
+      "Attempt.Login"
+   ],
+   "Node": [
+      {
+         "Type": [
+            "Flow",
+            "Statistical"
+         ],
+         "SW": [
+            "Nemea",
+            "brute_force_detector"
+         ],
+         "Name": "sipbf"
+      }
+   ],
+   "EventTime": "2017-01-05T16:04:36Z",
+   "Target": [
+      {
+         "Port": [
+            5060
+         ],
+         "IP4": [
+            "128.175.220.114"
+         ],
+         "Proto": [
+            "sip"
+         ]
+      }
+   ],
+   "Source": [
+      {
+         "Port": [
+            5171
+         ],
+         "IP4": [
+            "105.138.15.163"
+         ],
+         "Proto": [
+            "sip"
+         ]
+      }
+   ],
+   "ID": "0f2e00f5-f1e0-4464-99ec-963bf055aba8",
+   "DetectTime": "2017-02-03T18:43:50Z",
+   "Description": "SIP BruteForce login attempt, user account: 5985@128.175.220.114",
+   "ConnCount": 4380,
+   "Format": "IDEA0",
+   "CeaseTime": "2017-01-05T16:07:28Z",
+   "CreateTime": "2017-02-03T18:43:50Z"
+}
+```
+
 ### Alerts from the [hoststatsnemea](https://github.com/CESNET/Nemea-Detectors/tree/master/hoststatsnemea) module:
 
 ```json
@@ -502,6 +559,62 @@ Each reporting module can store its output into file or send alerts into [Warden
     "CreateTime": "2016-03-23T15:53:55Z"
 }
 ```
+
+### Alerts from the [haddrscan_detector](https://github.com/CESNET/Nemea-Detectors/tree/master/haddrscan_detector) module:
+
+```json
+{
+    "Category": [
+        "Recon.Scanning"
+    ],
+    "Node": [
+        {
+            "AggrWin": "00:10:00",
+            "Type": [
+                "Flow",
+                "Statistical"
+            ],
+            "SW": [
+                "Nemea",
+                "haddrscan_detector"
+            ],
+            "Name": "haddrscan"
+        }
+    ],
+    "EventTime": "2016-12-10T18:08:20Z",
+    "Target": [
+        {
+            "Port": [
+                54321
+            ],
+            "Proto": [
+                "tcp"
+            ]
+        }
+    ],
+    "Source": [
+        {
+            "IP4": [
+                "1.1.1.1"
+            ],
+            "Port": [
+                12345
+            ],
+            "Proto": [
+                "tcp"
+            ]
+        }
+    ],
+    "ID": "43ead176-e3a2-46f3-a92c-dfdddefc2bcf",
+    "DetectTime": "2016-12-10T18:21:08Z",
+    "Description": "Horizontal scan using TCP SYN",
+    "Format": "IDEA0",
+    "CeaseTime": "2016-12-10T18:21:08Z",
+    "FlowCount": 250,
+    "CreateTime": "2017-01-01T23:26:30Z"
+}
+```
+
 
 ## (D)DoS
 

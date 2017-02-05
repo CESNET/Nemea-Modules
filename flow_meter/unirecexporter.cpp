@@ -97,12 +97,16 @@ tmplt(NULL), record(NULL), eof(send_eof)
  * \param [in] plugins Active plugins.
  * \param [in] ifc_cnt Output interface count.
  * \param [in] basic_ifc_num Basic output interface number.
+ * \param [in] link Link bit field value.
+ * \param [in] dir Direction bit field value.
  * \return 0 on success or negative value when error occur.
  */
-int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, int basic_ifc_number)
+int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, int basic_ifc_number, uint64_t link = 0, uint8_t dir = 0)
 {
    out_ifc_cnt = ifc_cnt;
    basic_ifc_num = basic_ifc_number;
+   link_bit_field = link;
+   dir_bit_field = dir;
 
    tmplt = new ur_template_t*[out_ifc_cnt];
    record = new void*[out_ifc_cnt];
@@ -262,7 +266,7 @@ int UnirecExporter::export_packet(Packet &pkt)
    return 0;
 }
 
-int UnirecExporter::export_flow(FlowRecord &flow)
+int UnirecExporter::export_flow(Flow &flow)
 {
    RecordExt *ext = flow.exts;
    ur_template_t *tmplt_ptr = NULL;
@@ -273,7 +277,6 @@ int UnirecExporter::export_flow(FlowRecord &flow)
       record_ptr = record[basic_ifc_num];
 
       ur_clear_varlen(tmplt_ptr, record_ptr);
-      memset(record_ptr, 0, ur_rec_fixlen_size(tmplt_ptr));
 
       fill_basic_flow(flow, tmplt_ptr, record_ptr);
       ifc_to_export[basic_ifc_num] = true;
@@ -313,7 +316,7 @@ int UnirecExporter::export_flow(FlowRecord &flow)
  * \param [in] tmplt_ptr Pointer to unirec template.
  * \param [out] record_ptr Pointer to unirec record.
  */
-void UnirecExporter::fill_basic_flow(FlowRecord &flow, ur_template_t *tmplt_ptr, void *record_ptr)
+void UnirecExporter::fill_basic_flow(Flow &flow, ur_template_t *tmplt_ptr, void *record_ptr)
 {
    ur_time_t tmp_time;
 
@@ -325,10 +328,10 @@ void UnirecExporter::fill_basic_flow(FlowRecord &flow, ur_template_t *tmplt_ptr,
       ur_set(tmplt_ptr, record_ptr, F_DST_IP, ip_from_16_bytes_be((char *) flow.dst_ip.v6));
    }
 
-   tmp_time = ur_time_from_sec_msec(flow.start_timestamp.tv_sec, flow.start_timestamp.tv_usec / 1000.0);
+   tmp_time = ur_time_from_sec_msec(flow.time_first.tv_sec, flow.time_first.tv_usec / 1000.0);
    ur_set(tmplt_ptr, record_ptr, F_TIME_FIRST, tmp_time);
 
-   tmp_time = ur_time_from_sec_msec(flow.end_timestamp.tv_sec, flow.end_timestamp.tv_usec / 1000.0);
+   tmp_time = ur_time_from_sec_msec(flow.time_last.tv_sec, flow.time_last.tv_usec / 1000.0);
    ur_set(tmplt_ptr, record_ptr, F_TIME_LAST, tmp_time);
 
    ur_set(tmplt_ptr, record_ptr, F_PROTOCOL, flow.ip_proto);
@@ -340,8 +343,8 @@ void UnirecExporter::fill_basic_flow(FlowRecord &flow, ur_template_t *tmplt_ptr,
    ur_set(tmplt_ptr, record_ptr, F_TOS, flow.ip_tos);
    ur_set(tmplt_ptr, record_ptr, F_TTL, flow.ip_ttl);
 
-   //ur_set(tmplt_ptr, record_ptr, F_DIR_BIT_FIELD, 0);
-   //ur_set(tmplt_ptr, record_ptr, F_LINK_BIT_FIELD, 0);
+   ur_set(tmplt_ptr, record_ptr, F_DIR_BIT_FIELD, dir_bit_field);
+   ur_set(tmplt_ptr, record_ptr, F_LINK_BIT_FIELD, link_bit_field);
 }
 
 

@@ -1,0 +1,13 @@
+<module>
+  <name>warden_hoststats2idea</name>
+  <enabled>true</enabled>
+  <path>/usr/bin/nemea/hoststats2idea.py</path>
+  <params>--dstwhitelist-file=/data/hoststats_dst_whitelist.txt --name=cz.cesnet.nemea.hoststats --warden=/etc/warden/hoststats/config.cfg</params>
+  <trapinterfaces>
+    <interface>
+      <type>TCP</type>
+      <direction>IN</direction>
+      <params>12002</params>
+    </interface>
+  </trapinterfaces>
+</module>

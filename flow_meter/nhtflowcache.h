@@ -56,29 +56,44 @@
 
 using namespace std;
 
-#define MAX_KEY_LENGTH 40
+#define MAX_KEY_LENGTH 37
 
-class Flow
+class FlowRecord
 {
    uint64_t hash;
    char key[MAX_KEY_LENGTH];
 
 public:
    bool empty_flow;
-   FlowRecord flow_record;
+   Flow flow;
 
    void erase()
    {
-      flow_record.removeExtensions();
-      memset(&flow_record, 0, sizeof(flow_record));
+      flow.removeExtensions();
+
+      flow.field_indicator = 0;
+      memset(&flow.time_first, 0, sizeof(flow.time_first));
+      memset(&flow.time_last, 0, sizeof(flow.time_last));
+      flow.ip_version = 0;
+      flow.ip_proto = 0;
+      flow.ip_tos = 0;
+      flow.ip_ttl = 0;
+      memset(&flow.src_ip, 0, sizeof(flow.src_ip));
+      memset(&flow.dst_ip, 0, sizeof(flow.dst_ip));
+      flow.src_port = 0;
+      flow.dst_port = 0;
+      flow.pkt_total_cnt = 0;
+      flow.octet_total_length = 0;
+      flow.tcp_control_bits = 0;
+
       empty_flow = true;
    }
 
-   Flow()
+   FlowRecord()
    {
       erase();
    };
-   ~Flow()
+   ~FlowRecord()
    {
    };
 
@@ -92,8 +107,9 @@ class NHTFlowCache : public FlowCache
 {
    bool print_stats;
    uint8_t key_len;
-   int line_size;
-   int size;
+   uint32_t line_size;
+   uint32_t size;
+   uint32_t line_size_mask;
 #ifdef FLOW_CACHE_STATS
    uint64_t empty;
    uint64_t not_empty;
@@ -108,13 +124,16 @@ class NHTFlowCache : public FlowCache
    struct timeval active;
    struct timeval inactive;
    char key[MAX_KEY_LENGTH];
-   Flow **flow_array;
+   FlowRecord **flow_array;
+   FlowRecord *flow_records;
 
 public:
    NHTFlowCache(const options_t &options)
    {
       line_size = options.flow_line_size;
       size = options.flow_cache_size;
+      last_ts.tv_sec = 0;
+      line_size_mask = ~(line_size - 1);
 #ifdef FLOW_CACHE_STATS
       empty = 0;
       not_empty = 0;
@@ -128,16 +147,15 @@ public:
       active = options.active_timeout;
       inactive = options.inactive_timeout;
 
-      flow_array = new Flow*[size];
-      for (int i = 0; i < size; i++) {
-         flow_array[i] = new Flow();
+      flow_array = new FlowRecord*[size];
+      flow_records = new FlowRecord[size];
+      for (unsigned int i = 0; i < size; i++) {
+         flow_array[i] = flow_records + i;
       }
    };
    ~NHTFlowCache()
    {
-      for (int i = 0; i < size; i++) {
-         delete flow_array[i];
-      }
+      delete [] flow_records;
       delete [] flow_array;
    };
 

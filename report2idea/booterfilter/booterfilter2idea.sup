@@ -1,0 +1,13 @@
+<module>
+<name>warden_booterfilter2idea</name>
+<enabled>true</enabled>
+<path>/usr/bin/nemea/booterfilter2idea.py</path>
+<params>--name=cz.cesnet.nemea.booterfilter --warden=/etc/warden/booterfilter/config.cfg --test</params>
+<trapinterfaces>
+<interface>
+  <type>UNIXSOCKET</type>
+  <direction>IN</direction>
+  <params>bootertraffic</params>
+</interface>
+</trapinterfaces>
+</module>

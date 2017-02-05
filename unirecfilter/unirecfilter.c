@@ -70,7 +70,7 @@ UR_FIELDS ()
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Unirecfilter module",  "This NEMEA module selects records according to parameters in filter and sends "  \
+  BASIC("unirecfilter",  "This NEMEA module selects records according to parameters in filter and sends "  \
    "only fields specified in output template. " \
    "Unirecfilter expects unirec format of messages on input. Output format is " \
    "specified with -O flag, filter is specified with -F flag and contains expressions (<=, ==, &&, ...). " \

@@ -58,7 +58,7 @@
 #include <time.h>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
-#include <omp.h>
+#include <pthread.h>
 #include <ctype.h>
 #include "fields.h"
 
@@ -68,7 +68,7 @@ UR_FIELDS()
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Logger","This module logs all incoming UniRec records to standard output or into a specified file. Each record is written as one line containing values of its fields in human-readable format separated by chosen delimiters (CSV format). If you use more than one input interface you have to specify output format by parameter \"-o\".",-1,0)
+  BASIC("logger","This module logs all incoming UniRec records to standard output or into a specified file. Each record is written as one line containing values of its fields in human-readable format separated by chosen delimiters (CSV format). If you use more than one input interface you have to specify output format by parameter \"-o\".",-1,0)
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('w', "write", "Write output to FILE instead of stdout (rewrite the file).", required_argument, "string") \
@@ -112,20 +112,21 @@ int print_ifc_num = 0;
 int print_time = 0;
 int print_title = 0;
 uint8_t out_template_defined = 0;
+char delimiter = ',';
 
 unsigned int num_records = 0; // Number of records received (total of all inputs)
 unsigned int max_num_records = 0; // Exit after this number of records is received
 char enabled_max_num_records = 0; // Limit of message is set when non-zero
 
+pthread_mutex_t mtx;
 
 static FILE *file; // Output file
 
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
-void capture_thread(int index, char delimiter)
+void *capture_thread(void *arg)
 {
-   int fail = 0;
-   int ret;
+   int index =  *(int *) arg, fail = 0, ret;
    uint8_t data_fmt = TRAP_FMT_UNKNOWN;
 
    if (verbose >= 1) {
@@ -154,39 +155,39 @@ void capture_thread(int index, char delimiter)
                fprintf(stderr, "Error: Template could not be created.\n");
                break;
             }
-            #pragma omp critical
-            {
-               if (out_template_defined == 0) { // Check whether it is first thread trying to define output ifc template
-                  out_template = ur_define_fields_and_update_template(spec, out_template);
-                  if (out_template == NULL) {
-                    fprintf(stderr, "Error: Output interface template couldn't be created.\n");
-                    fflush(stderr);
-                    fail = 1;
-                  } else {
-                     out_template_defined = 1;
-                  }
+            pthread_mutex_lock(&mtx);
+            if (out_template_defined == 0) { // Check whether it is first thread trying to define output ifc template
+               out_template = ur_define_fields_and_update_template(spec, out_template);
+               if (out_template == NULL) {
+                 fprintf(stderr, "Error: Output interface template couldn't be created.\n");
+                 fflush(stderr);
+                 fail = 1;
+               } else {
+                  out_template_defined = 1;
                }
+            }
 
-               if (print_title == 1 && out_template_defined == 1) {
-                  print_title = 0;
-                  // Print a header - names of output UniRec fields
-                  if (print_time) {
-                     fprintf(file, "time,");
-                  }
-                  if (print_ifc_num) {
-                     fprintf(file, "ifc,");
-                  }
-                  char *data_format = ur_template_string_delimiter(out_template, delimiter);
-                  if (data_format == NULL) {
-                     fprintf(stderr, "Memory allocation error\n");
-                     fail = 1;
-                  } else {
-                     fprintf(file, "%s\n", data_format);
-                     free(data_format);
-                     fflush(file);
-                  }
+            if (print_title == 1 && out_template_defined == 1) {
+               print_title = 0;
+               // Print a header - names of output UniRec fields
+               if (print_time) {
+                  fprintf(file, "time,");
                }
-            } // End of critical section
+               if (print_ifc_num) {
+                  fprintf(file, "ifc,");
+               }
+               char *data_format = ur_template_string_delimiter(out_template, delimiter);
+               if (data_format == NULL) {
+                  fprintf(stderr, "Memory allocation error\n");
+                  fail = 1;
+               } else {
+                  fprintf(file, "%s\n", data_format);
+                  free(data_format);
+                  fflush(file);
+               }
+            }
+            pthread_mutex_unlock(&mtx);
+
             if (fail == 1) {
                break;
             }
@@ -214,135 +215,134 @@ void capture_thread(int index, char delimiter)
       }
 
       // Print contents of received UniRec to output
-      #pragma omp critical
-      {
-         if (print_time) {
-            char str[32];
-            time_t ts = time(NULL);
-            strftime(str, 31, "%FT%T", gmtime(&ts));
-            fprintf(file, "%s,", str);
+      pthread_mutex_lock(&mtx);
+      if (print_time) {
+         char str[32];
+         time_t ts = time(NULL);
+         strftime(str, 31, "%FT%T", gmtime(&ts));
+         fprintf(file, "%s,", str);
+      }
+      if (print_ifc_num) {
+         fprintf(file,"%i,", index);
+      }
+      // Iterate over all output fields
+      int delim = 0;
+      int i = 0;
+      ur_field_id_t id = 0;
+      while ((id = ur_iter_fields_record_order(out_template, i++)) != UR_ITER_END) {
+         if (delim != 0) {
+            fprintf(file,"%c", delimiter);
          }
-         if (print_ifc_num) {
-            fprintf(file,"%i,", index);
-         }
-         // Iterate over all output fields
-         int delim = 0;
-         int i = 0;
-         ur_field_id_t id = 0;
-         while ((id = ur_iter_fields_record_order(out_template, i++)) != UR_ITER_END) {
-            if (delim != 0) {
-               fprintf(file,"%c", delimiter);
-            }
-            delim = 1;
-            if (ur_is_present(templates[index], id)) {
-               // Get pointer to the field (valid for static fields only)
-               void *ptr = ur_get_ptr_by_id(templates[index], rec, id);
-                  // Static field - check what type is it and use appropriate format
-               switch (ur_get_type(id)) {
-                  case UR_TYPE_UINT8:
-                     fprintf(file, "%u", *(uint8_t*)ptr);
-                     break;
-                  case UR_TYPE_UINT16:
-                     fprintf(file, "%u", *(uint16_t*)ptr);
-                     break;
-                  case UR_TYPE_UINT32:
-                     fprintf(file, "%u", *(uint32_t*)ptr);
-                     break;
-                  case UR_TYPE_UINT64:
-                     fprintf(file, "%lu", *(uint64_t*)ptr);
-                     break;
-                  case UR_TYPE_INT8:
-                     fprintf(file, "%i", *(int8_t*)ptr);
-                     break;
-                  case UR_TYPE_INT16:
-                     fprintf(file, "%i", *(int16_t*)ptr);
-                     break;
-                  case UR_TYPE_INT32:
-                     fprintf(file, "%i", *(int32_t*)ptr);
-                     break;
-                  case UR_TYPE_INT64:
-                     fprintf(file, "%li", *(int64_t*)ptr);
-                     break;
-                  case UR_TYPE_CHAR:
-                     fprintf(file, "%c", *(char*)ptr);
-                     break;
-                  case UR_TYPE_FLOAT:
-                     fprintf(file, "%f", *(float*)ptr);
-                     break;
-                  case UR_TYPE_DOUBLE:
-                     fprintf(file, "%f", *(double*)ptr);
-                     break;
-                  case UR_TYPE_IP:
-                     {
-                        // IP address - convert to human-readable format and print
-                        char str[46];
-                        ip_to_str((ip_addr_t*)ptr, str);
-                        fprintf(file, "%s", str);
-                     }
-                     break;
-                  case UR_TYPE_TIME:
-                     {
-                        // Timestamp - convert to human-readable format and print
-                        time_t sec = ur_time_get_sec(*(ur_time_t*)ptr);
-                        int msec = ur_time_get_msec(*(ur_time_t*)ptr);
-                        char str[32];
-                        strftime(str, 31, "%FT%T", gmtime(&sec));
-                        fprintf(file, "%s.%03i", str, msec);
-                     }
-                     break;
-                  case UR_TYPE_STRING:
-                     {
-                        // Printable string - print it as it is
-                        int size = ur_get_var_len(templates[index], rec, id);
-                        char *data = ur_get_ptr_by_id(templates[index], rec, id);
-                        putc('"', file);
-                        while (size--) {
-                           switch (*data) {
-                              case '\n': // Replace newline with space
-                                         putc(' ', file);
-                                         break;
-                              case '"' : // Double quotes in string
-                                         putc('"', file);
-                                         putc('"', file);
-                                         break;
-                              default  : // Check if character is printable
-                                         if (isprint(*data)) {
-                                            putc(*data, file);
-                                         }
-                           }
-                           data++;
+         delim = 1;
+         if (ur_is_present(templates[index], id)) {
+            // Get pointer to the field (valid for static fields only)
+            void *ptr = ur_get_ptr_by_id(templates[index], rec, id);
+               // Static field - check what type is it and use appropriate format
+            switch (ur_get_type(id)) {
+               case UR_TYPE_UINT8:
+                  fprintf(file, "%u", *(uint8_t*)ptr);
+                  break;
+               case UR_TYPE_UINT16:
+                  fprintf(file, "%u", *(uint16_t*)ptr);
+                  break;
+               case UR_TYPE_UINT32:
+                  fprintf(file, "%u", *(uint32_t*)ptr);
+                  break;
+               case UR_TYPE_UINT64:
+                  fprintf(file, "%lu", *(uint64_t*)ptr);
+                  break;
+               case UR_TYPE_INT8:
+                  fprintf(file, "%i", *(int8_t*)ptr);
+                  break;
+               case UR_TYPE_INT16:
+                  fprintf(file, "%i", *(int16_t*)ptr);
+                  break;
+               case UR_TYPE_INT32:
+                  fprintf(file, "%i", *(int32_t*)ptr);
+                  break;
+               case UR_TYPE_INT64:
+                  fprintf(file, "%li", *(int64_t*)ptr);
+                  break;
+               case UR_TYPE_CHAR:
+                  fprintf(file, "%c", *(char*)ptr);
+                  break;
+               case UR_TYPE_FLOAT:
+                  fprintf(file, "%f", *(float*)ptr);
+                  break;
+               case UR_TYPE_DOUBLE:
+                  fprintf(file, "%f", *(double*)ptr);
+                  break;
+               case UR_TYPE_IP:
+                  {
+                     // IP address - convert to human-readable format and print
+                     char str[46];
+                     ip_to_str((ip_addr_t*)ptr, str);
+                     fprintf(file, "%s", str);
+                  }
+                  break;
+               case UR_TYPE_TIME:
+                  {
+                     // Timestamp - convert to human-readable format and print
+                     time_t sec = ur_time_get_sec(*(ur_time_t*)ptr);
+                     int msec = ur_time_get_msec(*(ur_time_t*)ptr);
+                     char str[32];
+                     strftime(str, 31, "%FT%T", gmtime(&sec));
+                     fprintf(file, "%s.%03i", str, msec);
+                  }
+                  break;
+               case UR_TYPE_STRING:
+                  {
+                     // Printable string - print it as it is
+                     int size = ur_get_var_len(templates[index], rec, id);
+                     char *data = ur_get_ptr_by_id(templates[index], rec, id);
+                     putc('"', file);
+                     while (size--) {
+                        switch (*data) {
+                           case '\n': // Replace newline with space
+                                      putc(' ', file);
+                                      break;
+                           case '"' : // Double quotes in string
+                                      putc('"', file);
+                                      putc('"', file);
+                                      break;
+                           default  : // Check if character is printable
+                                      if (isprint(*data)) {
+                                         putc(*data, file);
+                                      }
                         }
-                        putc('"', file);
+                        data++;
                      }
-                     break;
-                  case UR_TYPE_BYTES:
-                     {
-                        // Generic string of bytes - print each byte as two hex digits
-                        int size = ur_get_var_len(templates[index], rec, id);
-                        unsigned char *data = ur_get_ptr_by_id(templates[index], rec, id);
-                        while (size--) {
-                           fprintf(file, "%02x", *data++);
-                        }
+                     putc('"', file);
+                  }
+                  break;
+               case UR_TYPE_BYTES:
+                  {
+                     // Generic string of bytes - print each byte as two hex digits
+                     int size = ur_get_var_len(templates[index], rec, id);
+                     unsigned char *data = ur_get_ptr_by_id(templates[index], rec, id);
+                     while (size--) {
+                        fprintf(file, "%02x", *data++);
                      }
-                     break;
-                  default:
-                     {
-                        // Unknown type - print the value in hex
-                        int size = ur_get_len(templates[index], rec, id);
-                        fprintf(file, "0x");
-                        for (int i = 0; i < size; i++) {
-                           fprintf(file, "%02x", ((unsigned char*)ptr)[i]);
-                        }
+                  }
+                  break;
+               default:
+                  {
+                     // Unknown type - print the value in hex
+                     int size = ur_get_len(templates[index], rec, id);
+                     fprintf(file, "0x");
+                     for (int i = 0; i < size; i++) {
+                        fprintf(file, "%02x", ((unsigned char*)ptr)[i]);
                      }
-                     break;
-               } // case (field type)
-            } // if present
-         } // loop over fields
-         fprintf(file,"\n");
-         fflush(file);
+                  }
+                  break;
+            } // case (field type)
+         } // if present
+      } // loop over fields
+      fprintf(file,"\n");
+      fflush(file);
 
-         num_records++;
-      } // end critical section
+      num_records++;
+      pthread_mutex_unlock(&mtx);
 
       // Check whether maximum number of records has been reached
       if (max_num_records && num_records >= max_num_records) {
@@ -355,6 +355,8 @@ void capture_thread(int index, char delimiter)
    if (verbose >= 1) {
       printf("Thread %i exitting.\n", index);
    }
+
+   return NULL;
 }
 
 
@@ -364,7 +366,6 @@ int main(int argc, char **argv)
    char *out_template_str = NULL;
    char *out_filename = NULL;
    int append = 0;
-   char delimiter = ',';
    out_template_defined = 0;
 
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
@@ -557,10 +558,32 @@ Available types are: int8, int16, int32, int64, uint8, uint16, uint32, uint64, c
 
    // ***** Start a thread for each interface *****
 
-   #pragma omp parallel num_threads(n_inputs)
-   {
-      capture_thread(omp_get_thread_num(), delimiter);
+   int *interfaces = (int *) malloc(n_inputs * sizeof(int));
+   pthread_t *threads = (pthread_t *) malloc(n_inputs * sizeof(pthread_t));
+   pthread_attr_t attr;
+   pthread_attr_init(&attr);
+   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+   pthread_mutex_init(&mtx, NULL);
+
+   for (int i = 0; i < n_inputs; i++) {
+      interfaces[i] = i;
+      if (pthread_create(&threads[i], &attr, capture_thread, &interfaces[i]) != 0) {
+         fprintf(stderr, "pthread_create() failed\n");
+         pthread_attr_destroy(&attr);
+         pthread_mutex_destroy(&mtx);
+         free(threads);
+         free(interfaces);
+         goto exit;
+      }
    }
+   pthread_attr_destroy(&attr);
+
+   for (int i = 0; i < n_inputs; i++) {
+      pthread_join(threads[i], NULL);
+   }
+   pthread_mutex_destroy(&mtx);
+   free(threads);
+   free(interfaces);
 
    ret = 0;
 

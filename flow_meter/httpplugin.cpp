@@ -106,7 +106,7 @@ HTTPPlugin::HTTPPlugin(const options_t &module_options, vector<plugin_opt> plugi
    flush_flow = false;
 }
 
-int HTTPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
+int HTTPPlugin::post_create(Flow &rec, const Packet &pkt)
 {
    if (pkt.src_port == 80) {
       return add_ext_http_response(pkt.payload, pkt.payload_length, rec);
@@ -117,7 +117,7 @@ int HTTPPlugin::post_create(FlowRecord &rec, const Packet &pkt)
    return 0;
 }
 
-int HTTPPlugin::pre_update(FlowRecord &rec, Packet &pkt)
+int HTTPPlugin::pre_update(Flow &rec, Packet &pkt)
 {
    RecordExt *ext = NULL;
    if (pkt.src_port == 80) {
@@ -451,7 +451,7 @@ bool HTTPPlugin::valid_http_method(const char *method) const
  * \param [out] rec Flow record where to store created extension header.
  * \return 0 on success.
  */
-int HTTPPlugin::add_ext_http_request(const char *data, int payload_len, FlowRecord &rec)
+int HTTPPlugin::add_ext_http_request(const char *data, int payload_len, Flow &rec)
 {
    RecordExtHTTPReq *req = new RecordExtHTTPReq();
    if (!parse_http_request(data, payload_len, req, true)) {
@@ -470,7 +470,7 @@ int HTTPPlugin::add_ext_http_request(const char *data, int payload_len, FlowReco
  * \param [out] rec Flow record where to store created extension header.
  * \return 0 on success.
  */
-int HTTPPlugin::add_ext_http_response(const char *data, int payload_len, FlowRecord &rec)
+int HTTPPlugin::add_ext_http_response(const char *data, int payload_len, Flow &rec)
 {
    RecordExtHTTPResp *resp = new RecordExtHTTPResp();
    if (!parse_http_response(data, payload_len, resp, true)) {

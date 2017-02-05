@@ -46,7 +46,7 @@
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Traffic repeater","This module receive data from input interface and resend it to the output interface based on given arguments in -i option.",1,1)
+  BASIC("traffic_repeater","This module receive data from input interface and resend it to the output interface based on given arguments in -i option.",1,1)
 
 #define MODULE_PARAMS(PARAM)
 

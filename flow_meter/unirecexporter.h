@@ -66,13 +66,13 @@ class UnirecExporter : public FlowExporter
 {
 public:
    UnirecExporter(bool send_eof);
-   int init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, int basic_ifc_num);
+   int init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, int basic_ifc_num, uint64_t link, uint8_t dir);
    void close();
-   int export_flow(FlowRecord &flow);
+   int export_flow(Flow &flow);
    int export_packet(Packet &pkt);
 
 private:
-   void fill_basic_flow(FlowRecord &flow, ur_template_t *tmplt_ptr, void *record_ptr);
+   void fill_basic_flow(Flow &flow, ur_template_t *tmplt_ptr, void *record_ptr);
    void fill_packet_fields(Packet &pkt, ur_template_t *tmplt_ptr, void *record_ptr);
    void free_unirec_resources();
 
@@ -83,6 +83,9 @@ private:
    ur_template_t **tmplt;     /**< Pointer to unirec templates. */
    void **record;             /**< Pointer to unirec records. */
    bool eof;                  /**< Send eof when module exits. */
+
+   uint64_t link_bit_field;   /**< Link bit field value. */
+   uint8_t dir_bit_field;     /**< Direction bit field value. */
 };
 
 #endif

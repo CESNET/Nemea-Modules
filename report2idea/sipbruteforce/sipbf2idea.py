@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-# In case we are in nemea/modules/report2idea/ and we want to import from repo:
+# In case we are in nemea/modules/report2idea/sipbruteforce and we want to import from repo:
 import os, sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "nemea-framework", "pycommon"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "nemea-framework", "pycommon"))
 
 import argparse
 
@@ -16,7 +16,7 @@ MODULE_NAME = "sipbf2idea"
 MODULE_DESC = "Converts output of sip_bf_detector module to IDEA."
 
 REQ_TYPE = pytrap.FMT_UNIREC
-REQ_FORMAT = "uint64 SBFD_EVENT_ID,uint8 SBFD_EVENT_TYPE,ipaddr SBFD_TARGET,ipaddr SBFD_SOURCE,string SBFD_USER,uint64 SBFD_LINK_BIT_FIELD,uint8 SBFD_PROTOCOL,time SBFD_EVENT_TIME,time SBFD_CEASE_TIME,time SBFD_BREACH_TIME,uint32 SBFD_ATTEMPTS,uint32 SBFD_AVG_ATTEMPTS"
+REQ_FORMAT = "uint64 SBFD_EVENT_ID,uint8 SBFD_EVENT_TYPE,ipaddr SBFD_TARGET,ipaddr SBFD_SOURCE,string SBFD_USER,uint64 SBFD_LINK_BIT_FIELD,uint8 SBFD_PROTOCOL,time SBFD_EVENT_TIME,time SBFD_CEASE_TIME,time SBFD_BREACH_TIME,uint32 SBFD_ATTEMPTS,uint32 SBFD_AVG_ATTEMPTS,uint16 SRC_PORT,uint16 DST_PORT"
 
 # Main conversion function
 def convert_to_idea(rec, opts=None):
@@ -32,18 +32,22 @@ def convert_to_idea(rec, opts=None):
     #if rec.WARDEN_TYPE != 2:
     #    # this alert is not bruteforce
     #    return None
+    time = getIDEAtime();
     idea = {
         "Format": "IDEA0",
         "ID": getRandomId(),
-        "DetectTime": getIDEAtime(rec.SBFD_EVENT_TIME),
-        "CreateTime": getIDEAtime(),
+        "DetectTime": time,
+        "CreateTime": time,
+        "EventTime": getIDEAtime(rec.SBFD_EVENT_TIME),
         "CeaseTime": getIDEAtime(rec.SBFD_CEASE_TIME),
         "ConnCount": rec.SBFD_ATTEMPTS,
         "Source": [{
-            "Proto": [ "sip" ]
+            "Proto": [ "sip" ],
+            "Port": [rec.SRC_PORT]
          }],
         "Target": [{
-            "Proto": [ "sip" ]
+            "Proto": [ "sip" ],
+            "Port": [rec.DST_PORT]
          }],
         'Node': [{
             'Name': 'undefined',

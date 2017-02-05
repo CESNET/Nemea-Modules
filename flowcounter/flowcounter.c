@@ -79,7 +79,7 @@ UR_FIELDS(
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-   BASIC("Flow-counter module","Example module for counting number of incoming flow records.",1,0)
+   BASIC("flowcounter","Example module for counting number of incoming flow records.",1,0)
 
 #define MODULE_PARAMS(PARAM) \
    PARAM('p', "print", "Show progress - print a dot every N flows.", required_argument, "int32") \

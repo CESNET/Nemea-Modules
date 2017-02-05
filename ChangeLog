@@ -1,4 +1,4 @@
-2016-10-23 Nemea-modules-2.5.0
+2016-02-05 Nemea-modules-2.5.1
 	* added aggregator with liburfilter (by Miroslav Kalina)
 	* changed unirecfilter to link liburfilter (by Miroslav Kalina)
 	* added nfwriter (by Jiri Havranek)
@@ -10,11 +10,36 @@
 		optimizations
 		bugfixes
 
+2017-01-11 Nemea-modules-2.5.1
+	* unirecfilter:
+		fixes of the PROTOCOL field - allow numbers
+		allow negative float numbers
+		checking IP addresses
+		allow apostrophe
+	* link_traffic:
+		add new module (experimental), can export data into munin
+
+2016-10-07 Nemea-modules-2.5.0
+	* report2idea:
+		haddrscan2idea and sipbf2idea now also exports SRC and DST ports
+	* logger:
+		removed OpenMP dependency
+	* flow_meter
+		extended tests coverage
+		updated README
+		many bugfixes and overall improvements
+	* nfreader:
+		fixed ipv6 export in version with libnf
+	* nfwriter
+		new module - reads flows from input interface and write them to nfdump file
+	* endiverter
+		minor improvements
+
 2016-10-07 Nemea-modules-2.4.3
-        * added sipbf2idea reporter
+	* added sipbf2idea reporter
 
 2016-10-04 Nemea-modules-2.4.2
-        * flow_meter:
+	* flow_meter:
 		added arp plugin
 		bugfixes in http and ntp plugin
 	* other bugfixes

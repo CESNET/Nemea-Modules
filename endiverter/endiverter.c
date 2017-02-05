@@ -54,7 +54,7 @@
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Endianness converter", "Switch byte order of fields in unirec messages.", 1, 1)
+  BASIC("endiverter", "Switch byte order of fields in unirec messages.", 1, 1)
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('n', "no_eof", "Don't forward EOF message.", no_argument, "none")

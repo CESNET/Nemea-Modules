@@ -94,7 +94,7 @@ UR_FIELDS (
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Nfdump-reader module","This module reads a given nfdump file and outputs flow records in UniRec format. If more files are specified, all flows from the first file are read, then all flows from second file and so on.",0,1)
+  BASIC("nfdump_reader","This module reads a given nfdump file and outputs flow records in UniRec format. If more files are specified, all flows from the first file are read, then all flows from second file and so on.",0,1)
 
 #define MODULE_PARAMS(PARAM) \
    PARAM('f', "filter", "A nfdump-like filter expression. Only records matching the filter will be sent to the output.", required_argument, "string") \
@@ -105,7 +105,9 @@ trap_module_info_t *module_info = NULL;
    PARAM('l', "link_mask", "Use link mask m for LINK_BIT_FIELD. m is 8-bit hexadecimal number e.g. m should be 1, c2, AB,...", required_argument, "string") \
    PARAM('p', "print", "Show progress - print a dot every N flows.", required_argument, "uint64") \
    PARAM('r', "rate", "Rate limiting. Limiting sending flow rate to N records/sec.", required_argument, "uint64") \
-   PARAM('R', "resend", "Real time re-sending. Resending records from given files in real time, respecting original timestamps (seconds). Since this mode is timestamp order dependent, real time re-sending is done only at approximate time.", no_argument, "none")
+   PARAM('R', "resend", "Real time re-sending. Resending records from given files in real time, respecting original timestamps (seconds). Since this mode is timestamp order dependent, real time re-sending is done only at approximate time.", no_argument, "none") \
+   PARAM('-', "", "Input files - one or more nfdump files to read.", required_argument, "string")
+
 
 static int stop = 0;
 

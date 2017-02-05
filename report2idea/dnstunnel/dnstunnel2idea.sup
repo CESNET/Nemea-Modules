@@ -1,0 +1,13 @@
+<module>
+  <name>warden_dnstunnel2idea</name>
+  <enabled>false</enabled>
+  <path>/usr/bin/nemea/dnstunnel2idea.py</path>
+  <params>- - name=cz.cesnet.nemea.dnstunnel - - warden=/etc/warden/</params>
+  <trapinterfaces>
+    <interface>
+      <type>TCP</type>
+      <direction>IN</direction>
+      <params>12004</params>
+    </interface>
+  </trapinterfaces>
+</module>

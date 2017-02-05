@@ -310,6 +310,48 @@ inline uint16_t parse_udp_hdr(const u_char *data_ptr, Packet *pkt)
 }
 
 /**
+ * \brief Parse specific fields from ICMP header.
+ * \param [in] data_ptr Pointer to begin of header.
+ * \param [out] pkt Pointer to Packet structure where parsed fields will be stored.
+ * \return Size of header in bytes.
+ */
+inline uint16_t parse_icmp_hdr(const u_char *data_ptr, Packet *pkt)
+{
+   struct icmphdr *icmp = (struct icmphdr *) data_ptr;
+   pkt->dst_port = icmp->type * 256 + icmp->code;
+   pkt->field_indicator |= PCKT_ICMP;
+
+   DEBUG_MSG("ICMP header:\n");
+   DEBUG_MSG("\tType:\t\t%u\n",     icmp->type);
+   DEBUG_MSG("\tCode:\t\t%u\n",     icmp->code);
+   DEBUG_MSG("\tChecksum:\t%#06x\n",ntohs(icmp->checksum));
+   DEBUG_MSG("\tRest:\t\t%#06x\n",  ntohl(*(uint32_t *) &icmp->un));
+
+   return 0;
+}
+
+/**
+ * \brief Parse specific fields from ICMPv6 header.
+ * \param [in] data_ptr Pointer to begin of header.
+ * \param [out] pkt Pointer to Packet structure where parsed fields will be stored.
+ * \return Size of header in bytes.
+ */
+inline uint16_t parse_icmpv6_hdr(const u_char *data_ptr, Packet *pkt)
+{
+   struct icmp6_hdr *icmp6 = (struct icmp6_hdr *) data_ptr;
+   pkt->dst_port = icmp6->icmp6_type * 256 + icmp6->icmp6_code;
+   pkt->field_indicator |= PCKT_ICMP;
+
+   DEBUG_MSG("ICMPv6 header:\n");
+   DEBUG_MSG("\tType:\t\t%u\n",     icmp6->icmp6_type);
+   DEBUG_MSG("\tCode:\t\t%u\n",     icmp6->icmp6_code);
+   DEBUG_MSG("\tChecksum:\t%#x\n",  ntohs(icmp6->icmp6_cksum));
+   DEBUG_MSG("\tBody:\t\t%#x\n",    ntohs(*(uint32_t *) &icmp6->icmp6_dataun));
+
+   return 0;
+}
+
+/**
  * \brief Parsing callback function for pcap_dispatch() call. Parse packets up to transport layer.
  * \param [in,out] arg Serves for passing pointer to Packet structure into callback function.
  * \param [in] h Contains timestamp and packet size.
@@ -349,7 +391,11 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
       data_offset += parse_tcp_hdr(data + data_offset, pkt);
    } else if (pkt->ip_proto == IPPROTO_UDP) {
       data_offset += parse_udp_hdr(data + data_offset, pkt);
-   } else if (!parse_all && pkt->ip_proto != IPPROTO_ICMP && pkt->ip_proto != IPPROTO_ICMPV6) {
+   } else if (pkt->ip_proto == IPPROTO_ICMP) {
+      data_offset += parse_icmp_hdr(data + data_offset, pkt);
+   } else if (pkt->ip_proto == IPPROTO_ICMPV6) {
+      data_offset += parse_icmpv6_hdr(data + data_offset, pkt);
+   } else if (!parse_all) {
       DEBUG_MSG("Unknown transport protocol %x\n", pkt->ip_proto);
       return;
    }
@@ -374,7 +420,7 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
 /**
  * \brief Constructor.
  */
-PcapReader::PcapReader() : handle(NULL), print_pcap_stats(false)
+PcapReader::PcapReader() : handle(NULL), print_pcap_stats(false), netmask(PCAP_NETMASK_UNKNOWN)
 {
 }
 
@@ -382,7 +428,7 @@ PcapReader::PcapReader() : handle(NULL), print_pcap_stats(false)
  * \brief Constructor.
  * \param [in] options Module options.
  */
-PcapReader::PcapReader(const options_t &options) : handle(NULL)
+PcapReader::PcapReader(const options_t &options) : handle(NULL), netmask(PCAP_NETMASK_UNKNOWN)
 {
    print_pcap_stats = options.print_pcap_stats;
    last_ts.tv_sec = 0;
@@ -453,6 +499,17 @@ int PcapReader::init_interface(const string &interface, int snaplen, bool parse_
       fprintf(stderr, "%s\n", errbuf); // Print warning.
    }
 
+   if (pcap_datalink(handle) != DLT_EN10MB) {
+      error_msg = "Unsupported data link type.";
+      close();
+      return 3;
+   }
+
+   bpf_u_int32 net;
+   if (pcap_lookupnet(interface.c_str(), &net, &netmask, errbuf) != 0) {
+      netmask = PCAP_NETMASK_UNKNOWN;
+   }
+
    if (print_pcap_stats) {
       /* Print stats header. */
       printf("# recv   - number of packets received\n");
@@ -464,6 +521,33 @@ int PcapReader::init_interface(const string &interface, int snaplen, bool parse_
    live_capture = true;
    parse_all = parse_every_pkt;
    error_msg = "";
+   return 0;
+}
+
+/**
+ * \brief Install BPF filter to pcap handle.
+ * \param [in] filter_str String containing program.
+ * \return 0 on success, non 0 on failure.
+ */
+int PcapReader::set_filter(const string &filter_str)
+{
+   if (handle == NULL) {
+      error_msg = "No live capture or file opened.";
+      return 1;
+   }
+
+   struct bpf_program filter;
+   if (pcap_compile(handle, &filter, filter_str.c_str(), 0, netmask) == -1) {
+      error_msg = "Couldn't parse filter " + string(filter_str) + ": " + string(pcap_geterr(handle));
+      return 1;
+   }
+   if (pcap_setfilter(handle, &filter) == -1) {
+      pcap_freecode(&filter);
+      error_msg = "Couldn't install filter " + string(filter_str) + ": " + string(pcap_geterr(handle));
+      return 1;
+   }
+
+   pcap_freecode(&filter);
    return 0;
 }
 

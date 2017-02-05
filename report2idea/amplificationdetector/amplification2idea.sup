@@ -1,0 +1,13 @@
+<module>
+  <name>warden_amplification2idea</name>
+  <enabled>true</enabled>
+  <path>/usr/bin/nemea/amplification2idea.py</path>
+  <params>--dstwhitelist-file=/data/amplification_dst_whitelist.txt --name=cz.cesnet.nemea.amplificationdetector --warden=/etc/warden/amplificationdetector/config.cfg</params>
+  <trapinterfaces>
+    <interface>
+      <type>TCP</type>
+      <direction>IN</direction>
+      <params>12001</params>
+    </interface>
+  </trapinterfaces>
+</module>

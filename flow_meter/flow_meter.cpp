@@ -77,7 +77,7 @@ trap_module_info_t *module_info = NULL;
 static int stop = 0;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Flow meter module", "Convert packets from PCAP file or network interface into flow records.", 0, -1)
+  BASIC("flow_meter", "Convert packets from PCAP file or network interface into flow records.", 0, -1)
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('p', "plugins", "Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. "\
@@ -91,7 +91,10 @@ static int stop = 0;
   PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: DOUBLE:DOUBLE. Value default means use default value 300.0:30.0.", required_argument, "string") \
   PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 176 bytes. default means use value 65536.", required_argument, "string") \
   PARAM('S', "cache-statistics", "Print flow cache statistics. NUMBER specifies interval between prints.", required_argument, "float") \
-  PARAM('P', "pcap-statistics", "Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.", no_argument, "none")
+  PARAM('P', "pcap-statistics", "Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.", no_argument, "none") \
+  PARAM('L', "link_bit_field", "Link bit field value.", required_argument, "uint64") \
+  PARAM('D', "dir_bit_field", "Direction bit field value.", required_argument, "uint8") \
+  PARAM('F', "filter", "String containing filter expression to filter traffic. See man pcap-filter.", required_argument, "string")
 
 /**
  * \brief Parse input plugin settings.
@@ -153,12 +156,12 @@ int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plu
 }
 
 /**
- * \brief Count ifc interfaces.
+ * \brief Count trap interfaces.
  * \param [in] argc Number of parameters.
  * \param [in] argv Pointer to parameters.
- * \return Number of ifc interfaces.
+ * \return Number of trap interfaces.
  */
-int count_ifc_interfaces(int argc, char *argv[])
+int count_trap_interfaces(int argc, char *argv[])
 {
    char *interfaces = NULL;
    for (int i = 1; i < argc; i++) { // Find argument for param -i.
@@ -167,17 +170,48 @@ int count_ifc_interfaces(int argc, char *argv[])
       }
    }
 
-   int int_cnt = 1;
+   int ifc_cnt = 1;
    if (interfaces != NULL) {
       while(*interfaces) { // Count number of specified interfaces.
          if (*(interfaces++) == ',') {
-            int_cnt++;
+            ifc_cnt++;
          }
       }
-      return int_cnt;
+      return ifc_cnt;
    }
 
-   return int_cnt;
+   return ifc_cnt;
+}
+
+/**
+ * \brief Remove whitespaces from beginning and end of string.
+ * \param [in,out] str String to be trimmed.
+ */
+void trim_str(string &str)
+{
+   str.erase(0, str.find_first_not_of(" \t\n\r"));
+   str.erase(str.find_last_not_of(" \t\n\r") + 1);
+}
+
+/**
+ * \brief Provides conversion from string to uint64_t.
+ * \param [in] str String representation of value.
+ * \param [out] dst Destination variable.
+ * \return True on success, false otherwise.
+ */
+bool str_to_uint64(string str, uint64_t &dst)
+{
+   char *check;
+   errno = 0;
+   trim_str(str);
+   unsigned long long value = strtoull(str.c_str(), &check, 0);
+   if (errno == ERANGE || str[0] == '-' || str[0] == '\0' || *check ||
+      value > numeric_limits<uint64_t>::max()) {
+      return false;
+   }
+
+   dst = value;
+   return true;
 }
 
 /**
@@ -186,14 +220,35 @@ int count_ifc_interfaces(int argc, char *argv[])
  * \param [out] dst Destination variable.
  * \return True on success, false otherwise.
  */
-bool str_to_uint32(const char *str, uint32_t &dst)
+bool str_to_uint32(string str, uint32_t &dst)
 {
    char *check;
    errno = 0;
-   unsigned long long value = strtoull(str, &check, 10);
-   if (errno == ERANGE || str[0] == '-' || *check ||
-      value < numeric_limits<uint32_t>::min() ||
+   trim_str(str);
+   unsigned long long value = strtoull(str.c_str(), &check, 0);
+   if (errno == ERANGE || str[0] == '-' || str[0] == '\0' || *check ||
       value > numeric_limits<uint32_t>::max()) {
+      return false;
+   }
+
+   dst = value;
+   return true;
+}
+
+/**
+ * \brief Provides conversion from string to uint8_t.
+ * \param [in] str String representation of value.
+ * \param [out] dst Destination variable.
+ * \return True on success, false otherwise.
+ */
+bool str_to_uint8(string str, uint8_t &dst)
+{
+   char *check;
+   errno = 0;
+   trim_str(str);
+   unsigned long long value = strtoull(str.c_str(), &check, 0);
+   if (errno == ERANGE || str[0] == '-' || str[0] == '\0' || *check ||
+      value > numeric_limits<uint8_t>::max()) {
       return false;
    }
 
@@ -207,11 +262,12 @@ bool str_to_uint32(const char *str, uint32_t &dst)
  * \param [out] dst Destination variable.
  * \return True on success, false otherwise.
  */
-bool str_to_double(const char *str, double &dst)
+bool str_to_double(string str, double &dst)
 {
    char *check;
    errno = 0;
-   double value = strtod(str, &check);
+   trim_str(str);
+   double value = strtod(str.c_str(), &check);
    if (errno == ERANGE || *check || str[0] == '\0') {
       return false;
    }
@@ -266,19 +322,18 @@ int main(int argc, char *argv[])
    options.snaplen = 0;
    options.eof = true;
 
+   string filter = "";
    uint32_t pkt_limit = 0; // Limit of packets for packet parser. 0 = no limit
+   uint64_t link = 0;
+   uint8_t dir = 0;
 
    // ***** TRAP initialization *****
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-   module_info->num_ifc_out = count_ifc_interfaces(argc, argv);
+   module_info->num_ifc_out = count_trap_interfaces(argc, argv);
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
 
    signal(SIGTERM, signal_handler);
    signal(SIGINT, signal_handler);
-
-   for (int i = 0; i < module_info->num_ifc_out; i++) {
-      trap_ifcctl(TRAPIFC_OUTPUT, i, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
-   }
 
    signed char opt;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
@@ -387,6 +442,23 @@ int main(int argc, char *argv[])
       case 'P':
          options.print_pcap_stats = true;
          break;
+      case 'L':
+         if (!str_to_uint64(optarg, link)) {
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+            TRAP_DEFAULT_FINALIZATION();
+            return error("Invalid argument for option -L");
+         }
+         break;
+      case 'D':
+         if (!str_to_uint8(optarg, dir)) {
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+            TRAP_DEFAULT_FINALIZATION();
+            return error("Invalid argument for option -D");
+         }
+         break;
+      case 'F':
+         filter = string(optarg);
+         break;
       default:
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
@@ -405,9 +477,7 @@ int main(int argc, char *argv[])
    }
 
    if (options.flow_cache_size % options.flow_line_size != 0) {
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-      TRAP_DEFAULT_FINALIZATION();
-      return error("Size of flow line (32 by default) must divide size of flow cache.");
+      options.flow_cache_size += options.flow_line_size - (options.flow_cache_size % options.flow_line_size);
    }
 
    bool parse_every_pkt = false;
@@ -440,6 +510,10 @@ int main(int argc, char *argv[])
          return error("Can't open input file: " + options.pcap_file);
       }
    } else {
+      for (int i = 0; i < module_info->num_ifc_out; i++) {
+         trap_ifcctl(TRAPIFC_OUTPUT, i, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT);
+      }
+
       if (packetloader.init_interface(options.interface, options.snaplen, parse_every_pkt) != 0) {
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
@@ -447,10 +521,18 @@ int main(int argc, char *argv[])
       }
    }
 
+   if (filter != "") {
+      if (packetloader.set_filter(filter) != 0) {
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+         TRAP_DEFAULT_FINALIZATION();
+         return error(packetloader.error_msg);
+      }
+   }
+
    NHTFlowCache flowcache(options);
    UnirecExporter flowwriter(options.eof);
 
-   if (flowwriter.init(plugin_wrapper.plugins, module_info->num_ifc_out, options.basic_ifc_num) != 0) {
+   if (flowwriter.init(plugin_wrapper.plugins, module_info->num_ifc_out, options.basic_ifc_num, link, dir) != 0) {
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       TRAP_DEFAULT_FINALIZATION();
       return error("Unable to initialize UnirecExporter.");

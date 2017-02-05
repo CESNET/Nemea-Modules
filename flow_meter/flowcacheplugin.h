@@ -131,7 +131,7 @@ public:
     * \param [in] pkt Parsed packet.
     * \return 0 on success or FLOW_FLUSH option.
     */
-   virtual int post_create(FlowRecord &rec, const Packet &pkt)
+   virtual int post_create(Flow &rec, const Packet &pkt)
    {
       return 0;
    }
@@ -142,7 +142,7 @@ public:
     * \param [in,out] pkt Parsed packet.
     * \return 0 on success or FLOW_FLUSH option.
     */
-   virtual int pre_update(FlowRecord &rec, Packet &pkt)
+   virtual int pre_update(Flow &rec, Packet &pkt)
    {
       return 0;
    }
@@ -153,7 +153,7 @@ public:
     * \param [in,out] pkt Parsed packet.
     * \return 0 on success or FLOW_FLUSH option.
     */
-   virtual int post_update(FlowRecord &rec, const Packet &pkt)
+   virtual int post_update(Flow &rec, const Packet &pkt)
    {
       return 0;
    }
@@ -162,7 +162,7 @@ public:
     * \brief Called before a flow record is exported from the cache.
     * \param [in,out] rec Reference to flow record.
     */
-   virtual void pre_export(FlowRecord &rec)
+   virtual void pre_export(Flow &rec)
    {
    }
 

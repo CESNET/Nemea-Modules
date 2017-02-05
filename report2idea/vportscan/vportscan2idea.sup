@@ -1,0 +1,13 @@
+<module>
+  <name>warden_vportscan2idea</name>
+  <enabled>true</enabled>
+  <path>/usr/bin/nemea/vportscan2idea.py</path>
+  <params>--srcwhitelist-file=/data/vportscan_src_whitelist.txt --name=cz.cesnet.nemea.vportscan --warden=/etc/warden/vportscan/config.cfg</params>
+  <trapinterfaces>
+    <interface>
+      <type>TCP</type>
+      <direction>IN</direction>
+      <params>12005</params>
+    </interface>
+  </trapinterfaces>
+</module>

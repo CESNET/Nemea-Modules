@@ -4,5 +4,5 @@ test -z "$srcdir" && export srcdir=.
 
 . $srcdir/test_plugin.sh
 
-test_plugin arp "$pcap_dir/arp-sample.pcap"
+run_plugin_test arp "$pcap_dir/arp-sample.pcap"
 

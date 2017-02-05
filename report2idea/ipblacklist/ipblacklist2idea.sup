@@ -1,0 +1,13 @@
+<module>
+  <name>warden_ipblacklist2idea</name>
+  <enabled>true</enabled>
+  <path>/usr/bin/nemea/ipblacklist2idea.py</path>
+  <params>--name=cz.cesnet.nemea.ipblacklist --warden=/etc/warden/ipblacklist/config.cfg --test</params>
+  <trapinterfaces>
+    <interface>
+      <type>TCP</type>
+      <direction>IN</direction>
+      <params>12006</params>
+    </interface>
+  </trapinterfaces>
+</module>

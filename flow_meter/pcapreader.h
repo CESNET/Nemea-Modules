@@ -54,6 +54,10 @@
 
 using namespace std;
 
+#ifndef ETH_P_8021AD
+#define ETH_P_8021AD	0x88A8          /* 802.1ad Service VLAN*/
+#endif
+
 /*
  * \brief Minimum snapshot length of pcap handle.
  */
@@ -76,6 +80,7 @@ public:
 
    int open_file(const string &file, bool parse_every_pkt);
    int init_interface(const string &interface, int snaplen, bool parse_every_pkt);
+   int set_filter(const string &filter_str);
    void print_stats();
    void close();
    int get_pkt(Packet &packet);
@@ -84,6 +89,7 @@ private:
    bool live_capture;               /**< PcapReader is capturing from network interface. */
    bool print_pcap_stats;           /**< Print pcap handle stats. */
    struct timeval last_ts;          /**< Last timestamp. */
+   bpf_u_int32 netmask;             /**< Network mask. Used when setting filter. */
 };
 
 void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data);
