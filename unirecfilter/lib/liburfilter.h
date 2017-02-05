@@ -1,6 +1,6 @@
 /**
- * \file unirecfilter.h
- * \brief NEMEA module selecting records and sending specified fields.
+ * \file libunirecfilter.h
+ * \brief NEMEA library for matching UniRec
  * \author Zdenek Kasner <kasnezde@fit.cvut.cz>
  * \author Tomas Cejka <cejkat@cesnet.cz>
  * \author Miroslav Kalina <kalinmi2@fit.cvut.cz>
@@ -45,19 +45,41 @@
  * if advised of the possibility of such damage.
  *
  */
-#ifndef UNIRECFILTER_H
-#define UNIRECFILTER_H
+
+#ifndef LIBUNIRECFILTER_H
+#define LIBUNIRECFILTER_H
 
 #include <unirec/unirec.h>
-#include <sys/types.h>
-#include <regex.h>
 
-#define DYN_FIELD_MAX_SIZE 1024 // Maximal size of dynamic field, longer fields will be cutted to this size
+#define URFILTER_TRUE 1
+#define URFILTER_FALSE 0
+#define URFILTER_ERROR (-1)
 
-#define SET_NULL(field_id, tmpl, data) \
-memset(ur_get_ptr_by_id(tmpl, data, field_id), 0, ur_get_size(field_id));
+typedef struct urfilter_s {
+   char *filter;
+   void *tree;
+   const char *ifc_identifier;
+} urfilter_t;
 
-extern char * str_buffer;
+/**
+ *
+ * \param[in] ifc_identifier Identification of TRAP IFC where the filter is used.
+ * \return Pointer to urfilter internal memory, NULL on error.
+ */
+urfilter_t *urfilter_create(const char *filter_str, const char *ifc_identifier);
 
-#endif
+/**
+ *
+ * \return URFILTER_TRUE on success and URFILTER_ERROR on syntax error.
+ */
+int urfilter_compile(urfilter_t *unirec_filter);
 
+/**
+ *
+ * \return Result of condition eval: URFILTER_TRUE/URFILTER_FALSE. URFILTER_ERROR on syntax error.
+ */
+int urfilter_match(urfilter_t *unirec_filter, const ur_template_t *template, const void *record);
+
+void urfilter_destroy(urfilter_t *object);
+
+#endif /* LIBUNIRECFILTER_H */

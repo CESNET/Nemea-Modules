@@ -1,6 +1,6 @@
 /**
- * \file unirecfilter.c
- * \brief NEMEA module selecting records and sending specified fields.
+ * \file functions.c
+ * \brief NEMEA library for matching UniRec
  * \author Zdenek Kasner <kasnezde@fit.cvut.cz>
  * \author Klara Drhova <drhovkla@fit.cvut.cz>
  * \author Tomas Cejka <cejkat@cesnet.cz>
@@ -49,7 +49,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include "../unirecfilter.h"
+#include "functions.h"
 
 // get numbers of protocols and services
 #include <netdb.h>
@@ -117,7 +117,7 @@ struct ast *newExpression(char *column, char *cmp, int64_t number, int is_signed
    struct expression *newast = (struct expression *) malloc(sizeof(struct expression));
 
    newast->type = NODE_T_EXPRESSION;
-   newast->column = column;
+   newast->column = strdup(column);
    newast->number = number;
    int id = ur_get_id_by_name(column);
    newast->is_signed = is_signed;
@@ -127,8 +127,7 @@ struct ast *newExpression(char *column, char *cmp, int64_t number, int is_signed
    if (id == UR_E_INVALID_NAME) {
       printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
       newast->id = UR_INVALID_FIELD;
-   }
-   else if (ur_get_type(id) != UR_TYPE_INT8 &&
+   } else if (ur_get_type(id) != UR_TYPE_INT8 &&
             ur_get_type(id) != UR_TYPE_UINT8 &&
             ur_get_type(id) != UR_TYPE_INT16 &&
             ur_get_type(id) != UR_TYPE_UINT16 &&
@@ -138,8 +137,7 @@ struct ast *newExpression(char *column, char *cmp, int64_t number, int is_signed
             ur_get_type(id) != UR_TYPE_UINT64) {
       printf("Warning: Type of %s is not integer. Corresponding rule will always evaluate false.\n", column);
       newast->id = UR_INVALID_FIELD;
-   }
-   else {
+   } else {
       newast->id = id;
    }
    return (struct ast *) newast;
@@ -150,7 +148,7 @@ struct ast *newExpressionFP(char *column, char *cmp, double number)
    struct expression_fp *newast = (struct expression_fp *) malloc(sizeof(struct expression_fp));
 
    newast->type = NODE_T_EXPRESSION_FP;
-   newast->column = column;
+   newast->column = strdup(column);
    newast->number = number;
    int id = ur_get_id_by_name(column);
    newast->cmp = get_op_type(cmp);
@@ -159,13 +157,11 @@ struct ast *newExpressionFP(char *column, char *cmp, double number)
    if (id == UR_E_INVALID_NAME) {
       printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
       newast->id = UR_INVALID_FIELD;
-   }
-   else if (ur_get_type(id) != UR_TYPE_FLOAT &&
+   } else if (ur_get_type(id) != UR_TYPE_FLOAT &&
             ur_get_type(id) != UR_TYPE_DOUBLE) {
      printf("Warning: Type of %s is not float. Corresponding rule will always evaluate false.\n", column);
      newast->id = UR_INVALID_FIELD;
-   }
-   else {
+   } else {
       newast->id = id;
    }
    return (struct ast *) newast;
@@ -200,12 +196,10 @@ struct ast *newIP(char *column, char *cmp, char *ipAddr)
    if (id == UR_E_INVALID_NAME) {
       printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
       newast->id = UR_INVALID_FIELD;
-   }
-   else if (ur_get_type(id) != UR_TYPE_IP) {
+   } else if (ur_get_type(id) != UR_TYPE_IP) {
       printf("Warning: Type of %s is not IP address. Corresponding rule will always evaluate false.\n", column);
       newast->id = UR_INVALID_FIELD;
-   }
-   else {
+   } else {
       newast->id = id;
    }
    return (struct ast *) newast;
@@ -241,14 +235,12 @@ struct ast *newString(char *column, char *cmp, char *s)
    if (id == UR_E_INVALID_NAME) {
       printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
       newast->id = UR_INVALID_FIELD;
-   }
-   else if (ur_get_type(id) != UR_TYPE_STRING && 
+   } else if (ur_get_type(id) != UR_TYPE_STRING && 
             ur_get_type(id) != UR_TYPE_BYTES &&
             ur_get_type(id) != UR_TYPE_CHAR) {
       printf("Warning: Type of %s is not string. Corresponding rule will always evaluate false.\n", column);
       newast->id = UR_INVALID_FIELD;
-   }
-   else {
+   } else {
       newast->id = id;
    }
    return (struct ast *) newast;
@@ -694,7 +686,7 @@ void changeProtocol(struct ast **ast)
    case NODE_T_EXPRESSION_FP:
       return;
    case NODE_T_PROTOCOL:
-      proto = getprotobyname(((struct protocol*) (*ast))->data);
+      proto = getprotobyname(((struct protocol *) (*ast))->data);
       if (proto != NULL) {
          protocol = proto->p_proto;
       } else {
