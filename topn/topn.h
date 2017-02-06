@@ -116,7 +116,7 @@ void sig_handler(int signal);
 * \param num Number of elements in a given sorted array.
 * \return -1 if no smaller flow found, index of first smaller flow otherwise.
 */
-int get_array_index (uint32_t key, flow_t ** sorted_array, size_t num);
+int get_array_index(uint32_t key, flow_t ** sorted_array, size_t num);
 
 /**
 * \brief Function processes flows for top N flows stats - adds new big flow, removes smallest one.
@@ -229,32 +229,32 @@ void malloc_err(void);
 /**
 * \brief Function used by library function qsort().
 */
-int compare_flows (const void * a, const void * b);
+int compare_flows(const void * a, const void * b);
 
 /**
 * \brief Function used by library function qsort().
 */
-int compare_packets (const void * a, const void * b);
+int compare_packets(const void * a, const void * b);
 
 /**
 * \brief Function used by library function qsort().
 */
-int compare_bytes (const void * a, const void * b);
+int compare_bytes(const void * a, const void * b);
 
 /**
 * \brief Function used by library function qsort().
 */
-int compare_flows_table (const void * a, const void * b);
+int compare_flows_table(const void * a, const void * b);
 
 /**
 * \brief Function used by library function qsort().
 */
-int compare_packets_table (const void * a, const void * b);
+int compare_packets_table(const void * a, const void * b);
 
 /**
 * \brief Function used by library function qsort().
 */
-int compare_bytes_table (const void * a, const void * b);
+int compare_bytes_table(const void * a, const void * b);
 
 #endif /* _TOPN_ */
 

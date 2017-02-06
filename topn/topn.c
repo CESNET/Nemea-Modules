@@ -113,8 +113,8 @@ int main(int argc, char **argv)
          break;
 
       case 'l':
-           interval = atoi(optarg);
-          if (interval == 0) {
+         interval = atoi(optarg);
+         if (interval == 0) {
             fprintf(stderr, "Invalid argument for parameter -l\n");
             FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
             TRAP_DEFAULT_FINALIZATION();
@@ -170,22 +170,22 @@ int main(int argc, char **argv)
    }
 
    /* Counting Top N flows */
-   flow_t *array_of_bytes = malloc(topn * sizeof(flow_t));
-   flow_t **sorted_array_of_bytes = malloc (topn * sizeof(flow_t*));
-   flow_t *record_bytes = malloc(sizeof(flow_t));
-   flow_t *array_of_packets = malloc(topn * sizeof(flow_t));
-   flow_t **sorted_array_of_packets = malloc (topn * sizeof(flow_t*));
-   flow_t *record_packets = malloc(sizeof(flow_t));
+   flow_t *array_of_bytes = calloc(topn, sizeof(flow_t));
+   flow_t **sorted_array_of_bytes = calloc(topn, sizeof(flow_t*));
+   flow_t *record_bytes = calloc(1, sizeof(flow_t));
+   flow_t *array_of_packets = calloc(topn, sizeof(flow_t));
+   flow_t **sorted_array_of_packets = calloc(topn, sizeof(flow_t*));
+   flow_t *record_packets = calloc(1, sizeof(flow_t));
 
    if (array_of_bytes == NULL || sorted_array_of_bytes == NULL || record_bytes == NULL || array_of_packets == NULL || sorted_array_of_packets == NULL || record_packets == NULL) {
       malloc_err();
    }
 
-   flow_t **array_of_bytes_port;
-   flow_t ***sorted_array_of_bytes_port;
-   flow_t **array_of_packets_port;
-   flow_t ***sorted_array_of_packets_port;
-   int *array_counter_port;
+   flow_t **array_of_bytes_port = NULL;
+   flow_t ***sorted_array_of_bytes_port = NULL;
+   flow_t **array_of_packets_port = NULL;
+   flow_t ***sorted_array_of_packets_port = NULL;
+   int *array_counter_port = NULL;
 
    if (port_set != -1) {
       array_of_bytes_port = malloc(port_cnt *(sizeof(flow_t *)));
@@ -219,10 +219,10 @@ int main(int argc, char **argv)
       malloc_err();
    }
 
-   port_t **array_of_ports_port;
+   port_t **array_of_ports_port = NULL;
 
    if (port_set != -1) {
-      array_of_ports_port = malloc (port_cnt *(sizeof(port_t *)));
+      array_of_ports_port = malloc(port_cnt *(sizeof(port_t *)));
 
       if (array_of_ports_port == NULL) {
          malloc_err();
@@ -247,16 +247,16 @@ int main(int argc, char **argv)
       malloc_err();
    }
 
-   fht_table_t **table_flows_port;
-   fht_iter_t **iter_flows_port;
-   fhf_table_t **table_pab_port;
-   fhf_iter_t **iter_pab_port;
+   fht_table_t **table_flows_port = NULL;
+   fht_iter_t **iter_flows_port = NULL;
+   fhf_table_t **table_pab_port = NULL;
+   fhf_iter_t **iter_pab_port = NULL;
 
    if (port_set != -1) {
-      table_pab_port = malloc (port_cnt *(sizeof(fhf_table_t *)));
-      iter_pab_port = malloc (port_cnt *(sizeof(fhf_iter_t *)));
-      table_flows_port = malloc (port_cnt *(sizeof(fht_table_t *)));
-      iter_flows_port = malloc (port_cnt *(sizeof(fht_iter_t *)));
+      table_pab_port = malloc(port_cnt *(sizeof(fhf_table_t *)));
+      iter_pab_port = malloc(port_cnt *(sizeof(fhf_iter_t *)));
+      table_flows_port = malloc(port_cnt *(sizeof(fht_table_t *)));
+      iter_flows_port = malloc(port_cnt *(sizeof(fht_iter_t *)));
 
       if (table_pab_port == NULL || iter_pab_port == NULL || table_flows_port == NULL || iter_flows_port == NULL) {
          malloc_err();
@@ -285,10 +285,10 @@ int main(int argc, char **argv)
       malloc_err();
    }
 
-   fht_table_t *table_prefix_flows_v6;
-   fht_iter_t *iter_prefix_flows_v6;
-   fhf_table_t *table_prefix_pab_v6;
-   fhf_iter_t *iter_prefix_pab_v6;
+   fht_table_t *table_prefix_flows_v6 = NULL;
+   fht_iter_t *iter_prefix_flows_v6 = NULL;
+   fhf_table_t *table_prefix_pab_v6 = NULL;
+   fhf_iter_t *iter_prefix_pab_v6 = NULL;
 
    if (prefix_only_v4 == -1) {
       table_prefix_flows_v6 = fht_init(HASH_TABLE_SIZE * 2, sizeof(ip_addr_t), sizeof(ip_t), 0);   /* 16k */
@@ -301,33 +301,33 @@ int main(int argc, char **argv)
       }
    }
 
-   fhf_table_t **table_prefix_pab_port;
-   fhf_iter_t **iter_prefix_pab_port;
+   fhf_table_t **table_prefix_pab_port = NULL;
+   fhf_iter_t **iter_prefix_pab_port = NULL;
 
-   fht_table_t **table_prefix_flows_port;
-   fht_iter_t **iter_prefix_flows_port;
+   fht_table_t **table_prefix_flows_port = NULL;
+   fht_iter_t **iter_prefix_flows_port = NULL;
 
-   fhf_table_t **table_prefix_pab_port_v6;
-   fhf_iter_t **iter_prefix_pab_port_v6;
+   fhf_table_t **table_prefix_pab_port_v6 = NULL;
+   fhf_iter_t **iter_prefix_pab_port_v6 = NULL;
 
-   fht_table_t **table_prefix_flows_port_v6;
-   fht_iter_t **iter_prefix_flows_port_v6;
+   fht_table_t **table_prefix_flows_port_v6 = NULL;
+   fht_iter_t **iter_prefix_flows_port_v6 = NULL;
 
    if (port_set != -1) {
-      table_prefix_pab_port = malloc (port_cnt *(sizeof(fhf_table_t *)));
-      iter_prefix_pab_port = malloc (port_cnt *(sizeof(fhf_iter_t *)));
-      table_prefix_flows_port = malloc (port_cnt *(sizeof(fht_table_t *)));
-      iter_prefix_flows_port = malloc (port_cnt *(sizeof(fht_iter_t *)));
+      table_prefix_pab_port = malloc(port_cnt *(sizeof(fhf_table_t *)));
+      iter_prefix_pab_port = malloc(port_cnt *(sizeof(fhf_iter_t *)));
+      table_prefix_flows_port = malloc(port_cnt *(sizeof(fht_table_t *)));
+      iter_prefix_flows_port = malloc(port_cnt *(sizeof(fht_iter_t *)));
 
       if (table_prefix_pab_port == NULL || iter_prefix_pab_port == NULL || table_prefix_flows_port == NULL || iter_prefix_flows_port == NULL) {
          malloc_err();
       }
 
       if (prefix_only_v4 == -1) {
-         table_prefix_pab_port_v6 = malloc (port_cnt *(sizeof(fhf_table_t *)));
-         iter_prefix_pab_port_v6 = malloc (port_cnt *(sizeof(fhf_iter_t *)));
-         table_prefix_flows_port_v6 = malloc (port_cnt *(sizeof(fht_table_t *)));
-         iter_prefix_flows_port_v6 = malloc (port_cnt *(sizeof(fht_iter_t *)));
+         table_prefix_pab_port_v6 = malloc(port_cnt *(sizeof(fhf_table_t *)));
+         iter_prefix_pab_port_v6 = malloc(port_cnt *(sizeof(fhf_iter_t *)));
+         table_prefix_flows_port_v6 = malloc(port_cnt *(sizeof(fht_table_t *)));
+         iter_prefix_flows_port_v6 = malloc(port_cnt *(sizeof(fht_iter_t *)));
 
          if (table_prefix_pab_port_v6 == NULL || iter_prefix_pab_port_v6 == NULL || table_prefix_flows_port_v6 == NULL || iter_prefix_flows_port_v6 == NULL) {
             malloc_err();
@@ -362,8 +362,8 @@ int main(int argc, char **argv)
    char *ip_string = malloc(INET6_ADDRSTRLEN);
    char *ip_string2 = malloc(INET6_ADDRSTRLEN);
    ip_t *record_ip = malloc(sizeof(ip_t));
-   ip_addr_t *key_lost = malloc (sizeof(ip_addr_t));
-   ip_t  * data_lost = malloc (sizeof(ip_t));
+   ip_addr_t *key_lost = malloc(sizeof(ip_addr_t));
+   ip_t  * data_lost = malloc(sizeof(ip_t));
 
    if (ip_string == NULL || ip_string2 == NULL || record_ip == NULL || key_lost == NULL || data_lost == NULL) {
       malloc_err();
@@ -531,7 +531,7 @@ int main(int argc, char **argv)
       /* Printing results after time is up */
       if (print_stats == 1) {
          time_print = time(NULL);
-         strftime (time_print_buff, 128, "%Y-%m-%d %H:%M:%S", localtime (&time_print));
+         strftime(time_print_buff, 128, "%Y-%m-%d %H:%M:%S", localtime (&time_print));
          printf ("\n===================\n%s\n===================\n", time_print_buff);
 
          print_top_flows(sorted_array_of_bytes, sorted_array_of_packets, array_counter, ip_string, ip_string2, -1);
@@ -545,12 +545,12 @@ int main(int argc, char **argv)
          }
 
          print_top_ports(array_of_ports, -1);
-         memset (array_of_ports, 0, sizeof(port_t) * 65536);
+         memset(array_of_ports, 0, sizeof(port_t) * 65536);
 
          if (port_set != -1) {
             for (int p = 0; p < port_cnt; p++) {
                print_top_ports(array_of_ports_port[p], port[p]);
-               memset (array_of_ports_port[p], 0, sizeof(port_t) * 65536);
+               memset(array_of_ports_port[p], 0, sizeof(port_t) * 65536);
             }
          }
 
@@ -807,7 +807,7 @@ void sig_handler(int signal)
    print_stats = 1;
 }
 
-int get_array_index (uint32_t key, flow_t **sorted_array, size_t num) {
+int get_array_index(uint32_t key, flow_t **sorted_array, size_t num) {
    if (sorted_array[0]->max_number > key) {
       return -1;
    }
@@ -831,7 +831,7 @@ int get_array_index (uint32_t key, flow_t **sorted_array, size_t num) {
       } else if (sorted_array[0]->max_number < key) {
          if (sorted_array[1]->max_number > key) {
             return 0;
-        } else if (sorted_array[1]->max_number == key) {
+         } else if (sorted_array[1]->max_number == key) {
             return 0;
          } else {
             return 1;
@@ -888,6 +888,7 @@ int get_array_index (uint32_t key, flow_t **sorted_array, size_t num) {
          return first -1;
       }
    }
+   return -1;
 }
 
 void process_flows(flow_t *array, flow_t **sorted_array, flow_t *record, int array_counter)
@@ -1194,7 +1195,7 @@ int process_prefix_args(char *optarg, uint64_t *prefix128, uint32_t *prefix, int
 
    *prefix_set = 1;
 
-return 0;
+   return 0;
 }
 
 int process_ports_args(char *optarg) {
@@ -1235,7 +1236,7 @@ int process_ports_args(char *optarg) {
 
    port_set = 0;
 
-return 0;
+   return 0;
 }
 
 
@@ -1326,80 +1327,68 @@ void malloc_err(void)
    exit(EXIT_FAILURE);
 }
 
-int compare_flows (const void *a, const void *b)
+int compare_flows(const void *a, const void *b)
 {
    if (((port_t *) a)->flows < ((port_t *) b)->flows) {
       return 1;
-   }
-   if (((port_t *) a)->flows == ((port_t *) b)->flows) {
+   } else if (((port_t *) a)->flows == ((port_t *) b)->flows) {
       return 0;
-   }
-   if (((port_t *) a)->flows > ((port_t *) b)->flows) {
+   } else {
       return -1;
    }
 }
 
-int compare_packets (const void *a, const void *b)
+int compare_packets(const void *a, const void *b)
 {
    if (((port_t *) a)->packets < ((port_t *) b)->packets) {
       return 1;
-   }
-   if (((port_t *) a)->packets == ((port_t *) b)->packets) {
+   } else if (((port_t *) a)->packets == ((port_t *) b)->packets) {
       return 0;
-   }
-   if (((port_t *) a)->packets > ((port_t *) b)->packets) {
+   } else {
       return -1;
    }
 }
 
-int compare_bytes (const void *a, const void *b)
+int compare_bytes(const void *a, const void *b)
 {
    if (((port_t *) a)->bytes < ((port_t *) b)->bytes) {
       return 1;
-   }
-   if (((port_t *) a)->bytes == ((port_t *) b)->bytes) {
+   } else if (((port_t *) a)->bytes == ((port_t *) b)->bytes) {
       return 0;
-   }
-   if (((port_t *) a)->bytes > ((port_t *) b)->bytes) {
+   } else {
       return -1;
    }
 }
 
-int compare_flows_table (const void *a, const void *b)
+int compare_flows_table(const void *a, const void *b)
 {
    if (((ip_t *) a)->flows < ((ip_t *) b)->flows) {
       return 1;
-   }
-   if (((ip_t *) a)->flows == ((ip_t *) b)->flows) {
+   } else if (((ip_t *) a)->flows == ((ip_t *) b)->flows) {
       return 0;
-   }
-   if (((ip_t *) a)->flows > ((ip_t *) b)->flows) {
+   } else {
       return -1;
    }
 }
 
-int compare_packets_table (const void *a, const void *b)
+int compare_packets_table(const void *a, const void *b)
 {
    if (((ip_t *) a)->packets < ((ip_t *) b)->packets) {
       return 1;
-   }
-   if (((ip_t *) a)->packets == ((ip_t *) b)->packets) {
+   } else if (((ip_t *) a)->packets == ((ip_t *) b)->packets) {
       return 0;
-   }
-   if (((ip_t *) a)->packets > ((ip_t *) b)->packets) {
+   } else {
       return -1;
    }
 }
 
-int compare_bytes_table (const void *a, const void *b)
+int compare_bytes_table(const void *a, const void *b)
 {
    if (((ip_t *) a)->bytes < ((ip_t *) b)->bytes) {
       return 1;
-   }
-   if (((ip_t *) a)->bytes == ((ip_t *) b)->bytes) {
+   } else if (((ip_t *) a)->bytes == ((ip_t *) b)->bytes) {
       return 0;
-   }
-   if (((ip_t *) a)->bytes > ((ip_t *) b)->bytes) {
+   } else {
       return -1;
    }
 }
