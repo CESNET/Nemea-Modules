@@ -481,8 +481,8 @@ int main(int argc, char **argv)
       process_flows(array_of_bytes,  sorted_array_of_bytes, record_bytes, array_counter);
       process_flows(array_of_packets, sorted_array_of_packets, record_packets, array_counter);
       if (array_counter < topn) {
-			array_counter++;
-		}
+         array_counter++;
+      }
 
       if (port_set != -1) {
          for (int p = 0; p < port_cnt; p++) {
@@ -490,8 +490,8 @@ int main(int argc, char **argv)
                process_flows(array_of_bytes_port[p], sorted_array_of_bytes_port[p], record_bytes, array_counter_port[p]);
                process_flows(array_of_packets_port[p], sorted_array_of_packets_port[p], record_packets, array_counter_port[p]);
                if (array_counter_port[p] < topn) {
-						array_counter_port[p]++;
-					}
+                  array_counter_port[p]++;
+               }
             }
          }
       }
@@ -809,8 +809,8 @@ void sig_handler(int signal)
 
 int get_array_index (uint32_t key, flow_t **sorted_array, size_t num) {
    if (sorted_array[0]->max_number > key) {
-		return -1;
-	}
+      return -1;
+   }
 
    /**
    * In case sorted_array has less than 4 elements, I process it manually.
@@ -819,42 +819,42 @@ int get_array_index (uint32_t key, flow_t **sorted_array, size_t num) {
 
    if (num == 1) {
       if (sorted_array[0]->max_number > key) {
-			return -1;
-		} else {
-			return 0;
-		}
+         return -1;
+      } else {
+         return 0;
+      }
    }
 
    if (num == 2) {
       if (sorted_array[0]->max_number > key) {
-			return -1;
-		} else if (sorted_array[0]->max_number < key) {
+         return -1;
+      } else if (sorted_array[0]->max_number < key) {
          if (sorted_array[1]->max_number > key) {
-				return 0;
-			} else if (sorted_array[1]->max_number == key) {
-				return 0;
-			} else {
-				return 1;
-			}
+            return 0;
+        } else if (sorted_array[1]->max_number == key) {
+            return 0;
+         } else {
+            return 1;
+         }
       }
    }
 
    if (num == 3) {
       if (sorted_array[0]->max_number > key) {
-			return -1;
-		} else if (sorted_array[0]->max_number < key) {
+         return -1;
+      } else if (sorted_array[0]->max_number < key) {
          if (sorted_array[1]->max_number > key) {
-				return 0;
-			} else if (sorted_array[1]->max_number == key) {
-				return 0;
-			} else {
+            return 0;
+         } else if (sorted_array[1]->max_number == key) {
+            return 0;
+         } else {
             if (sorted_array[2]->max_number > key) {
-					return 1;
-				} else if (sorted_array[2]->max_number == key) {
-					return 1;
-				} else {
-					return 2;
-				}
+               return 1;
+            } else if (sorted_array[2]->max_number == key) {
+               return 1;
+            } else {
+               return 2;
+            }
          }
       }
    }
@@ -865,28 +865,28 @@ int get_array_index (uint32_t key, flow_t **sorted_array, size_t num) {
 
    while (first <= last) {
       if (sorted_array[middle]->max_number < key) {
-			first = middle + 1;
-		} else if (sorted_array[middle]->max_number == key) {
+         first = middle + 1;
+      } else if (sorted_array[middle]->max_number == key) {
          while (sorted_array[middle]->max_number == key) {
             if (middle == 0) {
-					return -1;
-				}
+               return -1;
+            }
             middle--;
          }
          return middle;
       } else {
-			last = middle - 1;
-		}
+         last = middle - 1;
+      }
 
       middle = (first + last) / 2;
    }
 
    if (first > last) {
       if (last == -1) {
-   		return -1;
-		} else if (first -1 != -1) {
-			return first -1;
-		}
+         return -1;
+      } else if (first -1 != -1) {
+         return first -1;
+      }
    }
 }
 
@@ -990,8 +990,8 @@ void print_top_ports(port_t *array_of_ports, int port_number)
 
    for (int i = 0; i < topn; i++) {
       if (array_of_ports[i].flows == 0) {
-			break;
-		}
+         break;
+      }
       printf("%d\t%u\t%lu\n", i + 1, array_of_ports[i].port, array_of_ports[i].flows);
    }
 
@@ -1007,8 +1007,8 @@ void print_top_ports(port_t *array_of_ports, int port_number)
 
    for (int i = 0; i < topn; i++) {
       if (array_of_ports[i].packets == 0) {
-			break;
-		}
+         break;
+      }
       printf("%d\t%u\t%lu\n", i + 1, array_of_ports[i].port, array_of_ports[i].packets);
    }
 
@@ -1024,8 +1024,8 @@ void print_top_ports(port_t *array_of_ports, int port_number)
 
    for (int i = 0; i < topn; i++) {
       if (array_of_ports[i].bytes == 0) {
-			break;
-		}
+         break;
+      }
       printf("%d\t%u\t%lu\n", i + 1, array_of_ports[i].port, array_of_ports[i].bytes);
    }
 }
@@ -1049,8 +1049,8 @@ void print_top_ip(char *ip_string, fhf_table_t *table_pab, fhf_iter_t *iter_pab,
    }
 
    if (number_of_records == 0) {
-		return;
-	}
+      return;
+   }
 
    qsort (ip_array, number_of_records, sizeof(ip_t), compare_flows_table);
    printf("\n");
@@ -1329,77 +1329,77 @@ void malloc_err(void)
 int compare_flows (const void *a, const void *b)
 {
    if (((port_t *) a)->flows < ((port_t *) b)->flows) {
-		return 1;
-	}
+      return 1;
+   }
    if (((port_t *) a)->flows == ((port_t *) b)->flows) {
-		return 0;
-	}
+      return 0;
+   }
    if (((port_t *) a)->flows > ((port_t *) b)->flows) {
-		return -1;
-	}
+      return -1;
+   }
 }
 
 int compare_packets (const void *a, const void *b)
 {
    if (((port_t *) a)->packets < ((port_t *) b)->packets) {
-		return 1;
-	}
+      return 1;
+   }
    if (((port_t *) a)->packets == ((port_t *) b)->packets) {
-		return 0;
-	}
+      return 0;
+   }
    if (((port_t *) a)->packets > ((port_t *) b)->packets) {
-		return -1;
-	}
+      return -1;
+   }
 }
 
 int compare_bytes (const void *a, const void *b)
 {
    if (((port_t *) a)->bytes < ((port_t *) b)->bytes) {
-		return 1;
-	}
+      return 1;
+   }
    if (((port_t *) a)->bytes == ((port_t *) b)->bytes) {
-		return 0;
-	}
+      return 0;
+   }
    if (((port_t *) a)->bytes > ((port_t *) b)->bytes) {
-		return -1;
-	}
+      return -1;
+   }
 }
 
 int compare_flows_table (const void *a, const void *b)
 {
    if (((ip_t *) a)->flows < ((ip_t *) b)->flows) {
-		return 1;
-	}
+      return 1;
+   }
    if (((ip_t *) a)->flows == ((ip_t *) b)->flows) {
-		return 0;
-	}
+      return 0;
+   }
    if (((ip_t *) a)->flows > ((ip_t *) b)->flows) {
-		return -1;
-	}
+      return -1;
+   }
 }
 
 int compare_packets_table (const void *a, const void *b)
 {
    if (((ip_t *) a)->packets < ((ip_t *) b)->packets) {
-		return 1;
-	}
+      return 1;
+   }
    if (((ip_t *) a)->packets == ((ip_t *) b)->packets) {
-		return 0;
-	}
+      return 0;
+   }
    if (((ip_t *) a)->packets > ((ip_t *) b)->packets) {
-		return -1;
-	}
+      return -1;
+   }
 }
 
 int compare_bytes_table (const void *a, const void *b)
 {
    if (((ip_t *) a)->bytes < ((ip_t *) b)->bytes) {
-		return 1;
-	}
+      return 1;
+   }
    if (((ip_t *) a)->bytes == ((ip_t *) b)->bytes) {
-		return 0;
-	}
+      return 0;
+   }
    if (((ip_t *) a)->bytes > ((ip_t *) b)->bytes) {
-		return -1;
-	}
+      return -1;
+   }
 }
