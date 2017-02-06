@@ -13,6 +13,7 @@ logreplay \
 merger \
 proto_traffic \
 report2idea \
+topn \
 traffic_repeater \
 unirec2json \
 endiverter

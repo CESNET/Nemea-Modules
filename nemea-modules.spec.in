@@ -67,6 +67,7 @@ ldconfig
 %{_bindir}/nemea/proto_traffic
 %{_bindir}/nemea/sipbf2idea.py
 %{_bindir}/nemea/svm-tools
+%{_bindir}/nemea/topn
 %{_bindir}/nemea/traffic_repeater
 %{_bindir}/nemea/unirec2json.py
 %{_bindir}/nemea/unirecfilter

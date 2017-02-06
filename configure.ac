@@ -229,6 +229,7 @@ AC_CONFIG_FILES([Makefile
                  report2idea/sipbruteforce/Makefile
                  report2idea/voipfraud/Makefile
                  report2idea/vportscan/Makefile
+                 topn/Makefile
                  traffic_repeater/Makefile
                  unirec2json/Makefile
                  unirecfilter/lib/Makefile
