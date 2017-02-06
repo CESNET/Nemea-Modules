@@ -363,7 +363,7 @@ int main(int argc, char **argv)
    char *ip_string2 = malloc(INET6_ADDRSTRLEN);
    ip_t *record_ip = malloc(sizeof(ip_t));
    ip_addr_t *key_lost = malloc(sizeof(ip_addr_t));
-   ip_t  * data_lost = malloc(sizeof(ip_t));
+   ip_t *data_lost = malloc(sizeof(ip_t));
 
    if (ip_string == NULL || ip_string2 == NULL || record_ip == NULL || key_lost == NULL || data_lost == NULL) {
       malloc_err();
