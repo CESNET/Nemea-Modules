@@ -1,0 +1,15 @@
+traffic_repeater/Makefile.am
+nfreader/Makefile.am
+endiverter/Makefile.am
+logreplay/Makefile.am
+merger/Makefile.am
+link_traffic/Makefile.am
+proto_traffic/Makefile.am
+anonymizer/Makefile.am
+logger/Makefile.am
+flowcounter/Makefile.am
+nfwriter/Makefile.am
+flow_meter/Makefile.am
+device_classifier/libsvm/Makefile.am
+device_classifier/Makefile.am
+unirecfilter/Makefile.am
