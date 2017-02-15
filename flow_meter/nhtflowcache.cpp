@@ -55,24 +55,6 @@
 
 using namespace std;
 
-/**
- * \brief Check whether flow is expired or not.
- * \param [in] flow Pointer to flow.
- * \param [in] current_ts Current timestamp.
- * \param [in] active Active timeout.
- * \param [in] inactive Inactive timeout.
- * \return True if flow is expired, false otherwise.
- */
-inline bool is_expired(const FlowRecord *flow_rec, const struct timeval &current_ts,
-                       const struct timeval &active, const struct timeval &inactive)
-{
-   if (!flow_rec->is_empty() && current_ts.tv_sec - flow_rec->flow.time_last.tv_sec >= inactive.tv_sec) {
-      return true;
-   } else {
-      return false;
-   }
-}
-
 inline bool FlowRecord::is_empty() const
 {
    return empty_flow;
@@ -170,7 +152,18 @@ void NHTFlowCache::init()
 void NHTFlowCache::finish()
 {
    plugins_finish();
-   export_expired(true); // export whole cache
+
+   for (unsigned int i = 0; i < size; i++) {
+      if (!flow_array[i]->is_empty()) {
+         plugins_pre_export(flow_array[i]->flow);
+         exporter->export_flow(flow_array[i]->flow);
+
+         flow_array[i]->erase();
+#ifdef FLOW_CACHE_STATS
+         expired++;
+#endif /* FLOW_CACHE_STATS */
+      }
+   }
 
    if (print_stats) {
       print_report();
@@ -312,19 +305,19 @@ int NHTFlowCache::put_pkt(Packet &pkt)
    }
 
    if (current_ts.tv_sec - last_ts.tv_sec > 5) {
-      export_expired(false); // false -- export only expired flows
+      export_expired(current_ts.tv_sec);
       last_ts = current_ts;
    }
 
    return 0;
 }
 
-int NHTFlowCache::export_expired(bool export_all)
+void NHTFlowCache::export_expired(time_t ts)
 {
-   int exported = 0;
    for (unsigned int i = 0; i < size; i++) {
-      if (is_expired(flow_array[i], current_ts, active, inactive) ||
-         (export_all && !flow_array[i]->is_empty())) {
+      if (!flow_array[i]->is_empty() &&
+         ts - flow_array[i]->flow.time_last.tv_sec >= inactive.tv_sec) {
+
          plugins_pre_export(flow_array[i]->flow);
          exporter->export_flow(flow_array[i]->flow);
 
@@ -332,13 +325,9 @@ int NHTFlowCache::export_expired(bool export_all)
 #ifdef FLOW_CACHE_STATS
          expired++;
 #endif /* FLOW_CACHE_STATS */
-         exported++;
       }
    }
-   return exported;
 }
-
-// NHTFlowCache -- PROTECTED **************************************************
 
 bool NHTFlowCache::create_hash_key(Packet &pkt)
 {

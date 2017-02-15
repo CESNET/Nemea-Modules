@@ -552,12 +552,13 @@ int main(int argc, char *argv[])
    Packet packet;
    int ret = 0;
    uint32_t pkt_total = 0, pkt_parsed = 0;
+
    packet.packet = new char[MAXPCKTSIZE + 1];
 
    /* Main packet capture loop. */
    while (!stop && (ret = packetloader.get_pkt(packet)) > 0) {
       if (ret == 3) { /* Process timeout. */
-         flowcache.export_expired(false);
+         flowcache.export_expired(time(NULL));
          continue;
       }
 

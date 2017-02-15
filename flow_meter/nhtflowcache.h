@@ -164,7 +164,7 @@ public:
    virtual void init();
    virtual void finish();
 
-   int export_expired(bool export_all);
+   void export_expired(time_t ts);
 
 protected:
    bool create_hash_key(Packet &pkt);
