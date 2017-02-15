@@ -1,4 +1,4 @@
-# Flow_meter module - README
+# flow_meter module - README
 
 ## Description
 This NEMEA module creates flows from input PCAP file / network interface and exports them to output interface.
@@ -56,6 +56,109 @@ Turn off message buffering using `buffer=off` option on output interfaces.
 ```
 ./flow_meter -i u:abc:buffer=off -r traffic.pcap
 ```
+
+## Output data
+### Basic
+Basic unirec fields exported on interface with basic (pseudo) plugin. These fields are also exported on interfaces where HTTP, DNS, SIP and NTP plugins are active.
+
+| Unirec field    | Type   | Description                                         |
+|:---------------:|:------:|:---------------------------------------------------:|
+| DST_IP          | ipaddr | destination IP address                              |
+| SRC_IP          | ipaddr | source IP address                                   |
+| BYTES           | uint64 | number of bytes in data flow                        |
+| LINK_BIT_FIELD  | uint64 | exporter identification                             |
+| TIME_FIRST      | time   | first time stamp                                    |
+| TIME_LAST       | time   | last time stamp                                     |
+| PACKETS         | uint32 | number of packet in data flow                       |
+| DST_PORT        | uint16 | transport layer destination port                    |
+| SRC_PORT        | uint16 | transport layer source port                         |
+| DIR_BIT_FIELD   | uint8  | bit field for determining outgoing/incoming traffic |
+| PROTOCOL        | uint8  | transport protocol                                  |
+| TCP_FLAGS       | uint8  | TCP protocol flags                                  |
+| TOS             | uint8  | IP type of service                                  |
+| TTL             | uint8  | IP time to live                                     |
+
+### HTTP
+List of unirec fields exported together with basic flow fields on interface by HTTP plugin.
+
+| Unirec field        | Type   | Description                 |
+|:-------------------:|:------:|:---------------------------:|
+| HTTP_METHOD         | string | HTTP request method         |
+| HTTP_HOST           | string | HTTP request host           |
+| HTTP_URL            | string | HTTP request url            |
+| HTTP_USER_AGENT     | string | HTTP request user agent     |
+| HTTP_REFERER        | string | HTTP request referer        |
+| HTTP_RESPONSE_CODE  | uint16 | HTTP response code          |
+| HTTP_CONTENT_TYPE   | string | HTTP response content type  |
+
+### DNS
+List of unirec fields exported together with basic flow fields on interface by DNS plugin.
+
+| Unirec field | Type   | Description                     |
+|:------------:|:------:|:-------------------------------:|
+| DNS_ID       | uint16 | transaction ID                  |
+| DNS_ANSWERS  | uint16 | number of DNS answer records    |
+| DNS_RCODE    | uint8  | response code field             |
+| DNS_NAME     | string | question domain name            |
+| DNS_QTYPE    | uint16 | question type field             |
+| DNS_CLASS    | uint16 | class field of DNS question     |
+| DNS_RR_TTL   | uint32 | resource record TTL field       |
+| DNS_RLENGTH  | uint16 | length of DNS_RDATA             |
+| DNS_RDATA    | bytes  | resource record specific data   |
+| DNS_PSIZE    | uint16 | requestor's payload size        |
+| DNS_DO       | uint8  | DNSSEC OK bit                   |
+
+### SIP
+List of unirec fields exported together with basic flow fields on interface by SIP plugin.
+
+| Unirec field      | Type   | Description                     |
+|:-----------------:|:------:|:-------------------------------:|
+| SIP_MSG_TYPE      | uint16 | SIP message code                |
+| SIP_STATUS_CODE   | uint16 | status of the SIP request       |
+| SIP_CSEQ          | string | CSeq field of SIP packet        |
+| SIP_CALLING_PARTY | string | calling party (from) URI        |
+| SIP_CALLED_PARTY  | string | called party (to) URI           |
+| SIP_CALL_ID       | string | call ID                         |
+| SIP_USER_AGENT    | string | user agent field of SIP packet  |
+| SIP_REQUEST_URI   | string | SIP request URI                 |
+| SIP_VIA           | string | via field of SIP packet         |
+
+### NTP
+List of unirec fields exported together with basic flow fields on interface by NTP plugin.
+
+| Unirec field   | Type   | Description               |
+|:--------------:|:------:|:-------------------------:|
+| NTP_LEAP       | uint8  | NTP leap field            |
+| NTP_VERSION    | uint8  | NTP message version       |
+| NTP_MODE       | uint8  | NTP mode field            |
+| NTP_STRATUM    | uint8  | NTP stratum field         |
+| NTP_POLL       | uint8  | NTP poll interval         |
+| NTP_PRECISION  | uint8  | NTP precision field       |
+| NTP_DELAY      | uint32 | NTP root delay            |
+| NTP_DISPERSION | uint32 | NTP root dispersion       |
+| NTP_REF_ID     | string | NTP reference ID          |
+| NTP_REF        | string | NTP reference timestamp   |
+| NTP_ORIG       | string | NTP origin timestamp      |
+| NTP_RECV       | string | NTP receive timestamp     |
+| NTP_SENT       | string | NTP transmit timestamp    |
+
+### ARP
+List of unirec fields exported on interface by ARP plugin.
+
+| Unirec field    | Type   | Description                        |
+|:---------------:|:------:|:----------------------------------:|
+| SRC_MAC         | bytes  | source MAC address                 |
+| DST_MAC         | bytes  | destinaton MAC address             |
+| ETHERTYPE       | uint16 | protocol encapsulated in L2 frame  |
+| TIME            | time   | time packet was received           |
+| ARP_HA_FORMAT   | uint16 | hardware address format            |
+| ARP_PA_FORMAT   | uint16 | protocol address format            |
+| ARP_OPCODE      | uint16 | type of ARP message                |
+| ARP_SRC_HA      | bytes  | source hardware address            |
+| ARP_SRC_PA      | bytes  | source protocol address            |
+| ARP_DST_HA      | bytes  | destination hardware address       |
+| ARP_DST_PA      | bytes  | destination protocol address       |
+
 
 ## Simplified function diagram
 Diagram below shows how `flow_meter` works.
