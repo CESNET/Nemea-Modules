@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# input data:
+in='
+H4sIAKFLp1gAA2NiAIP7mQWJKSlFCi7BIfGeATpQXnCQM4hXmplXYmai4BQZ4hoM4/h4+nnHO3mG
+xLt5uvq46JRk5qYqhHj6ugL5QcEhSHwfRyAXpMnYSCHA0dnbNQRihqEZ2LIA/6AQGB9kHZxvoeDi
+GYRkA0QsIMg/xN/Z3wfKDXEOiHfzcXQPhvH94awQmJowVz9/X6AXFzP4MUABIxD8BwIYnwkIQHxX
+mDyUFoiw/DLzz7IIGA0SN2XYcIpRkIHBlpnK5v0HKgMA3CPmo44BAAA=
+'
+
+# output data:
+out='
+H4sIAGVPp1gAA+1UXWvbMBR936+4+HW1Y9lJbAf20CYZ5KFdaEMHHSXI9nUiUkuefN0QQv57Jbnd
+Z6Gwx20Igzj3+x4dH70pJ9woffAm8MVbSNJdK5QMLhRJJO8MvEv+sOcag2ulaCfIuzfYlSrRBhy9
+1aFxN2/Ji10fMFsunNPNZ2e4whq5xR9RqnpdImFBSvd5eG2je5N3stDc3GklejwKWeKHkc+SFYsn
+cTKJsjubaqpkJUqUhfUKg8y1RC7kvCDxyMnMAHveAifCuiEsIT9ADI3rsoW9oC20uliLBt4DFc26
+xa/wAVgUsQAWBKKFTu6k2ksQFdAWQffzW0ujsTVdgqlhLcT1BglqXmyFxMA2eKM6Xfy6ou87nU7d
++EulyVpGLE1TCyyWQ+cZBe70TlqRcmhXNt796Qx+T/lTsvjHTCxw59VMDnMLmapO2mBmkGus7B63
+RE07GQz2YicC3Jivc/fBraPx5TXYUjPrn46qPM9HpZ9GPPSHcTT00zIr/SQch7wok5xVmXsdjv+3
+CJ5hW2jRWBodqT2LQAp4zy/C7fzq0+U3VgwVz6O6/X9UuuZ2ItPd/Dx0O0fe4lt1Lw6EL8sY22c1
+1WiKvRaWTeJwMhzdead3x39KRfxZRb2Iar4RBbSkhdyAkMZ2eFC8/C+iPxERCxmLzT/Ir7KREVE0
+TvyMZ2MfRzmPCx5lGLG/VURPZJ67wYsGAAA=
+'
+
+test -z "$srcdir" && export srcdir=.
+
+. $srcdir/../test.sh
+
+test_conversion "venom" "venom" "$in" "$out"
+

@@ -100,7 +100,7 @@ test_conversion()
       # clean it from variable info
       sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
       # compare it with prepared expected data (previously base64 encoded and gzipped)
-      diff -u - <(echo -n "$4" | base64 -d | gunzip) ||
+      diff -u - <(echo -n "$4" | base64 -d | gunzip | sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g') ||
       { echo "${1}2idea FAILED :-("; ((errors++)); }
 
    # cleanup
