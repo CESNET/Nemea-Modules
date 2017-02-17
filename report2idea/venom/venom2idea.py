@@ -53,27 +53,31 @@ def convert_to_idea(rec, opts=None):
         }],
     }
 
-    if rec.DST_IP:
-        addr = {
-            "Proto": [ protocol ]
-        }
-        if rec.PROTOCOL != 1:
-            addr["Port"] = [ rec.DST_PORT ]
-        addr["Type"] = [ "Botnet", "CC" ]
-        setAddr(addr, rec.DST_IP)
-        idea['Source'].append(addr)
-
     if rec.SRC_IP:
         addr = {
             "Proto": [ protocol ]
         }
         if rec.PROTOCOL != 1:
             addr["Port"] = [ rec.SRC_PORT ]
-        addr["Type"] = [ "Botnet" ]
+        addr["Type"] = [ "Botnet", "CC" ]
         setAddr(addr, rec.SRC_IP)
         idea['Source'].append(addr)
 
-    idea['Note'] = "Activation was attempted by a packet with magic string in payload. It is unknown if the rootkit is present on the target machine."
+    if rec.DST_IP:
+        addr = {
+            "Proto": [ protocol ]
+        }
+        if rec.PROTOCOL != 1:
+            addr["Port"] = [ rec.DST_PORT ]
+        addr["Type"] = [ "Botnet" ]
+        setAddr(addr, rec.DST_IP)
+        idea['Source'].append(addr)
+
+    if rec.VENOM == 255:
+        idea['Note'] = "Activation was attempted by a packet with magic string in payload. It is unknown if the rootkit is present on the target machine."
+    else:
+        idea['Note'] = "Activation was attempted by {0} packets with src_ip + tcp_seq = 1221. It is unknown if the rootkit is present on the target machine.".format(rec.VENOM)
+
     idea['Description'] = "Attempt to activate VENOM rootkit on {0}.".format(rec.DST_IP)
     idea['Ref'] = 'https://wiki.egi.eu/wiki/Venom_Rootkit'
     return idea
