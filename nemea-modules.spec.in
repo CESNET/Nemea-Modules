@@ -71,6 +71,7 @@ ldconfig
 %{_bindir}/nemea/traffic_repeater
 %{_bindir}/nemea/unirec2json.py
 %{_bindir}/nemea/unirecfilter
+%{_bindir}/nemea/venom2idea.py
 %{_bindir}/nemea/voipfraud2idea.py
 %{_bindir}/nemea/vportscan2idea.py
 %{_docdir}/nemea-modules/*/*
@@ -88,6 +89,7 @@ ldconfig
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/hoststats2idea.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/ipblacklist2idea.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/sipbf2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/venom2idea.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/voipfraud2idea.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/vportscan2idea.sup
 
@@ -100,6 +102,7 @@ ldconfig
 %config(noreplace) %{_sysconfdir}/warden/ipblacklist/config.cfg
 %config(noreplace) %{_sysconfdir}/warden/minerdetector/config.cfg
 %config(noreplace) %{_sysconfdir}/warden/sipbruteforce/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/venom/config.cfg
 %config(noreplace) %{_sysconfdir}/warden/vportscan/config.cfg
 %config(noreplace) %{_sysconfdir}/warden/voipfraud/config.cfg
 

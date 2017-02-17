@@ -227,6 +227,7 @@ AC_CONFIG_FILES([Makefile
                  report2idea/ipblacklist/Makefile
                  report2idea/minerdetector/Makefile
                  report2idea/sipbruteforce/Makefile
+                 report2idea/venom/Makefile
                  report2idea/voipfraud/Makefile
                  report2idea/vportscan/Makefile
                  topn/Makefile
