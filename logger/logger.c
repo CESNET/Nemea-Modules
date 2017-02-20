@@ -442,7 +442,6 @@ int main(int argc, char **argv)
 
    // ***** TRAP initialization *****
 
-   // Create UniRec templates
    if (verbose >= 0) {
       printf("Number of inputs: %i\n", n_inputs);
    }
@@ -484,6 +483,7 @@ int main(int argc, char **argv)
    // Register signal handler.
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
+   // Create UniRec templates
    if (verbose >= 0) {
       printf("Creating UniRec templates ...\n");
    }
