@@ -149,6 +149,7 @@ string replace_string(string subject, const string &search, const string &replac
 int main(int argc, char **argv)
 {
    int ret;
+   imt tmp;
    int send_eof = 1;
    int time_flag = 0;
    char *in_filename = NULL;
@@ -230,9 +231,9 @@ int main(int argc, char **argv)
       if (line.compare(0, 5, "time,") == 0) {
          time_flag = 1;
          line.erase(0,5);
-      }
-      if (ur_define_set_of_fields(line.c_str()) != UR_OK) {
-         fprintf(stderr, "Error: Cannot define UniRec fields from header fields.\n");
+      } 
+      if ((tmp = ur_define_set_of_fields(line.c_str())) != UR_OK) {
+         fprintf(stderr, "Error: Cannot define UniRec fields from header fields (%i).\n", tmp);
          ret = 1;
          goto exit;
       }
@@ -248,7 +249,7 @@ int main(int argc, char **argv)
          goto exit;
       }
 
-      // Set interface tineout to TRAP_WAIT (and disable buffering (why?))
+      // Set interface timeout to TRAP_WAIT (and disable buffering (why?))
       trap_ctx_ifcctl(ctx, TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
       //trap_ctx_ifcctl(ctx, TRAPIFC_OUTPUT, 0, TRAPCTL_BUFFERSWITCH, 0);
 
