@@ -93,6 +93,10 @@ trap_module_info_t *module_info = NULL;
 
 #define DEF_SOCKET_PATH "/var/run/libtrap/munin_link_traffic"
 
+#define CONFIG_PATH "/home/nemea/Nemea-Modules/link_traffic/config.txt"
+
+#define NUMBER_OF_LINKS 8
+
 static volatile int stop = 0;
 
 /**
@@ -111,11 +115,47 @@ typedef struct link_stats {
 
 link_stats_t stats[8];
 
+/*   *** function for parsing config ***
+*   function goes through text file line by line and search for specific pattern
+*   return names string array 
+*   input arg: fileName is path to config file, arrayCnt is counter for array */
+char **get_link_names(char *fileName)
+{
+   FILE *fp;
+   char **linkNames = malloc(sizeof(char**) * NUMBER_OF_LINKS);
+   char *line = NULL, *name = NULL;
+   size_t len = 0;
+   ssize_t read;
+   int arrCnt = 0;
+   printf(">Accesing config file %s.\n", fileName);
+   fp = fopen(fileName, "r");
+
+   if (!fp) {
+      fprintf(stderr, "Error while opening config file %s\n", fileName);
+      return NULL;
+   }   
+
+   while ((read = getline(&line, &len, fp)) != -1) {   
+      if ((name = strstr(line, "name="))) {
+         linkNames[arrCnt] = malloc(sizeof(char) * (strlen(name)-8));
+         strncpy(linkNames[arrCnt], name+6, strlen(name)-8);   
+         arrCnt++;
+      }   
+   }   
+
+   fclose(fp);
+   if (line)
+      free(line);
+   printf(">Configuration success.\n");
+   return linkNames;
+}
+
 void *accept_clients(void *arg)
 {
    int client_fd;
    struct sockaddr_in clt;
    socklen_t soc_size;
+   char **linkNames;
 
    int fd = socket(AF_UNIX, SOCK_STREAM, 0);   
     
@@ -151,6 +191,8 @@ void *accept_clients(void *arg)
    }
 
    soc_size = sizeof(clt);
+   linkNames = malloc(sizeof(char**) * NUMBER_OF_LINKS);
+   linkNames = get_link_names(CONFIG_PATH);
    while (!stop) {
       char *str;
       int size;
@@ -161,14 +203,14 @@ void *accept_clients(void *arg)
          continue;
       } 
       /* creating formated text to be forwarded and parsed by munin_link_flows script */
-      size = asprintf(&str,"nix2-in-bytes,nix2-in-flows,nix2-in-packets,nix2-out-bytes,nix2-out-flows,nix2-out-packets,"
-         "nix3-in-bytes,nix3-in-flows,nix3-in-packets,nix3-out-bytes,nix3-out-flows,nix3-out-packets,"
-         "telia-in-bytes,telia-in-flows,telia-in-packets,telia-out-bytes,telia-out-flows,telia-out-packets,"
-         "geant-in-bytes,geant-in-flows,geant-in-packets,geant-out-bytes,geant-out-flows,geant-out-packets,"
-         "amsix-in-bytes,amsix-in-flows,amsix-in-packets,amsix-out-bytes,amsix-out-flows,amsix-out-packets,"
-         "sanet-in-bytes,sanet-in-flows,sanet-in-packets,sanet-out-bytes,sanet-out-flows,sanet-out-packets,"
-         "aconet-in-bytes,aconet-in-flows,aconet-in-packets,aconet-out-bytes,aconet-out-flows,aconet-out-packets,"
-         "pioneer-in-bytes,pioneer-in-flows,pioneer-in-packets,pioneer-out-bytes,pioneer-out-flows,pioneer-out-packets\n"
+      size = asprintf(&str,"%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,"
+         "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,"
+         "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,"
+         "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,"
+         "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,"
+         "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,"
+         "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,"
+         "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets\n"
          "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32","
          "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32","
          "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32","
@@ -177,6 +219,14 @@ void *accept_clients(void *arg)
          "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32","
          "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32","
          "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32"\n",
+         linkNames[0],linkNames[0],linkNames[0],linkNames[0],linkNames[0],linkNames[0],
+         linkNames[1],linkNames[1],linkNames[1],linkNames[1],linkNames[1],linkNames[1],
+         linkNames[2],linkNames[2],linkNames[2],linkNames[2],linkNames[2],linkNames[2],
+         linkNames[3],linkNames[3],linkNames[3],linkNames[3],linkNames[3],linkNames[3],
+         linkNames[4],linkNames[4],linkNames[4],linkNames[4],linkNames[4],linkNames[4],
+         linkNames[5],linkNames[5],linkNames[5],linkNames[5],linkNames[5],linkNames[5],
+         linkNames[6],linkNames[6],linkNames[6],linkNames[6],linkNames[6],linkNames[6],
+         linkNames[7],linkNames[7],linkNames[7],linkNames[7],linkNames[7],linkNames[7],
          stats[0].bytes_in, stats[0].flows_in, stats[0].packets_in, stats[0].bytes_out, stats[0].flows_out, stats[0].packets_out,
          stats[1].bytes_in, stats[1].flows_in, stats[1].packets_in, stats[1].bytes_out, stats[1].flows_out, stats[1].packets_out,
          stats[2].bytes_in, stats[2].flows_in, stats[2].packets_in, stats[2].bytes_out, stats[2].flows_out, stats[2].packets_out,
@@ -189,12 +239,13 @@ void *accept_clients(void *arg)
          send(client_fd, str, size, 0);
          free(str);
       }
-
       close(client_fd);
    }
    
    close(fd);
    pthread_exit(0);
+   if (linkNames)
+      free(linkNames);
 }
 
 /* adds data to global array of link_stats_t structures "statistics[]" */   
@@ -255,7 +306,7 @@ int main(int argc, char **argv)
 
    /* **** Create UniRec templates **** */
    in_tmplt = ur_create_input_template(0, "BYTES,LINK_BIT_FIELD,PACKETS,DIR_BIT_FIELD", NULL);
-   if (!in_tmplt){
+   if (!in_tmplt) {
       fprintf(stderr, "Error: Input template could not be created.\n");
       goto cleanup;
    }
