@@ -218,7 +218,6 @@ AC_CONFIG_FILES([Makefile
                  proto_traffic/munin/Makefile
                  report2idea/Makefile
                  report2idea/amplificationdetector/Makefile
-                 report2idea/booterfilter/Makefile
                  report2idea/bruteforce/Makefile
                  report2idea/dnstunnel/Makefile
                  report2idea/haddrscan/Makefile
