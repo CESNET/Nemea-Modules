@@ -2,7 +2,7 @@
   <name>warden_venom2idea</name>
   <enabled>true</enabled>
   <path>/usr/bin/nemea/venom2idea.py</path>
-  <params>--name=cz.cesnet.nemea.vportscan --warden=/etc/warden/venom/config.cfg</params>
+  <params>--name=cz.cesnet.nemea.venom --warden=/etc/warden/venom/config.cfg</params>
   <trapinterfaces>
     <interface>
       <type>UNIXSOCKET</type>

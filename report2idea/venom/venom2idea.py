@@ -41,7 +41,6 @@ def convert_to_idea(rec, opts=None):
         "DetectTime": endTime,
         'CeaseTime': endTime,
         "Category": [ "Intrusion.Botnet", "Malware.Rootkit" ],
-        "Confidence": 0.9,
         "PacketCount": rec.PACKETS,
         "ByteCount": rec.BYTES,
 
@@ -75,8 +74,14 @@ def convert_to_idea(rec, opts=None):
 
     if rec.VENOM == 255:
         idea['Note'] = "Activation was attempted by a packet with magic string in payload. It is unknown if the rootkit is present on the target machine."
+        idea['Confidence'] = 0.9
     else:
         idea['Note'] = "Activation was attempted by {0} packets with src_ip + tcp_seq = 1221. It is unknown if the rootkit is present on the target machine.".format(rec.VENOM)
+        idea['Confidence'] = 0.3
+
+    # This is very often a false positive
+    if rec.SRC_PORT == 1221:
+        idea['Confidence'] = 0.05
 
     idea['Description'] = "Attempt to activate VENOM rootkit on {0}.".format(rec.DST_IP)
     idea['Ref'] = 'https://wiki.egi.eu/wiki/Venom_Rootkit'
