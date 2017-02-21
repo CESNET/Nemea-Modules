@@ -1,8 +1,8 @@
 bin_SCRIPTS=idea2idea.py
 
 SUBDIRS=hoststats \
-		booterfilter \
 		ipblacklist \
+		venom \
 		vportscan \
 		voipfraud \
 		dnstunnel \

@@ -1,0 +1,13 @@
+<module>
+  <name>warden_venom2idea</name>
+  <enabled>true</enabled>
+  <path>/usr/bin/nemea/venom2idea.py</path>
+  <params>--name=cz.cesnet.nemea.venom --warden=/etc/warden/venom/config.cfg</params>
+  <trapinterfaces>
+    <interface>
+      <type>UNIXSOCKET</type>
+      <direction>IN</direction>
+      <params>venom_data_source</params>
+    </interface>
+  </trapinterfaces>
+</module>
