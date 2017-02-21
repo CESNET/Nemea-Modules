@@ -149,7 +149,7 @@ string replace_string(string subject, const string &search, const string &replac
 int main(int argc, char **argv)
 {
    int ret;
-   imt tmp;
+   int tmp;
    int send_eof = 1;
    int time_flag = 0;
    char *in_filename = NULL;
