@@ -119,10 +119,9 @@ AC_ARG_WITH([nfreader],
 
 if test x${withnfreader} = xyes; then
 	# Checks for libraries.
-	AC_CHECK_LIB(nf, lnf_open, [libnf=yes],
+	AC_CHECK_HEADER(libnf.h, AC_CHECK_LIB(nf, lnf_open, [libnf=yes],
 	  [AC_MSG_WARN([libnf not found. The nfreader module will not be compiled.])]
-	)
-
+	), AC_MSG_WARN([libnf.h not found. The nfreader module will not be compiled.]))
 fi
 
 AM_CONDITIONAL(HAVE_LIBNF, test x${libnf} = xyes && test x${withnfreader} = xyes)
