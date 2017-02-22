@@ -26,6 +26,7 @@ This NEMEA module creates flows from input PCAP file / network interface and exp
 - `-L NUMBER`        Link bit field value.
 - `-D NUMBER`        Direction bit field value.
 - `-F STRING`        String containing filter expression to filter traffic. See man pcap-filter.
+- `-O`               Send ODID field instead of LINK_BIT_FIELD.
 
 ### Common TRAP parameters
 - `-h [trap,1]`      Print help message for this module / for libtrap specific parameters.
@@ -61,22 +62,22 @@ Turn off message buffering using `buffer=off` option on output interfaces.
 ### Basic
 Basic unirec fields exported on interface with basic (pseudo) plugin. These fields are also exported on interfaces where HTTP, DNS, SIP and NTP plugins are active.
 
-| Unirec field    | Type   | Description                                         |
-|:---------------:|:------:|:---------------------------------------------------:|
-| DST_IP          | ipaddr | destination IP address                              |
-| SRC_IP          | ipaddr | source IP address                                   |
-| BYTES           | uint64 | number of bytes in data flow                        |
-| LINK_BIT_FIELD  | uint64 | exporter identification                             |
-| TIME_FIRST      | time   | first time stamp                                    |
-| TIME_LAST       | time   | last time stamp                                     |
-| PACKETS         | uint32 | number of packet in data flow                       |
-| DST_PORT        | uint16 | transport layer destination port                    |
-| SRC_PORT        | uint16 | transport layer source port                         |
-| DIR_BIT_FIELD   | uint8  | bit field for determining outgoing/incoming traffic |
-| PROTOCOL        | uint8  | transport protocol                                  |
-| TCP_FLAGS       | uint8  | TCP protocol flags                                  |
-| TOS             | uint8  | IP type of service                                  |
-| TTL             | uint8  | IP time to live                                     |
+| Unirec field           | Type             | Description                                         |
+|:----------------------:|:----------------:|:---------------------------------------------------:|
+| DST_IP                 | ipaddr           | destination IP address                              |
+| SRC_IP                 | ipaddr           | source IP address                                   |
+| BYTES                  | uint64           | number of bytes in data flow                        |
+| LINK_BIT_FIELD or ODID | uint64 or uint32 | exporter identification                             |
+| TIME_FIRST             | time             | first time stamp                                    |
+| TIME_LAST              | time             | last time stamp                                     |
+| PACKETS                | uint32           | number of packet in data flow                       |
+| DST_PORT               | uint16           | transport layer destination port                    |
+| SRC_PORT               | uint16           | transport layer source port                         |
+| DIR_BIT_FIELD          | uint8            | bit field for determining outgoing/incoming traffic |
+| PROTOCOL               | uint8            | transport protocol                                  |
+| TCP_FLAGS              | uint8            | TCP protocol flags                                  |
+| TOS                    | uint8            | IP type of service                                  |
+| TTL                    | uint8            | IP time to live                                     |
 
 ### HTTP
 List of unirec fields exported together with basic flow fields on interface by HTTP plugin.

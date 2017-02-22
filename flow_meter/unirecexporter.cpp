@@ -58,7 +58,7 @@
 
 using namespace std;
 
-#define BASIC_FLOW_TEMPLATE "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,LINK_BIT_FIELD,DIR_BIT_FIELD,TOS,TTL"
+#define BASIC_FLOW_TEMPLATE "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,DIR_BIT_FIELD,TOS,TTL" /* LINK_BIT_FIELD or ODID will be added at init. */
 
 #define PACKET_TEMPLATE "SRC_MAC,DST_MAC,ETHERTYPE,TIME"
 
@@ -67,6 +67,7 @@ UR_FIELDS (
    ipaddr SRC_IP,
    uint64 BYTES,
    uint64 LINK_BIT_FIELD,
+   uint32 ODID,
    time TIME_FIRST,
    time TIME_LAST,
    uint32 PACKETS,
@@ -88,7 +89,7 @@ UR_FIELDS (
  * \brief Constructor.
  */
 UnirecExporter::UnirecExporter(bool send_eof) : out_ifc_cnt(0), ifc_mapping(NULL), ifc_to_export(NULL),
-tmplt(NULL), record(NULL), eof(send_eof)
+tmplt(NULL), record(NULL), eof(send_eof), send_odid(false)
 {
 }
 
@@ -99,14 +100,18 @@ tmplt(NULL), record(NULL), eof(send_eof)
  * \param [in] basic_ifc_num Basic output interface number.
  * \param [in] link Link bit field value.
  * \param [in] dir Direction bit field value.
+ * \param [in] odid Send ODID field instead of LINK_BIT_FIELD.
  * \return 0 on success or negative value when error occur.
  */
-int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, int basic_ifc_number, uint64_t link = 0, uint8_t dir = 0)
+int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, int basic_ifc_number, uint64_t link = 0, uint8_t dir = 0, bool odid = false)
 {
+   string basic_tmplt = BASIC_FLOW_TEMPLATE;
+
    out_ifc_cnt = ifc_cnt;
    basic_ifc_num = basic_ifc_number;
    link_bit_field = link;
    dir_bit_field = dir;
+   send_odid = odid;
 
    tmplt = new ur_template_t*[out_ifc_cnt];
    record = new void*[out_ifc_cnt];
@@ -116,9 +121,15 @@ int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, 
       record[i] = NULL;
    }
 
+   if (odid) {
+      basic_tmplt += ",ODID";
+   } else {
+      basic_tmplt += ",LINK_BIT_FIELD";
+   }
+
    char *error = NULL;
    if (basic_ifc_num >= 0) {
-      tmplt[basic_ifc_num] = ur_create_output_template(basic_ifc_num, BASIC_FLOW_TEMPLATE, &error);
+      tmplt[basic_ifc_num] = ur_create_output_template(basic_ifc_num, basic_tmplt.c_str(), &error);
       if (tmplt[basic_ifc_num] == NULL) {
          fprintf(stderr, "UnirecExporter: %s\n", error);
          free(error);
@@ -154,7 +165,7 @@ int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, 
       // Create unirec templates.
       template_str = tmp->get_unirec_field_string();
       if (tmp->include_basic_flow_fields()) {
-         template_str += string(",") + BASIC_FLOW_TEMPLATE;
+         template_str += string(",") + basic_tmplt;
       } else {
          template_str += string (",") + PACKET_TEMPLATE;
       }
@@ -334,6 +345,13 @@ void UnirecExporter::fill_basic_flow(Flow &flow, ur_template_t *tmplt_ptr, void 
    tmp_time = ur_time_from_sec_msec(flow.time_last.tv_sec, flow.time_last.tv_usec / 1000.0);
    ur_set(tmplt_ptr, record_ptr, F_TIME_LAST, tmp_time);
 
+
+   if (send_odid) {
+      ur_set(tmplt_ptr, record_ptr, F_ODID, link_bit_field);
+   } else {
+      ur_set(tmplt_ptr, record_ptr, F_LINK_BIT_FIELD, link_bit_field);
+   }
+   ur_set(tmplt_ptr, record_ptr, F_DIR_BIT_FIELD, dir_bit_field);
    ur_set(tmplt_ptr, record_ptr, F_PROTOCOL, flow.ip_proto);
    ur_set(tmplt_ptr, record_ptr, F_SRC_PORT, flow.src_port);
    ur_set(tmplt_ptr, record_ptr, F_DST_PORT, flow.dst_port);
@@ -342,9 +360,6 @@ void UnirecExporter::fill_basic_flow(Flow &flow, ur_template_t *tmplt_ptr, void 
    ur_set(tmplt_ptr, record_ptr, F_TCP_FLAGS, flow.tcp_control_bits);
    ur_set(tmplt_ptr, record_ptr, F_TOS, flow.ip_tos);
    ur_set(tmplt_ptr, record_ptr, F_TTL, flow.ip_ttl);
-
-   ur_set(tmplt_ptr, record_ptr, F_DIR_BIT_FIELD, dir_bit_field);
-   ur_set(tmplt_ptr, record_ptr, F_LINK_BIT_FIELD, link_bit_field);
 }
 
 

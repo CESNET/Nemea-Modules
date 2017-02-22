@@ -94,7 +94,8 @@ static int stop = 0;
   PARAM('P', "pcap-statistics", "Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.", no_argument, "none") \
   PARAM('L', "link_bit_field", "Link bit field value.", required_argument, "uint64") \
   PARAM('D', "dir_bit_field", "Direction bit field value.", required_argument, "uint8") \
-  PARAM('F', "filter", "String containing filter expression to filter traffic. See man pcap-filter.", required_argument, "string")
+  PARAM('F', "filter", "String containing filter expression to filter traffic. See man pcap-filter.", required_argument, "string") \
+  PARAM('O', "odid", "Send ODID field instead of LINK_BIT_FIELD.", no_argument, "none")
 
 /**
  * \brief Parse input plugin settings.
@@ -324,6 +325,7 @@ int main(int argc, char *argv[])
 
    string filter = "";
    uint32_t pkt_limit = 0; // Limit of packets for packet parser. 0 = no limit
+   bool odid = false;
    uint64_t link = 0;
    uint8_t dir = 0;
 
@@ -459,6 +461,9 @@ int main(int argc, char *argv[])
       case 'F':
          filter = string(optarg);
          break;
+      case 'O':
+         odid = true;
+         break;
       default:
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
@@ -532,7 +537,7 @@ int main(int argc, char *argv[])
    NHTFlowCache flowcache(options);
    UnirecExporter flowwriter(options.eof);
 
-   if (flowwriter.init(plugin_wrapper.plugins, module_info->num_ifc_out, options.basic_ifc_num, link, dir) != 0) {
+   if (flowwriter.init(plugin_wrapper.plugins, module_info->num_ifc_out, options.basic_ifc_num, link, dir, odid) != 0) {
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       TRAP_DEFAULT_FINALIZATION();
       return error("Unable to initialize UnirecExporter.");
