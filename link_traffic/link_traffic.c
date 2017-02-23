@@ -192,53 +192,41 @@ void *accept_clients(void *arg)
 
    soc_size = sizeof(clt);
    linkNames = malloc(sizeof(char**) * NUMBER_OF_LINKS);
-   linkNames = get_link_names(CONFIG_PATH);
+   linkNames = get_link_names(CONFIG_PATH); 
+
+   if (!linkNames) 
+      stop = 1;
+
    while (!stop) {
       char *str;
-      int size;
-
+      int size = 0;
+      int link_cnt = 8;
       client_fd = accept(fd, (struct sockaddr *) &clt, &soc_size);
+      
       if (client_fd < 0) {
          fprintf(stderr, "Error: Accept failed.\n");
          continue;
       } 
       /* creating formated text to be forwarded and parsed by munin_link_flows script */
-      size = asprintf(&str,"%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,"
-         "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,"
-         "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,"
-         "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,"
-         "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,"
-         "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,"
-         "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,"
-         "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets\n"
-         "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32","
-         "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32","
-         "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32","
-         "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32","
-         "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32","
-         "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32","
-         "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32","
-         "%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32"\n",
-         linkNames[0],linkNames[0],linkNames[0],linkNames[0],linkNames[0],linkNames[0],
-         linkNames[1],linkNames[1],linkNames[1],linkNames[1],linkNames[1],linkNames[1],
-         linkNames[2],linkNames[2],linkNames[2],linkNames[2],linkNames[2],linkNames[2],
-         linkNames[3],linkNames[3],linkNames[3],linkNames[3],linkNames[3],linkNames[3],
-         linkNames[4],linkNames[4],linkNames[4],linkNames[4],linkNames[4],linkNames[4],
-         linkNames[5],linkNames[5],linkNames[5],linkNames[5],linkNames[5],linkNames[5],
-         linkNames[6],linkNames[6],linkNames[6],linkNames[6],linkNames[6],linkNames[6],
-         linkNames[7],linkNames[7],linkNames[7],linkNames[7],linkNames[7],linkNames[7],
-         stats[0].bytes_in, stats[0].flows_in, stats[0].packets_in, stats[0].bytes_out, stats[0].flows_out, stats[0].packets_out,
-         stats[1].bytes_in, stats[1].flows_in, stats[1].packets_in, stats[1].bytes_out, stats[1].flows_out, stats[1].packets_out,
-         stats[2].bytes_in, stats[2].flows_in, stats[2].packets_in, stats[2].bytes_out, stats[2].flows_out, stats[2].packets_out,
-         stats[3].bytes_in, stats[3].flows_in, stats[3].packets_in, stats[3].bytes_out, stats[3].flows_out, stats[3].packets_out,
-         stats[4].bytes_in, stats[4].flows_in, stats[4].packets_in, stats[4].bytes_out, stats[4].flows_out, stats[4].packets_out,
-         stats[5].bytes_in, stats[5].flows_in, stats[5].packets_in, stats[5].bytes_out, stats[5].flows_out, stats[5].packets_out,
-         stats[6].bytes_in, stats[6].flows_in, stats[6].packets_in, stats[6].bytes_out, stats[6].flows_out, stats[6].packets_out,
-         stats[7].bytes_in, stats[7].flows_in, stats[7].packets_in, stats[7].bytes_out, stats[7].flows_out, stats[7].packets_out);
-      if (size > 0) {
-         send(client_fd, str, size, 0);
-         free(str);
+
+      for (int i = 0; i < link_cnt; i++) {
+         size = asprintf(&str,"%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,",
+         linkNames[i],linkNames[i],linkNames[i],linkNames[i],linkNames[i],linkNames[i]);
+         if ( size > 0) {
+            send(client_fd, str, size, 0);
+         }
       }
+      for (int i = 0; i < link_cnt; i++) {
+         size = asprintf(&str,"%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32",",
+         stats[i].bytes_in, stats[i].flows_in, stats[i].packets_in, stats[i].bytes_out, stats[i].flows_out, stats[i].packets_out);
+         if ( size > 0) {
+           send(client_fd, str, size, 0);
+         } 
+      }
+
+      if (str)
+         free(str);
+
       close(client_fd);
    }
    
