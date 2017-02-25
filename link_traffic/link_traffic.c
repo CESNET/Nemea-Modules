@@ -143,7 +143,6 @@ char **get_link_names(char *filePath, char **linkNames, int *size, int *arrCnt)
                free(linkNames);
                return NULL;
             }
-            printf(">Memory allocated.\n");
             linkNames = tmp;
          }
 
