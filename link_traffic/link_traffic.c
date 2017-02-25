@@ -113,39 +113,51 @@ typedef struct link_stats {
    volatile uint64_t bytes_out;
 } link_stats_t;
 
-link_stats_t stats[8];
+link_stats_t stats[8]; 
 
 /*   *** function for parsing config ***
 *   function goes through text file line by line and search for specific pattern
 *   return names string array 
-*   input arg: fileName is path to config file, arrayCnt is counter for array */
-char **get_link_names(char *fileName)
+*   input arg: fileName is path to config file, arrayCnt is counter for array and size 
+*   stores size of memory for array */
+char **get_link_names(char *filePath, char **linkNames, int *size, int *arrCnt)
 {
    FILE *fp;
-   char **linkNames = malloc(sizeof(char**) * NUMBER_OF_LINKS);
    char *line = NULL, *name = NULL;
    size_t len = 0;
    ssize_t read;
-   int arrCnt = 0;
-   printf(">Accesing config file %s.\n", fileName);
-   fp = fopen(fileName, "r");
+   printf(">Accesing config file %s.\n", filePath);
+   fp = fopen(filePath, "r");
 
    if (!fp) {
-      fprintf(stderr, "Error while opening config file %s\n", fileName);
+      fprintf(stderr, "Error while opening config file %s\n", filePath);
       return NULL;
    }   
 
-   while ((read = getline(&line, &len, fp)) != -1) {   
+   while ((read = getline(&line, &len, fp)) != -1) {
       if ((name = strstr(line, "name="))) {
-         linkNames[arrCnt] = malloc(sizeof(char) * (strlen(name)-8));
-         strncpy(linkNames[arrCnt], name+6, strlen(name)-8);   
-         arrCnt++;
+         if(*arrCnt >= *size) {
+            *size += (*size < 100) ? 10 : *size/2;
+            char **tmp = (char**) realloc(linkNames, *size * sizeof(char**));
+            if(!tmp) {
+               free(linkNames);
+               return NULL;
+            }
+            printf(">Memory allocated.\n");
+            linkNames = tmp;
+         }
+
+         linkNames[*arrCnt] = malloc(sizeof(char) * (strlen(name)-8));
+         strncpy(linkNames[*arrCnt], name+6, strlen(name)-8);   
+         ++*arrCnt;
       }   
    }   
 
    fclose(fp);
+
    if (line)
       free(line);
+
    printf(">Configuration success.\n");
    return linkNames;
 }
@@ -155,8 +167,8 @@ void *accept_clients(void *arg)
    int client_fd;
    struct sockaddr_in clt;
    socklen_t soc_size;
-   char **linkNames;
-
+   char **linkNames = NULL;
+   int link_size = 0, link_cnt = 0;
    int fd = socket(AF_UNIX, SOCK_STREAM, 0);   
     
    if (fd < 0) {
@@ -191,16 +203,14 @@ void *accept_clients(void *arg)
    }
 
    soc_size = sizeof(clt);
-   linkNames = malloc(sizeof(char**) * NUMBER_OF_LINKS);
-   linkNames = get_link_names(CONFIG_PATH); 
+   linkNames = get_link_names(CONFIG_PATH, linkNames, &link_size, &link_cnt); 
 
    if (!linkNames) 
       stop = 1;
 
    while (!stop) {
       char *str;
-      int size = 0;
-      int link_cnt = 8;
+      int size = 0, i = 0;
       client_fd = accept(fd, (struct sockaddr *) &clt, &soc_size);
       
       if (client_fd < 0) {
@@ -209,14 +219,14 @@ void *accept_clients(void *arg)
       } 
       /* creating formated text to be forwarded and parsed by munin_link_flows script */
 
-      for (int i = 0; i < link_cnt; i++) {
+      for (i = 0; i < link_cnt; i++) {
          size = asprintf(&str,"%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,",
          linkNames[i],linkNames[i],linkNames[i],linkNames[i],linkNames[i],linkNames[i]);
          if ( size > 0) {
             send(client_fd, str, size, 0);
          }
       }
-      for (int i = 0; i < link_cnt; i++) {
+      for (i = 0; i < link_cnt; i++) {
          size = asprintf(&str,"%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32",",
          stats[i].bytes_in, stats[i].flows_in, stats[i].packets_in, stats[i].bytes_out, stats[i].flows_out, stats[i].packets_out);
          if ( size > 0) {
@@ -230,10 +240,11 @@ void *accept_clients(void *arg)
       close(client_fd);
    }
    
-   close(fd);
-   pthread_exit(0);
    if (linkNames)
       free(linkNames);
+
+   close(fd);
+   pthread_exit(0);
 }
 
 /* adds data to global array of link_stats_t structures "statistics[]" */   
