@@ -53,6 +53,7 @@
 #include <getopt.h>
 #include <string.h>
 #include <ctype.h>
+#include <regex.h>
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
