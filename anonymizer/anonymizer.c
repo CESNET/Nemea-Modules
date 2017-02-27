@@ -64,7 +64,12 @@
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-   BASIC("anonymizer","Module for anonymizing incoming flow records.",1,1)
+   BASIC("anonymizer","",1,1)
+
+// Description is constructed at run-time at the beginning of main() (list of supported fields is filled in)
+#define MODULE_DESCRIPTION_TEMPLATE "Module for anonymizing flow records. Anonymizes IP addresses in the following fields:\n"\
+     "    %s\n"\
+     "If a field is of 'string' type, IP address represenation is searched in the string and replaced by its anonymized version."
 
 #define MODULE_PARAMS(PARAM) \
    PARAM('k', "key", "Specify secret key, the key must be 32 characters long string or 32B sized hex string starting with 0x", required_argument, "string") \
@@ -338,7 +343,7 @@ int set_fields_present(ur_template_t *tmplt)
 int main(int argc, char **argv)
 {
 //    NMCM_PROGRESS_DEF
-   int ret, reti;
+   int ret, reti, i;
    uint8_t init_key[32] = {0};
    char *secret_key = "01234567890123450123456789012345";
    char *secret_file = NULL;
@@ -351,7 +356,38 @@ int main(int argc, char **argv)
    ANONYMIZATION_ALGORITHM = RIJNDAEL_BC; // Default algorithm
 
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-
+   // Fill in the list of supported fields in module description
+   {
+      // create string with list of supported fields
+      int fields_desc_len = 0;
+      for (i = 0; i < ANON_FIELDS_COUNT; i++) {
+         fields_desc_len += strlen(anon_field_names[i]) + 2; // +2 for delimiter (", ")
+      }
+      fields_desc_len -= 2; // last delimiter
+      char* fields_desc = malloc(fields_desc_len + 1);
+      if (!fields_desc) {
+          fprintf(stderr, "Error: Memory allocation problem (module description).\n");
+          ret = 5;
+          goto cleanup2;
+      }
+      for (i = 0; i < ANON_FIELDS_COUNT; i++) {
+         if (i > 0) {
+            strcat(fields_desc, ", ");
+         }
+         strcat(fields_desc, anon_field_names[i]);
+      }
+      // Fill the list into module's description
+      free(module_info->description); // free old description that was allocated in INIT_MODULE_INFO_STRUCT
+      module_info->description = malloc(strlen(MODULE_DESCRIPTION_TEMPLATE) + fields_desc_len);
+      if (!module_info->description) {
+          fprintf(stderr, "Error: Memory allocation problem (module description).\n");
+          ret = 5;
+          goto cleanup2;
+      }
+      sprintf(module_info->description, MODULE_DESCRIPTION_TEMPLATE, fields_desc);
+      free(fields_desc);
+   }
+      
 
    // ***** TRAP initialization *****
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
@@ -480,6 +516,8 @@ cleanup:
    }
 
    ur_finalize();
+
+cleanup2:
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    return ret;
