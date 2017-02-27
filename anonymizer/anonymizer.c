@@ -54,6 +54,7 @@
 #include "panonymizer.h"
 #include "fields.h"
 #include <nemea-common.h>
+#include <regex.h>
 
 #define IP_V6_SIZE 16           // 128b or 16B is size of IP address version 6
 #define SECRET_KEY_FILE "secret_key.txt"   // File with secret key
@@ -96,7 +97,7 @@ inline uint32_t hash_div8(const char *key, int32_t key_size)
    uint32_t m1 = 11117;
    uint32_t n1 = 14011;
    uint64_t h = 42;
-   uint64_t * k_ptr = (uint64_t *) key;
+   uint64_t *k_ptr = (uint64_t *) key;
    uint64_t k;
    uint32_t rep = key_size / 8;
    uint32_t i;
@@ -161,8 +162,8 @@ int init_from_file(char *secret_file, uint8_t *init_key)
 
 /** \brief Anonymize IP in static UniRec field
  * Anonymize source and destination IP in Unirec using Crypto-PAn libraries
- * \param[in-out] data  Pointer to Unirec flow record data.
- * \param[in]     mode  Anonymizer mode (ANONYMIZATION or DEANONYMIZATION).
+ * \param[in-out] field_ptr  Pointer to Unirec string which is to be annonymized.
+ * \param[in]     mode       Anonymizer mode (ANONYMIZATION or DEANONYMIZATION).
  * \return        void
 */
 void ip_anonymize(void *field_ptr, uint8_t mode)
@@ -386,8 +387,7 @@ int main(int argc, char **argv)
          ret = 2;
          goto cleanup;
       }
-   }
-   else {
+   } else {
       if (!ParseCryptoPAnKey(secret_key, init_key)) {
          ret = 3;
          goto cleanup;
@@ -400,34 +400,28 @@ int main(int argc, char **argv)
    trap_set_required_fmt(0, TRAP_FMT_UNIREC, NULL);
    if (tmplt == NULL) {
       fprintf(stderr, "Error: Unable to create input template.\n");
-         ret = 4;
-         goto cleanup;
+      ret = 4;
+      goto cleanup;
    }
 
    anon_rec = calloc(UR_MAX_SIZE, 1);
    if (!anon_rec) {
       fprintf(stderr, "Error: Memory allocation problem (output alert record).\n");
-         ret = 5;
-         goto cleanup;
+      ret = 5;
+      goto cleanup;
    }
 
-   reti = regcomp(&regex_IPV4, "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}", REG_EXTENDED);
+   reti = regcomp(&regex_IPV4, IPV4_REGEX, REG_EXTENDED);
    if (reti) {
-         ret = 6;
-         goto cleanup;
+      ret = 6;
+      goto cleanup;
    }
 
-   reti = regcomp(&regex_IPV6, "(([0-9a-fA-F]{1,4}:) {7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:) {1,7}:|\
-      ([0-9a-fA-F]{1,4}:) {1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:) {1,5}(:[0-9a-fA-F]{1,4}) {1,2}|\
-      ([0-9a-fA-F]{1,4}:) {1,4}(:[0-9a-fA-F]{1,4}) {1,3}|([0-9a-fA-F]{1,4}:) {1,3}(:[0-9a-fA-F]{1,4}) {1,4}|\
-      ([0-9a-fA-F]{1,4}:) {1,2}(:[0-9a-fA-F]{1,4}) {1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}) {1,6})|\
-      :((:[0-9a-fA-F]{1,4}) {1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}) {0,4}\%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}) {0,1}:) {0,1}((25[0-5]|\
-      (2[0-4]|1{0,1}[0-9]) {0,1}[0-9])\\.) {3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]) {0,1}[0-9])|([0-9a-fA-F]{1,4}:) {1,4}\
-      :((25[0-5]|(2[0-4]|1{0,1}[0-9]) {0,1}[0-9])\\.) {3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]) {0,1}[0-9]))", REG_EXTENDED);
+   reti = regcomp(&regex_IPV6, IPV6_REGEX, REG_EXTENDED);
    if (reti) {
-         ret = 7;
-         regfree(&regex_IPV4);
-         goto cleanup;
+      ret = 7;
+      regfree(&regex_IPV4);
+      goto cleanup;
    }
 
    // ***** Main processing loop *****
