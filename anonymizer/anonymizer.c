@@ -59,7 +59,6 @@
 #define IP_V6_SIZE 16           // 128b or 16B is size of IP address version 6
 #define SECRET_KEY_FILE "secret_key.txt"   // File with secret key
 #define SECRET_KEY_MAX_SIZE 67             // Max length of secret key
-#define ANON_FIELDS_COUNT 7
 
 // Struct with information about module
 trap_module_info_t *module_info = NULL;
@@ -77,8 +76,11 @@ static int stop = 0;
 
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
-const char *anon_field_names[ANON_FIELDS_COUNT] = {"SRC_IP", "DST_IP", "SIP_CALLED_PARTY", "SIP_CALLING_PARTY", "SIP_CALL_ID", "SIP_REQUEST_URI", "SIP_VIA"};
-ur_field_id_t anon_fields[ANON_FIELDS_COUNT];
+const char *anon_field_names[] = {"SRC_IP", "DST_IP", "SIP_CALLED_PARTY", "SIP_CALLING_PARTY", "SIP_CALL_ID", "SIP_REQUEST_URI", "SIP_VIA"};
+#define ANON_FIELDS_COUNT (sizeof(anon_field_names) / sizeof(anon_field_names[0]))
+
+ur_field_id_t anon_fields[ANON_FIELDS_COUNT]; // list of IDs of fields present in input template
+int anon_fields_cnt = 0; // number of valid field IDs in anon_fields
 
 
 /**
@@ -282,7 +284,7 @@ char *string_anonymize(void *field_ptr, uint32_t field_len, uint8_t mode, regex_
 }
 
 /** \brief Anonymize fields of the UniRec record
- * Check template for anonymizeable fields and set up "anon_fields" array.
+ * Anonymize IP addresses in all fields in "anon_fields" array.
  * \param[in]     tmplt      Pointer to Unirec template.
  * \param[in-out] data       Pointer to Unirec flow record data.
  * \param[in]     mode       Anonymizer mode (ANONYMIZATION or DEANONYMIZATION).
@@ -291,11 +293,11 @@ char *string_anonymize(void *field_ptr, uint32_t field_len, uint8_t mode, regex_
  * \param[in]     regex_IPV6 Compiled regular expression to match IPv6.
  * \return        void
 */
-void anon_present_fields(ur_template_t *tmplt, void *data, uint8_t mode, int fields_cnt, regex_t regex_IPV4, regex_t regex_IPV6)
+void anon_present_fields(ur_template_t *tmplt, void *data, uint8_t mode, regex_t regex_IPV4, regex_t regex_IPV6)
 {
    int i;
 
-   for (i = 0; i < fields_cnt; i++) {
+   for (i = 0; i < anon_fields_cnt; i++) {
       void *field_ptr = ur_get_ptr_by_id(tmplt, data, anon_fields[i]);
       uint32_t field_len = ur_get_len(tmplt, data, anon_fields[i]);
 
@@ -326,7 +328,7 @@ int set_fields_present(ur_template_t *tmplt)
          j++;
       }
    }
-
+   anon_fields_cnt = j;
    return j;
 }
 
@@ -341,7 +343,6 @@ int main(int argc, char **argv)
    char *secret_key = "01234567890123450123456789012345";
    char *secret_file = NULL;
    int first = 1;
-   int fields_cnt = 0;
    void *anon_rec = NULL;
    ur_template_t *tmplt = NULL;
    regex_t regex_IPV4, regex_IPV6;
@@ -438,10 +439,9 @@ int main(int argc, char **argv)
             fprintf(stderr, "Data format was not loaded.");
             break;
          }
-         // Set the same data format to repeaters output interface
+         // Set the same data format to the output interface
          trap_set_data_fmt(0, TRAP_FMT_UNIREC, spec);
-         fields_cnt = set_fields_present(tmplt);
-         if (fields_cnt < 1) {
+         if (set_fields_present(tmplt) < 1) {
             fprintf(stderr, "Warning: No fields for anonymizing present in input template.");
          }
       } else {
@@ -453,7 +453,7 @@ int main(int argc, char **argv)
       }
 
       memcpy(anon_rec, data, data_size);
-      anon_present_fields(tmplt, anon_rec, mode, fields_cnt, regex_IPV4, regex_IPV6);
+      anon_present_fields(tmplt, anon_rec, mode, regex_IPV4, regex_IPV6);
 
       // Send anonymized data
       if (first == 1) {
