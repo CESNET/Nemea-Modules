@@ -1,3 +1,24 @@
+2017-03-01 Nemea-modules-2.5.3
+	* anonymizer:
+		added possibility to anonymize IP adresses (IPv4, IPv6) 
+		in string representations in dynamic fields
+	* flow_meter:
+		added -O option (see documentation)
+		bash completion feature
+		BUGFIX distcheck failed
+		added traffic filtering using -F parameter
+		default timeout on output interfaces set to HALF_WAIT
+		fixed exporting expired flows while no packets are captured
+		added output unirec field description to README
+	* topn:
+		add new module for TOP-n stats computation
+	* improved manual pages generation
+	* report2idea:
+		added reporter venom2idea
+		removed booterfilter
+		fixed paths in tests
+	* some other minor bugfixes and optimizations
+
 2017-02-05 Nemea-modules-2.5.2
 	* added aggregator with liburfilter (by Miroslav Kalina)
 	* changed unirecfilter to link liburfilter (by Miroslav Kalina)
