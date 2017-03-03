@@ -5,7 +5,7 @@ AC_PREREQ([2.63])
 AC_INIT([nemea-modules], [2.5.3], [nemea@cesnet.cz])
 AC_CONFIG_SRCDIR([flowcounter/flowcounter.c])
 AC_CONFIG_HEADERS([config.h])
-RELEASE=1
+RELEASE=2
 AC_SUBST(RELEASE)
 USERNAME=`git config --get user.name`
 USERMAIL=`git config --get user.email`
@@ -87,13 +87,21 @@ AX_LIBTRAP_CHECK
 AX_UNIREC_CHECK
 AX_NEMEACOMMON_CHECK
 
-AC_CHECK_HEADER(idna.h,
-         AC_CHECK_LIB(idn, stringprep_check_version, [libidn=yes], AC_MSG_WARN([libidn not found. The ipdetect module from blacklistfilter will not be compiled.])), AC_MSG_WARN([libidn.h not found. Blacklistfilter modules will not be compiled.]))
+AC_ARG_WITH([openssl],
+        [AS_HELP_STRING([--without-openssl], [Force to disable openssl])],
+        [if test x$withval = xyes; then
+        PKG_CHECK_MODULES([openssl], [openssl], [have_openssl="yes"], [have_openssl="no"])
+        fi],
+        [PKG_CHECK_MODULES([openssl], [openssl], [have_openssl="yes"], [have_openssl="no"])])
 
-AM_CONDITIONAL(HAVE_LIBIDN, test x${libidn} = xyes)
-if [[ -z "$HAVE_LIBIDN_TRUE" ]]; then
-RPM_REQUIRES+=" libidn"
-RPM_BUILDREQ+=" libidn-devel"
+AM_CONDITIONAL([HAVE_OPENSSL], [test x$have_openssl = xyes])
+if test x$have_openssl = xyes; then
+  AC_DEFINE([HAVE_OPENSSL], [1], [Define to 1 if the openssl is available])
+  RPM_REQUIRES+=" openssl"
+  RPM_BUILDREQ+=" openssl-devel"
+else
+  AC_DEFINE([HAVE_OPENSSL], [0], [Define to 1 if the openssl is available])
+  AC_MSG_WARN([openssl not found. The aggregator module will not be compiled.])
 fi
 
 AC_ARG_WITH([flowcachesize],

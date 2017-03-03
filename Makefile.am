@@ -26,12 +26,16 @@ SUBDIRS += nfwriter
 endif
 
 if HAVE_BISON
-SUBDIRS += unirecfilter aggregator
+SUBDIRS += unirecfilter
+if HAVE_OPENSSL
+SUBDIRS += aggregator
+endif
 endif
 
 if HAVE_LIBPCAP
 SUBDIRS += flow_meter
 endif
+
 
 RPMDIR = RPMBUILD
 
