@@ -87,6 +87,7 @@ ldconfig
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/haddrscan2idea.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/hoststats2idea.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/ipblacklist2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/miner2idea.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/sipbf2idea.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/venom2idea.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/voipfraud2idea.sup
