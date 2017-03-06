@@ -62,6 +62,14 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include "fields.h"
+#include <time.h>
+#include <errno.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#define save_tmp "/var/run/libtrap/saved_data.tmp"
+#define save_file "/var/run/libtrap/saved_data"
 
 /**
  * Definition of fields used in unirec templates (for both input and output interfaces)
@@ -93,9 +101,11 @@ trap_module_info_t *module_info = NULL;
 
 #define DEF_SOCKET_PATH "/var/run/libtrap/munin_link_traffic"
 
-#define CONFIG_PATH "/home/nemea/Nemea-Modules/link_traffic/config.txt"
+#define CONFIG_PATH "/home/nemea/Nemea-Modules/link_traffic/config.txt" 
 
-#define NUMBER_OF_LINKS 8
+#define SAVE_FILE "/var/run/libtrap/saved_data"
+
+#define SAVE_TMP "/var/run/libtrap/saved_data.tmp"
 
 static volatile int stop = 0;
 
@@ -114,6 +124,49 @@ typedef struct link_stats {
 } link_stats_t;
 
 link_stats_t stats[8]; 
+
+/* function for initialization temporary file */
+int init_f()
+{
+   /* Create tmp file  */
+   FILE *tmp;
+   if ( ! (tmp = fopen(save_tmp, "w+")) )
+      return 1;
+   fclose(tmp);
+   return 0;
+}
+
+/* function saves input string to defined file */
+int saveData (const char *string)
+{
+   FILE *fp;
+   if (! (fp = fopen(save_tmp, "w") )) {
+      fprintf(stderr, "Error while opening %s.\n", save_tmp);
+      return 1;
+   }
+
+   fputs(string, fp);
+   fclose(fp);
+
+   if (rename(save_tmp, save_file) == -1 ) {
+      fprintf(stderr, "A rename error occurred check if file %s and %s exists.\n", save_tmp, save_file);
+   }
+   if (!init_f())
+      return 0;
+   fprintf(stderr,"Error creating tmp file: %s.\n", save_tmp);
+   return 1;
+} 
+
+/* function which return md_time of file */
+time_t mdf_time(char *path) {
+   struct stat fst;
+   bzero(&fst,sizeof(fst));
+   if (stat(path, &fst) != 0) { 
+      printf("stat() failed with errno %d\n",errno); exit(-1); 
+   }   
+   return fst.st_mtime;
+}
+
 
 /*   *** function for parsing config ***
 *   function goes through text file line by line and search for specific pattern
@@ -161,14 +214,42 @@ char **get_link_names(char *filePath, char **linkNames, int *size, int *arrCnt)
    return linkNames;
 }
 
+/* *** Function for saving data to file used for further analyses.*/
+int savaData (char *dataToSave) 
+{
+   FILE *fp;
+   if (!(fp = fopen("SAVE_TMP", "w"))) {
+      fprintf(stderr,"Error opening file %s", SAVE_TMP);
+      return 1;
+   }  
+} 
+
+/* creating formated text to be forwarded and parsed by munin_link_flows script */
+char *getText(char **linkNames, int link_cnt, int *size) {
+   char *data = NULL;
+   int i = 0;
+
+   for (i = 0; i < link_cnt; i++) {
+      size += asprintf(&data,"%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,", linkNames[i],linkNames[i],linkNames[i],linkNames[i],linkNames[i],linkNames[i]);
+      }
+   for (i = 0; i < link_cnt; i++) {
+      size += asprintf(&data,"%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32",",stats[i].bytes_in, stats[i].flows_in, stats[i].packets_in, stats[i].bytes_out, stats[i].flows_out, stats[i].packets_out);
+   }
+
+   return data;
+}
+
 void *accept_clients(void *arg)
 {
    int client_fd;
    struct sockaddr_in clt;
    socklen_t soc_size;
+   int fd = socket(AF_UNIX, SOCK_STREAM, 0);
    char **linkNames = NULL;
    int link_size = 0, link_cnt = 0;
-   int fd = socket(AF_UNIX, SOCK_STREAM, 0);   
+
+   /* load names of links form config file */
+   linkNames = get_link_names(CONFIG_PATH, linkNames, &link_size, &link_cnt);   
     
    if (fd < 0) {
       fprintf(stderr, "Error: Socket creation failed.\n");
@@ -202,35 +283,22 @@ void *accept_clients(void *arg)
    }
 
    soc_size = sizeof(clt);
-   linkNames = get_link_names(CONFIG_PATH, linkNames, &link_size, &link_cnt); 
-
-   if (!linkNames) 
-      stop = 1;
 
    while (!stop) {
       char *str;
-      int size = 0, i = 0;
+      int size = 0;
       client_fd = accept(fd, (struct sockaddr *) &clt, &soc_size);
       
       if (client_fd < 0) {
          fprintf(stderr, "Error: Accept failed.\n");
          continue;
-      } 
-      /* creating formated text to be forwarded and parsed by munin_link_flows script */
+      }      
+      str = getText(linkNames, link_cnt, &size);
+      printf("%s", str);
 
-      for (i = 0; i < link_cnt; i++) {
-         size = asprintf(&str,"%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,",
-         linkNames[i],linkNames[i],linkNames[i],linkNames[i],linkNames[i],linkNames[i]);
-         if ( size > 0) {
-            send(client_fd, str, size, 0);
-         }
-      }
-      for (i = 0; i < link_cnt; i++) {
-         size = asprintf(&str,"%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32",",
-         stats[i].bytes_in, stats[i].flows_in, stats[i].packets_in, stats[i].bytes_out, stats[i].flows_out, stats[i].packets_out);
-         if ( size > 0) {
-           send(client_fd, str, size, 0);
-         } 
+      if ( size > 0) {
+          send(client_fd, str, size, 0);
+          size = 0;
       }
 
       if (str)
@@ -261,15 +329,19 @@ void count_stats (uint64_t link, uint8_t direction, ur_template_t *in_tmplt, con
 }
 
 int main(int argc, char **argv)
-{
-   int ret;
+{  
+   char **linkNames = NULL;
+   int link_size = 0, link_cnt = 0, ret;
    signed char opt;
    ur_template_t *in_tmplt = NULL;
    
    pthread_t accept_thread;
    pthread_attr_t thrAttr; 
    pthread_attr_init(&thrAttr);
-   pthread_attr_setdetachstate(&thrAttr, PTHREAD_CREATE_DETACHED);
+   pthread_attr_setdetachstate(&thrAttr, PTHREAD_CREATE_DETACHED); 
+   
+   /* load names of links form config file */
+   linkNames = get_link_names(CONFIG_PATH, linkNames, &link_size, &link_cnt); 
 
    /* **** TRAP initialization **** */
 
@@ -282,7 +354,7 @@ int main(int argc, char **argv)
 
    /**
     * Let TRAP library parse program arguments, extract its parameters and initialize module interfaces
-    */
+2   */
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
 
    /**
@@ -316,6 +388,12 @@ int main(int argc, char **argv)
       goto cleanup;     
    } 
 
+   /* Create tmp file */
+   if (init_f()) {
+      fprintf(stderr, "Error initializing temporary file.\n"); 
+      return 1;
+   }
+ 
    /* **** Main processing loop **** */
    
    /* reading data from input and calling count_stats function to save processed data */
@@ -324,6 +402,14 @@ int main(int argc, char **argv)
       uint16_t in_rec_size;
       uint64_t link_index;
       uint8_t direction;
+      time_t curr_t;
+      time_t saved_t;  
+      char *data;
+      double interval = 60.0;
+
+      /* Initialize time stamp and get time from tmp file */
+      saved_t = mdf_time(save_tmp);
+      time(&curr_t);
 
       /* Receive data from input interface 0. */
       /* Block if data are not available immediately (unless a timeout is set using trap_ifcctl) */
@@ -347,6 +433,17 @@ int main(int argc, char **argv)
       direction = ur_get(in_tmplt, in_rec, F_DIR_BIT_FIELD);
       /* save data according to information got by the code above */
       count_stats(link_index, direction, in_tmplt, in_rec);
+      
+      /* saving loop */
+      if (difftime(curr_t, saved_t) > interval) {
+         if ( saveData(data) ) { 
+            fprintf(stderr, "Error while saving data.\n");
+            break;
+         }
+         else
+            printf(">Data saved.\n");
+      }
+
    }
 
    /* **** Cleanup **** */
@@ -359,6 +456,10 @@ cleanup:
    TRAP_DEFAULT_FINALIZATION();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    ur_finalize();
+
+   if (linkNames)
+      free(linkNames);
+
 
    return 0;
 }
