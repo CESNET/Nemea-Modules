@@ -62,6 +62,7 @@
 #include "pcapreader.h"
 #include "nhtflowcache.h"
 #include "unirecexporter.h"
+#include "ipfixexporter.h"
 #include "stats.h"
 #include "fields.h"
 
@@ -86,7 +87,7 @@ static int stop = 0;
   PARAM('c', "count", "Quit after number of packets are captured.", required_argument, "uint32")\
   PARAM('I', "interface", "Capture from given network interface. Parameter require interface name (eth0 for example).", required_argument, "string")\
   PARAM('r', "file", "Pcap file to read. - to read from stdin.", required_argument, "string") \
-  PARAM('n', "no_eof", "Don't send EOF message when flow_meter exits.", no_argument, "none") \
+  PARAM('n', "no_eof", "Don't send NULL record message when flow_meter exits.", no_argument, "none") \
   PARAM('l', "snapshot_len", "Snapshot length when reading packets. Set value between 120-65535.", required_argument, "uint32") \
   PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: DOUBLE:DOUBLE. Value default means use default value 300.0:30.0.", required_argument, "string") \
   PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 176 bytes. default means use value 65536.", required_argument, "string") \
@@ -95,7 +96,9 @@ static int stop = 0;
   PARAM('L', "link_bit_field", "Link bit field value.", required_argument, "uint64") \
   PARAM('D', "dir_bit_field", "Direction bit field value.", required_argument, "uint8") \
   PARAM('F', "filter", "String containing filter expression to filter traffic. See man pcap-filter.", required_argument, "string") \
-  PARAM('O', "odid", "Send ODID field instead of LINK_BIT_FIELD.", no_argument, "none")
+  PARAM('O', "odid", "Send ODID field instead of LINK_BIT_FIELD in unirec message.", no_argument, "none") \
+  PARAM('x', "ipfix", "Export to IPFIX collector. Format: HOST:PORT", required_argument, "string") \
+  PARAM('u', "udp", "Use UDP when exporting to IPFIX collector.", no_argument, "none")
 
 /**
  * \brief Parse input plugin settings.
@@ -164,11 +167,19 @@ int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plu
  */
 int count_trap_interfaces(int argc, char *argv[])
 {
+   bool ipfix = false;
    char *interfaces = NULL;
    for (int i = 1; i < argc; i++) { // Find argument for param -i.
+      if (!strcmp(argv[i], "-x")) {
+         ipfix = true;
+      }
       if (!strcmp(argv[i], "-i") && i + 1 < argc) {
          interfaces = argv[i + 1];
       }
+   }
+   if (ipfix && interfaces) {
+      *interfaces = 0;
+      return 0;
    }
 
    int ifc_cnt = 1;
@@ -229,6 +240,27 @@ bool str_to_uint32(string str, uint32_t &dst)
    unsigned long long value = strtoull(str.c_str(), &check, 0);
    if (errno == ERANGE || str[0] == '-' || str[0] == '\0' || *check ||
       value > numeric_limits<uint32_t>::max()) {
+      return false;
+   }
+
+   dst = value;
+   return true;
+}
+
+/**
+ * \brief Provides conversion from string to uint16_t.
+ * \param [in] str String representation of value.
+ * \param [out] dst Destination variable.
+ * \return True on success, false otherwise.
+ */
+bool str_to_uint16(string str, uint16_t &dst)
+{
+   char *check;
+   errno = 0;
+   trim_str(str);
+   unsigned long long value = strtoull(str.c_str(), &check, 0);
+   if (errno == ERANGE || str[0] == '-' || str[0] == '\0' || *check ||
+      value > numeric_limits<uint16_t>::max()) {
       return false;
    }
 
@@ -328,6 +360,9 @@ int main(int argc, char *argv[])
    bool odid = false;
    uint64_t link = 0;
    uint8_t dir = 0;
+   string host = "";
+   string port = "";
+   bool udp = false;
 
    // ***** TRAP initialization *****
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
@@ -349,7 +384,7 @@ int main(int argc, char *argv[])
                TRAP_DEFAULT_FINALIZATION();
                return error("Invalid argument for option -p");
             }
-            if (ret != module_info->num_ifc_out) {
+            if (module_info->num_ifc_out && ret != module_info->num_ifc_out) {
                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                TRAP_DEFAULT_FINALIZATION();
                return error("Number of output ifc interfaces does not correspond number of items in -p parameter.");
@@ -464,6 +499,23 @@ int main(int argc, char *argv[])
       case 'O':
          odid = true;
          break;
+      case 'x':
+         {
+               char *check = strchr(optarg, ':');
+               if (check == NULL) {
+                  FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+                  TRAP_DEFAULT_FINALIZATION();
+                  return error("Invalid argument for option -x");
+               }
+
+               *check = '\0';
+               host = optarg;
+               port = check + 1;
+         }
+         break;
+      case 'u':
+         udp = true;
+         break;
       default:
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
@@ -536,13 +588,23 @@ int main(int argc, char *argv[])
 
    NHTFlowCache flowcache(options);
    UnirecExporter flowwriter(options.eof);
+   IPFIXExporter flow_writer_ipfix;
 
-   if (flowwriter.init(plugin_wrapper.plugins, module_info->num_ifc_out, options.basic_ifc_num, link, dir, odid) != 0) {
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-      TRAP_DEFAULT_FINALIZATION();
-      return error("Unable to initialize UnirecExporter.");
+   if (host == "") {
+      if (flowwriter.init(plugin_wrapper.plugins, module_info->num_ifc_out, options.basic_ifc_num, link, dir, odid) != 0) {
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+         TRAP_DEFAULT_FINALIZATION();
+         return error("Unable to initialize UnirecExporter.");
+      }
+      flowcache.set_exporter(&flowwriter);
+   } else {
+      if (flow_writer_ipfix.init(plugin_wrapper.plugins, options.basic_ifc_num, link, host, port, udp) != 0) {
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+         TRAP_DEFAULT_FINALIZATION();
+         return error("Unable to initialize IPFIXExporter.");
+      }
+      flowcache.set_exporter(&flow_writer_ipfix);
    }
-   flowcache.set_exporter(&flowwriter);
 
    if (!options.print_stats) {
       plugin_wrapper.plugins.push_back(new StatsPlugin(options.cache_stats_interval, cout));

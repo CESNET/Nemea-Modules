@@ -141,6 +141,26 @@ string NTPPlugin::get_unirec_field_string()
 {
    return NTP_UNIREC_TEMPLATE;
 }
+const char *ntp_ipfix_string[] = {
+   "NTP_LEAP",
+   "NTP_VERSION",
+   "NTP_MODE",
+   "NTP_STRATUM",
+   "NTP_POLL",
+   "NTP_PRECISION",
+   "NTP_DELAY",
+   "NTP_DISPERSION",
+   "NTP_REF_ID",
+   "NTP_REF",
+   "NTP_ORIG",
+   "NTP_RECV",
+   "NTP_SENT",
+   NULL
+};
+const char **NTPPlugin::get_ipfix_string()
+{
+   return ntp_ipfix_string;
+}
 
 /**
  *\brief Add new extension NTP header into Flow.

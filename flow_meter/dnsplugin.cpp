@@ -161,6 +161,26 @@ string DNSPlugin::get_unirec_field_string()
    return DNS_UNIREC_TEMPLATE;
 }
 
+const char *dns_ipfix_string[] = {
+   "DNS_ANSWERS",
+   "DNS_RCODE",
+   "DNS_QTYPE",
+   "DNS_CLASS",
+   "DNS_RR_TTL",
+   "DNS_RLENGTH",
+   "DNS_PSIZE",
+   "DNS_DO",
+   "DNS_ID",
+   "DNS_NAME",
+   "DNS_RDATA",
+   NULL
+};
+
+const char **DNSPlugin::get_ipfix_string()
+{
+   return dns_ipfix_string;
+}
+
 /**
  * \brief Get name length.
  * \param [in] data Pointer to string.

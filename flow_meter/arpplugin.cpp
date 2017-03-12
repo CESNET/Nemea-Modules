@@ -215,6 +215,22 @@ string ARPPlugin::get_unirec_field_string()
    return ARP_UNIREC_TEMPLATE;
 }
 
+const char *ipfix_arp_fields[] = {
+   "ARP_HA_FORMAT",
+   "ARP_PA_FORMAT",
+   "ARP_OPCODE",
+   "ARP_SRC_HA",
+   "ARP_SRC_PA",
+   "ARP_DST_HA",
+   "ARP_DST_PA",
+   NULL
+};
+
+const char **ARPPlugin::get_ipfix_string()
+{
+   return ipfix_arp_fields;
+}
+
 bool ARPPlugin::include_basic_flow_fields()
 {
    return false;

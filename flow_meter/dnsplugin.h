@@ -255,6 +255,30 @@ struct RecordExtDNS : RecordExt {
          ur_set(tmplt, record, F_DNS_PSIZE, psize);
          ur_set(tmplt, record, F_DNS_DO, dns_do);
    }
+   virtual int fillIPFIX(uint8_t *buffer, int size)
+   {
+      int length;
+
+      length = strlen(qname);
+      if (length + rlength + 20 > size) {
+         return -1;
+      }
+      *(uint16_t *) (buffer) = ntohs(answers);
+      *(uint8_t *) (buffer + 2) = rcode;
+      *(uint16_t *) (buffer + 3) = ntohs(qtype);
+      *(uint16_t *) (buffer + 5) = ntohs(qclass);
+      *(uint32_t *) (buffer + 7) = ntohl(rr_ttl);
+      *(uint16_t *) (buffer + 11) = ntohs(rlength);
+      *(uint16_t *) (buffer + 13) = ntohs(psize);
+      *(uint8_t *) (buffer + 15) = dns_do;
+      *(uint16_t *) (buffer + 16) = ntohs(id);
+      buffer[18] = length;
+      memcpy(buffer + 19, qname, length);
+      buffer[length + 19] = rlength;
+      memcpy(buffer + 20 + length, data, rlength);
+
+      return 20 + rlength + length;
+   }
 };
 
 /**
@@ -269,6 +293,7 @@ public:
    int pre_update(Flow &rec, Packet &pkt);
    void finish();
    string get_unirec_field_string();
+   const char **get_ipfix_string();
 
 private:
    bool parse_dns(const char *data, unsigned int payload_len, bool tcp, RecordExtDNS *rec);
