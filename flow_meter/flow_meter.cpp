@@ -380,7 +380,6 @@ int main(int argc, char *argv[])
             options.basic_ifc_num = -1;
             int ret = parse_plugin_settings(string(optarg), plugin_wrapper.plugins, options);
             if (ret < 0) {
-               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                TRAP_DEFAULT_FINALIZATION();
                return error("Invalid argument for option -p");
             }
@@ -501,16 +500,16 @@ int main(int argc, char *argv[])
          break;
       case 'x':
          {
-               char *check = strchr(optarg, ':');
-               if (check == NULL) {
-                  FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-                  TRAP_DEFAULT_FINALIZATION();
-                  return error("Invalid argument for option -x");
-               }
+            char *check = strchr(optarg, ':');
+            if (check == NULL) {
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               TRAP_DEFAULT_FINALIZATION();
+               return error("Invalid argument for option -x");
+            }
 
-               *check = '\0';
-               host = optarg;
-               port = check + 1;
+            *check = '\0';
+            host = optarg;
+            port = check + 1;
          }
          break;
       case 'u':
@@ -523,12 +522,12 @@ int main(int argc, char *argv[])
       }
    }
 
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+
    if (options.interface != "" && options.pcap_file != "") {
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       TRAP_DEFAULT_FINALIZATION();
       return error("Cannot capture from file and from interface at the same time.");
    } else if (options.interface == "" && options.pcap_file == "") {
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       TRAP_DEFAULT_FINALIZATION();
       return error("Specify capture interface (-I) or file for reading (-r). ");
    }
@@ -562,7 +561,6 @@ int main(int argc, char *argv[])
    PcapReader packetloader(options);
    if (options.interface == "") {
       if (packetloader.open_file(options.pcap_file, parse_every_pkt) != 0) {
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
          return error("Can't open input file: " + options.pcap_file);
       }
@@ -572,7 +570,6 @@ int main(int argc, char *argv[])
       }
 
       if (packetloader.init_interface(options.interface, options.snaplen, parse_every_pkt) != 0) {
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
          return error("Unable to initialize libpcap: " + packetloader.error_msg);
       }
@@ -580,7 +577,6 @@ int main(int argc, char *argv[])
 
    if (filter != "") {
       if (packetloader.set_filter(filter) != 0) {
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
          return error(packetloader.error_msg);
       }
@@ -592,14 +588,12 @@ int main(int argc, char *argv[])
 
    if (host == "") {
       if (flowwriter.init(plugin_wrapper.plugins, module_info->num_ifc_out, options.basic_ifc_num, link, dir, odid) != 0) {
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
          return error("Unable to initialize UnirecExporter.");
       }
       flowcache.set_exporter(&flowwriter);
    } else {
       if (flow_writer_ipfix.init(plugin_wrapper.plugins, options.basic_ifc_num, link, host, port, udp) != 0) {
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
          return error("Unable to initialize IPFIXExporter.");
       }
@@ -645,7 +639,6 @@ int main(int argc, char *argv[])
       packetloader.close();
       flowwriter.close();
       delete [] packet.packet;
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       TRAP_DEFAULT_FINALIZATION();
       return error("Error during reading: " + packetloader.error_msg);
    }
@@ -661,7 +654,6 @@ int main(int argc, char *argv[])
    packetloader.close();
 
    delete [] packet.packet;
-   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
    TRAP_DEFAULT_FINALIZATION();
 
    return EXIT_SUCCESS;
