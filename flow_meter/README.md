@@ -116,6 +116,33 @@ List of unirec fields exported together with basic flow fields on interface by D
 | DNS_PSIZE    | uint16 | requestor's payload size        |
 | DNS_DO       | uint8  | DNSSEC OK bit                   |
 
+#### DNS_RDATA format
+
+DNS_RDATA formatting is implemented for some base DNS RR Types in human-readable output.
+Same as [here](https://www.liberouter.org/technologies/exporter/dns-plugin/):
+
+| Record | Format |
+|:------:|:------:|
+| A      | <IPv4 in dotted decimal representation\> |
+| AAAA   | <IPv6 represented as groups separated by semicolons\> |
+| NS     | <parsed hostname\> |
+| CNAME  | <parsed hostname\> |
+| PTR    | <parsed hostname\> |
+| DNAME  | <parsed hostname\> |
+| SOA    | <mname\> <rname\> <serial\> <refresh\> <retry\> <expire\> <min ttl\> |
+| SRV    | <service\> <protocol\> <name\> <target\> <priority\> <weight\> <port\> |
+| MX     | <priority\> <mx hostname\> |
+| TXT    | <txt string\> |
+| MINFO  | <rmailbx\> <emailbx\> |
+| HINFO  | <txt string\> |
+| ISDN   | <txt string\> |
+| DS     | <keytag\> <algorithm\> <digest\> <publickey\>\* |
+| RRSIG  | <type_covered\> <algorithm\> <labels\> <original_ttl\> <signature_exp\> <signature_inc\> <keytag\> <signer_signature\>\* |
+| DNSKEY | <flags\> <protocol\> <algorithm\> <publickey\>\* |
+| other  | <not impl\>\* |
+
+ \* binary data are skipped and not printed
+
 ### SIP
 List of unirec fields exported together with basic flow fields on interface by SIP plugin.
 
