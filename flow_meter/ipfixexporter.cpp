@@ -396,18 +396,20 @@ int IPFIXExporter::init(const vector<FlowCachePlugin *> &plugins, int basic_num,
    for (unsigned int i = 0; i < plugins.size(); i++) {
       FlowCachePlugin * const tmp = plugins[i];
       vector<plugin_opt> &opts = tmp->get_options();
-      int ifc;
+      int ifc = -1;
 
       for (unsigned int j = 0; j < opts.size(); j++) { // Create plugin extension id -> output interface mapping.
          tmpltMapping[opts[j].ext_type] = opts[j].out_ifc_num;
          ifc = opts[j].out_ifc_num;
       }
 
-      if (tmp->include_basic_flow_fields()) {
-         templateArray[ifc * 2] = create_template(basic_tmplt_v4, tmp->get_ipfix_string());
-         templateArray[ifc * 2 + 1] = create_template(basic_tmplt_v6, tmp->get_ipfix_string());
-      } else {
-         templateArray[ifc * 2] = create_template(packet_tmplt, tmp->get_ipfix_string());
+      if (ifc >= 0) {
+         if (tmp->include_basic_flow_fields()) {
+            templateArray[ifc * 2] = create_template(basic_tmplt_v4, tmp->get_ipfix_string());
+            templateArray[ifc * 2 + 1] = create_template(basic_tmplt_v6, tmp->get_ipfix_string());
+         } else {
+            templateArray[ifc * 2] = create_template(packet_tmplt, tmp->get_ipfix_string());
+         }
       }
    }
 
