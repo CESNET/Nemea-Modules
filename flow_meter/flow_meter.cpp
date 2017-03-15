@@ -167,21 +167,12 @@ int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plu
  */
 int count_trap_interfaces(int argc, char *argv[])
 {
-   bool ipfix = false;
    char *interfaces = NULL;
    for (int i = 1; i < argc; i++) { // Find argument for param -i.
-      if (!strcmp(argv[i], "-x")) {
-         ipfix = true;
-      }
       if (!strcmp(argv[i], "-i") && i + 1 < argc) {
          interfaces = argv[i + 1];
       }
    }
-   if (ipfix && interfaces) {
-      *interfaces = 0;
-      return 0;
-   }
-
    int ifc_cnt = 1;
    if (interfaces != NULL) {
       while(*interfaces) { // Count number of specified interfaces.
@@ -364,10 +355,46 @@ int main(int argc, char *argv[])
    string port = "";
    bool udp = false;
 
-   // ***** TRAP initialization *****
-   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-   module_info->num_ifc_out = count_trap_interfaces(argc, argv);
-   TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
+   int trap_module_params_cnt = 0, ifc_cnt = 0;
+   size_t module_getopt_string_size = 50;
+   char * module_getopt_string = NULL;
+
+   bool export_unirec = false, export_ipfix = false;
+   for (int i = 0; i < argc; i++) {
+      if (!strcmp(argv[i], "-i")) {
+         export_unirec = i;
+      } else if (!strcmp(argv[i], "-x")) {
+         export_ipfix = i;
+      }
+   }
+
+   if (export_unirec && export_ipfix) {
+      return error("Cannot export to IPFIX and Unirec at the same time.");
+      return 1;
+   } else if (!export_unirec && !export_ipfix) {
+      return error("Specify exporter output.");
+      return 1;
+   }
+
+   module_getopt_string = (char *) calloc(module_getopt_string_size, sizeof(char));
+   module_info = (trap_module_info_t *) calloc(1, sizeof(trap_module_info_t));
+   GEN_LONG_OPT_STRUCT(MODULE_PARAMS);
+   MODULE_BASIC_INFO(ALLOCATE_BASIC_INFO);
+   MODULE_PARAMS(COUNT_MODULE_PARAMS);
+   if (module_info != NULL) {
+      module_info->params = (trap_module_info_parameter_t **) calloc(trap_module_params_cnt + 1, sizeof(trap_module_info_parameter_t *));
+      if (module_info->params != NULL) {
+         trap_module_params_cnt = 0;
+         MODULE_PARAMS(ALLOCATE_PARAM_ITEMS);
+         MODULE_PARAMS(GENERATE_GETOPT_STRING);
+      }
+   }
+   if (export_unirec) {
+      /* TRAP initialization */
+      ifc_cnt = count_trap_interfaces(argc, argv);
+      module_info->num_ifc_out = ifc_cnt;
+      TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
+   }
 
    signal(SIGTERM, signal_handler);
    signal(SIGINT, signal_handler);
@@ -383,7 +410,7 @@ int main(int argc, char *argv[])
                TRAP_DEFAULT_FINALIZATION();
                return error("Invalid argument for option -p");
             }
-            if (module_info->num_ifc_out && ret != module_info->num_ifc_out) {
+            if (ifc_cnt && ret != ifc_cnt) {
                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                TRAP_DEFAULT_FINALIZATION();
                return error("Number of output ifc interfaces does not correspond number of items in -p parameter.");
@@ -565,8 +592,10 @@ int main(int argc, char *argv[])
          return error("Can't open input file: " + options.pcap_file);
       }
    } else {
-      for (int i = 0; i < module_info->num_ifc_out; i++) {
-         trap_ifcctl(TRAPIFC_OUTPUT, i, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT);
+      if (export_unirec) {
+         for (int i = 0; i < ifc_cnt; i++) {
+            trap_ifcctl(TRAPIFC_OUTPUT, i, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT);
+         }
       }
 
       if (packetloader.init_interface(options.interface, options.snaplen, parse_every_pkt) != 0) {
@@ -587,7 +616,7 @@ int main(int argc, char *argv[])
    IPFIXExporter flow_writer_ipfix;
 
    if (host == "") {
-      if (flowwriter.init(plugin_wrapper.plugins, module_info->num_ifc_out, options.basic_ifc_num, link, dir, odid) != 0) {
+      if (flowwriter.init(plugin_wrapper.plugins, ifc_cnt, options.basic_ifc_num, link, dir, odid) != 0) {
          TRAP_DEFAULT_FINALIZATION();
          return error("Unable to initialize UnirecExporter.");
       }
