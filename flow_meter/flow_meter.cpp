@@ -346,54 +346,39 @@ int main(int argc, char *argv[])
    options.snaplen = 0;
    options.eof = true;
 
-   string filter = "";
-   uint32_t pkt_limit = 0; // Limit of packets for packet parser. 0 = no limit
-   bool odid = false;
+   bool odid = false, export_unirec = false, export_ipfix = false, help = false, udp = false;
+   int ifc_cnt = 0;
    uint64_t link = 0;
+   uint32_t pkt_limit = 0; /* Limit of packets for packet parser. 0 = no limit */
    uint8_t dir = 0;
-   string host = "";
-   string port = "";
-   bool udp = false;
+   string host = "", port = "", filter = "";
 
-   int trap_module_params_cnt = 0, ifc_cnt = 0;
-   size_t module_getopt_string_size = 50;
-   char * module_getopt_string = NULL;
-
-   bool export_unirec = false, export_ipfix = false;
    for (int i = 0; i < argc; i++) {
       if (!strcmp(argv[i], "-i")) {
-         export_unirec = i;
+         export_unirec = true;
       } else if (!strcmp(argv[i], "-x")) {
-         export_ipfix = i;
+         export_ipfix = true;
+      } else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
+         help = true;
       }
    }
 
-   if (export_unirec && export_ipfix) {
-      return error("Cannot export to IPFIX and Unirec at the same time.");
-      return 1;
-   } else if (!export_unirec && !export_ipfix) {
-      return error("Specify exporter output.");
-      return 1;
-   }
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
 
-   module_getopt_string = (char *) calloc(module_getopt_string_size, sizeof(char));
-   module_info = (trap_module_info_t *) calloc(1, sizeof(trap_module_info_t));
-   GEN_LONG_OPT_STRUCT(MODULE_PARAMS);
-   MODULE_BASIC_INFO(ALLOCATE_BASIC_INFO);
-   MODULE_PARAMS(COUNT_MODULE_PARAMS);
-   if (module_info != NULL) {
-      module_info->params = (trap_module_info_parameter_t **) calloc(trap_module_params_cnt + 1, sizeof(trap_module_info_parameter_t *));
-      if (module_info->params != NULL) {
-         trap_module_params_cnt = 0;
-         MODULE_PARAMS(ALLOCATE_PARAM_ITEMS);
-         MODULE_PARAMS(GENERATE_GETOPT_STRING);
-      }
-   }
-   if (export_unirec) {
+   if ((export_unirec && !export_ipfix) || help) {
       /* TRAP initialization */
       ifc_cnt = count_trap_interfaces(argc, argv);
       module_info->num_ifc_out = ifc_cnt;
       TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
+   }
+
+   if (export_unirec && export_ipfix) {
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      TRAP_DEFAULT_FINALIZATION();
+      return error("Cannot export to IPFIX and Unirec at the same time.");
+   } else if (!export_unirec && !export_ipfix) {
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      return error("Specify exporter output Unirec (-i) or IPFIX (-x).");
    }
 
    signal(SIGTERM, signal_handler);
