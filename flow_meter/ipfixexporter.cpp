@@ -46,6 +46,7 @@
 #include <netdb.h>
 #include <errno.h>
 #include <endian.h>
+#include <config.h>
 
 #include "flowcacheplugin.h"
 #include "flowexporter.h"
@@ -1008,7 +1009,7 @@ int IPFIXExporter::reconnect()
  * @param value Value to swap
  * @return Swapped value
  */
-#if BYTEORDER == 1234 /* Big endian */
+#if BYTEORDER == 4321 /* Big endian */
 static inline uint64_t swap_uint64(uint64_t value)
 {
    return value;
