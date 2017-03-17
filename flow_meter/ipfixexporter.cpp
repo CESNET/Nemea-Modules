@@ -216,11 +216,11 @@ IPFIXExporter::IPFIXExporter()
    protocol = IPPROTO_TCP;
    ip = AF_UNSPEC; //AF_INET;
    flags = 0;
-   reconnectTimeout = 0;
+   reconnectTimeout = RECONNECT_TIMEOUT;
    lastReconnect = 0;
    odid = 0;
-   templateRefreshTime = 0;
-   templateRefreshPackets = 0;
+   templateRefreshTime = TEMPLATE_REFRESH_TIME;
+   templateRefreshPackets = TEMPLATE_REFRESH_PACKETS;
 }
 
 IPFIXExporter::~IPFIXExporter()

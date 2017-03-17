@@ -62,6 +62,8 @@ using namespace std;
 #define IPFIX_SET_HEADER_SIZE 4
 #define TEMPLATE_BUFFER_SIZE (PACKET_DATA_SIZE - IPFIX_HEADER_SIZE)
 #define RECONNECT_TIMEOUT 60
+#define TEMPLATE_REFRESH_TIME 600
+#define TEMPLATE_REFRESH_PACKETS 0
 
 typedef struct {
 	char *name; /**< Record name */
