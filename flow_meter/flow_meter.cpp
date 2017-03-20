@@ -398,6 +398,7 @@ int main(int argc, char *argv[])
 
    signal(SIGTERM, signal_handler);
    signal(SIGINT, signal_handler);
+   signal(SIGPIPE, SIG_IGN);
 
    signed char opt;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
