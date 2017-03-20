@@ -164,7 +164,6 @@ time_t mdf_time(char *path) {
 
 /*   *** Parsing link names from config file ***
 *   Function goes through text file line by line and search for specific pattern
-*   return names string array 
 *   input arg: fileName is path to config file, arrayCnt is counter for array and size 
 *   stores size of memory for array */
 
@@ -210,7 +209,7 @@ char **get_link_names(char *filePath, char **linkNames, int *size, int *arrCnt)
 }
 
 /* Creating formated text to be forwarded and parsed by munin_link_flows script */
-char *send_to_sock(const int client_fd, const char **linkNames, const int link_cnt) {
+char *send_to_sock(const int client_fd, char **linkNames, const int link_cnt) {
    char *str = NULL;
    char *tmp = NULL;
    char *strToSave = NULL;
@@ -243,9 +242,11 @@ char *send_to_sock(const int client_fd, const char **linkNames, const int link_c
                size -= sent;  
                watch_dog ++; 
             }   
+         asprintf(&strToSave, str);
          free(str);
       }   
-   }      
+   } 
+   return strToSave;     
 }
 
 void *accept_clients(void *arg)
@@ -258,12 +259,11 @@ void *accept_clients(void *arg)
    int link_size = 0, link_cnt = 0, interval = 60;
    time_t curr_t;
    time_t saved_t;
-   char *data;
 
    /* Create tmp file */
    if (init_f()) {
       fprintf(stderr, "Error initializing temporary file.\n");
-      return 1;
+      stop = 1;
    }
 
    /* load names of links form config file */
@@ -311,7 +311,7 @@ void *accept_clients(void *arg)
    tv.tv_usec = 0;
 
    while (!stop) {
-      char *str = NULL;
+      char *data = NULL;
       int size = 0;
       FD_ZERO (&rfds);
       FD_SET (fd, &rfds);
@@ -336,6 +336,7 @@ void *accept_clients(void *arg)
          fprintf(stderr,"Error : select().\n");
          break;
       } else if (!retval) {
+         data = send_to_sock(fd, linkNames, link_cnt);
          if ( saveData(data) ) {
                fprintf(stderr, "Error while saving data.\n");
                break;
@@ -343,6 +344,7 @@ void *accept_clients(void *arg)
 
       } else if (retval) {
          if (difftime(curr_t, saved_t) >= interval) {
+            data = send_to_sock(fd, linkNames, link_cnt); 
             if ( saveData(data) ) { 
                fprintf(stderr, "Error while saving data.\n");
                break;
@@ -351,9 +353,8 @@ void *accept_clients(void *arg)
                printf(">Data saved.\n");
          }
       }
- 
-      if (!(str = send_to_sock(&client_fd, linkNames, &link_cnt))) {
-         fprintf(stderr, " Error while sending data to socket. ");
+      if (data) {
+         free(data);   
       }
       close(client_fd);
    }
