@@ -57,6 +57,7 @@
 #include <time.h>
 #include <errno.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include <nemea-common.h>
 
 #include <libtrap/trap.h>

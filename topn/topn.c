@@ -405,7 +405,7 @@ int main(int argc, char **argv)
       average_packets = all_packets / received_flows;
 
       /*if ((received_flows > 190000) && received_flows % 200000 == 0) {
-         printf("%luk (%luM): average bytes: %d, average packets: %d,\n", received_flows / 1000, received_flows / 1000000, average_bytes, average_packets);
+         printf("%" PRIu64 "k (%" PRIu64 "M): average bytes: %d, average packets: %d,\n", received_flows / 1000, received_flows / 1000000, average_bytes, average_packets);
       }*/
 
       record_ip->bytes = ur_get(tmplt, data, F_BYTES);
@@ -995,7 +995,7 @@ void print_top_ports(port_t *array_of_ports, int port_number)
       if (array_of_ports[i].flows == 0) {
          break;
       }
-      printf("%d\t%u\t%lu\n", i + 1, array_of_ports[i].port, array_of_ports[i].flows);
+      printf("%d\t%u\t%" PRIu64 "\n", i + 1, array_of_ports[i].port, array_of_ports[i].flows);
    }
 
    qsort (array_of_ports, 65536, sizeof(port_t), compare_packets);
@@ -1012,7 +1012,7 @@ void print_top_ports(port_t *array_of_ports, int port_number)
       if (array_of_ports[i].packets == 0) {
          break;
       }
-      printf("%d\t%u\t%lu\n", i + 1, array_of_ports[i].port, array_of_ports[i].packets);
+      printf("%d\t%u\t%" PRIu64 "\n", i + 1, array_of_ports[i].port, array_of_ports[i].packets);
    }
 
    qsort (array_of_ports, 65536, sizeof(port_t), compare_bytes);
@@ -1029,7 +1029,7 @@ void print_top_ports(port_t *array_of_ports, int port_number)
       if (array_of_ports[i].bytes == 0) {
          break;
       }
-      printf("%d\t%u\t%lu\n", i + 1, array_of_ports[i].port, array_of_ports[i].bytes);
+      printf("%d\t%u\t%" PRIu64 "\n", i + 1, array_of_ports[i].port, array_of_ports[i].bytes);
    }
 }
 
@@ -1075,7 +1075,7 @@ void print_top_ip(char *ip_string, fhf_table_t *table_pab, fhf_iter_t *iter_pab,
 
    for (int i = 0; i < topn && i < number_of_records; i++) {
       ip_to_str(&ip_array[i].src_ip, ip_string);
-      printf("%d\t%s\t%lu\n", i + 1, ip_string, ip_array[i].flows);
+      printf("%d\t%s\t%" PRIu64 "\n", i + 1, ip_string, ip_array[i].flows);
    }
 
 
@@ -1115,7 +1115,7 @@ void print_top_ip(char *ip_string, fhf_table_t *table_pab, fhf_iter_t *iter_pab,
 
    for (int i = 0; i < topn && i < number_of_records; i++) {
       ip_to_str(&ip_array[i].src_ip, ip_string);
-      printf("%d\t%s\t%lu\n", i + 1, ip_string, ip_array[i].packets);
+      printf("%d\t%s\t%" PRIu64 "\n", i + 1, ip_string, ip_array[i].packets);
    }
 
 
@@ -1140,7 +1140,7 @@ void print_top_ip(char *ip_string, fhf_table_t *table_pab, fhf_iter_t *iter_pab,
 
    for (int i = 0; i < topn && i < number_of_records; i++) {
       ip_to_str(&ip_array[i].src_ip, ip_string);
-      printf("%d\t%s\t%lu\n", i + 1, ip_string, ip_array[i].bytes);
+      printf("%d\t%s\t%" PRIu64 "\n", i + 1, ip_string, ip_array[i].bytes);
    }
 }
 

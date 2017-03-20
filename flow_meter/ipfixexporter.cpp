@@ -48,6 +48,9 @@
 #include <endian.h>
 #include <config.h>
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 #include "flowcacheplugin.h"
 #include "flowexporter.h"
 #include "ipfixexporter.h"
@@ -924,7 +927,7 @@ int IPFIXExporter::send_packet(ipfix_packet_t *packet)
    exportedPackets++;
 
    if (verbose) {
-      printf("VERBOSE: Packet (%li) sent to %s on port %s. Next sequence number is %i\n",
+      printf("VERBOSE: Packet (%" PRIu64 ") sent to %s on port %s. Next sequence number is %i\n",
             exportedPackets, host.c_str(), port.c_str(), sequenceNum);
    }
 
