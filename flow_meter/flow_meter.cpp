@@ -97,7 +97,7 @@ static int stop = 0;
   PARAM('D', "dir_bit_field", "Direction bit field value.", required_argument, "uint8") \
   PARAM('F', "filter", "String containing filter expression to filter traffic. See man pcap-filter.", required_argument, "string") \
   PARAM('O', "odid", "Send ODID field instead of LINK_BIT_FIELD in unirec message.", no_argument, "none") \
-  PARAM('x', "ipfix", "Export to IPFIX collector. Format: HOST:PORT", required_argument, "string") \
+  PARAM('x', "ipfix", "Export to IPFIX collector. Format: HOST:PORT or [HOST]:PORT", required_argument, "string") \
   PARAM('u', "udp", "Use UDP when exporting to IPFIX collector.", no_argument, "none")
 
 /**
@@ -512,16 +512,30 @@ int main(int argc, char *argv[])
          break;
       case 'x':
          {
-            char *check = strchr(optarg, ':');
-            if (check == NULL) {
+            host = optarg;
+            size_t tmp = host.find_last_of(":");
+            if (tmp == string::npos) {
                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                TRAP_DEFAULT_FINALIZATION();
                return error("Invalid argument for option -x");
             }
 
-            *check = '\0';
-            host = optarg;
-            port = check + 1;
+
+            port = string(host, tmp + 1);
+            host = host.erase(tmp);
+            trim_str(host);
+            trim_str(port);
+
+            if (host == "" || port == "") {
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               TRAP_DEFAULT_FINALIZATION();
+               return error("Invalid argument for option -x");
+            }
+
+            if (host[0] == '[' && host[host.size() - 1] == ']') {
+               host = host.erase(0, 1);
+               host = host.erase(host.size() - 1, 1);
+            }
          }
          break;
       case 'u':
@@ -600,7 +614,7 @@ int main(int argc, char *argv[])
    UnirecExporter flowwriter(options.eof);
    IPFIXExporter flow_writer_ipfix;
 
-   if (host == "") {
+   if (export_unirec) {
       if (flowwriter.init(plugin_wrapper.plugins, ifc_cnt, options.basic_ifc_num, link, dir, odid) != 0) {
          TRAP_DEFAULT_FINALIZATION();
          return error("Unable to initialize UnirecExporter.");

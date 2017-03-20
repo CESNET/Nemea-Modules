@@ -32,7 +32,7 @@ This NEMEA module creates flows from input PCAP file / network interface and exp
 - `-D NUMBER`        Direction bit field value.
 - `-F STRING`        String containing filter expression to filter traffic. See man pcap-filter.
 - `-O`               Send ODID field instead of LINK_BIT_FIELD.
-- `-x STRING`        Export to IPFIX collector. Format: HOST:PORT
+- `-x STRING`        Export to IPFIX collector. Format: HOST:PORT or [HOST]:PORT
 - `-u`               Use UDP when exporting to IPFIX collector.
 
 ### Common TRAP parameters
