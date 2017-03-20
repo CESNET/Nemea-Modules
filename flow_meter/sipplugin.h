@@ -57,7 +57,7 @@
 
 using namespace std;
 
-#define SIP_FIELD_LEN				256
+#define SIP_FIELD_LEN				128
 
 #define SIP_MSG_TYPE_INVALID     0
 #define SIP_MSG_TYPE_INVITE      1
