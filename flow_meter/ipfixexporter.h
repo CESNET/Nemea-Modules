@@ -197,11 +197,11 @@ class IPFIXExporter : public FlowExporter
 public:
    IPFIXExporter();
    ~IPFIXExporter();
-   void plugin_export_shutdown();
    int export_flow(Flow &flow);
    int export_packet(Packet &pkt);
-   void flush();
    int init(const vector<FlowCachePlugin *> &plugins, int basic_ifc_num, uint32_t odid, string host, string port, bool udp, bool verbose);
+   void flush();
+   void shutdown();
 private:
 	/* Templates */
 	template_file_record_t *templateFileRecords; /**< File template records  */

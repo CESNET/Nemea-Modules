@@ -226,18 +226,18 @@ IPFIXExporter::IPFIXExporter()
 
 IPFIXExporter::~IPFIXExporter()
 {
-   plugin_export_shutdown();
+   shutdown();
 }
 
 /**
  * \brief Function called at exporter shutdown
  */
-void IPFIXExporter::plugin_export_shutdown()
+void IPFIXExporter::shutdown()
 {
    /* Close the connection */
    if (fd != -1) {
-      send_templates();
-      send_data();
+      flush();
+
       close(fd);
       freeaddrinfo(addrinfo);
       fd = -1;
@@ -392,6 +392,12 @@ int IPFIXExporter::init(const vector<FlowCachePlugin *> &plugins, int basic_num,
    if (basic_num >= 0) {
       templateArray[basic_ifc_num * 2] = create_template(basic_tmplt_v4, NULL);
       templateArray[basic_ifc_num * 2 + 1] = create_template(basic_tmplt_v6, NULL);
+
+      if (templateArray[basic_ifc_num * 2] == NULL || templateArray[basic_ifc_num * 2 + 1] == NULL) {
+         fprintf(stderr, "IPFIX template creation failed.\n");
+         shutdown();
+         return 1;
+      }
    }
 
    tmpltMapping = new int[EXTENSION_CNT];
@@ -414,6 +420,13 @@ int IPFIXExporter::init(const vector<FlowCachePlugin *> &plugins, int basic_num,
             templateArray[ifc * 2 + 1] = create_template(basic_tmplt_v6, tmp->get_ipfix_string());
          } else {
             templateArray[ifc * 2] = create_template(packet_tmplt, tmp->get_ipfix_string());
+         }
+
+         if (templateArray[ifc * 2] == NULL || (tmp->include_basic_flow_fields() &&
+             templateArray[ifc * 2 + 1] == NULL)) {
+            fprintf(stderr, "IPFIX template creation failed.\n");
+            shutdown();
+            return 1;
          }
       }
    }
@@ -473,7 +486,7 @@ int IPFIXExporter::fill_template_set_header(char *ptr, uint16_t size)
 void IPFIXExporter::check_template_lifetime(template_t *tmpl)
 {
    if (templateRefreshTime != 0 &&
-         templateRefreshTime + tmpl->exportTime <= time(NULL)) {
+         (time_t) (templateRefreshTime + tmpl->exportTime) <= time(NULL)) {
       if (verbose) {
          printf("VERBOSE: Template %i refresh time expired (%is)\n", tmpl->id, templateRefreshTime);
       }
@@ -573,6 +586,7 @@ template_t *IPFIXExporter::create_template(const char **tmplt, const char **ext)
    /* Create new template structure */
    newTemplate = (template_t *) malloc(sizeof(template_t));
    if (!newTemplate) {
+      fprintf(stderr, "Not enough memory for IPFIX template.\n");
       return NULL;
    }
    //newTemplate->templateGetters = NULL;
@@ -605,7 +619,9 @@ template_t *IPFIXExporter::create_template(const char **tmplt, const char **ext)
 
             /* Set element length */
             if (tmpFileRecord->length == 0) {
-               //len = tmpGetter->length;
+               fprintf(stderr, "Template field cannot be zero length.\n");
+               free(newTemplate);
+               return NULL;
             } else {
                len = tmpFileRecord->length;
             }
@@ -1008,7 +1024,7 @@ int IPFIXExporter::reconnect()
    /* Check for broken connection */
    if (lastReconnect != 0) {
       /* Check whether we need to attempt reconnection */
-      if (lastReconnect + reconnectTimeout <= time(NULL)) {
+      if ((time_t) (lastReconnect + reconnectTimeout) <= time(NULL)) {
          /* Try to reconnect */
          if (connect_to_collector() == 0) {
             lastReconnect = 0;
