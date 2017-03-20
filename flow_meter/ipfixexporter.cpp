@@ -908,15 +908,20 @@ int IPFIXExporter::send_packet(ipfix_packet_t *packet)
 int IPFIXExporter::connect_to_collector()
 {
    struct addrinfo hints, *tmp;
+   int err;
 
    memset(&hints, 0, sizeof(hints));
    hints.ai_family = ip;
    hints.ai_protocol = protocol;
    hints.ai_flags = AI_ADDRCONFIG | flags;
 
-   /* get server address */
-   if (getaddrinfo(host.c_str(), port.c_str(), &hints, &addrinfo) != 0) {
-      perror("Cannot get server info");
+   err = getaddrinfo(host.c_str(), port.c_str(), &hints, &addrinfo);
+   if (err) {
+      if (err == EAI_SYSTEM) {
+         fprintf(stderr, "Cannot get server info: %s\n", strerror(errno));
+      } else {
+         fprintf(stderr, "Cannot get server info: %s\n", gai_strerror(err));
+      }
       return 1;
    }
 
