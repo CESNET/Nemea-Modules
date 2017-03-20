@@ -201,7 +201,7 @@ public:
    int export_flow(Flow &flow);
    int export_packet(Packet &pkt);
    void flush();
-   int init(const vector<FlowCachePlugin *> &plugins, int basic_ifc_num, uint32_t odid, string host, string port, bool udp);
+   int init(const vector<FlowCachePlugin *> &plugins, int basic_ifc_num, uint32_t odid, string host, string port, bool udp, bool verbose);
 private:
 	/* Templates */
 	template_file_record_t *templateFileRecords; /**< File template records  */
@@ -211,6 +211,7 @@ private:
    int templateMaxCnt;
    int *tmpltMapping;
    int basic_ifc_num;
+   bool verbose;
 
 	uint32_t sequenceNum; /**< Number of exported flows */
 	uint64_t counter; /**< Number of exported flows -- to be removed*/

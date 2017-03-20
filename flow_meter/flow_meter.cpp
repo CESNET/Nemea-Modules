@@ -347,7 +347,7 @@ int main(int argc, char *argv[])
    options.eof = true;
 
    bool odid = false, export_unirec = false, export_ipfix = false, help = false, udp = false;
-   int ifc_cnt = 0;
+   int ifc_cnt = 0, verbose = -1;
    uint64_t link = 0;
    uint32_t pkt_limit = 0; /* Limit of packets for packet parser. 0 = no limit */
    uint8_t dir = 0;
@@ -360,6 +360,16 @@ int main(int argc, char *argv[])
          export_ipfix = true;
       } else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
          help = true;
+      } else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "-vv") || !strcmp(argv[i], "-vvv")) {
+         if (verbose >= 0) {
+            for (int j = verbose; j + 1 < argc; j++) {
+               argv[j] = argv[j + 1];
+            }
+            argc--;
+            verbose = --i;
+         } else {
+            verbose = i;
+         }
       }
    }
 
@@ -370,6 +380,11 @@ int main(int argc, char *argv[])
       ifc_cnt = count_trap_interfaces(argc, argv);
       module_info->num_ifc_out = ifc_cnt;
       TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
+   } else if (verbose >= 0) {
+      for (int i = verbose; i + 1 < argc; i++) {
+         argv[i] = argv[i + 1];
+      }
+      argc--;
    }
 
    if (export_unirec && export_ipfix) {
@@ -621,7 +636,7 @@ int main(int argc, char *argv[])
       }
       flowcache.set_exporter(&flowwriter);
    } else {
-      if (flow_writer_ipfix.init(plugin_wrapper.plugins, options.basic_ifc_num, link, host, port, udp) != 0) {
+      if (flow_writer_ipfix.init(plugin_wrapper.plugins, options.basic_ifc_num, link, host, port, udp, (verbose >= 0)) != 0) {
          TRAP_DEFAULT_FINALIZATION();
          return error("Unable to initialize IPFIXExporter.");
       }
