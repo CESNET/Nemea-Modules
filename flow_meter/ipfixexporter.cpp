@@ -371,6 +371,8 @@ int IPFIXExporter::export_packet(Packet &pkt)
  */
 int IPFIXExporter::init(const vector<FlowCachePlugin *> &plugins, int basic_num, uint32_t odid, string host, string port, bool udp, bool verbose)
 {
+   int ret;
+
    if (verbose) {
       printf("VERBOSE: IPFIX export plugin init start\n");
    }
@@ -434,10 +436,12 @@ int IPFIXExporter::init(const vector<FlowCachePlugin *> &plugins, int basic_num,
       }
    }
 
-   if (connect_to_collector() != 0) {
+   ret = connect_to_collector();
+   if (ret == 1) {
       return 1;
+   } else if (ret == 2) {
+      lastReconnect = time(NULL);
    }
-
 
    if (verbose) {
       printf("VERBOSE: IPFIX export plugin init end\n");
@@ -1011,7 +1015,7 @@ int IPFIXExporter::connect_to_collector()
    if (tmp == NULL) {
       /* Free allocated resources */
       freeaddrinfo(addrinfo);
-      return 1;
+      return 2;
    }
 
    return 0;
