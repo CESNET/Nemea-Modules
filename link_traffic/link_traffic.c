@@ -54,7 +54,7 @@
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 #include <pthread.h>
-#include <sys/socket.h> 
+#include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -66,8 +66,9 @@
 #include <unistd.h>
 #include <sys/select.h>
 
-#define save_tmp "/var/run/libtrap/saved_data.tmp"
-#define save_file "/var/run/libtrap/saved_data"
+#define SAVE_FILE "/var/run/libtrap/saved_data"
+#define SAVE_TMP SAVE_FILE ".tmp"
+#define NAME_IDENT "name=\""
 
 /**
  * Definition of fields used in unirec templates (for both input and output interfaces)
@@ -99,7 +100,7 @@ trap_module_info_t *module_info = NULL;
 
 #define DEF_SOCKET_PATH "/var/run/libtrap/munin_link_traffic"
 
-#define CONFIG_PATH "/home/nemea/Nemea-Modules/link_traffic/config.txt" 
+#define CONFIG_PATH "config.txt"
 
 static volatile int stop = 0;
 
@@ -117,120 +118,189 @@ typedef struct link_stats {
    volatile uint64_t bytes_out;
 } link_stats_t;
 
-link_stats_t stats[8]; 
+link_stats_t stats[8];
+
+char *file_header = NULL;
 
 /* Initialize temporary file */
 int init_f()
 {
    /* Create tmp file  */
    FILE *tmp;
-   if ( ! (tmp = fopen(save_tmp, "w+")) )
+   if ( ! (tmp = fopen(SAVE_TMP, "w+")) )
       return 1;
    fclose(tmp);
    return 0;
 }
 
 /* Saves input string to defined save file */
-int saveData (const char *string)
+int saveData(const char *string)
 {
    FILE *fp;
-   if (! (fp = fopen(save_tmp, "w") )) {
-      fprintf(stderr, "Error while opening %s.\n", save_tmp);
+   if (!(fp = fopen(SAVE_TMP, "w") )) {
+      fprintf(stderr, "Error while opening %s.\n", SAVE_TMP);
       return 1;
    }
 
    fputs(string, fp);
    fclose(fp);
 
-   if (rename(save_tmp, save_file) == -1 ) {
-      fprintf(stderr, "A rename error occurred check if file %s and %s exists.\n", save_tmp, save_file);
+   if (rename(SAVE_TMP, SAVE_FILE) == -1 ) {
+      fprintf(stderr, "A rename error occurred check if file %s and %s exists.\n", SAVE_TMP, SAVE_FILE);
    }
    if (!init_f())
       return 0;
-   fprintf(stderr,"Error creating tmp file: %s.\n", save_tmp);
+   fprintf(stderr,"Error creating tmp file: %s.\n", SAVE_TMP);
    return 1;
-} 
+}
 
 /* Get md_time of file  */
 time_t mdf_time(char *path) {
    struct stat fst;
    bzero(&fst,sizeof(fst));
-   if (stat(path, &fst) != 0) { 
-      printf("stat() failed with errno %d\n",errno); exit(-1); 
-   }   
+   if (stat(path, &fst) != 0) {
+      printf("stat() failed with errno %d\n",errno); exit(-1);
+   }
    return fst.st_mtime;
 }
 
 
 /*   *** Parsing link names from config file ***
 *   Function goes through text file line by line and search for specific pattern
-*   input arg: fileName is path to config file, arrayCnt is counter for array and size 
+*   input arg: fileName is path to config file, arrayCnt is counter for array and size
 *   stores size of memory for array */
 
-char **get_link_names(char *filePath, char **linkNames, int *size, int *arrCnt)
+char **get_link_names(char *filePath, char **linkNames, int *arrCnt)
 {
    FILE *fp;
-   char *line = NULL, *name = NULL;
+   char *line = NULL, *name = NULL, *n;
+   int i, size = 10;
    size_t len = 0;
    ssize_t read;
-   printf(">Accesing config file %s.\n", filePath);
+   *arrCnt = 0;
+
+   printf(">Accessing config file %s.\n", filePath);
+   linkNames = malloc(size * sizeof(char**));
+   if (linkNames == NULL) {
+      return NULL;
+   }
    fp = fopen(filePath, "r");
 
    if (!fp) {
       fprintf(stderr, "Error while opening config file %s\n", filePath);
       return NULL;
-   }   
+   }
 
    while ((read = getline(&line, &len, fp)) != -1) {
-      if ((name = strstr(line, "name="))) {
-         if(*arrCnt >= *size) {
-            *size += (*size < 100) ? 10 : *size/2;
-            char **tmp = (char**) realloc(linkNames, *size * sizeof(char**));
-            if(!tmp) {
-               free(linkNames);
-               return NULL;
+      if ((name = strstr(line, NAME_IDENT))) {
+         if(*arrCnt >= size) {
+            size *= 2;
+            char **tmp = (char**) realloc(linkNames, size * sizeof(char**));
+            if (!tmp) {
+               goto failure;
             }
             linkNames = tmp;
          }
+         name += strlen(NAME_IDENT);
 
-         linkNames[*arrCnt] = malloc(sizeof(char) * (strlen(name)-8));
-         strncpy(linkNames[*arrCnt], name+6, strlen(name)-8);   
-         ++*arrCnt;
-      }   
-   }   
+         /* make a copy of the name */
+         n = calloc(strlen(name), sizeof(char));
+         if (n == NULL) {
+            goto failure;
+         }
 
-   fclose(fp);
-
-   if (line)
+         /* copy the name without trailing '"' */
+         memcpy(n, name, strchr(name, '"') - name);
+         linkNames[*arrCnt] = n;
+         ++(*arrCnt);
+      }
       free(line);
+      line = NULL;
+      len = 0;
+   }
+   fclose(fp);
 
    printf(">Configuration success.\n");
    return linkNames;
+
+failure:
+   for (i = 0; i < *arrCnt; ++i) {
+      free(linkNames[i]);
+   }
+   free(linkNames);
+   return NULL;
 }
 
-/* Creating formated text to be forwarded and parsed by munin_link_flows script */
-char *send_to_sock(const int client_fd, char **linkNames, const int link_cnt) {
-   int i = 0;
-   for (i = 0; i < link_cnt; i ++ ) { 
-   char *tmp = "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,", linkNames[i],linkNames[i],linkNames[i],linkNames[i],linkNames[i],linkNames[i];
+/**
+ * Pointer to null-terminated string that will be sent/stored.
+ */
+static char *databuffer = NULL;
+
+/**
+ * Size of allocated memory of databuffer.
+ */
+size_t databuffer_size = 0;
+
+/**
+ * size of the first line including '\n'
+ */
+size_t header_len = 0;
+
+/**
+ * Create formated text to be forwarded and parsed by munin_link_flows script
+ * \return Positive number with size of string to be sent/stored or 0 on error.
+ */
+int prepare_data(char **linkNames, const int link_cnt)
+{
+   int i = 0, size;
+
+   if (databuffer == NULL) {
+      databuffer = calloc(4096, sizeof(char));
+      if (databuffer == NULL) {
+         return 0;
+      }
+      databuffer_size = 4096;
+      header_len = 0;
+      for (i = 0; i < link_cnt; i++) {
+         header_len += snprintf(databuffer + header_len, databuffer_size - header_len, "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,", linkNames[i],linkNames[i],linkNames[i],linkNames[i],linkNames[i],linkNames[i]);
+      }
+      databuffer[header_len - 1] = '\n';
    }
-   
-"%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32",",stats[i].bytes_in, stats[i].flows_in, stats[i].packets_in, stats[i].bytes_out, stats[i].flows_out, stats[i].packets_out;
 
+   size = header_len;
+   for (i = 0; i < link_cnt; i++) {
+      if ((databuffer_size - size)) {
+         /* realloc */
+      }
+      size += snprintf(databuffer + size, databuffer_size - size, "%"
+                       PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32",",
+                       stats[i].bytes_in, stats[i].flows_in, stats[i].packets_in,
+                       stats[i].bytes_out, stats[i].flows_out, stats[i].packets_out);
+   }
+   databuffer[size - 1] = '\n';
+   databuffer[size] = '\0';
 
+   return size;
+}
 
-      if (size > 0) {
-         tmp = str;
-            while  (sent != size) {
-               if (watch_dog > 500) {
-                  break;
-               }   
-               sent = send(client_fd, (tmp+sent), size, 0); 
-               size -= sent;  
-               watch_dog ++; 
-            } 
-      }  
-   return strToSave;     
+void send_to_sock(const int client_fd, char *str)
+{
+   size_t size = strlen(str), sent = 0;
+   const char *tmp = str;
+
+   if (size > 0) {
+      tmp = str;
+      while (size > 0) {
+         sent = send(client_fd, tmp, size, MSG_NOSIGNAL);
+         if (sent > 0) {
+            size -= sent;
+            tmp += sent;
+         } else {
+            break;
+         }
+      }
+   }
+   close(client_fd);
 }
 
 void *accept_clients(void *arg)
@@ -240,7 +310,8 @@ void *accept_clients(void *arg)
    socklen_t soc_size;
    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
    char **linkNames = NULL;
-   int link_size = 0, link_cnt = 0, interval = 60;
+   char *data = NULL;
+   int link_cnt = 0, interval = 60;
    time_t curr_t;
    time_t saved_t;
 
@@ -251,8 +322,8 @@ void *accept_clients(void *arg)
    }
 
    /* load names of links form config file */
-   linkNames = get_link_names(CONFIG_PATH, linkNames, &link_size, &link_cnt);   
-    
+   linkNames = get_link_names(CONFIG_PATH, linkNames, &link_cnt);
+
    if (fd < 0) {
       fprintf(stderr, "Error: Socket creation failed.\n");
       stop = 1;
@@ -260,11 +331,11 @@ void *accept_clients(void *arg)
    }
 
    struct sockaddr_un address;
-   bzero(&address, sizeof(address)); 
+   bzero(&address, sizeof(address));
    address.sun_family = AF_UNIX;
    strcpy(address.sun_path, DEF_SOCKET_PATH);
    unlink(DEF_SOCKET_PATH);
-   
+
    if (bind(fd, (struct sockaddr *) &address, sizeof(address)) < 0) {
       close(fd);
       fprintf(stderr, "Error: Bind failed.\n");
@@ -276,7 +347,7 @@ void *accept_clients(void *arg)
    if (chmod(DEF_SOCKET_PATH, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH) != 0) {
       fprintf(stderr, "Error: Changing permissions failed.\n");
    }
-   
+
    if (listen(fd, 5) < 0) {
       close(fd);
       fprintf(stderr, "Error: Listen failed.\n");
@@ -285,7 +356,7 @@ void *accept_clients(void *arg)
    }
 
    soc_size = sizeof(clt);
-   
+
    fd_set rfds;
    struct timeval tv;
    int retval;
@@ -295,54 +366,55 @@ void *accept_clients(void *arg)
    tv.tv_usec = 0;
 
    while (!stop) {
-      char *data = NULL;
-      int size = 0;
-      FD_ZERO (&rfds);
-      FD_SET (fd, &rfds);
-      client_fd = accept(fd, (struct sockaddr *) &clt, &soc_size);
-      if (client_fd < 0) {
-         fprintf(stderr, "Error: Accept failed.\n");
-         continue;
-      }
-
+      data = NULL;
+      FD_ZERO(&rfds);
+      FD_SET(fd, &rfds);
       /* Saving loop */
       /* Initialize time stamp and get time from tmp file */
-      saved_t = mdf_time(save_tmp);
+      saved_t = mdf_time(SAVE_TMP);
       time(&curr_t);
 
       /* Wait up to five seconds. */
       tv.tv_sec = 5;
       tv.tv_usec = 0;
       /* check for timeout */
-      retval  = select(60, &rfds, NULL, NULL, &tv);
-      
+      retval  = select(fd + 1, &rfds, NULL, NULL, &tv);
+
       if (retval == -1 ) {
          fprintf(stderr,"Error : select().\n");
          break;
       } else if (!retval) {
-         data = send_to_sock(fd, linkNames, link_cnt);
-         if ( saveData(data) ) {
+         if (prepare_data(linkNames, link_cnt) > 0) {
+            if (saveData(databuffer) ) {
                fprintf(stderr, "Error while saving data.\n");
                break;
             }
+         }
 
       } else if (retval) {
-         if (difftime(curr_t, saved_t) >= interval) {
-            data = send_to_sock(fd, linkNames, link_cnt); 
-            if ( saveData(data) ) { 
-               fprintf(stderr, "Error while saving data.\n");
-               break;
+         client_fd = accept(fd, (struct sockaddr *) &clt, &soc_size);
+         if (client_fd < 0) {
+            fprintf(stderr, "Error: Accept failed.\n");
+            continue;
+         }
+
+         if (prepare_data(linkNames, link_cnt) > 0) {
+            send_to_sock(client_fd, databuffer);
+            if (difftime(curr_t, saved_t) >= interval) {
+               if (saveData(databuffer) ) {
+                  fprintf(stderr, "Error while saving data.\n");
+                  break;
+               } else {
+                  printf(">Data saved.\n");
+               }
             }
-            else
-               printf(">Data saved.\n");
          }
       }
       if (data) {
-         free(data);   
+         free(data);
       }
-      close(client_fd);
    }
-   
+
    if (linkNames) {
       free(linkNames);
    }
@@ -351,7 +423,7 @@ void *accept_clients(void *arg)
    pthread_exit(0);
 }
 
-/* adds data to global array of link_stats_t structures "statistics[]" */   
+/* adds data to global array of link_stats_t structures "statistics[]" */
 void count_stats (uint64_t link, uint8_t direction, ur_template_t *in_tmplt, const void *in_rec) {
    if (direction == 0) {
       stats[link].flows_in++;
@@ -366,15 +438,15 @@ void count_stats (uint64_t link, uint8_t direction, ur_template_t *in_tmplt, con
 }
 
 int main(int argc, char **argv)
-{  
+{
    signed char opt;
    ur_template_t *in_tmplt = NULL;
-   
+
    pthread_t accept_thread;
-   pthread_attr_t thrAttr; 
+   pthread_attr_t thrAttr;
    pthread_attr_init(&thrAttr);
-   pthread_attr_setdetachstate(&thrAttr, PTHREAD_CREATE_DETACHED); 
-   
+   pthread_attr_setdetachstate(&thrAttr, PTHREAD_CREATE_DETACHED);
+
    /* return value for control of opening sockets and saving loop */
    int ret = 0;
 
@@ -419,18 +491,18 @@ int main(int argc, char **argv)
    ret = pthread_create(&accept_thread, &thrAttr, accept_clients, NULL);
    if (ret) {
       fprintf(stderr, "Error: Thread creation failed.\n");
-      goto cleanup;     
-   } 
+      goto cleanup;
+   }
 
    /* **** Main processing loop **** */
-   
+
    /* reading data from input and calling count_stats function to save processed data */
    while (!stop) {
       const void *in_rec;
       uint16_t in_rec_size;
       uint64_t link_index;
       uint8_t direction;
-      
+
       /* Receive data from input interface 0. */
       /* Block if data are not available immediately (unless a timeout is set using trap_ifcctl) */
       ret = TRAP_RECEIVE(0, in_rec, in_rec_size, in_tmplt);
@@ -453,7 +525,6 @@ int main(int argc, char **argv)
       direction = ur_get(in_tmplt, in_rec, F_DIR_BIT_FIELD);
       /* save data according to information got by the code above */
       count_stats(link_index, direction, in_tmplt, in_rec);
-      
    }
 
    /* **** Cleanup **** */
