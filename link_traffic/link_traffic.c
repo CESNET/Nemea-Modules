@@ -210,28 +210,15 @@ char **get_link_names(char *filePath, char **linkNames, int *size, int *arrCnt)
 
 /* Creating formated text to be forwarded and parsed by munin_link_flows script */
 char *send_to_sock(const int client_fd, char **linkNames, const int link_cnt) {
-   char *str = NULL;
-   char *tmp = NULL;
-   char *strToSave = NULL;
-   int size = 0, i = 0, sent = 0, watch_dog = 0;
-   for (i = 0; i < link_cnt; i++) {
-      size = asprintf(&str,"%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,", linkNames[i],linkNames[i],linkNames[i],linkNames[i],linkNames[i],linkNames[i]);
-      if (size > 0) {
-         tmp = str;
-            while  (sent != size) {
-               if (watch_dog > 500) {
-                  break;
-               }
-               sent = send(client_fd, (tmp+sent), size, 0);
-               size -= sent;  
-               watch_dog ++;
-            }
-         asprintf(&strToSave, str);
-         free(str);
-      }
+   int i = 0;
+   for (i = 0; i < link_cnt; i ++ ) { 
+   char *tmp = "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,", linkNames[i],linkNames[i],linkNames[i],linkNames[i],linkNames[i],linkNames[i];
    }
-   for (i = 0; i < link_cnt; i++) {
-      size = asprintf(&str,"%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32",",stats[i].bytes_in, stats[i].flows_in, stats[i].packets_in, stats[i].bytes_out, stats[i].flows_out, stats[i].packets_out);
+   
+"%" PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32",",stats[i].bytes_in, stats[i].flows_in, stats[i].packets_in, stats[i].bytes_out, stats[i].flows_out, stats[i].packets_out;
+
+
+
       if (size > 0) {
          tmp = str;
             while  (sent != size) {
@@ -241,11 +228,8 @@ char *send_to_sock(const int client_fd, char **linkNames, const int link_cnt) {
                sent = send(client_fd, (tmp+sent), size, 0); 
                size -= sent;  
                watch_dog ++; 
-            }   
-         asprintf(&strToSave, str);
-         free(str);
-      }   
-   } 
+            } 
+      }  
    return strToSave;     
 }
 
