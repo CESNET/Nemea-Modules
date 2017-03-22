@@ -374,7 +374,7 @@ int IPFIXExporter::init(const vector<FlowCachePlugin *> &plugins, int basic_num,
    int ret;
 
    if (verbose) {
-      printf("VERBOSE: IPFIX export plugin init start\n");
+      fprintf(stderr, "VERBOSE: IPFIX export plugin init start\n");
    }
 
    /* Init plugin configuration */
@@ -444,7 +444,7 @@ int IPFIXExporter::init(const vector<FlowCachePlugin *> &plugins, int basic_num,
    }
 
    if (verbose) {
-      printf("VERBOSE: IPFIX export plugin init end\n");
+      fprintf(stderr, "VERBOSE: IPFIX export plugin init end\n");
    }
    return 0;
 }
@@ -495,7 +495,7 @@ void IPFIXExporter::check_template_lifetime(template_t *tmpl)
    if (templateRefreshTime != 0 &&
          (time_t) (templateRefreshTime + tmpl->exportTime) <= time(NULL)) {
       if (verbose) {
-         printf("VERBOSE: Template %i refresh time expired (%is)\n", tmpl->id, templateRefreshTime);
+         fprintf(stderr, "VERBOSE: Template %i refresh time expired (%is)\n", tmpl->id, templateRefreshTime);
       }
       tmpl->exported = 0;
    }
@@ -503,7 +503,7 @@ void IPFIXExporter::check_template_lifetime(template_t *tmpl)
    if (templateRefreshPackets != 0 &&
          templateRefreshPackets + tmpl->exportPacket <= exportedPackets) {
       if (verbose) {
-         printf("VERBOSE: Template %i refresh packets expired (%i packets)\n", tmpl->id, templateRefreshPackets);
+         fprintf(stderr, "VERBOSE: Template %i refresh packets expired (%i packets)\n", tmpl->id, templateRefreshPackets);
       }
       tmpl->exported = 0;
    }
@@ -541,7 +541,7 @@ template_file_record_t *IPFIXExporter::get_template_record_by_name(const char *n
 
    if (name == NULL) {
       if (verbose) {
-         printf("VERBOSE: Cannot get template for NULL name\n");
+         fprintf(stderr, "VERBOSE: Cannot get template for NULL name\n");
       }
       return NULL;
    }
@@ -593,10 +593,9 @@ template_t *IPFIXExporter::create_template(const char **tmplt, const char **ext)
    /* Create new template structure */
    newTemplate = (template_t *) malloc(sizeof(template_t));
    if (!newTemplate) {
-      fprintf(stderr, "Not enough memory for IPFIX template.\n");
+      fprintf(stderr, "Error: Not enough memory for IPFIX template.\n");
       return NULL;
    }
-   //newTemplate->templateGetters = NULL;
    newTemplate->fieldCount = 0;
    newTemplate->recordCount = 0;
 
@@ -608,6 +607,10 @@ template_t *IPFIXExporter::create_template(const char **tmplt, const char **ext)
    newTemplate->id = maxID;
    ((uint16_t *) newTemplate->templateRecord)[0] = htons(newTemplate->id);
 
+   if (verbose) {
+      fprintf(stderr, "VERBOSE: Creating new template id %u\n", newTemplate->id);
+   }
+
    /* Template header size */
    newTemplate->templateSize = 4;
 
@@ -616,6 +619,10 @@ template_t *IPFIXExporter::create_template(const char **tmplt, const char **ext)
          /* Find appropriate template file record */
          template_file_record_t *tmpFileRecord = get_template_record_by_name(*tmp);
          if (tmpFileRecord != NULL) {
+            if (verbose) {
+               fprintf(stderr, "VERBOSE: Adding template field name=%s EN=%u ID=%u len=%d\n",
+                  tmpFileRecord->name, tmpFileRecord->enterpriseNumber, tmpFileRecord->elementID, tmpFileRecord->length);
+            }
 
             /* Set information element ID */
             uint16_t eID = tmpFileRecord->elementID;
@@ -626,7 +633,7 @@ template_t *IPFIXExporter::create_template(const char **tmplt, const char **ext)
 
             /* Set element length */
             if (tmpFileRecord->length == 0) {
-               fprintf(stderr, "Template field cannot be zero length.\n");
+               fprintf(stderr, "Error: Template field cannot be zero length.\n");
                free(newTemplate);
                return NULL;
             } else {
@@ -647,9 +654,9 @@ template_t *IPFIXExporter::create_template(const char **tmplt, const char **ext)
             /* Increase field count */
             newTemplate->fieldCount++;
          } else {
-            if (verbose) {
-               printf("VERBOSE: Cannot find template for field %s\n", *tmp);
-            }
+            fprintf(stderr, "Error: Cannot find field specification for name %s\n", *tmp);
+            free(newTemplate);
+            return NULL;
          }
 
          tmp++;
@@ -776,7 +783,7 @@ uint16_t IPFIXExporter::create_data_packet(ipfix_packet_t *packet)
          /* Set SET length */
          ((ipfix_template_set_header_t *) ptr)->length = htons(tmp->bufferSize);
          if (verbose) {
-            printf("VERBOSE: Adding template %i of length %i to data packet\n", tmp->id, tmp->bufferSize);
+            fprintf(stderr, "VERBOSE: Adding template %i of length %i to data packet\n", tmp->id, tmp->bufferSize);
          }
          ptr += tmp->bufferSize;
          /* Count size of the data copied to buffer */
@@ -897,7 +904,9 @@ int IPFIXExporter::send_packet(ipfix_packet_t *packet)
          case ENOMEM:
 
             /* The connection is broken */
-            fprintf(stderr, "Collector closed connection\n");
+            if (verbose) {
+               fprintf(stderr, "VERBOSE: Collector closed connection\n");
+            }
 
             /* free resources */
             close(fd);
@@ -915,7 +924,9 @@ int IPFIXExporter::send_packet(ipfix_packet_t *packet)
             return 1;
          default:
             /* Unknown error */
-            perror("Cannot send data to collector");
+            if (verbose) {
+               perror("VERBOSE: Cannot send data to collector");
+            }
             return -1;
          }
       }
@@ -931,7 +942,7 @@ int IPFIXExporter::send_packet(ipfix_packet_t *packet)
    exportedPackets++;
 
    if (verbose) {
-      printf("VERBOSE: Packet (%" PRIu64 ") sent to %s on port %s. Next sequence number is %i\n",
+      fprintf(stderr, "VERBOSE: Packet (%" PRIu64 ") sent to %s on port %s. Next sequence number is %i\n",
             exportedPackets, host.c_str(), port.c_str(), sequenceNum);
    }
 
@@ -981,24 +992,27 @@ int IPFIXExporter::connect_to_collector()
                   (void *) &((struct sockaddr_in6 *) tmp->ai_addr)->sin6_addr,
             (char *) &buff, sizeof(buff));
 
-      printf("Connecting to IP %s\n", buff);
-
       if (verbose) {
-         printf("VERBOSE: Socket configuration: AI Family: %i, AI Socktype: %i, AI Protocol: %i\n",
+         fprintf(stderr, "VERBOSE: Connecting to IP %s\n", buff);
+         fprintf(stderr, "VERBOSE: Socket configuration: AI Family: %i, AI Socktype: %i, AI Protocol: %i\n",
                tmp->ai_family, tmp->ai_socktype, tmp->ai_protocol);
       }
 
       /* create socket */
       fd = socket(addrinfo->ai_family, addrinfo->ai_socktype, addrinfo->ai_protocol);
       if (fd == -1) {
-         perror("Cannot create new socket");
+         if (verbose) {
+            perror("VERBOSE: Cannot create new socket");
+         }
          continue;
       }
 
       /* connect to server with TCP and SCTP */
       if (protocol != IPPROTO_UDP &&
             connect(fd, addrinfo->ai_addr, addrinfo->ai_addrlen) == -1) {
-         perror("Cannot connect to collector");
+         if (verbose) {
+            perror("VERBOSE: Cannot connect to collector");
+         }
          close(fd);
          fd = -1;
          continue;
@@ -1006,7 +1020,9 @@ int IPFIXExporter::connect_to_collector()
 
       /* Connected, meaningless for UDP */
       if (protocol != IPPROTO_UDP) {
-         printf("Successfully connected to collector\n");
+         if (verbose) {
+            fprintf(stderr, "VERBOSE: Successfully connected to collector\n");
+         }
       }
       break;
    }
