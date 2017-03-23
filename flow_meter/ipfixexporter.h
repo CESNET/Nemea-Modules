@@ -46,14 +46,6 @@
 
 using namespace std;
 
-//#define DEBUG
-
-#ifdef DEBUG
-#define MSG(format, ...) fprintf(stderr, format, ## __VA_ARGS__)
-#else
-#define MSG(format, ...) {}
-#endif
-
 #define TEMPLATE_SET_ID 2
 #define FIRST_TEMPLATE_ID 258
 #define IPFIX_VERISON 10
@@ -83,7 +75,6 @@ typedef struct template_t {
 	uint16_t bufferSize; /**< Size of data buffer */
 	uint16_t recordCount; /**< Number of records in buffer */
 	uint16_t fieldCount; /**< Number of elements in template */
-	template_file_record_t *templateFileRecords; /**< Template elements from file */
 	uint8_t exported; /**< 1 indicates that the template was exported to collector*/
 	time_t exportTime; /**< Time when the template was last exported */
 	uint64_t exportPacket; /**< Number of packet when the template was last exported */
@@ -204,17 +195,14 @@ public:
    void shutdown();
 private:
 	/* Templates */
-	template_file_record_t *templateFileRecords; /**< File template records  */
 	template_t **templateArray;
 	template_t *templates; /**< Templates in use by plugin */
 	uint16_t templatesDataSize; /**< Total data size stored in templates */
-   int templateMaxCnt;
    int *tmpltMapping;
    int basic_ifc_num;
    bool verbose;
 
 	uint32_t sequenceNum; /**< Number of exported flows */
-	uint64_t counter; /**< Number of exported flows -- to be removed*/
 	uint64_t exportedPackets; /**< Number of exported packets */
 	int fd; /**< Socket used to send data */
 	struct addrinfo *addrinfo; /**< Info about the connection used by sendto */

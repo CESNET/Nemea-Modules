@@ -200,17 +200,14 @@ const char *basic_tmplt_v6[] = {
 
 IPFIXExporter::IPFIXExporter()
 {
-   templateFileRecords = NULL;
    templateArray = NULL;
    templates = NULL;
    templatesDataSize = 0;
-   templateMaxCnt = 0;
    tmpltMapping = NULL;
    basic_ifc_num = -1;
    verbose = false;
 
    sequenceNum = 0;
-   counter = 0;
    exportedPackets = 0;
    fd = -1;
    addrinfo = NULL;
@@ -371,17 +368,16 @@ int IPFIXExporter::export_packet(Packet &pkt)
  */
 int IPFIXExporter::init(const vector<FlowCachePlugin *> &plugins, int basic_num, uint32_t odid, string host, string port, bool udp, bool verbose)
 {
-   int ret;
+   int ret, templateCnt;
 
    if (verbose) {
       fprintf(stderr, "VERBOSE: IPFIX export plugin init start\n");
    }
 
    /* Init plugin configuration */
-   templateMaxCnt = EXTENSION_CNT * 2 + 2;
-   templateFileRecords = *ipfix_fields;
-   templateArray = new template_t*[templateMaxCnt];
-   for (int i = 0; i < templateMaxCnt; i++) {
+   templateCnt = EXTENSION_CNT * 2 + 2;
+   templateArray = new template_t*[templateCnt];
+   for (int i = 0; i < templateCnt; i++) {
       templateArray[i] = NULL;
    }
    this->verbose = verbose;
@@ -537,7 +533,7 @@ int IPFIXExporter::fill_ipfix_header(char *ptr, uint16_t size)
  */
 template_file_record_t *IPFIXExporter::get_template_record_by_name(const char *name)
 {
-   template_file_record_t *tmpFileRecord = templateFileRecords;
+   template_file_record_t *tmpFileRecord = *ipfix_fields;
 
    if (name == NULL) {
       if (verbose) {
