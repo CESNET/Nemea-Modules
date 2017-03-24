@@ -688,8 +688,8 @@ int main(int argc, char *argv[])
    }
 
    if (options.print_stats) {
-      cout << "Total packets processed: "<< pkt_total << endl;
-      cout << "Packet headers parsed: "<< pkt_parsed << endl;
+      cout << "Total packets captured: " << pkt_total << endl;
+      cout << "Packets parsed: " << pkt_parsed << endl;
    }
 
    /* Cleanup. */
