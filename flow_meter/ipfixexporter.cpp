@@ -172,6 +172,7 @@ const char *basic_tmplt_v4[] = {
    "PACKETS",
    "FLOW_START_MSEC",
    "FLOW_END_MSEC",
+   "L3_PROTO",
    "L4_PROTO",
    "L4_TCP_FLAGS",
    "L4_PORT_SRC",
@@ -188,6 +189,7 @@ const char *basic_tmplt_v6[] = {
    "PACKETS",
    "FLOW_START_MSEC",
    "FLOW_END_MSEC",
+   "L3_PROTO",
    "L4_PROTO",
    "L4_TCP_FLAGS",
    "L4_PORT_SRC",
@@ -1126,20 +1128,21 @@ int IPFIXExporter::fill_basic_flow(Flow &flow, template_t *tmplt)
    *(uint64_t *) (buffer + 8) = swap_uint64(flow.pkt_total_cnt);
    *(uint64_t *) (buffer + 16) = swap_uint64(((uint64_t)flow.time_first.tv_sec * 1000) + (uint64_t)(flow.time_first.tv_usec / 1000));
    *(uint64_t *) (buffer + 24) = swap_uint64(((uint64_t)flow.time_last.tv_sec * 1000) + (uint64_t)(flow.time_last.tv_usec / 1000));
-   *(uint8_t *) (buffer + 32) = flow.ip_proto;
-   *(uint8_t *) (buffer + 33) = flow.tcp_control_bits;
-   *(uint16_t *) (buffer + 34) = ntohs(flow.src_port);
-   *(uint16_t *) (buffer + 36) = ntohs(flow.dst_port);
+   *(uint8_t *) (buffer + 32) = flow.ip_version;
+   *(uint8_t *) (buffer + 33) = flow.ip_proto;
+   *(uint8_t *) (buffer + 34) = flow.tcp_control_bits;
+   *(uint16_t *) (buffer + 35) = ntohs(flow.src_port);
+   *(uint16_t *) (buffer + 37) = ntohs(flow.dst_port);
 
-   *(uint8_t *) (buffer + 38) = flow.ip_ttl;
+   *(uint8_t *) (buffer + 39) = flow.ip_ttl;
    if (flow.ip_version == 4) {
-     memcpy(buffer + 39, (void *) &flow.src_ip.v4, 4);
-     memcpy(buffer + 43, (void *) &flow.dst_ip.v4, 4);
-     length = 47;
+     memcpy(buffer + 40, (void *) &flow.src_ip.v4, 4);
+     memcpy(buffer + 44, (void *) &flow.dst_ip.v4, 4);
+     length = 48;
    } else {
-     memcpy(buffer + 39, flow.src_ip.v6, 16);
-     memcpy(buffer + 55, flow.dst_ip.v6, 16);
-     length = 71;
+     memcpy(buffer + 40, flow.src_ip.v6, 16);
+     memcpy(buffer + 56, flow.dst_ip.v6, 16);
+     length = 72;
    }
 
    return length;
