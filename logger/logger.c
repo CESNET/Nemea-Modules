@@ -60,6 +60,7 @@
 #include <unirec/unirec.h>
 #include <pthread.h>
 #include <ctype.h>
+#include <inttypes.h>
 #include "fields.h"
 
 UR_FIELDS()
@@ -249,7 +250,7 @@ void *capture_thread(void *arg)
                   fprintf(file, "%u", *(uint32_t*)ptr);
                   break;
                case UR_TYPE_UINT64:
-                  fprintf(file, "%lu", *(uint64_t*)ptr);
+                  fprintf(file, "%" PRIu64, *(uint64_t*)ptr);
                   break;
                case UR_TYPE_INT8:
                   fprintf(file, "%i", *(int8_t*)ptr);
@@ -261,7 +262,7 @@ void *capture_thread(void *arg)
                   fprintf(file, "%i", *(int32_t*)ptr);
                   break;
                case UR_TYPE_INT64:
-                  fprintf(file, "%li", *(int64_t*)ptr);
+                  fprintf(file, "%" PRIi64, *(int64_t*)ptr);
                   break;
                case UR_TYPE_CHAR:
                   fprintf(file, "%c", *(char*)ptr);

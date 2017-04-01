@@ -122,6 +122,65 @@ struct RecordExtNTP : RecordExt {
       ur_set_string(tmplt, record, F_NTP_RECV, receive);
       ur_set_string(tmplt, record, F_NTP_SENT, sent);
    }
+
+   virtual int fillIPFIX(uint8_t *buffer, int size)
+   {
+      int length, total_length = 14;
+
+      if (total_length > size) {
+         return -1;
+      }
+      *(uint8_t *) (buffer) = leap;
+      *(uint8_t *) (buffer + 1) = version;
+      *(uint8_t *) (buffer + 2) = mode;
+      *(uint8_t *) (buffer + 3) = stratum;
+      *(uint8_t *) (buffer + 4) = poll;
+      *(uint8_t *) (buffer + 5) = precision;
+      *(uint32_t *) (buffer + 6) = ntohl(delay);
+      *(uint32_t *) (buffer + 10) = ntohl(dispersion);
+
+      length = strlen(reference_id);
+      if (total_length + length + 1 > size) {
+         return -1;
+      }
+      buffer[total_length] = length;
+      memcpy(buffer + total_length + 1, reference_id, length);
+      total_length += length + 1;
+
+      length = strlen(reference);
+      if (total_length + length + 1 > size) {
+         return -1;
+      }
+      buffer[total_length] = length;
+      memcpy(buffer + total_length + 1, reference, length);
+      total_length += length + 1;
+
+      length = strlen(origin);
+      if (total_length + length + 1 > size) {
+         return -1;
+      }
+      buffer[total_length] = length;
+      memcpy(buffer + total_length + 1, origin, length);
+      total_length += length + 1;
+
+      length = strlen(receive);
+      if (total_length + length + 1 > size) {
+         return -1;
+      }
+      buffer[total_length] = length;
+      memcpy(buffer + total_length + 1, receive, length);
+      total_length += length + 1;
+
+      length = strlen(sent);
+      if (total_length + length + 1 > size) {
+         return -1;
+      }
+      buffer[total_length] = length;
+      memcpy(buffer + total_length + 1, sent, length);
+      total_length += length + 1;
+
+      return total_length;
+   }
 };
 
 /**
@@ -135,6 +194,7 @@ public:
    int post_create(Flow &rec, const Packet &pkt);
    void finish();
    string get_unirec_field_string();
+   const char **get_ipfix_string();
 
 private:
    bool parse_ntp(const Packet &pkt, RecordExtNTP *ntp_data_ext);

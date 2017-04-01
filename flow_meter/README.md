@@ -8,8 +8,13 @@ This NEMEA module creates flows from input PCAP file / network interface and exp
 - Root priviliges are needed when capturing from network interface.
 
 ## Interfaces
-- Input: PCAP file or network interface
-- Output interfaces: Unirec containing `<COLLECTOR_FLOW>` + fields added by active plugins
+### Inputs
+- PCAP file
+- Network interface
+
+### Outputs
+- Unirec containing `<COLLECTOR_FLOW>` + fields added by active plugins
+- IPFIX [RFC 5101](https://tools.ietf.org/html/rfc5101)
 
 ## Parameters
 ### Module specific parameters
@@ -17,7 +22,7 @@ This NEMEA module creates flows from input PCAP file / network interface and exp
 - `-c NUMBER`        Quit after `NUMBER` of packets are captured.
 - `-I STRING`        Capture from given network interface. Parameter require interface name (eth0 for example).
 - `-r STRING`        Pcap file to read. `-` to read from stdin.
-- `-n`               Don't send eof when flow_meter exits.
+- `-n`               Don't send NULL record when flow_meter exits.
 - `-l NUMBER`        Snapshot length when reading packets. Set value between `120`-`65535` .
 - `-t NUM:NUM`       Active and inactive timeout in seconds. Format: DOUBLE:DOUBLE. Value default means use default value 300.0:30.0.
 - `-s STRING`        Size of flow cache in number of flow records. Each flow record has 176 bytes. default means use value 65536.
@@ -27,6 +32,8 @@ This NEMEA module creates flows from input PCAP file / network interface and exp
 - `-D NUMBER`        Direction bit field value.
 - `-F STRING`        String containing filter expression to filter traffic. See man pcap-filter.
 - `-O`               Send ODID field instead of LINK_BIT_FIELD.
+- `-x STRING`        Export to IPFIX collector. Format: HOST:PORT or [HOST]:PORT
+- `-u`               Use UDP when exporting to IPFIX collector.
 
 ### Common TRAP parameters
 - `-h [trap,1]`      Print help message for this module / for libtrap specific parameters.
@@ -108,6 +115,33 @@ List of unirec fields exported together with basic flow fields on interface by D
 | DNS_RDATA    | bytes  | resource record specific data   |
 | DNS_PSIZE    | uint16 | requestor's payload size        |
 | DNS_DO       | uint8  | DNSSEC OK bit                   |
+
+#### DNS_RDATA format
+
+DNS_RDATA formatting is implemented for some base DNS RR Types in human-readable output.
+Same as [here](https://www.liberouter.org/technologies/exporter/dns-plugin/):
+
+| Record | Format |
+|:------:|:------:|
+| A      | <IPv4 in dotted decimal representation\> |
+| AAAA   | <IPv6 represented as groups separated by semicolons\> |
+| NS     | <parsed hostname\> |
+| CNAME  | <parsed hostname\> |
+| PTR    | <parsed hostname\> |
+| DNAME  | <parsed hostname\> |
+| SOA    | <mname\> <rname\> <serial\> <refresh\> <retry\> <expire\> <min ttl\> |
+| SRV    | <service\> <protocol\> <name\> <target\> <priority\> <weight\> <port\> |
+| MX     | <priority\> <mx hostname\> |
+| TXT    | <txt string\> |
+| MINFO  | <rmailbx\> <emailbx\> |
+| HINFO  | <txt string\> |
+| ISDN   | <txt string\> |
+| DS     | <keytag\> <algorithm\> <digest\> <publickey\>\* |
+| RRSIG  | <type_covered\> <algorithm\> <labels\> <original_ttl\> <signature_exp\> <signature_inc\> <keytag\> <signer_signature\>\* |
+| DNSKEY | <flags\> <protocol\> <algorithm\> <publickey\>\* |
+| other  | <not impl\>\* |
+
+ \* binary data are skipped and not printed
 
 ### SIP
 List of unirec fields exported together with basic flow fields on interface by SIP plugin.

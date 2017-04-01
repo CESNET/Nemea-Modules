@@ -327,6 +327,7 @@ void NHTFlowCache::export_expired(time_t ts)
 #endif /* FLOW_CACHE_STATS */
       }
    }
+   exporter->flush();
 }
 
 bool NHTFlowCache::create_hash_key(Packet &pkt)

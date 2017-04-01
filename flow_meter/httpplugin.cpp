@@ -162,6 +162,22 @@ string HTTPPlugin::get_unirec_field_string()
    return HTTP_UNIREC_TEMPLATE;
 }
 
+const char *ipfix_http_template[] = {
+   "HTTP_USERAGENT",
+   "HTTP_METHOD",
+   "HTTP_DOMAIN",
+   "HTTP_REFERER",
+   "HTTP_URL",
+   "HTTP_CONTENT_TYPE",
+   "HTTP_STATUS",
+   NULL
+};
+
+const char **HTTPPlugin::get_ipfix_string()
+{
+   return ipfix_http_template;
+}
+
 /**
  * \brief Copy string and append \0 character.
  * NOTE: function removes any CR chars at the end of string.

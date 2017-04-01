@@ -28,7 +28,9 @@ flow_meter_SOURCES=flow_meter.cpp \
 		    ntpplugin.h \
 		    ipaddr.h \
 		    arpplugin.cpp \
-		    arpplugin.h
+		    arpplugin.h \
+		    ipfixexporter.cpp \
+		    ipfixexporter.h
 flow_meter_LDADD=-ltrap -lunirec -lnemea-common -lpcap
 flow_meter_CXXFLAGS=-std=c++98 -Wno-write-strings
 pkgdocdir=${docdir}/flow_meter

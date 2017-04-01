@@ -100,6 +100,7 @@ int SIPPlugin::post_create(Flow &rec, const Packet &pkt)
 
    return 0;
 }
+
 int SIPPlugin::pre_update(Flow &rec, Packet &pkt)
 {
    uint16_t msg_type;
@@ -111,6 +112,7 @@ int SIPPlugin::pre_update(Flow &rec, Packet &pkt)
 
    return 0;
 }
+
 void SIPPlugin::finish()
 {
    if (print_stats) {
@@ -120,9 +122,28 @@ void SIPPlugin::finish()
       cout << "   Total sip packets processed: " << total << endl;
    }
 }
+
 string SIPPlugin::get_unirec_field_string()
 {
    return SIP_UNIREC_TEMPLATE;
+}
+
+const char *sip_ipfix_string[] = {
+   "SIP_MSG_TYPE",
+   "SIP_STATUS_CODE",
+   "SIP_CSEQ",
+   "SIP_CALLING_PARTY",
+   "SIP_CALLED_PARTY",
+   "SIP_CALL_ID",
+   "SIP_USER_AGENT",
+   "SIP_REQUEST_URI",
+   "SIP_VIA",
+   NULL
+};
+
+const char **SIPPlugin::get_ipfix_string()
+{
+   return sip_ipfix_string;
 }
 
 uint16_t SIPPlugin::parse_msg_type(const Packet &pkt)
@@ -577,3 +598,4 @@ int SIPPlugin::parser_process_sip(const Packet &pkt, RecordExtSIP *sip_data)
 
    return 0;
 }
+

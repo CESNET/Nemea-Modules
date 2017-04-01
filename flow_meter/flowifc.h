@@ -121,6 +121,8 @@
    FLW_FLOWPAYLOADSIZE \
 )
 
+struct template_t;
+
 /**
  * \brief Extension header type enum.
  */
@@ -157,6 +159,17 @@ struct RecordExt {
     */
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
+   }
+
+   /**
+    * \brief Fill IPFIX record with stored extension data.
+    * \param [out] buffer IPFIX template record buffer.
+    * \param [in] size IPFIX template record buffer size.
+    * \return Number of bytes written to buffer or -1 if data cannot be written.
+    */
+   virtual int fillIPFIX(uint8_t *buffer, int size)
+   {
+      return 0;
    }
 
    /**

@@ -69,6 +69,12 @@ public:
     * \return 0 on success
     */
    virtual int export_packet(Packet &pkt) = 0;
+   /**
+    * \brief Force exporter to flush flows to collector.
+    */
+   virtual void flush()
+   {
+   }
 };
 
 #endif

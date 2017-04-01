@@ -113,10 +113,10 @@ void traffic_repeater(void)
 
    clock_gettime(CLOCK_MONOTONIC, &end);
    diff = (end.tv_sec * NS + end.tv_nsec) - (start.tv_sec * NS + start.tv_nsec);
-   fprintf(stderr, "Info: Flows received:  %16lu\n", cnt_r > 0 ? cnt_r - 1 : cnt_r);
-   fprintf(stderr, "Info: Flows sent:      %16lu\n", cnt_s > 0 ? cnt_s - 1 : cnt_s);
-   fprintf(stderr, "Info: Timeouts:        %16lu\n", cnt_t);
-   fprintf(stderr, "Info: Time elapsed:    %12lu.%03lus\n", diff / NS, (diff % NS) / 1000000);
+   fprintf(stderr, "Info: Flows received:  %16" PRIu64 "\n", cnt_r > 0 ? cnt_r - 1 : cnt_r);
+   fprintf(stderr, "Info: Flows sent:      %16" PRIu64 "\n", cnt_s > 0 ? cnt_s - 1 : cnt_s);
+   fprintf(stderr, "Info: Timeouts:        %16" PRIu64 "\n", cnt_t);
+   fprintf(stderr, "Info: Time elapsed:    %12" PRIu64 ".%03" PRIu64 "s\n", diff / NS, (diff % NS) / 1000000);
 }
 
 int main(int argc, char **argv)
