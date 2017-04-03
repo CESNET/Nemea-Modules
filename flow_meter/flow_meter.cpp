@@ -348,7 +348,7 @@ int main(int argc, char *argv[])
 
    bool odid = false, export_unirec = false, export_ipfix = false, help = false, udp = false;
    int ifc_cnt = 0, verbose = -1;
-   uint64_t link = 0;
+   uint64_t link = 1;
    uint32_t pkt_limit = 0; /* Limit of packets for packet parser. 0 = no limit */
    uint8_t dir = 0;
    string host = "", port = "", filter = "";
@@ -637,7 +637,7 @@ int main(int argc, char *argv[])
       }
       flowcache.set_exporter(&flowwriter);
    } else {
-      if (flow_writer_ipfix.init(plugin_wrapper.plugins, options.basic_ifc_num, link, host, port, udp, (verbose >= 0)) != 0) {
+      if (flow_writer_ipfix.init(plugin_wrapper.plugins, options.basic_ifc_num, link, host, port, udp, (verbose >= 0), dir) != 0) {
          TRAP_DEFAULT_FINALIZATION();
          return error("Unable to initialize IPFIXExporter.");
       }

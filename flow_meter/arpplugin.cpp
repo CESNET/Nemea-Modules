@@ -52,6 +52,7 @@
 #include "flowcacheplugin.h"
 #include "packet.h"
 #include "flow_meter.h"
+#include "ipfix-elements.h"
 
 using namespace std;
 
@@ -216,13 +217,7 @@ string ARPPlugin::get_unirec_field_string()
 }
 
 const char *ipfix_arp_fields[] = {
-   "ARP_HA_FORMAT",
-   "ARP_PA_FORMAT",
-   "ARP_OPCODE",
-   "ARP_SRC_HA",
-   "ARP_SRC_PA",
-   "ARP_DST_HA",
-   "ARP_DST_PA",
+   IPFIX_ARP_TEMPLATE(IPFIX_FIELD_NAMES)
    NULL
 };
 
