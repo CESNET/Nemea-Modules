@@ -49,6 +49,7 @@
 #include "packet.h"
 #include "flowifc.h"
 #include "sipplugin.h"
+#include "ipfix-elements.h"
 
 using namespace std;
 
@@ -129,15 +130,7 @@ string SIPPlugin::get_unirec_field_string()
 }
 
 const char *sip_ipfix_string[] = {
-   "SIP_MSG_TYPE",
-   "SIP_STATUS_CODE",
-   "SIP_CSEQ",
-   "SIP_CALLING_PARTY",
-   "SIP_CALLED_PARTY",
-   "SIP_CALL_ID",
-   "SIP_USER_AGENT",
-   "SIP_REQUEST_URI",
-   "SIP_VIA",
+   IPFIX_SIP_TEMPLATE(IPFIX_FIELD_NAMES)
    NULL
 };
 

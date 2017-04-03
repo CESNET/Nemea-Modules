@@ -50,6 +50,7 @@
 #include "packet.h"
 #include "flowifc.h"
 #include "httpplugin.h"
+#include "ipfix-elements.h"
 
 using namespace std;
 
@@ -163,13 +164,7 @@ string HTTPPlugin::get_unirec_field_string()
 }
 
 const char *ipfix_http_template[] = {
-   "HTTP_USERAGENT",
-   "HTTP_METHOD",
-   "HTTP_DOMAIN",
-   "HTTP_REFERER",
-   "HTTP_URL",
-   "HTTP_CONTENT_TYPE",
-   "HTTP_STATUS",
+   IPFIX_HTTP_TEMPLATE(IPFIX_FIELD_NAMES)
    NULL
 };
 
