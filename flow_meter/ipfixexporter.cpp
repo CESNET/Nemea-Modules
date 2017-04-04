@@ -57,9 +57,13 @@
 #include "flowifc.h"
 #include "ipfix-elements.h"
 
-#define FIELD_LEN_INT(EID, ELID, LEN, SRC) LEN
-#define FIELD_SOURCE_INT(EID, ELID, LEN, SRC) SRC
+#define FIELD_EN_INT(EN, ID, LEN, SRC) EN
+#define FIELD_ID_INT(EN, ID, LEN, SRC) ID
+#define FIELD_LEN_INT(EN, ID, LEN, SRC) LEN
+#define FIELD_SOURCE_INT(EN, ID, LEN, SRC) SRC
 
+#define FIELD_EN(A) A(FIELD_EN_INT)
+#define FIELD_ID(A) A(FIELD_ID_INT)
 #define FIELD_LEN(A) A(FIELD_LEN_INT)
 #define FIELD_SOURCE(A) A(FIELD_SOURCE_INT)
 
@@ -69,9 +73,6 @@
 /**
  * Copy value into buffer and swap bytes if needed.
  *
- * It might require uint64_t temp variable defined in the block where this
- * macro is used.
- *
  * \param[out] TARGET pointer to the first byte of the current field in buffer
  * \param[in] SOURCE pointer to source of data
  * \param[in] LENGTH size of data in bytes
@@ -80,11 +81,14 @@
    if (FIELD_LEN(FIELD) == 1) { \
       *((uint8_t *) TARGET) = *((uint8_t *) FIELD_SOURCE(FIELD)); \
    } else if (FIELD_LEN(FIELD) == 2) { \
-      *((uint16_t *) TARGET) = htons(*((uint16_t *) FIELD_SOURCE(FIELD))); \
+      *((uint16_t *) TARGET) = htons(*(FIELD_SOURCE(FIELD))); \
+   } else if ((FIELD_EN(FIELD) == 0) && \
+              ((FIELD_ID(FIELD) == FIELD_ID(L3_IPV4_ADDR_SRC)) || (FIELD_ID(FIELD) == FIELD_ID(L3_IPV4_ADDR_DST)))) { \
+      *((uint32_t *) TARGET) = *(FIELD_SOURCE(FIELD)); \
    } else if (FIELD_LEN(FIELD) == 4) { \
-      *((uint32_t *) TARGET) = htonl(*((uint32_t *) FIELD_SOURCE(FIELD))); \
+      *((uint32_t *) TARGET) = htonl(*(FIELD_SOURCE(FIELD))); \
    } else if (FIELD_LEN(FIELD) == 8) { \
-      *((uint64_t *) TARGET) = swap_uint64(*((uint64_t *) FIELD_SOURCE(FIELD))); \
+      *((uint64_t *) TARGET) = swap_uint64(*(FIELD_SOURCE(FIELD))); \
    } else { \
       memcpy(TARGET, FIELD_SOURCE(FIELD), FIELD_LEN(FIELD)); \
    } \
