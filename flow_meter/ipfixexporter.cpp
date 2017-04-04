@@ -77,11 +77,16 @@
  * \param[in] LENGTH size of data in bytes
  */
 #define IPFIX_FILL_FIELD(TARGET, FIELD) do { \
-   memcpy(TARGET, FIELD_SOURCE(FIELD), FIELD_LEN(FIELD)); \
-   if (FIELD_LEN(FIELD) == 2) { \
-      *((uint16_t *) TARGET) = htons(*((uint16_t *) TARGET)); \
+   if (FIELD_LEN(FIELD) == 1) { \
+      *((uint8_t *) TARGET) = *((uint8_t *) FIELD_SOURCE(FIELD)); \
+   } else if (FIELD_LEN(FIELD) == 2) { \
+      *((uint16_t *) TARGET) = htons(*((uint16_t *) FIELD_SOURCE(FIELD))); \
+   } else if (FIELD_LEN(FIELD) == 4) { \
+      *((uint32_t *) TARGET) = htonl(*((uint32_t *) FIELD_SOURCE(FIELD))); \
    } else if (FIELD_LEN(FIELD) == 8) { \
-      *((uint64_t *) TARGET) = swap_uint64(*((uint64_t *) TARGET)); \
+      *((uint64_t *) TARGET) = swap_uint64(*((uint64_t *) FIELD_SOURCE(FIELD))); \
+   } else { \
+      memcpy(TARGET, FIELD_SOURCE(FIELD), FIELD_LEN(FIELD)); \
    } \
    TARGET += FIELD_LEN(FIELD); \
 } while (0)
