@@ -3,6 +3,7 @@
  * \brief Export flows in IPFIX format.
  *    The following code was used https://dior.ics.muni.cz/~velan/flowmon-export-ipfix/
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
+ * \author Tomas Cejka <cejkat@cesnet.cz>
  * \date 2017
  */
 /*

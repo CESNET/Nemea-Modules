@@ -1,9 +1,69 @@
+/**
+ * \file ipfix-elements.h
+ * \brief List of IPFIX elements and templates
+ * \author Tomas Cejka <cejkat@cesnet.cz>
+ * \date 2017
+ */
+/*
+ * Copyright (C) 2017 CESNET
+ *
+ * LICENSE TERMS
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is'', and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
+
 #ifndef IPFIX_ELEMENTS_H
 #define IPFIX_ELEMENTS_H
 
 
+/**
+ * Each IPFIX element is defined as a C-preprocessor macro expecting
+ * one argument - macro function that is used to pass 4 arguments (info about an element).
+ *
+ * The IPFIX element has 4 "attributes" in the following order:
+ *   1. Enterprise number,
+ *   2. Element ID,
+ *   3. Data type length (in bytes),
+ *   4. Source memory pointer (to copy value from)
+ */
+
+/**
+ * Convert FIELD to its "attributes", i.e. BYTES(FIELD) used in the source code produces
+ *    0, 1, 8, &flow.octet_total_length
+ * when it is substituted by C-preprocessor.
+ */
 #define FIELD(EN, ID, LEN, SRC) EN, ID, LEN, SRC
 
+/* The list of known IPFIX elements: */
 #define BYTES(F)                      F(0,        1,    8,   &flow.octet_total_length)
 #define PACKETS(F)                    F(0,        2,    8,   (temp = (uint64_t) flow.pkt_total_cnt, &temp))
 #define FLOW_START_MSEC(F)            F(0,      152,    8,   (temp = ((uint64_t) flow.time_first.tv_sec) * 1000 + (flow.time_first.tv_usec / 1000), &temp))
@@ -90,7 +150,16 @@
 #define ARP_DST_HA(F)                 F(8057,    36,   -1,   NULL)
 #define ARP_DST_PA(F)                 F(8057,    37,   -1,   NULL)
 
-/* IPFIX Templates - list of elements */
+/**
+ * IPFIX Templates - list of elements
+ *
+ * Each template is defined as a macro function expecting one argument F.
+ * This argument must be a macro function which is substituted with every
+ * specified element of the template.
+ *
+ * For instance, PACKET_TMPLT contains L2_SRC_MAC, L2_DST_MAC, ETHERTYPE, OBSERVATION_MSEC,
+ * all of them defined above.
+ */
 
 #define PACKET_TMPLT(F) \
    F(L2_SRC_MAC) \
@@ -185,6 +254,12 @@
    F(SIP_REQUEST_URI) \
    F(SIP_VIA)
 
+/**
+ * List of all known templated.
+ *
+ * This macro is define in order to use all elements of all defined
+ * templates at once.
+ */
 #define IPFIX_ENABLED_TEMPLATES(F) \
    PACKET_TMPLT(F) \
    BASIC_TMPLT_V4(F) \
@@ -196,7 +271,12 @@
    IPFIX_DNS_TEMPLATE(F)
 
 
-/* Helper macros */
+/**
+ * Helper macro, convert FIELD into its name as a C literal.
+ *
+ * For instance, processing: IPFIX_FIELD_NAMES(BYTES) with C-preprocessor
+ * produces "BYTES".
+ */
 #define IPFIX_FIELD_NAMES(F) #F,
 
 #endif
