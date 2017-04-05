@@ -218,7 +218,6 @@ private:
 	uint32_t odid; /**< Observation Domain ID */
 	uint32_t templateRefreshTime; /**< UDP template refresh time interval */
 	uint32_t templateRefreshPackets; /**< UDP template refresh packet interval */
-   uint64_t link_bit_field;   /**< Link bit field value. */
    uint8_t dir_bit_field;     /**< Direction bit field value. */
 
    void init_template_buffer(template_t *tmpl);
