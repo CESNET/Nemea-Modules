@@ -5,7 +5,7 @@
 #define FIELD(EN, ID, LEN, SRC) EN, ID, LEN, SRC
 
 #define BYTES(F)                      F(0,        1,    8,   &flow.octet_total_length)
-#define PACKETS(F)                    F(0,        2,    8,   &flow.pkt_total_cnt)
+#define PACKETS(F)                    F(0,        2,    8,   (temp = (uint64_t) flow.pkt_total_cnt, &temp))
 #define FLOW_START_MSEC(F)            F(0,      152,    8,   (temp = ((uint64_t) flow.time_first.tv_sec) * 1000 + (flow.time_first.tv_usec / 1000), &temp))
 #define FLOW_END_MSEC(F)              F(0,      153,    8,   (temp = ((uint64_t) flow.time_last.tv_sec) * 1000 + (flow.time_last.tv_usec / 1000), &temp))
 #define OBSERVATION_MSEC(F)           F(0,      323,    8,   NULL)
