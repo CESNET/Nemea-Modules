@@ -59,7 +59,7 @@ const unsigned int DEFAULT_FLOW_CACHE_SIZE = 65536;
 #else
 const unsigned int DEFAULT_FLOW_CACHE_SIZE = FLOW_CACHE_SIZE;
 #endif
-const unsigned int DEFAULT_FLOW_LINE_SIZE = 32;
+const unsigned int DEFAULT_FLOW_LINE_SIZE = 16;
 const double DEFAULT_INACTIVE_TIMEOUT = 30.0;
 const double DEFAULT_ACTIVE_TIMEOUT = 300.0;
 
