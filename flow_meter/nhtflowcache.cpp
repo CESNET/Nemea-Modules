@@ -48,12 +48,28 @@
 #include <cstdlib>
 #include <iostream>
 #include <sys/time.h>
-#include <nemea-common.h>
 
 #include "nhtflowcache.h"
 #include "flowcache.h"
+#include "xxhash.h"
 
 using namespace std;
+
+#if _WIN32 || _WIN64
+   #if _WIN64
+     #define ENV_64BIT
+  #else
+    #define ENV_32BIT
+  #endif
+#endif
+
+#if __GNUC__
+  #if __x86_64__ || __ppc64__
+    #define ENV_64BIT
+  #else
+    #define ENV_32BIT
+  #endif
+#endif
 
 inline __attribute__((always_inline)) bool FlowRecord::is_empty() const
 {
@@ -169,12 +185,16 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       return 0;
    }
 
-   uint32_t hashval = SuperFastHash(key, key_len); /* Calculates hash value from key created before. */
+#if defined(ENV_64BIT)
+   uint32_t hashval = XXH64(key, key_len, 0); /* Calculates hash value from key created before. */
+#else
+   uint32_t hashval = XXH32(key, key_len, 0); /* Calculates hash value from key created before. */
+#endif
 
-   uint32_t line_index = (hashval % size) & line_size_mask; /* Find place for packet. */
-   uint32_t flow_index = 0, next_line = line_index + line_size;
-   bool found = false;
    FlowRecord *flow; /* Pointer to flow we will be working with. */
+   uint32_t line_index = (hashval % size) & line_size_mask; /* Find place for packet. */
+   bool found = false;
+   uint32_t flow_index = 0, next_line = line_index + line_size;
 
    /* Find existing flow record in flow cache. */
    for (flow_index = line_index; flow_index < next_line; flow_index++) {
