@@ -55,6 +55,7 @@
 #include <netinet/udp.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp6.h>
+#include <linux/mpls.h>
 #include <pcap/pcap.h>
 
 #include "pcapreader.h"
@@ -120,7 +121,7 @@ inline uint16_t parse_eth_hdr(const u_char *data_ptr, Packet *pkt)
       ethertype = ntohs(*(uint16_t *) (data_ptr + hdr_len - 2));
       DEBUG_MSG("\t\tEthertype:\t%#06x\n", ethertype);
    }
-   if (ethertype == ETH_P_8021Q) {
+   while (ethertype == ETH_P_8021Q) {
       DEBUG_CODE(uint16_t vlan = ntohs(*(uint16_t *) (data_ptr + hdr_len)));
       DEBUG_MSG("\t802.1q field:\n");
       DEBUG_MSG("\t\tPriority:\t%u\n",    ((vlan & 0xE000) >> 12));
@@ -351,6 +352,90 @@ inline uint16_t parse_icmpv6_hdr(const u_char *data_ptr, Packet *pkt)
    return 0;
 }
 
+uint16_t process_mpls_stack(const u_char *data_ptr)
+{
+   struct mpls_label *mpls;
+   uint16_t length = 0;
+
+   do {
+      mpls = (struct mpls_label *) (data_ptr + length);
+      length += sizeof(struct mpls_label);
+
+      DEBUG_MSG("MPLS:\n");
+      DEBUG_MSG("\tLabel:\t%u\n",   ntohl(mpls->entry) >> 12);
+      DEBUG_MSG("\tTC:\t%u\n",      (ntohl(mpls->entry) & 0xE00) >> 9);
+      DEBUG_MSG("\tBOS:\t%u\n",     (ntohl(mpls->entry) & 0x100) >> 8);
+      DEBUG_MSG("\tTTL:\t%u\n",     ntohl(mpls->entry) & 0xFF);
+
+    } while (!(ntohl(mpls->entry) & 0x100));
+
+   return length;
+}
+
+uint16_t process_mpls(const u_char *data_ptr, Packet *pkt)
+{
+   Packet tmp;
+   uint16_t length = process_mpls_stack(data_ptr);
+   uint8_t next_hdr = (*(data_ptr + length) & 0xF0) >> 4;
+
+   if (next_hdr == 4) {
+      length += parse_ipv4_hdr(data_ptr + length, pkt);
+   } else if (next_hdr == 6) {
+      length += parse_ipv6_hdr(data_ptr + length, pkt);
+   } else if (next_hdr == 0) {
+      /* Process EoMPLS */
+      length += 4; /* Skip Pseudo Wire Ethernet control word. */
+      length = parse_eth_hdr(data_ptr + length, &tmp);
+      if (tmp.ethertype == ETH_P_IP) {
+         length += parse_ipv4_hdr(data_ptr + length, pkt);
+      } else if (tmp.ethertype == ETH_P_IPV6) {
+         length += parse_ipv6_hdr(data_ptr + length, pkt);
+      }
+   }
+
+   return length;
+}
+
+struct __attribute__((packed)) pppoe_hdr {
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+   uint8_t type:4;
+   uint8_t version:4;
+#elif __BYTE_ORDER == __BIG_ENDIAN
+   uint8_t version:4;
+   uint8_t type:4;
+#endif
+   uint8_t code;
+   uint16_t sid;
+   uint16_t length;
+};
+
+inline uint16_t process_pppoe(const u_char *data_ptr, Packet *pkt)
+{
+   struct pppoe_hdr *pppoe = (struct pppoe_hdr *) data_ptr;
+   uint16_t next_hdr = ntohs(*(uint16_t *) (data_ptr + sizeof(struct pppoe_hdr)));
+   uint16_t length = sizeof(struct pppoe_hdr) + 2;
+
+   DEBUG_MSG("PPPoE header:\n");
+   DEBUG_MSG("\tVer:\t%u\n",     pppoe->version);
+   DEBUG_MSG("\tType:\t%u\n",    pppoe->type);
+   DEBUG_MSG("\tCode:\t%u\n",    pppoe->code);
+   DEBUG_MSG("\tSID:\t%u\n",     ntohs(pppoe->sid));
+   DEBUG_MSG("\tLength:\t%u\n",  ntohs(pppoe->length));
+   DEBUG_MSG("PPP header:\n");
+   DEBUG_MSG("\tProtocol:\t%#04x\n", next_hdr);
+   if (pppoe->code != 0) {
+      return length;
+   }
+
+   if (next_hdr == 0x0021) {
+      length += parse_ipv4_hdr(data_ptr + length, pkt);
+   } else if (next_hdr == 0x0057) {
+      length += parse_ipv6_hdr(data_ptr + length, pkt);
+   }
+
+   return length;
+}
+
 /**
  * \brief Parsing callback function for pcap_dispatch() call. Parse packets up to transport layer.
  * \param [in,out] arg Serves for passing pointer to Packet structure into callback function.
@@ -382,6 +467,10 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
       data_offset += parse_ipv4_hdr(data + data_offset, pkt);
    } else if (pkt->ethertype == ETH_P_IPV6) {
       data_offset += parse_ipv6_hdr(data + data_offset, pkt);
+   } else if (pkt->ethertype == ETH_P_MPLS_UC || pkt->ethertype == ETH_P_MPLS_MC) {
+      data_offset += process_mpls(data + data_offset, pkt);
+   } else if (pkt->ethertype == ETH_P_PPP_SES) {
+      data_offset += process_pppoe(data + data_offset, pkt);
    } else if (!parse_all) {
       DEBUG_MSG("Unknown ethertype %x\n", pkt->ethertype);
       return;
