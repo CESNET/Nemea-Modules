@@ -71,7 +71,6 @@ public:
    {
       flow.removeExtensions();
 
-      flow.field_indicator = 0;
       memset(&flow.time_first, 0, sizeof(flow.time_first));
       memset(&flow.time_last, 0, sizeof(flow.time_last));
       flow.ip_version = 0;

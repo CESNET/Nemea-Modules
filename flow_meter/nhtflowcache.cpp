@@ -71,21 +71,14 @@ bool FlowRecord::belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len) cons
 
 void FlowRecord::create(const Packet &pkt, uint64_t pkt_hash, char *pkt_key, uint8_t key_len)
 {
-   flow.field_indicator    = FLW_FLOWFIELDINDICATOR;
    flow.pkt_total_cnt      = 1;
-   flow.field_indicator   |= FLW_PACKETTOTALCOUNT;
 
    hash = pkt_hash;
    memcpy(key, pkt_key, key_len);
 
-   if ((pkt.field_indicator & PCKT_INFO_MASK) == PCKT_INFO_MASK) {
-      flow.field_indicator |= FLW_HASH;
-   }
-
    if ((pkt.field_indicator & PCKT_PCAP_MASK) == PCKT_PCAP_MASK) {
       flow.time_first               = pkt.timestamp;
       flow.time_last                = pkt.timestamp;
-      flow.field_indicator         |= FLW_TIMESTAMPS_MASK;
    }
 
    if ((pkt.field_indicator & PCKT_IPV4_MASK) == PCKT_IPV4_MASK) {
@@ -96,7 +89,6 @@ void FlowRecord::create(const Packet &pkt, uint64_t pkt_hash, char *pkt_key, uin
       flow.src_ip.v4                = pkt.src_ip.v4;
       flow.dst_ip.v4                = pkt.dst_ip.v4;
       flow.octet_total_length       = pkt.ip_length;
-      flow.field_indicator         |= (FLW_IPV4_MASK | FLW_IPSTAT_MASK);
    } else if ((pkt.field_indicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
       flow.ip_version               = pkt.ip_version;
       flow.ip_proto                 = pkt.ip_proto;
@@ -104,22 +96,18 @@ void FlowRecord::create(const Packet &pkt, uint64_t pkt_hash, char *pkt_key, uin
       memcpy(flow.src_ip.v6, pkt.src_ip.v6, 16);
       memcpy(flow.dst_ip.v6, pkt.dst_ip.v6, 16);
       flow.octet_total_length         = pkt.ip_length;
-      flow.field_indicator           |= (FLW_IPV6_MASK | FLW_IPSTAT_MASK);
    }
 
    if ((pkt.field_indicator & PCKT_TCP_MASK) == PCKT_TCP_MASK) {
       flow.src_port                  = pkt.src_port;
       flow.dst_port                  = pkt.dst_port;
       flow.tcp_control_bits          = pkt.tcp_control_bits;
-      flow.field_indicator          |= FLW_TCP_MASK;
    } else if ((pkt.field_indicator & PCKT_UDP_MASK) == PCKT_UDP_MASK) {
       flow.src_port                  = pkt.src_port;
       flow.dst_port                  = pkt.dst_port;
-      flow.field_indicator          |= FLW_UDP_MASK;
    } else if (pkt.field_indicator & PCKT_ICMP) {
       flow.src_port                  = pkt.src_port;
       flow.dst_port                  = pkt.dst_port;
-      flow.field_indicator          |= FLW_ICMP;
    }
 
    empty_flow = false;
