@@ -90,7 +90,7 @@ static int stop = 0;
   PARAM('n', "no_eof", "Don't send NULL record message when flow_meter exits.", no_argument, "none") \
   PARAM('l', "snapshot_len", "Snapshot length when reading packets. Set value between 120-65535.", required_argument, "uint32") \
   PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: DOUBLE:DOUBLE. Value default means use default value 300.0:30.0.", required_argument, "string") \
-  PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 176 bytes. default means use value 65536.", required_argument, "string") \
+  PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 152 bytes. default means use value 131072.", required_argument, "string") \
   PARAM('S', "cache-statistics", "Print flow cache statistics. NUMBER specifies interval between prints.", required_argument, "float") \
   PARAM('P', "pcap-statistics", "Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.", no_argument, "none") \
   PARAM('L', "link_bit_field", "Link bit field value.", required_argument, "uint64") \

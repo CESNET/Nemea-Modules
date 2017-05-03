@@ -25,7 +25,7 @@ This NEMEA module creates flows from input PCAP file / network interface and exp
 - `-n`               Don't send NULL record when flow_meter exits.
 - `-l NUMBER`        Snapshot length when reading packets. Set value between `120`-`65535` .
 - `-t NUM:NUM`       Active and inactive timeout in seconds. Format: DOUBLE:DOUBLE. Value default means use default value 300.0:30.0.
-- `-s STRING`        Size of flow cache in number of flow records. Each flow record has 176 bytes. default means use value 65536.
+- `-s STRING`        Size of flow cache in number of flow records. Each flow record has 152 bytes. default means use value 131072.
 - `-S NUMBER`        Print flow cache statistics. `NUMBER` specifies interval between prints.
 - `-P`               Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.
 - `-L NUMBER`        Link bit field value.

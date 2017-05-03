@@ -55,7 +55,7 @@
 using namespace std;
 
 #ifndef FLOW_CACHE_SIZE
-const unsigned int DEFAULT_FLOW_CACHE_SIZE = 65536;
+const unsigned int DEFAULT_FLOW_CACHE_SIZE = 131072;
 #else
 const unsigned int DEFAULT_FLOW_CACHE_SIZE = FLOW_CACHE_SIZE;
 #endif
