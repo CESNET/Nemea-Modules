@@ -55,12 +55,12 @@
 
 using namespace std;
 
-inline bool FlowRecord::is_empty() const
+inline __attribute__((always_inline)) bool FlowRecord::is_empty() const
 {
-   return empty_flow;
+   return hash == 0;
 }
 
-bool FlowRecord::belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len) const
+inline __attribute__((always_inline)) bool FlowRecord::belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len) const
 {
    if (is_empty() || (pkt_hash != hash)) {
       return false;
@@ -71,46 +71,44 @@ bool FlowRecord::belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len) cons
 
 void FlowRecord::create(const Packet &pkt, uint64_t pkt_hash, char *pkt_key, uint8_t key_len)
 {
-   flow.pkt_total_cnt      = 1;
+   flow.pkt_total_cnt = 1;
 
    hash = pkt_hash;
    memcpy(key, pkt_key, key_len);
 
    if ((pkt.field_indicator & PCKT_PCAP_MASK) == PCKT_PCAP_MASK) {
-      flow.time_first               = pkt.timestamp;
-      flow.time_last                = pkt.timestamp;
+      flow.time_first = pkt.timestamp;
+      flow.time_last = pkt.timestamp;
    }
 
    if ((pkt.field_indicator & PCKT_IPV4_MASK) == PCKT_IPV4_MASK) {
-      flow.ip_version               = pkt.ip_version;
-      flow.ip_proto                 = pkt.ip_proto;
-      flow.ip_tos                   = pkt.ip_tos;
-      flow.ip_ttl                   = pkt.ip_ttl;
-      flow.src_ip.v4                = pkt.src_ip.v4;
-      flow.dst_ip.v4                = pkt.dst_ip.v4;
-      flow.octet_total_length       = pkt.ip_length;
+      flow.ip_version = pkt.ip_version;
+      flow.ip_proto = pkt.ip_proto;
+      flow.ip_tos = pkt.ip_tos;
+      flow.ip_ttl = pkt.ip_ttl;
+      flow.src_ip.v4 = pkt.src_ip.v4;
+      flow.dst_ip.v4 = pkt.dst_ip.v4;
+      flow.octet_total_length = pkt.ip_length;
    } else if ((pkt.field_indicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
-      flow.ip_version               = pkt.ip_version;
-      flow.ip_proto                 = pkt.ip_proto;
-      flow.ip_tos                   = pkt.ip_tos;
+      flow.ip_version = pkt.ip_version;
+      flow.ip_proto = pkt.ip_proto;
+      flow.ip_tos = pkt.ip_tos;
       memcpy(flow.src_ip.v6, pkt.src_ip.v6, 16);
       memcpy(flow.dst_ip.v6, pkt.dst_ip.v6, 16);
-      flow.octet_total_length         = pkt.ip_length;
+      flow.octet_total_length = pkt.ip_length;
    }
 
    if ((pkt.field_indicator & PCKT_TCP_MASK) == PCKT_TCP_MASK) {
-      flow.src_port                  = pkt.src_port;
-      flow.dst_port                  = pkt.dst_port;
-      flow.tcp_control_bits          = pkt.tcp_control_bits;
+      flow.src_port = pkt.src_port;
+      flow.dst_port = pkt.dst_port;
+      flow.tcp_control_bits = pkt.tcp_control_bits;
    } else if ((pkt.field_indicator & PCKT_UDP_MASK) == PCKT_UDP_MASK) {
-      flow.src_port                  = pkt.src_port;
-      flow.dst_port                  = pkt.dst_port;
+      flow.src_port = pkt.src_port;
+      flow.dst_port = pkt.dst_port;
    } else if (pkt.field_indicator & PCKT_ICMP) {
-      flow.src_port                  = pkt.src_port;
-      flow.dst_port                  = pkt.dst_port;
+      flow.src_port = pkt.src_port;
+      flow.dst_port = pkt.dst_port;
    }
-
-   empty_flow = false;
 }
 
 void FlowRecord::update(const Packet &pkt)
@@ -129,8 +127,6 @@ void FlowRecord::update(const Packet &pkt)
       flow.tcp_control_bits |= pkt.tcp_control_bits;
    }
 }
-
-// NHTFlowCache -- PUBLIC *****************************************************
 
 void NHTFlowCache::init()
 {

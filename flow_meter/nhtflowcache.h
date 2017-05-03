@@ -64,12 +64,12 @@ class FlowRecord
    char key[MAX_KEY_LENGTH];
 
 public:
-   bool empty_flow;
    Flow flow;
 
    void erase()
    {
       flow.removeExtensions();
+      hash = 0;
 
       memset(&flow.time_first, 0, sizeof(flow.time_first));
       memset(&flow.time_last, 0, sizeof(flow.time_last));
@@ -84,8 +84,6 @@ public:
       flow.pkt_total_cnt = 0;
       flow.octet_total_length = 0;
       flow.tcp_control_bits = 0;
-
-      empty_flow = true;
    }
 
    FlowRecord()
@@ -97,7 +95,7 @@ public:
    };
 
    inline bool is_empty() const;
-   bool belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len) const;
+   inline bool belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len) const;
    void create(const Packet &pkt, uint64_t pkt_hash, char *pkt_key, uint8_t key_len);
    void update(const Packet &pkt);
 };
