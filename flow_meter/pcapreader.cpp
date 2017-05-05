@@ -148,8 +148,7 @@ inline uint16_t parse_ipv4_hdr(const u_char *data_ptr, Packet *pkt)
 {
    struct iphdr *ip = (struct iphdr *) data_ptr;
 
-   pkt->field_indicator |= PCKT_IPV4_MASK;
-   pkt->ip_version = ip->version;
+   pkt->ip_version = 4;
    pkt->ip_proto = ip->protocol;
    pkt->ip_tos = ip->tos;
    pkt->ip_length = ntohs(ip->tot_len);
@@ -223,8 +222,7 @@ inline uint16_t parse_ipv6_hdr(const u_char *data_ptr, Packet *pkt)
    struct ip6_hdr *ip6 = (struct ip6_hdr *) data_ptr;
    uint16_t hdr_len = 40;
 
-   pkt->field_indicator |= PCKT_IPV6_MASK;
-   pkt->ip_version = (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0xf0000000) >> 28;
+   pkt->ip_version = 6;
    pkt->ip_tos = (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0x0ff00000) >> 20;
    pkt->ip_proto = ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;
    pkt->ip_length = ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);
@@ -262,8 +260,7 @@ inline uint16_t parse_tcp_hdr(const u_char *data_ptr, Packet *pkt)
 {
    struct tcphdr *tcp = (struct tcphdr *) data_ptr;
 
-   pkt->field_indicator |= PCKT_PAYLOAD_MASK;
-   pkt->field_indicator |= PCKT_TCP_MASK;
+   pkt->field_indicator |= (PCKT_TCP | PCKT_PAYLOAD);
    pkt->src_port = ntohs(tcp->source);
    pkt->dst_port = ntohs(tcp->dest);
    pkt->tcp_control_bits = (uint8_t) *(data_ptr + 13) & 0x3F;
@@ -296,8 +293,7 @@ inline uint16_t parse_udp_hdr(const u_char *data_ptr, Packet *pkt)
 {
    struct udphdr *udp = (struct udphdr *) data_ptr;
 
-   pkt->field_indicator |= PCKT_PAYLOAD_MASK;
-   pkt->field_indicator |= PCKT_UDP_MASK;
+   pkt->field_indicator |= (PCKT_UDP | PCKT_PAYLOAD);
    pkt->src_port = ntohs(udp->source);
    pkt->dst_port = ntohs(udp->dest);
 
@@ -456,11 +452,11 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
    DEBUG_MSG("Time:\t\t\t%s.%06lu\n",     timestamp, h->ts.tv_usec);
    DEBUG_MSG("Packet length:\t\tcaplen=%uB len=%uB\n\n", h->caplen, h->len);
 
-   pkt->field_indicator = PCKT_PCAP_MASK;
    pkt->timestamp = h->ts;
    pkt->src_port = 0;
    pkt->dst_port = 0;
    pkt->ip_proto = 0;
+   pkt->ip_version = 0;
 
    data_offset = parse_eth_hdr(data, pkt);
    if (pkt->ethertype == ETH_P_IP) {

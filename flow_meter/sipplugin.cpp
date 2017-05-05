@@ -141,7 +141,7 @@ const char **SIPPlugin::get_ipfix_string()
 
 uint16_t SIPPlugin::parse_msg_type(const Packet &pkt)
 {
-   if ((pkt.field_indicator & PCKT_PAYLOAD_MASK) != PCKT_PAYLOAD_MASK) { // If payload is not present, return.
+   if (!(pkt.field_indicator & PCKT_PAYLOAD)) {
       return SIP_MSG_TYPE_INVALID;
    }
 
