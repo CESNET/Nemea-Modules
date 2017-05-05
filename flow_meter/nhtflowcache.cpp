@@ -186,14 +186,14 @@ int NHTFlowCache::put_pkt(Packet &pkt)
    }
 
 #if defined(ENV_64BIT)
-   uint32_t hashval = XXH64(key, key_len, 0); /* Calculates hash value from key created before. */
+   uint64_t hashval = XXH64(key, key_len, 0); /* Calculates hash value from key created before. */
 #else
    uint32_t hashval = XXH32(key, key_len, 0); /* Calculates hash value from key created before. */
 #endif
 
    FlowRecord *flow; /* Pointer to flow we will be working with. */
-   uint32_t line_index = (hashval % size) & line_size_mask; /* Find place for packet. */
    bool found = false;
+   uint32_t line_index = hashval & line_size_mask; /* Get index of flow line. */
    uint32_t flow_index = 0, next_line = line_index + line_size;
 
    /* Find existing flow record in flow cache. */

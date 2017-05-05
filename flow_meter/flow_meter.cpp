@@ -90,7 +90,7 @@ static int stop = 0;
   PARAM('n', "no_eof", "Don't send NULL record message when flow_meter exits.", no_argument, "none") \
   PARAM('l', "snapshot_len", "Snapshot length when reading packets. Set value between 120-65535.", required_argument, "uint32") \
   PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: DOUBLE:DOUBLE. Value default means use default value 300.0:30.0.", required_argument, "string") \
-  PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 152 bytes. default means use value 131072.", required_argument, "string") \
+  PARAM('s', "cache_size", "Size of flow cache. Parameter is used as an exponent to the power of two. Valid numbers are in range 4-30. default is 17 (131072 records).", required_argument, "string") \
   PARAM('S', "cache-statistics", "Print flow cache statistics. NUMBER specifies interval between prints.", required_argument, "float") \
   PARAM('P', "pcap-statistics", "Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.", no_argument, "none") \
   PARAM('L', "link_bit_field", "Link bit field value.", required_argument, "uint64") \
@@ -481,12 +481,13 @@ int main(int argc, char *argv[])
       case 's':
          if (strcmp(optarg, "default")) {
             uint32_t tmp;
-            if (!str_to_uint32(optarg, tmp) || tmp == 0) {
+            if (!str_to_uint32(optarg, tmp) || tmp <= 3 || tmp > 30) {
                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                TRAP_DEFAULT_FINALIZATION();
                return error("Invalid argument for option -s");
             }
-            options.flow_cache_size = tmp;
+
+            options.flow_cache_size = (1 << tmp);
          } else {
             options.flow_cache_size = DEFAULT_FLOW_CACHE_SIZE;
          }
@@ -572,10 +573,6 @@ int main(int argc, char *argv[])
    } else if (options.interface == "" && options.pcap_file == "") {
       TRAP_DEFAULT_FINALIZATION();
       return error("Specify capture interface (-I) or file for reading (-r). ");
-   }
-
-   if (options.flow_cache_size % options.flow_line_size != 0) {
-      options.flow_cache_size += options.flow_line_size - (options.flow_cache_size % options.flow_line_size);
    }
 
    bool parse_every_pkt = false;
