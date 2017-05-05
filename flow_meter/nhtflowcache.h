@@ -56,7 +56,7 @@
 
 using namespace std;
 
-#define MAX_KEY_LENGTH 37
+#define MAX_KEY_LENGTH 38
 
 class FlowRecord
 {
@@ -167,6 +167,24 @@ public:
 protected:
    bool create_hash_key(Packet &pkt);
    void print_report();
+};
+
+struct __attribute__((packed)) flow_key_v4_t {
+   uint16_t src_port;
+   uint16_t dst_port;
+   uint8_t proto;
+   uint8_t ip_version;
+   uint32_t src_ip;
+   uint32_t dst_ip;
+};
+
+struct __attribute__((packed)) flow_key_v6_t {
+   uint16_t src_port;
+   uint16_t dst_port;
+   uint8_t proto;
+   uint8_t ip_version;
+   uint8_t src_ip[16];
+   uint8_t dst_ip[16];
 };
 
 #endif

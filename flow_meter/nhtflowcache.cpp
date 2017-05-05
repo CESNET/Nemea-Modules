@@ -322,32 +322,29 @@ void NHTFlowCache::export_expired(time_t ts)
 
 bool NHTFlowCache::create_hash_key(Packet &pkt)
 {
-   char *k = key;
    if (pkt.ip_version == 4) {
-      *(uint8_t *) k = pkt.ip_proto;
-      k += sizeof(pkt.ip_proto);
-      *(uint32_t *) k = pkt.src_ip.v4;
-      k += sizeof(pkt.src_ip.v4);
-      *(uint32_t *) k = pkt.dst_ip.v4;
-      k += sizeof(pkt.dst_ip.v4);
-      *(uint16_t *) k = pkt.src_port;
-      k += sizeof(pkt.src_port);
-      *(uint16_t *) k = pkt.dst_port;
-      k += sizeof(pkt.dst_port);
-      key_len = 13;
+      struct flow_key_v4_t *key_v4 = (struct flow_key_v4_t *) key;
+
+      key_v4->src_port = pkt.src_port;
+      key_v4->dst_port = pkt.dst_port;
+      key_v4->proto = pkt.ip_proto;
+      key_v4->ip_version = 4;
+      key_v4->src_ip = pkt.src_ip.v4;
+      key_v4->dst_ip = pkt.dst_ip.v4;
+
+      key_len = 14;
       return true;
    } else if (pkt.ip_version == 6) {
-      *(uint8_t *) k = pkt.ip_proto;
-      k += sizeof(pkt.ip_proto);
-      memcpy(k, pkt.src_ip.v6, sizeof(pkt.src_ip.v6));
-      k += sizeof(pkt.src_ip.v6);
-      memcpy(k, pkt.dst_ip.v6, sizeof(pkt.src_ip.v6));
-      k += sizeof(pkt.dst_ip.v6);
-      *(uint16_t *) k = pkt.src_port;
-      k += sizeof(pkt.src_port);
-      *(uint16_t *) k = pkt.dst_port;
-      k += sizeof(pkt.dst_port);
-      key_len = 37;
+      struct flow_key_v6_t *key_v6 = (struct flow_key_v6_t *) key;
+
+      key_v6->src_port = pkt.src_port;
+      key_v6->dst_port = pkt.dst_port;
+      key_v6->proto = pkt.ip_proto;
+      key_v6->ip_version = 6;
+      memcpy(key_v6->src_ip, pkt.src_ip.v6, sizeof(pkt.src_ip.v6));
+      memcpy(key_v6->dst_ip, pkt.dst_ip.v6, sizeof(pkt.dst_ip.v6));
+
+      key_len = 38;
       return true;
    }
 
