@@ -61,8 +61,6 @@ using namespace std;
 class FlowRecord
 {
    uint64_t hash;
-   char key[MAX_KEY_LENGTH];
-
 public:
    Flow flow;
 
@@ -95,8 +93,8 @@ public:
    };
 
    inline bool is_empty() const;
-   inline bool belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len) const;
-   void create(const Packet &pkt, uint64_t pkt_hash, char *pkt_key, uint8_t key_len);
+   inline bool belongs(uint64_t pkt_hash) const;
+   void create(const Packet &pkt, uint64_t pkt_hash);
    void update(const Packet &pkt);
 };
 

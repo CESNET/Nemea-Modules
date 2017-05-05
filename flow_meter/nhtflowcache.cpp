@@ -55,38 +55,21 @@
 
 using namespace std;
 
-#if _WIN32 || _WIN64
-   #if _WIN64
-     #define ENV_64BIT
-  #else
-    #define ENV_32BIT
-  #endif
-#endif
-
-#if __GNUC__
-  #if __x86_64__ || __ppc64__
-    #define ENV_64BIT
-  #else
-    #define ENV_32BIT
-  #endif
-#endif
-
 inline __attribute__((always_inline)) bool FlowRecord::is_empty() const
 {
    return hash == 0;
 }
 
-inline __attribute__((always_inline)) bool FlowRecord::belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len) const
+inline __attribute__((always_inline)) bool FlowRecord::belongs(uint64_t pkt_hash) const
 {
-   return pkt_hash == hash && memcmp(key, pkt_key, key_len) == 0;
+   return pkt_hash == hash;
 }
 
-void FlowRecord::create(const Packet &pkt, uint64_t pkt_hash, char *pkt_key, uint8_t key_len)
+void FlowRecord::create(const Packet &pkt, uint64_t pkt_hash)
 {
    flow.pkt_total_cnt = 1;
 
    hash = pkt_hash;
-   memcpy(key, pkt_key, key_len);
 
    flow.time_first = pkt.timestamp;
    flow.time_last = pkt.timestamp;
@@ -172,11 +155,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       return 0;
    }
 
-#if defined(ENV_64BIT)
    uint64_t hashval = XXH64(key, key_len, 0); /* Calculates hash value from key created before. */
-#else
-   uint32_t hashval = XXH32(key, key_len, 0); /* Calculates hash value from key created before. */
-#endif
 
    FlowRecord *flow; /* Pointer to flow we will be working with. */
    bool found = false;
@@ -185,7 +164,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
 
    /* Find existing flow record in flow cache. */
    for (flow_index = line_index; flow_index < next_line; flow_index++) {
-      if (flow_array[flow_index]->belongs(hashval, key, key_len)) {
+      if (flow_array[flow_index]->belongs(hashval)) {
          found = true;
          break;
       }
@@ -247,7 +226,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
    current_ts = pkt.timestamp;
    flow = flow_array[flow_index];
    if (flow->is_empty()) {
-      flow->create(pkt, hashval, key, key_len);
+      flow->create(pkt, hashval);
       ret = plugins_post_create(flow->flow, pkt);
 
       if (ret & FLOW_FLUSH) {
