@@ -453,6 +453,7 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
    DEBUG_MSG("Packet length:\t\tcaplen=%uB len=%uB\n\n", h->caplen, h->len);
 
    pkt->timestamp = h->ts;
+   pkt->field_indicator = 0;
    pkt->src_port = 0;
    pkt->dst_port = 0;
    pkt->ip_proto = 0;
