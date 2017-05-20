@@ -586,9 +586,9 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp, 
 
          data += sizeof(struct dns_answer);
          rdlength = ntohs(answer->rdlength);
-         process_rdata(record_begin, data, rdata, ntohs(answer->atype), rdlength);
 
          if (i == 0) { // Copy only first answer.
+            process_rdata(record_begin, data, rdata, ntohs(answer->atype), rdlength);
             rec->rr_ttl = ntohl(answer->ttl);
 
             size_t length = rdata.str().length();
@@ -606,6 +606,7 @@ bool DNSPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp, 
       /********************************************************************
       *****                 DNS Authority RRs section                 *****
       ********************************************************************/
+
       for (int i = 0; i < authority_rr_cnt; i++) { // Unused yet.
          record_begin = data;
 
