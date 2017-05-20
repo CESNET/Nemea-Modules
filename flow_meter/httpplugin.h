@@ -199,15 +199,17 @@ public:
 private:
    bool parse_http_request(const char *data, int payload_len, RecordExtHTTPReq *rec, bool create);
    bool parse_http_response(const char *data, int payload_len, RecordExtHTTPResp *rec, bool create);
-   int add_ext_http_request(const char *data, int payload_len, Flow &rec);
-   int add_ext_http_response(const char *data, int payload_len, Flow &rec);
+   void add_ext_http_request(const char *data, int payload_len, Flow &rec);
+   void add_ext_http_response(const char *data, int payload_len, Flow &rec);
    bool valid_http_method(const char *method) const;
 
-   bool print_stats;       /**< Print stats when flow cache is finishing. */
-   bool flush_flow;        /**< Tell FlowCache to flush current Flow. */
-   uint32_t requests;      /**< Total number of parsed HTTP requests. */
-   uint32_t responses;     /**< Total number of parsed HTTP responses. */
-   uint32_t total;         /**< Total number of parsed HTTP packets. */
+   RecordExtHTTPReq *req;     /**< Preallocated request extension. */
+   RecordExtHTTPResp *resp;   /**< Preallocated response extension. */
+   bool print_stats;          /**< Print stats when flow cache is finishing. */
+   bool flush_flow;           /**< Tell FlowCache to flush current Flow. */
+   uint32_t requests;         /**< Total number of parsed HTTP requests. */
+   uint32_t responses;        /**< Total number of parsed HTTP responses. */
+   uint32_t total;            /**< Total number of parsed HTTP packets. */
 };
 
 #endif
