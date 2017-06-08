@@ -5,7 +5,7 @@ AC_PREREQ([2.63])
 AC_INIT([nemea-modules], [2.5.3], [nemea@cesnet.cz])
 AC_CONFIG_SRCDIR([flowcounter/flowcounter.c])
 AC_CONFIG_HEADERS([config.h])
-RELEASE=3
+RELEASE=4
 AC_SUBST(RELEASE)
 USERNAME=`git config --get user.name`
 USERMAIL=`git config --get user.email`
@@ -227,6 +227,7 @@ AC_CONFIG_FILES([Makefile
                  report2idea/Makefile
                  report2idea/amplificationdetector/Makefile
                  report2idea/bruteforce/Makefile
+                 report2idea/ddos/Makefile
                  report2idea/dnstunnel/Makefile
                  report2idea/haddrscan/Makefile
                  report2idea/hoststats/Makefile
