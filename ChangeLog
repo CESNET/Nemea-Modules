@@ -1,3 +1,16 @@
+2017-06-08 Nemea-modules-2.5.4
+	* report2idea:
+		added ddos reporter
+		venom2idea: BUGFIX invalid JSON in config.cfg
+	* flow_meter:
+		flow cache hash function changed to xxHash
+		added handler for SIGPIPE signal 
+		add support for IPv6 address in -x parameter
+		added export to IPFIX
+		optimizations
+		simplifications
+		bugfixes
+	
 2017-03-01 Nemea-modules-2.5.3
 	* anonymizer:
 		added possibility to anonymize IP adresses (IPv4, IPv6) 
