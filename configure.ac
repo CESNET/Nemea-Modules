@@ -227,6 +227,7 @@ AC_CONFIG_FILES([Makefile
                  report2idea/Makefile
                  report2idea/amplificationdetector/Makefile
                  report2idea/bruteforce/Makefile
+                 report2idea/ddos/Makefile
                  report2idea/dnstunnel/Makefile
                  report2idea/haddrscan/Makefile
                  report2idea/hoststats/Makefile

@@ -6,6 +6,7 @@ SUBDIRS=hoststats \
 		vportscan \
 		voipfraud \
 		dnstunnel \
+		ddos \
 		bruteforce \
 		haddrscan \
 		sipbruteforce \

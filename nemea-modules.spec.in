@@ -43,6 +43,7 @@ ldconfig
 %{_bindir}/nemea/amplification2idea.py
 %{_bindir}/nemea/anonymizer
 %{_bindir}/nemea/bruteforce2idea.py
+%{_bindir}/nemea/ddos_detector2idea.py
 %{_bindir}/nemea/debug_sender.py
 %{_bindir}/nemea/device_classifier
 %{_bindir}/nemea/dnstunnel2idea.py
