@@ -55,7 +55,6 @@
 #include <netinet/udp.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp6.h>
-#include <linux/mpls.h>
 #include <pcap/pcap.h>
 
 #include "pcapreader.h"
@@ -350,20 +349,20 @@ inline uint16_t parse_icmpv6_hdr(const u_char *data_ptr, Packet *pkt)
 
 uint16_t process_mpls_stack(const u_char *data_ptr)
 {
-   struct mpls_label *mpls;
+   uint32_t *mpls;
    uint16_t length = 0;
 
    do {
-      mpls = (struct mpls_label *) (data_ptr + length);
-      length += sizeof(struct mpls_label);
+      mpls = (uint32_t *) (data_ptr + length);
+      length += sizeof(uint32_t);
 
       DEBUG_MSG("MPLS:\n");
-      DEBUG_MSG("\tLabel:\t%u\n",   ntohl(mpls->entry) >> 12);
-      DEBUG_MSG("\tTC:\t%u\n",      (ntohl(mpls->entry) & 0xE00) >> 9);
-      DEBUG_MSG("\tBOS:\t%u\n",     (ntohl(mpls->entry) & 0x100) >> 8);
-      DEBUG_MSG("\tTTL:\t%u\n",     ntohl(mpls->entry) & 0xFF);
+      DEBUG_MSG("\tLabel:\t%u\n",   ntohl(*mpls) >> 12);
+      DEBUG_MSG("\tTC:\t%u\n",      (ntohl(*mpls) & 0xE00) >> 9);
+      DEBUG_MSG("\tBOS:\t%u\n",     (ntohl(*mpls) & 0x100) >> 8);
+      DEBUG_MSG("\tTTL:\t%u\n",     ntohl(*mpls) & 0xFF);
 
-    } while (!(ntohl(mpls->entry) & 0x100));
+    } while (!(ntohl(*mpls) & 0x100));
 
    return length;
 }
