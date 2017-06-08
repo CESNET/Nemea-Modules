@@ -48,101 +48,72 @@
 #include <cstdlib>
 #include <iostream>
 #include <sys/time.h>
-#include <nemea-common.h>
 
 #include "nhtflowcache.h"
 #include "flowcache.h"
+#include "xxhash.h"
 
 using namespace std;
 
-inline bool FlowRecord::is_empty() const
+inline __attribute__((always_inline)) bool FlowRecord::is_empty() const
 {
-   return empty_flow;
+   return hash == 0;
 }
 
-bool FlowRecord::belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len) const
+inline __attribute__((always_inline)) bool FlowRecord::belongs(uint64_t pkt_hash) const
 {
-   if (is_empty() || (pkt_hash != hash)) {
-      return false;
-   } else {
-      return (memcmp(key, pkt_key, key_len) == 0);
-   }
+   return pkt_hash == hash;
 }
 
-void FlowRecord::create(const Packet &pkt, uint64_t pkt_hash, char *pkt_key, uint8_t key_len)
+void FlowRecord::create(const Packet &pkt, uint64_t pkt_hash)
 {
-   flow.field_indicator    = FLW_FLOWFIELDINDICATOR;
-   flow.pkt_total_cnt      = 1;
-   flow.field_indicator   |= FLW_PACKETTOTALCOUNT;
+   flow.pkt_total_cnt = 1;
 
    hash = pkt_hash;
-   memcpy(key, pkt_key, key_len);
 
-   if ((pkt.field_indicator & PCKT_INFO_MASK) == PCKT_INFO_MASK) {
-      flow.field_indicator |= FLW_HASH;
-   }
+   flow.time_first = pkt.timestamp;
+   flow.time_last = pkt.timestamp;
 
-   if ((pkt.field_indicator & PCKT_PCAP_MASK) == PCKT_PCAP_MASK) {
-      flow.time_first               = pkt.timestamp;
-      flow.time_last                = pkt.timestamp;
-      flow.field_indicator         |= FLW_TIMESTAMPS_MASK;
-   }
-
-   if ((pkt.field_indicator & PCKT_IPV4_MASK) == PCKT_IPV4_MASK) {
-      flow.ip_version               = pkt.ip_version;
-      flow.ip_proto                 = pkt.ip_proto;
-      flow.ip_tos                   = pkt.ip_tos;
-      flow.ip_ttl                   = pkt.ip_ttl;
-      flow.src_ip.v4                = pkt.src_ip.v4;
-      flow.dst_ip.v4                = pkt.dst_ip.v4;
-      flow.octet_total_length       = pkt.ip_length;
-      flow.field_indicator         |= (FLW_IPV4_MASK | FLW_IPSTAT_MASK);
-   } else if ((pkt.field_indicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
-      flow.ip_version               = pkt.ip_version;
-      flow.ip_proto                 = pkt.ip_proto;
-      flow.ip_tos                   = pkt.ip_tos;
+   if (pkt.ip_version == 4) {
+      flow.ip_version = pkt.ip_version;
+      flow.ip_proto = pkt.ip_proto;
+      flow.ip_tos = pkt.ip_tos;
+      flow.ip_ttl = pkt.ip_ttl;
+      flow.src_ip.v4 = pkt.src_ip.v4;
+      flow.dst_ip.v4 = pkt.dst_ip.v4;
+      flow.octet_total_length = pkt.ip_length;
+   } else if (pkt.ip_version == 6) {
+      flow.ip_version = pkt.ip_version;
+      flow.ip_proto = pkt.ip_proto;
+      flow.ip_tos = pkt.ip_tos;
       memcpy(flow.src_ip.v6, pkt.src_ip.v6, 16);
       memcpy(flow.dst_ip.v6, pkt.dst_ip.v6, 16);
-      flow.octet_total_length         = pkt.ip_length;
-      flow.field_indicator           |= (FLW_IPV6_MASK | FLW_IPSTAT_MASK);
+      flow.octet_total_length = pkt.ip_length;
    }
 
-   if ((pkt.field_indicator & PCKT_TCP_MASK) == PCKT_TCP_MASK) {
-      flow.src_port                  = pkt.src_port;
-      flow.dst_port                  = pkt.dst_port;
-      flow.tcp_control_bits          = pkt.tcp_control_bits;
-      flow.field_indicator          |= FLW_TCP_MASK;
-   } else if ((pkt.field_indicator & PCKT_UDP_MASK) == PCKT_UDP_MASK) {
-      flow.src_port                  = pkt.src_port;
-      flow.dst_port                  = pkt.dst_port;
-      flow.field_indicator          |= FLW_UDP_MASK;
+   if (pkt.field_indicator & PCKT_TCP) {
+      flow.src_port = pkt.src_port;
+      flow.dst_port = pkt.dst_port;
+      flow.tcp_control_bits = pkt.tcp_control_bits;
+   } else if (pkt.field_indicator & PCKT_UDP) {
+      flow.src_port = pkt.src_port;
+      flow.dst_port = pkt.dst_port;
    } else if (pkt.field_indicator & PCKT_ICMP) {
-      flow.src_port                  = pkt.src_port;
-      flow.dst_port                  = pkt.dst_port;
-      flow.field_indicator          |= FLW_ICMP;
+      flow.src_port = pkt.src_port;
+      flow.dst_port = pkt.dst_port;
    }
-
-   empty_flow = false;
 }
 
 void FlowRecord::update(const Packet &pkt)
 {
-   flow.pkt_total_cnt += 1;
-   if ((pkt.field_indicator & PCKT_PCAP_MASK) == PCKT_PCAP_MASK) {
-      flow.time_last = pkt.timestamp;
-   }
-   if ((pkt.field_indicator & PCKT_IPV4_MASK) == PCKT_IPV4_MASK) {
-      flow.octet_total_length += pkt.ip_length;
-   }
-   if ((pkt.field_indicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
-      flow.octet_total_length += pkt.ip_length;
-   }
-   if ((pkt.field_indicator & PCKT_TCP_MASK) == PCKT_TCP_MASK) {
+   flow.pkt_total_cnt++;
+   flow.time_last = pkt.timestamp;
+   flow.octet_total_length += pkt.ip_length;
+
+   if (pkt.field_indicator & PCKT_TCP) {
       flow.tcp_control_bits |= pkt.tcp_control_bits;
    }
 }
-
-// NHTFlowCache -- PUBLIC *****************************************************
 
 void NHTFlowCache::init()
 {
@@ -177,7 +148,6 @@ int NHTFlowCache::put_pkt(Packet &pkt)
    if (ret == EXPORT_PACKET) {
       exporter->export_packet(pkt);
       pkt.removeExtensions();
-
       return 0;
    }
 
@@ -185,16 +155,16 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       return 0;
    }
 
-   uint32_t hashval = SuperFastHash(key, key_len); /* Calculates hash value from key created before. */
+   uint64_t hashval = XXH64(key, key_len, 0); /* Calculates hash value from key created before. */
 
-   uint32_t line_index = (hashval % size) & line_size_mask; /* Find place for packet. */
-   uint32_t flow_index = 0, next_line = line_index + line_size;
-   bool found = false;
    FlowRecord *flow; /* Pointer to flow we will be working with. */
+   bool found = false;
+   uint32_t line_index = hashval & line_size_mask; /* Get index of flow line. */
+   uint32_t flow_index = 0, next_line = line_index + line_size;
 
    /* Find existing flow record in flow cache. */
    for (flow_index = line_index; flow_index < next_line; flow_index++) {
-      if (flow_array[flow_index]->belongs(hashval, key, key_len)) {
+      if (flow_array[flow_index]->belongs(hashval)) {
          found = true;
          break;
       }
@@ -206,15 +176,14 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       lookups += (flow_index - line_index + 1);
       lookups2 += (flow_index - line_index + 1) * (flow_index - line_index + 1);
 #endif /* FLOW_CACHE_STATS */
-      int flow_index_start = line_index;
 
       flow = flow_array[flow_index];
-      for (int j = flow_index; j > flow_index_start; j--) {
+      for (uint32_t j = flow_index; j > line_index; j--) {
          flow_array[j] = flow_array[j - 1];
       }
 
-      flow_array[flow_index_start] = flow;
-      flow_index = flow_index_start;
+      flow_array[line_index] = flow;
+      flow_index = line_index;
 #ifdef FLOW_CACHE_STATS
       hits++;
 #endif /* FLOW_CACHE_STATS */
@@ -238,14 +207,14 @@ int NHTFlowCache::put_pkt(Packet &pkt)
 #ifdef FLOW_CACHE_STATS
          expired++;
 #endif /* FLOW_CACHE_STATS */
-         int flow_index_start = line_index + 13;
+         uint32_t flow_new_index = line_index + 8;
          flow = flow_array[flow_index];
          flow->erase();
-         for (int j = flow_index; j > flow_index_start; j--) {
+         for (uint32_t j = flow_index; j > flow_new_index; j--) {
             flow_array[j] = flow_array[j - 1];
          }
-         flow_index = flow_index_start;
-         flow_array[flow_index] = flow;
+         flow_index = flow_new_index;
+         flow_array[flow_new_index] = flow;
 #ifdef FLOW_CACHE_STATS
          not_empty++;
       } else {
@@ -257,7 +226,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
    current_ts = pkt.timestamp;
    flow = flow_array[flow_index];
    if (flow->is_empty()) {
-      flow->create(pkt, hashval, key, key_len);
+      flow->create(pkt, hashval);
       ret = plugins_post_create(flow->flow, pkt);
 
       if (ret & FLOW_FLUSH) {
@@ -332,37 +301,33 @@ void NHTFlowCache::export_expired(time_t ts)
 
 bool NHTFlowCache::create_hash_key(Packet &pkt)
 {
-   char *k = key;
+   if (pkt.ip_version == 4) {
+      struct flow_key_v4_t *key_v4 = (struct flow_key_v4_t *) key;
 
-   if ((pkt.field_indicator & PCKT_IPV4_MASK) == PCKT_IPV4_MASK) {
-      *(uint8_t *) k = pkt.ip_proto;
-      k += sizeof(pkt.ip_proto);
-      *(uint32_t *) k = pkt.src_ip.v4;
-      k += sizeof(pkt.src_ip.v4);
-      *(uint32_t *) k = pkt.dst_ip.v4;
-      k += sizeof(pkt.dst_ip.v4);
-      *(uint16_t *) k = pkt.src_port;
-      k += sizeof(pkt.src_port);
-      *(uint16_t *) k = pkt.dst_port;
-      k += sizeof(pkt.dst_port);
-      key_len = 13;
-   } else if ((pkt.field_indicator & PCKT_IPV6_MASK) == PCKT_IPV6_MASK) {
-      *(uint8_t *) k = pkt.ip_proto;
-      k += sizeof(pkt.ip_proto);
-      memcpy(k, pkt.src_ip.v6, sizeof(pkt.src_ip.v6));
-      k += sizeof(pkt.src_ip.v6);
-      memcpy(k, pkt.dst_ip.v6, sizeof(pkt.src_ip.v6));
-      k += sizeof(pkt.dst_ip.v6);
-      *(uint16_t *) k = pkt.src_port;
-      k += sizeof(pkt.src_port);
-      *(uint16_t *) k = pkt.dst_port;
-      k += sizeof(pkt.dst_port);
-      key_len = 37;
-   } else {
-      return false;
+      key_v4->src_port = pkt.src_port;
+      key_v4->dst_port = pkt.dst_port;
+      key_v4->proto = pkt.ip_proto;
+      key_v4->ip_version = 4;
+      key_v4->src_ip = pkt.src_ip.v4;
+      key_v4->dst_ip = pkt.dst_ip.v4;
+
+      key_len = 14;
+      return true;
+   } else if (pkt.ip_version == 6) {
+      struct flow_key_v6_t *key_v6 = (struct flow_key_v6_t *) key;
+
+      key_v6->src_port = pkt.src_port;
+      key_v6->dst_port = pkt.dst_port;
+      key_v6->proto = pkt.ip_proto;
+      key_v6->ip_version = 6;
+      memcpy(key_v6->src_ip, pkt.src_ip.v6, sizeof(pkt.src_ip.v6));
+      memcpy(key_v6->dst_ip, pkt.dst_ip.v6, sizeof(pkt.dst_ip.v6));
+
+      key_len = 38;
+      return true;
    }
 
-   return true;
+   return false;
 }
 
 void NHTFlowCache::print_report()

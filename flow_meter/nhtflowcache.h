@@ -56,22 +56,19 @@
 
 using namespace std;
 
-#define MAX_KEY_LENGTH 37
+#define MAX_KEY_LENGTH 38
 
 class FlowRecord
 {
    uint64_t hash;
-   char key[MAX_KEY_LENGTH];
-
 public:
-   bool empty_flow;
    Flow flow;
 
    void erase()
    {
       flow.removeExtensions();
+      hash = 0;
 
-      flow.field_indicator = 0;
       memset(&flow.time_first, 0, sizeof(flow.time_first));
       memset(&flow.time_last, 0, sizeof(flow.time_last));
       flow.ip_version = 0;
@@ -85,8 +82,6 @@ public:
       flow.pkt_total_cnt = 0;
       flow.octet_total_length = 0;
       flow.tcp_control_bits = 0;
-
-      empty_flow = true;
    }
 
    FlowRecord()
@@ -98,8 +93,8 @@ public:
    };
 
    inline bool is_empty() const;
-   bool belongs(uint64_t pkt_hash, char *pkt_key, uint8_t key_len) const;
-   void create(const Packet &pkt, uint64_t pkt_hash, char *pkt_key, uint8_t key_len);
+   inline bool belongs(uint64_t pkt_hash) const;
+   void create(const Packet &pkt, uint64_t pkt_hash);
    void update(const Packet &pkt);
 };
 
@@ -133,7 +128,8 @@ public:
       line_size = options.flow_line_size;
       size = options.flow_cache_size;
       last_ts.tv_sec = 0;
-      line_size_mask = ~(line_size - 1);
+      /* Mask for getting flow cache line index. */
+      line_size_mask = (size - 1) & ~(line_size - 1);
 #ifdef FLOW_CACHE_STATS
       empty = 0;
       not_empty = 0;
@@ -169,6 +165,24 @@ public:
 protected:
    bool create_hash_key(Packet &pkt);
    void print_report();
+};
+
+struct __attribute__((packed)) flow_key_v4_t {
+   uint16_t src_port;
+   uint16_t dst_port;
+   uint8_t proto;
+   uint8_t ip_version;
+   uint32_t src_ip;
+   uint32_t dst_ip;
+};
+
+struct __attribute__((packed)) flow_key_v6_t {
+   uint16_t src_port;
+   uint16_t dst_port;
+   uint8_t proto;
+   uint8_t ip_version;
+   uint8_t src_ip[16];
+   uint8_t dst_ip[16];
 };
 
 #endif

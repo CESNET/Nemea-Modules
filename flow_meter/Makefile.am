@@ -30,8 +30,12 @@ flow_meter_SOURCES=flow_meter.cpp \
 		    arpplugin.cpp \
 		    arpplugin.h \
 		    ipfixexporter.cpp \
-		    ipfixexporter.h
-flow_meter_LDADD=-ltrap -lunirec -lnemea-common -lpcap
+		    ipfix-elements.h \
+		    ipfixexporter.h \
+		    xxhash.c \
+		    xxhash.h
+
+flow_meter_LDADD=-ltrap -lunirec -lpcap
 flow_meter_CXXFLAGS=-std=c++98 -Wno-write-strings
 pkgdocdir=${docdir}/flow_meter
 pkgdoc_DATA=README.md

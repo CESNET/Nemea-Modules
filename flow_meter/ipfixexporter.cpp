@@ -3,6 +3,7 @@
  * \brief Export flows in IPFIX format.
  *    The following code was used https://dior.ics.muni.cz/~velan/flowmon-export-ipfix/
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
+ * \author Tomas Cejka <cejkat@cesnet.cz>
  * \date 2017
  */
 /*
@@ -55,6 +56,47 @@
 #include "flowexporter.h"
 #include "ipfixexporter.h"
 #include "flowifc.h"
+#include "ipfix-elements.h"
+
+#define GCC_CHECK_PRAGMA ((__GNUC__ == 4 && 3 <= __GNUC_MINOR__) || 4 < __GNUC__)
+
+#define FIELD_EN_INT(EN, ID, LEN, SRC) EN
+#define FIELD_ID_INT(EN, ID, LEN, SRC) ID
+#define FIELD_LEN_INT(EN, ID, LEN, SRC) LEN
+#define FIELD_SOURCE_INT(EN, ID, LEN, SRC) SRC
+
+#define FIELD_EN(A) A(FIELD_EN_INT)
+#define FIELD_ID(A) A(FIELD_ID_INT)
+#define FIELD_LEN(A) A(FIELD_LEN_INT)
+#define FIELD_SOURCE(A) A(FIELD_SOURCE_INT)
+
+#define F(ENUMBER, EID, LENGTH, SOURCE) ENUMBER, EID, LENGTH
+#define X(FIELD) {#FIELD, FIELD(F)},
+
+/**
+ * Copy value into buffer and swap bytes if needed.
+ *
+ * \param[out] TARGET pointer to the first byte of the current field in buffer
+ * \param[in] SOURCE pointer to source of data
+ * \param[in] LENGTH size of data in bytes
+ */
+#define IPFIX_FILL_FIELD(TARGET, FIELD) do { \
+   if (FIELD_LEN(FIELD) == 1) { \
+      *((uint8_t *) TARGET) = *((uint8_t *) FIELD_SOURCE(FIELD)); \
+   } else if (FIELD_LEN(FIELD) == 2) { \
+      *((uint16_t *) TARGET) = htons(*((uint16_t *) FIELD_SOURCE(FIELD))); \
+   } else if ((FIELD_EN(FIELD) == 0) && \
+              ((FIELD_ID(FIELD) == FIELD_ID(L3_IPV4_ADDR_SRC)) || (FIELD_ID(FIELD) == FIELD_ID(L3_IPV4_ADDR_DST)))) { \
+      *((uint32_t *) TARGET) = *((uint32_t *) FIELD_SOURCE(FIELD)); \
+   } else if (FIELD_LEN(FIELD) == 4) { \
+      *((uint32_t *) TARGET) = htonl(*((uint32_t *) FIELD_SOURCE(FIELD))); \
+   } else if (FIELD_LEN(FIELD) == 8) { \
+      *((uint64_t *) TARGET) = swap_uint64(*((uint64_t *) FIELD_SOURCE(FIELD))); \
+   } else { \
+      memcpy(TARGET, (void *) FIELD_SOURCE(FIELD), FIELD_LEN(FIELD)); \
+   } \
+   TARGET += FIELD_LEN(FIELD); \
+} while (0)
 
 /*
  * IPFIX template fields.
@@ -62,141 +104,25 @@
  * name enterprise-number element-id length
  */
 template_file_record_t ipfix_fields[][1] = {
-   { "BYTES", 0, 1, 8 },
-   { "PACKETS", 0, 2, 8 },
-   { "FLOW_START_MSEC", 0, 152, 8 },
-   { "FLOW_END_MSEC", 0, 153, 8 },
-   { "OBSERVATION_MSEC", 0, 323, 8},
-   { "INPUT_INTERFACE", 0, 10, 2 },
-   { "OUTPUT_INTERFACE", 0, 14, 2 },
-   { "L2_SRC_MAC", 0, 56, 6 },
-   { "L2_DST_MAC", 0, 80, 6 },
-   { "ETHERTYPE", 0, 256, 2 },
-   { "L3_PROTO", 0, 60, 1 },
-   { "L3_IPV4_ADDR_SRC", 0, 8, 4 },
-   { "L3_IPV4_ADDR_DST", 0, 12, 4 },
-   { "L3_IPV4_TOS", 0, 5, 1 },
-   { "L3_IPV6_ADDR_SRC", 0, 27, 16 },
-   { "L3_IPV6_ADDR_DST", 0, 28, 16 },
-   { "L3_IPV4_IDENTIFICATION", 0, 54, 2 },
-   { "L3_IPV4_FRAGMENT", 0, 88, 2 },
-   { "L3_IPV4_TTL", 0, 192, 1 },
-   { "L3_IPV6_TTL", 0, 192, 1 },
-   { "L4_PROTO", 0, 4, 1 },
-   { "L4_TCP_FLAGS", 0, 6, 1 },
-   { "L4_PORT_SRC", 0, 7, 2 },
-   { "L4_PORT_DST", 0, 11, 2 },
-   { "L4_ICMP_TYPE_CODE", 0, 32, 2 },
-
-   { "HTTP_USERAGENT", 16982, 100, -1 },
-   { "HTTP_METHOD", 16982, 101, -1 },
-   { "HTTP_DOMAIN", 16982, 102, -1 },
-   { "HTTP_REFERER", 16982, 103, -1 },
-   { "HTTP_CONTENT_TYPE", 16982, 104, -1 },
-   { "HTTP_URL", 16982, 105, -1 },
-   { "HTTP_STATUS", 16982, 106, 2 },
-
-   { "HTTP_HEADER_COUNT", 16982, 107, 2 },
-   { "SRC_COUNTRY", 16982, 412, 4 },
-   { "DST_COUNTRY", 16982, 413, 4 },
-   { "TUN_HOP", 16982, 414, 1 },
-   { "TTL_HOP", 0, 192, 1 },
-   { "HTTP_REQUEST_METHOD_ID", 16982, 500, 4 },
-   { "HTTP_REQUEST_HOST", 16982, 501, -1 },
-   { "HTTP_REQUEST_URL", 16982, 502, -1 },
-   { "HTTP_REQUEST_AGENT_ID", 16982, 503, 4 },
-   { "HTTP_REQUEST_AGENT", 16982, 504, -1 },
-   { "HTTP_REQUEST_REFERER", 16982, 505, -1 },
-   { "HTTP_RESPONSE_STATUS_CODE", 16982, 506, 4 },
-   { "HTTP_RESPONSE_CONTENT_TYPE", 16982, 507, -1 },
-
-   { "DNS_ANSWERS", 8057, 0, 2 },
-   { "DNS_RCODE", 8057, 1, 1 },
-   { "DNS_NAME", 8057, 2, -1 },
-   { "DNS_QTYPE", 8057, 3, 2 },
-   { "DNS_CLASS", 8057, 4, 2 },
-   { "DNS_RR_TTL", 8057, 5, 4 },
-   { "DNS_RLENGTH", 8057, 6, 2 },
-   { "DNS_RDATA", 8057, 7, -1 },
-   { "DNS_PSIZE", 8057, 8, 2 },
-   { "DNS_DO", 8057, 9, 1 },
-   { "DNS_ID", 8057, 10, 2 },
-
-   { "SIP_MSG_TYPE", 8057, 9, 2 },
-   { "SIP_STATUS_CODE", 8057, 10, 2 },
-   { "SIP_CSEQ", 8057, 11, -1 },
-   { "SIP_CALLING_PARTY", 8057, 12, -1 },
-   { "SIP_CALLED_PARTY", 8057, 13, -1 },
-   { "SIP_CALL_ID", 8057, 14, -1 },
-   { "SIP_USER_AGENT", 8057, 15, -1 },
-   { "SIP_REQUEST_URI", 8057, 16, -1 },
-   { "SIP_VIA", 8057, 17, -1 },
-
-   { "NTP_LEAP", 8057, 18, 1 },
-   { "NTP_VERSION", 8057, 19, 1 },
-   { "NTP_MODE", 8057, 20, 1 },
-   { "NTP_STRATUM", 8057, 21, 1 },
-   { "NTP_POLL", 8057, 22, 1 },
-   { "NTP_PRECISION", 8057, 23, 1 },
-   { "NTP_DELAY", 8057, 24, 4 },
-   { "NTP_DISPERSION", 8057, 25, 4 },
-   { "NTP_REF_ID", 8057, 26, -1 },
-   { "NTP_REF", 8057, 27, -1 },
-   { "NTP_ORIG", 8057, 28, -1 },
-   { "NTP_RECV", 8057, 29, -1 },
-   { "NTP_SENT", 8057, 30, -1 },
-
-   { "ARP_HA_FORMAT", 8057, 31, 2 },
-   { "ARP_PA_FORMAT",8057, 32, 2 },
-   { "ARP_OPCODE", 8057, 33, 2 },
-   { "ARP_SRC_HA", 8057, 34, -1 },
-   { "ARP_SRC_PA", 8057, 35, -1 },
-   { "ARP_DST_HA", 8057, 36, -1 },
-   { "ARP_DST_PA", 8057, 37, -1 },
-
+   IPFIX_ENABLED_TEMPLATES(X)
    NULL
 };
 
 /* Packet template. */
 const char *packet_tmplt[] = {
-   "L2_SRC_MAC",
-   "L2_DST_MAC",
-   "ETHERTYPE",
-   "OBSERVATION_MSEC",
+   PACKET_TMPLT(IPFIX_FIELD_NAMES)
    NULL
 };
 
 /* Basic IPv4 template. */
 const char *basic_tmplt_v4[] = {
-   "BYTES",
-   "PACKETS",
-   "FLOW_START_MSEC",
-   "FLOW_END_MSEC",
-   "L3_PROTO",
-   "L4_PROTO",
-   "L4_TCP_FLAGS",
-   "L4_PORT_SRC",
-   "L4_PORT_DST",
-   "L3_IPV4_TTL",
-   "L3_IPV4_ADDR_SRC",
-   "L3_IPV4_ADDR_DST",
+   BASIC_TMPLT_V4(IPFIX_FIELD_NAMES)
    NULL
 };
 
 /* Basic IPv6 template. */
 const char *basic_tmplt_v6[] = {
-   "BYTES",
-   "PACKETS",
-   "FLOW_START_MSEC",
-   "FLOW_END_MSEC",
-   "L3_PROTO",
-   "L4_PROTO",
-   "L4_TCP_FLAGS",
-   "L4_PORT_SRC",
-   "L4_PORT_DST",
-   "L3_IPV6_TTL",
-   "L3_IPV6_ADDR_SRC",
-   "L3_IPV6_ADDR_DST",
+   BASIC_TMPLT_V6(IPFIX_FIELD_NAMES)
    NULL
 };
 
@@ -368,7 +294,7 @@ int IPFIXExporter::export_packet(Packet &pkt)
  * @param udp Use UDP instead of TCP
  * @return Returns 0 on succes, non 0 otherwise.
  */
-int IPFIXExporter::init(const vector<FlowCachePlugin *> &plugins, int basic_num, uint32_t odid, string host, string port, bool udp, bool verbose)
+int IPFIXExporter::init(const vector<FlowCachePlugin *> &plugins, int basic_num, uint32_t odid, string host, string port, bool udp, bool verbose, uint8_t dir)
 {
    int ret, templateCnt;
 
@@ -387,6 +313,7 @@ int IPFIXExporter::init(const vector<FlowCachePlugin *> &plugins, int basic_num,
    this->port = port;
    this->odid = odid;
    basic_ifc_num = basic_num;
+   this->dir_bit_field = dir;
 
    if (udp) {
       protocol = IPPROTO_UDP;
@@ -1108,6 +1035,22 @@ int IPFIXExporter::fill_packet_fields(Packet &pkt, template_t *tmplt)
    return 22;
 }
 
+
+#define GEN_FIELDS_SUMLEN_INT(FIELD) FIELD_LEN(FIELD) +
+#define GEN_FILLFIELDS_INT(TMPLT) IPFIX_FILL_FIELD(p, TMPLT);
+#define GEN_FILLFIELDS_MAXLEN(TMPLT) IPFIX_FILL_FIELD(p, TMPLT);
+
+
+#define GENERATE_FILL_FIELDS_V4() do { \
+BASIC_TMPLT_V4(GEN_FILLFIELDS_INT) \
+} while (0)
+
+#define GENERATE_FILL_FIELDS_V6() do { \
+BASIC_TMPLT_V6(GEN_FILLFIELDS_INT) \
+} while (0)
+
+#define GENERATE_FIELDS_SUMLEN(TMPL) TMPL(GEN_FIELDS_SUMLEN_INT) 0
+
 /**
  * \brief Fill template buffer with flow.
  * @param flow Flow
@@ -1116,34 +1059,50 @@ int IPFIXExporter::fill_packet_fields(Packet &pkt, template_t *tmplt)
  */
 int IPFIXExporter::fill_basic_flow(Flow &flow, template_t *tmplt)
 {
-   uint8_t *buffer;
+   uint8_t *buffer, *p;
    int length;
-
-   if (tmplt->bufferSize + 71 > TEMPLATE_BUFFER_SIZE) {
-      return -1;
-   }
+   uint64_t temp;
 
    buffer = tmplt->buffer + tmplt->bufferSize;
-   *(uint64_t *) (buffer) = swap_uint64(flow.octet_total_length);
-   *(uint64_t *) (buffer + 8) = swap_uint64(flow.pkt_total_cnt);
-   *(uint64_t *) (buffer + 16) = swap_uint64(((uint64_t)flow.time_first.tv_sec * 1000) + (uint64_t)(flow.time_first.tv_usec / 1000));
-   *(uint64_t *) (buffer + 24) = swap_uint64(((uint64_t)flow.time_last.tv_sec * 1000) + (uint64_t)(flow.time_last.tv_usec / 1000));
-   *(uint8_t *) (buffer + 32) = flow.ip_version;
-   *(uint8_t *) (buffer + 33) = flow.ip_proto;
-   *(uint8_t *) (buffer + 34) = flow.tcp_control_bits;
-   *(uint16_t *) (buffer + 35) = ntohs(flow.src_port);
-   *(uint16_t *) (buffer + 37) = ntohs(flow.dst_port);
-
-   *(uint8_t *) (buffer + 39) = flow.ip_ttl;
+   p = buffer;
    if (flow.ip_version == 4) {
-     memcpy(buffer + 40, (void *) &flow.src_ip.v4, 4);
-     memcpy(buffer + 44, (void *) &flow.dst_ip.v4, 4);
-     length = 48;
+      if (tmplt->bufferSize + GENERATE_FIELDS_SUMLEN(BASIC_TMPLT_V4) > TEMPLATE_BUFFER_SIZE) {
+         return -1;
+      }
+
+      /* Temporary disable warnings about breaking string-aliasing, since it is produced by
+       * if-branches that are never going to be used - generated by C-preprocessor.
+       */
+#if GCC_CHECK_PRAGMA
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif
+		/* Generate code for copying values of IPv4 template into IPFIX message. */
+      GENERATE_FILL_FIELDS_V4();
+#if GCC_CHECK_PRAGMA
+# pragma GCC diagnostic pop
+#endif
+
    } else {
-     memcpy(buffer + 40, flow.src_ip.v6, 16);
-     memcpy(buffer + 56, flow.dst_ip.v6, 16);
-     length = 72;
+      if (tmplt->bufferSize + GENERATE_FIELDS_SUMLEN(BASIC_TMPLT_V6) > TEMPLATE_BUFFER_SIZE) {
+         return -1;
+      }
+
+      /* Temporary disable warnings about breaking string-aliasing, since it is produced by
+       * if-branches that are never going to be used - generated by C-preprocessor.
+       */
+#if GCC_CHECK_PRAGMA
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif
+		/* Generate code for copying values of IPv6 template into IPFIX message. */
+      GENERATE_FILL_FIELDS_V6();
+#if GCC_CHECK_PRAGMA
+# pragma GCC diagnostic pop
+#endif
    }
+
+   length = p - buffer;
 
    return length;
 }

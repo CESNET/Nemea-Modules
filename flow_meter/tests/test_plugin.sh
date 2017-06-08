@@ -29,7 +29,7 @@ run_plugin_test() {
       mkdir "$output_dir"
    fi
 
-   "$flow_meter_bin" -i f:"$output_dir/$file_out":buffer=off:timeout=WAIT -p "$1" -r "$2" >/dev/null
+   "$flow_meter_bin" -i f:"$output_dir/$file_out":buffer=off:timeout=WAIT -p "$1" -L 0 -r "$2" >/dev/null
    "$logger_bin"     -i f:"$output_dir/$file_out" -t | sort > "$output_dir/$1"
    rm "$output_dir/$file_out"
 

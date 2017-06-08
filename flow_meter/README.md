@@ -23,16 +23,16 @@ This NEMEA module creates flows from input PCAP file / network interface and exp
 - `-I STRING`        Capture from given network interface. Parameter require interface name (eth0 for example).
 - `-r STRING`        Pcap file to read. `-` to read from stdin.
 - `-n`               Don't send NULL record when flow_meter exits.
-- `-l NUMBER`        Snapshot length when reading packets. Set value between `120`-`65535` .
+- `-l NUMBER`        Snapshot length when reading packets. Set value between `120`-`65535`.
 - `-t NUM:NUM`       Active and inactive timeout in seconds. Format: DOUBLE:DOUBLE. Value default means use default value 300.0:30.0.
-- `-s STRING`        Size of flow cache in number of flow records. Each flow record has 176 bytes. default means use value 65536.
+- `-s STRING`        Size of flow cache. Parameter is used as an exponent to the power of two. Valid numbers are in range 4-30. default is 17 (131072 records).
 - `-S NUMBER`        Print flow cache statistics. `NUMBER` specifies interval between prints.
 - `-P`               Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.
 - `-L NUMBER`        Link bit field value.
 - `-D NUMBER`        Direction bit field value.
 - `-F STRING`        String containing filter expression to filter traffic. See man pcap-filter.
 - `-O`               Send ODID field instead of LINK_BIT_FIELD.
-- `-x STRING`        Export to IPFIX collector. Format: HOST:PORT or [HOST]:PORT
+- `-x STRING`        Export to IPFIX collector. Format: HOST:PORT or [HOST]:PORT.
 - `-u`               Use UDP when exporting to IPFIX collector.
 
 ### Common TRAP parameters

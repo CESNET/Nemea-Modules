@@ -54,6 +54,7 @@
 #include "flowcacheplugin.h"
 #include "packet.h"
 #include "flow_meter.h"
+#include "ipfix-elements.h"
 
 using namespace std;
 
@@ -162,17 +163,7 @@ string DNSPlugin::get_unirec_field_string()
 }
 
 const char *dns_ipfix_string[] = {
-   "DNS_ANSWERS",
-   "DNS_RCODE",
-   "DNS_QTYPE",
-   "DNS_CLASS",
-   "DNS_RR_TTL",
-   "DNS_RLENGTH",
-   "DNS_PSIZE",
-   "DNS_DO",
-   "DNS_ID",
-   "DNS_NAME",
-   "DNS_RDATA",
+   IPFIX_DNS_TEMPLATE(IPFIX_FIELD_NAMES)
    NULL
 };
 

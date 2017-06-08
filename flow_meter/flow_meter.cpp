@@ -90,7 +90,7 @@ static int stop = 0;
   PARAM('n', "no_eof", "Don't send NULL record message when flow_meter exits.", no_argument, "none") \
   PARAM('l', "snapshot_len", "Snapshot length when reading packets. Set value between 120-65535.", required_argument, "uint32") \
   PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: DOUBLE:DOUBLE. Value default means use default value 300.0:30.0.", required_argument, "string") \
-  PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 176 bytes. default means use value 65536.", required_argument, "string") \
+  PARAM('s', "cache_size", "Size of flow cache. Parameter is used as an exponent to the power of two. Valid numbers are in range 4-30. default is 17 (131072 records).", required_argument, "string") \
   PARAM('S', "cache-statistics", "Print flow cache statistics. NUMBER specifies interval between prints.", required_argument, "float") \
   PARAM('P', "pcap-statistics", "Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.", no_argument, "none") \
   PARAM('L', "link_bit_field", "Link bit field value.", required_argument, "uint64") \
@@ -348,7 +348,7 @@ int main(int argc, char *argv[])
 
    bool odid = false, export_unirec = false, export_ipfix = false, help = false, udp = false;
    int ifc_cnt = 0, verbose = -1;
-   uint64_t link = 0;
+   uint64_t link = 1;
    uint32_t pkt_limit = 0; /* Limit of packets for packet parser. 0 = no limit */
    uint8_t dir = 0;
    string host = "", port = "", filter = "";
@@ -481,12 +481,13 @@ int main(int argc, char *argv[])
       case 's':
          if (strcmp(optarg, "default")) {
             uint32_t tmp;
-            if (!str_to_uint32(optarg, tmp) || tmp == 0) {
+            if (!str_to_uint32(optarg, tmp) || tmp <= 3 || tmp > 30) {
                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                TRAP_DEFAULT_FINALIZATION();
                return error("Invalid argument for option -s");
             }
-            options.flow_cache_size = tmp;
+
+            options.flow_cache_size = (1 << tmp);
          } else {
             options.flow_cache_size = DEFAULT_FLOW_CACHE_SIZE;
          }
@@ -574,10 +575,6 @@ int main(int argc, char *argv[])
       return error("Specify capture interface (-I) or file for reading (-r). ");
    }
 
-   if (options.flow_cache_size % options.flow_line_size != 0) {
-      options.flow_cache_size += options.flow_line_size - (options.flow_cache_size % options.flow_line_size);
-   }
-
    bool parse_every_pkt = false;
    uint32_t max_payload_size = 0;
 
@@ -637,7 +634,7 @@ int main(int argc, char *argv[])
       }
       flowcache.set_exporter(&flowwriter);
    } else {
-      if (flow_writer_ipfix.init(plugin_wrapper.plugins, options.basic_ifc_num, link, host, port, udp, (verbose >= 0)) != 0) {
+      if (flow_writer_ipfix.init(plugin_wrapper.plugins, options.basic_ifc_num, link, host, port, udp, (verbose >= 0), dir) != 0) {
          TRAP_DEFAULT_FINALIZATION();
          return error("Unable to initialize IPFIXExporter.");
       }

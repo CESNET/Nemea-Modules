@@ -190,7 +190,7 @@ public:
    ~IPFIXExporter();
    int export_flow(Flow &flow);
    int export_packet(Packet &pkt);
-   int init(const vector<FlowCachePlugin *> &plugins, int basic_ifc_num, uint32_t odid, string host, string port, bool udp, bool verbose);
+   int init(const vector<FlowCachePlugin *> &plugins, int basic_ifc_num, uint32_t odid, string host, string port, bool udp, bool verbose, uint8_t dir = 1);
    void flush();
    void shutdown();
 private:
@@ -218,6 +218,7 @@ private:
 	uint32_t odid; /**< Observation Domain ID */
 	uint32_t templateRefreshTime; /**< UDP template refresh time interval */
 	uint32_t templateRefreshPackets; /**< UDP template refresh packet interval */
+   uint8_t dir_bit_field;     /**< Direction bit field value. */
 
    void init_template_buffer(template_t *tmpl);
    int fill_template_set_header(char *ptr, uint16_t size);
