@@ -6,10 +6,13 @@ from report2idea import *
 
 # Moudle name, description and required input data format
 MODULE_NAME = "venom2idea"
-MODULE_DESC = "Converts output of venom detector module to IDEA."
+MODULE_DESC = """Creates IDEA messages for detected attempts of Venom rootkit activation.
+
+Note: There is no Venom detection module in Nemea, the detection is done on exporter and a special field is added to flows detected as Venom activation attempt."""
 
 REQ_TYPE = pytrap.FMT_UNIREC
 REQ_FORMAT = 'ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,uint64 LINK_BIT_FIELD,time TIME_FIRST,time TIME_LAST,uint32 PACKETS,uint16 DST_PORT,uint16 SRC_PORT,uint8 DIR_BIT_FIELD,uint8 PROTOCOL,uint8 TCP_FLAGS,uint8 TOS,uint8 TTL,uint8 VENOM'
+
 
 proto_conv = {
     1 : 'icmp',
@@ -30,9 +33,7 @@ def convert_to_idea(rec, opts=None):
     """
 
     endTime = getIDEAtime(rec.TIME_LAST)
-    protocol = ""
-    if rec.PROTOCOL in proto_conv:
-        protocol = proto_conv[rec.PROTOCOL]
+    protocol = proto_conv.get(rec.PROTOCOL, "")
     idea = {
         "Format": "IDEA0",
         "ID": getRandomId(),
@@ -53,20 +54,20 @@ def convert_to_idea(rec, opts=None):
     }
 
     if rec.SRC_IP:
-        addr = {
-            "Proto": [ protocol ]
-        }
-        if rec.PROTOCOL != 1:
+        addr = {}
+        if protocol:
+            addr["Proto"] = [ protocol ]
+        if rec.PROTOCOL == 6 or rec.PROTOCOL == 17: # TCP or UDP
             addr["Port"] = [ rec.SRC_PORT ]
         addr["Type"] = [ "Botnet", "CC" ]
         setAddr(addr, rec.SRC_IP)
         idea['Source'].append(addr)
 
     if rec.DST_IP:
-        addr = {
-            "Proto": [ protocol ]
-        }
-        if rec.PROTOCOL != 1:
+        addr = {}
+        if protocol:
+            addr["Proto"] = [ protocol ]
+        if rec.PROTOCOL == 6 or rec.PROTOCOL == 17: # TCP or UDP
             addr["Port"] = [ rec.DST_PORT ]
         addr["Type"] = [ "Botnet" ]
         setAddr(addr, rec.DST_IP)
@@ -76,7 +77,7 @@ def convert_to_idea(rec, opts=None):
         idea['Note'] = "Activation was attempted by a packet with magic string in payload. It is unknown if the rootkit is present on the target machine."
         idea['Confidence'] = 0.9
     else:
-        idea['Note'] = "Activation was attempted by {0} packets with src_ip + tcp_seq = 1221. It is unknown if the rootkit is present on the target machine.".format(rec.VENOM)
+        idea['Note'] = "Activation was attempted by {0} packets with src_port + tcp_seq = 1221. It is unknown if the rootkit is present on the target machine.".format(rec.VENOM)
         idea['Confidence'] = 0.3
 
     # This is very often a false positive
@@ -84,7 +85,7 @@ def convert_to_idea(rec, opts=None):
         idea['Confidence'] = 0.05
 
     idea['Description'] = "Attempt to activate VENOM rootkit on {0}.".format(rec.DST_IP)
-    idea['Ref'] = 'https://wiki.egi.eu/wiki/Venom_Rootkit'
+    idea['Ref'] = ['https://wiki.egi.eu/wiki/Venom_Rootkit']
     return idea
 
 # Run the module
