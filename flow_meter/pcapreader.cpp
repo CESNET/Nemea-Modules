@@ -457,6 +457,7 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
    pkt->dst_port = 0;
    pkt->ip_proto = 0;
    pkt->ip_version = 0;
+   pkt->tcp_control_bits = 0;
 
    data_offset = parse_eth_hdr(data, pkt);
    if (pkt->ethertype == ETH_P_IP) {
@@ -480,9 +481,6 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
       data_offset += parse_icmp_hdr(data + data_offset, pkt);
    } else if (pkt->ip_proto == IPPROTO_ICMPV6) {
       data_offset += parse_icmpv6_hdr(data + data_offset, pkt);
-   } else if (!parse_all) {
-      DEBUG_MSG("Unknown transport protocol %x\n", pkt->ip_proto);
-      return;
    }
 
    uint32_t len = h->caplen;
