@@ -71,7 +71,20 @@ Filter specified in a file provides more flexibility. Format of the file is `[TE
 ## Default values
 You can use syntax FIELD=value in the template to specify default value used if field is not present on the input (f.e. uint32 BAR=1)
 
+## Protocols 
+It is possible to use filter protocols using -F "PROTOCOL==\<protocol\>" (note: It is possible to use both, name or number of the protocol) 
+
+For example : `-F PROTOCOL==udp` or `-F PROTOCOL==17`
+
 ## Usage
 `./unirecfilter -i IFC_SPEC [-O TMPLT] [-F FLTR]`
 
 `./unirecfilter -i IFC_SPEC [-f FILE]`
+
+## Basic usage / examples 
+For example we will be connecting to UNIX socket called input_us, and sending the resaults to another UNIX socket output_us, filtering all records containing UDP protocol.
+
+`./unirecfilter -i u:input_us,u:output_us -F PROTOCOL==17` 
+
+## More info
+More info at `./unirecfilter -h [ trap ]`
