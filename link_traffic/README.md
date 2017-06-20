@@ -1,31 +1,90 @@
-# Link_traffic module - README
+# Unirecfilter module - README
 
 ## Description
-This module processes flow data (sums flows, bytes, packets for each LINK_BIT_FIELD). Munin plugin then connects to it via UNIX socket to create graphs.
+This NEMEA module selects records according to parameters in filter and sends only fields specified in output template.
 
 ## Interfaces
 - Input: 1
-- Output: 0
+- Output: variable
 
 ## Parameters
+### Module specific parameters
+  - `-O TMPLT`  Specify UniRec template expected on the output interface.
+  - `-F FILTR`	Specify filter.
+  - `-f FILE`	Read template and filter from FILE.
+  - `-c N`		Quit after N records are received.
+
 ### Common TRAP parameters
-- `-h [trap,1]`      Print help message for this module / for libtrap specific parameters.
+- `-h [trap,1]`        Print help message for this module / for libtrap specific parameters.
 - `-i IFC_SPEC`      Specification of interface types and their parameters.
 - `-v`               Be verbose.
 - `-vv`              Be more verbose.
 - `-vvv`             Be even more verbose.
 
-## Algorithm
-Module collects statistics about flows according to LINK_BIT_FIELD. Running module creates a UNIX socket (/var/run/libtrap/munin_link_traffic). Munin plugin then connects to this socket and gets formatted string with data. The format is the following (the number of headers is not limited):
+## Filter
+Filter is a logical expression composed of terms joined together by logical operators, possibly with the use of brackets. Term is a triplet `unirec_field cmp_operator value`, e.g. FOO == 1. 
 
-```
-"header1, header2, header3\n
-value1, value2, value3"
-```
-When munin plugin starts it checks /tmp/munin_link_traffic_data.txt. If it is actual enough it uses cached data, if its not actual it connects to UNIX socket and creates new cache file.
+### Operators
+Available comparison operators are:
 
-## Install Munin script
+- `>` greater than
+- `<` lesser than
+- `>=`, `=>` greater than or equal
+- `<=`, `=<` lesser than or equal
+- `=`, `==` equal
+- `!=`, `<>` not equal
+- `=~`, `~=` matches regular expression
 
-In order to get data into munin server you need to set it up. Easies way is to execute suggested commands to activate graphs you want: `munin-node-configure --suggest --shell`
+Available logical operators are:
 
-When the confituration is done you need to restart munin-node service: `service munin-node restart`
+- `||`, `OR` - or
+- `&&`, `AND` - and
+- `!`, `NOT` - not
+
+### Data types
+
+Almost all data types from unirec are supported:
+
+- `int8` 8bit singed integer
+- `int16` 16bit singed integer
+- `int32` 32bit singed integer
+- `int32` 32bit singed integer
+- `int64` 64bit singed integer
+- `uint8` 8bit unsigned integer
+- `uint16` 16bit unsigned integer
+- `uint32` 32bit unsigned integer
+- `uint64` 64bit unsigned integer
+- `char`  a single ASCII character
+- `float` single precision floating point number (IEEE 754)
+- `double` double precision floating point number (IEEE 754)
+- `ipaddr` special type for IPv4/IPv6 addresses, see unirec README (note -  IPv6 address in a filter loaded from a file has to be surrounded by double quotes because of syntax issues)
+- `string` variable-length array of (mostly) printable characters, surrounded by double quotes
+- `bytes` variable-length array of bytes (not expected to be printable characters), surrounded by double quotes
+
+### Format
+#### Command line
+Filter specified on command line with `-F` flag is a single expression which is evaluated for the output interface.
+
+#### File
+Filter specified in a file provides more flexibility. Format of the file is `[TEMPLATE_1]:FILTER_1;...;[TEMPLATE_N]:FILTER_N;` where each semicolon separated item corresponds with one output interface. One-line comments starting with `#` are allowed. To reload filter while unirecfilter is running, send signal SIGUSR1 (10) to the process.
+
+## Default values
+You can use syntax FIELD=value in the template to specify default value used if field is not present on the input (f.e. uint32 BAR=1)
+
+## Protocols 
+It is possible to use filter protocols using -F "PROTOCOL==\<protocol\>" (note: It is possible to use both, name or number of the protocol) 
+
+For example : `-F PROTOCOL==udp` or `-F PROTOCOL==17`
+
+## Usage
+`./unirecfilter -i IFC_SPEC [-O TMPLT] [-F FLTR]`
+
+`./unirecfilter -i IFC_SPEC [-f FILE]`
+
+## Basic usage / examples 
+For example we will be connecting to UNIX socket called input_us, and sending the resaults to another UNIX socket output_us, filtering all records containing UDP protocol.
+
+`./unirecfilter -i u:input_us,u:output_us -F PROTOCOL==17` 
+
+## More info
+More info at `./unirecfilter -h [ trap ]`
