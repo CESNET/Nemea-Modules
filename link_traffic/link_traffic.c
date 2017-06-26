@@ -68,7 +68,6 @@
 
 #define SAVE_FILE "/var/run/libtrap/saved_data"
 #define SAVE_TMP SAVE_FILE ".tmp"
-#define NAME_IDENT "name=\""
 
 /**
  * Definition of fields used in unirec templates (for both input and output interfaces)
@@ -102,6 +101,8 @@ trap_module_info_t *module_info = NULL;
 
 #define CONFIG_PATH "config.txt"
 
+#define CONFIG_VALUES 4 //Definition of how many values link's config has. 
+
 static volatile int stop = 0;
 
 /**
@@ -120,6 +121,15 @@ typedef struct link_stats {
 
 link_stats_t stats[8];
 
+typedef struct Link_Conf 
+{
+   int         m_num;        /*!int number of link*/
+   char        *m_name;      /*!string name of link*/
+   char        *m_ur_field;  /*!string link bit field of link*/ 
+   int         m_color;      /*!int represents hex value of link's color*/
+} link_conf_t;
+
+
 char *file_header = NULL;
 
 /* Initialize temporary file */
@@ -134,14 +144,15 @@ int init_f()
 }
 
 /* Saves input string to defined save file */
-int saveData(const char *string)
+int save_data(const char *string)
 {
    FILE *fp;
    if (!(fp = fopen(SAVE_TMP, "w") )) {
       fprintf(stderr, "Error while opening %s.\n", SAVE_TMP);
       return 1;
    }
-
+   
+   printf(">File updated.\n");
    fputs(string, fp);
    fclose(fp);
 
@@ -164,24 +175,23 @@ time_t mdf_time(char *path) {
    return fst.st_mtime;
 }
 
-
 /*   *** Parsing link names from config file ***
 *   Function goes through text file line by line and search for specific pattern
 *   input arg: fileName is path to config file, arrayCnt is counter for array and size
-*   stores size of memory for array */
-
-char **get_link_names(char *filePath, char **linkNames, int *arrCnt)
+*   stores size of memory for array 
+*   */
+link_conf_t **load_links(char *filePath, link_conf_t **links, int *arrCnt)
 {
    FILE *fp;
-   char *line = NULL, *name = NULL, *n;
-   int i, size = 10;
+   char *line = NULL, *tok = NULL, *save_pt1 = NULL, *str1 = NULL;
+   int i = 0, size = 10, num = 0;
    size_t len = 0;
    ssize_t read;
    *arrCnt = 0;
 
    printf(">Accessing config file %s.\n", filePath);
-   linkNames = malloc(size * sizeof(char**));
-   if (linkNames == NULL) {
+   links = (link_conf_t**) malloc(size * sizeof(link_conf_t**));
+   if (links == NULL) {
       return NULL;
    }
    fp = fopen(filePath, "r");
@@ -191,43 +201,71 @@ char **get_link_names(char *filePath, char **linkNames, int *arrCnt)
       return NULL;
    }
 
+   /* start parsig csv config here. */ 
    while ((read = getline(&line, &len, fp)) != -1) {
-      if ((name = strstr(line, NAME_IDENT))) {
-         if(*arrCnt >= size) {
-            size *= 2;
-            char **tmp = (char**) realloc(linkNames, size * sizeof(char**));
-            if (!tmp) {
-               goto failure;
-            }
-            linkNames = tmp;
-         }
-         name += strlen(NAME_IDENT);
-
-         /* make a copy of the name */
-         n = calloc(strlen(name), sizeof(char));
-         if (n == NULL) {
+      if(*arrCnt >= size) { //check if there is enough space allocated
+         size *= 2;        
+         link_conf_t **tmp = (link_conf_t **) realloc(links, size * sizeof(link_conf_t **));
+         if (!tmp) {
             goto failure;
          }
-
-         /* copy the name without trailing '"' */
-         memcpy(n, name, strchr(name, '"') - name);
-         linkNames[*arrCnt] = n;
-         ++(*arrCnt);
+         links = tmp;
       }
+      
+      link_conf_t *new_link = (link_conf_t*) malloc(sizeof(link_conf_t));
+
+      for (i = 1, str1 = line; ;i++, str1 = NULL) {
+         tok = strtok_r(str1, ",", &save_pt1);
+         if (tok == NULL)
+             break;
+         switch (i) {
+            case 1: //parsing line number
+               num = 0;
+               if(sscanf(tok, "%d", &num) == EOF) {
+                  fprintf(stderr, ">config parser error: parsing number failed!");
+                  goto failure;
+               }
+               new_link->m_num = num;
+            break;
+
+            case 2: //parsing line name
+               new_link->m_name  = (char*) calloc(sizeof(char), strlen(tok) + 1);
+               if (!new_link->m_name) {
+                  goto failure;
+               }
+               memcpy(new_link->m_name, tok, strlen(tok));
+            break;
+            
+            case 3: //parsing UR_FIELD TODO unknow type
+               continue;
+            
+            break;
+
+            case 4: //parsing line color
+               num = 0;
+               if(sscanf(tok, "%d", &num) == EOF) {
+                  fprintf(stderr, ">config parser error: parsing number failed!");
+                  goto failure;
+               }
+            new_link->m_color = num;
+            break;
+         }
+         links[*arrCnt] = new_link;
+      }
+      ++(*arrCnt);
       free(line);
       line = NULL;
       len = 0;
    }
    fclose(fp);
-
    printf(">Configuration success.\n");
-   return linkNames;
+   return links;
 
 failure:
    for (i = 0; i < *arrCnt; ++i) {
-      free(linkNames[i]);
+      free(links[i]);
    }
-   free(linkNames);
+   free(links);
    return NULL;
 }
 
@@ -238,7 +276,7 @@ static char *databuffer = NULL;
 
 /**
  * Size of allocated memory of databuffer.
- */
+k */
 size_t databuffer_size = 0;
 
 /**
@@ -250,7 +288,7 @@ size_t header_len = 0;
  * Create formated text to be forwarded and parsed by munin_link_flows script
  * \return Positive number with size of string to be sent/stored or 0 on error.
  */
-int prepare_data(char **linkNames, const int link_cnt)
+int prepare_data(link_conf_t **links, const int link_cnt)
 {
    int i = 0, size;
 
@@ -262,7 +300,7 @@ int prepare_data(char **linkNames, const int link_cnt)
       databuffer_size = 4096;
       header_len = 0;
       for (i = 0; i < link_cnt; i++) {
-         header_len += snprintf(databuffer + header_len, databuffer_size - header_len, "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,", linkNames[i],linkNames[i],linkNames[i],linkNames[i],linkNames[i],linkNames[i]);
+         header_len += snprintf(databuffer + header_len, databuffer_size - header_len, "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,", links[i]->m_name,links[i]->m_name,links[i]->m_name,links[i]->m_name,links[i]->m_name,links[i]->m_name);
       }
       databuffer[header_len - 1] = '\n';
    }
@@ -305,24 +343,24 @@ void send_to_sock(const int client_fd, char *str)
 
 void *accept_clients(void *arg)
 {
-   int client_fd;
+   int client_fd, i;
    struct sockaddr_in clt;
    socklen_t soc_size;
    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
-   char **linkNames = NULL;
+   link_conf_t **links = NULL;
    char *data = NULL;
    int link_cnt = 0, interval = 60;
    time_t curr_t;
    time_t saved_t;
 
-   /* Create tmp file */
+   /* create tmp file */
    if (init_f()) {
       fprintf(stderr, "Error initializing temporary file.\n");
       stop = 1;
    }
 
    /* load names of links form config file */
-   linkNames = get_link_names(CONFIG_PATH, linkNames, &link_cnt);
+   links = load_links(CONFIG_PATH, links, &link_cnt);
 
    if (fd < 0) {
       fprintf(stderr, "Error: Socket creation failed.\n");
@@ -361,7 +399,7 @@ void *accept_clients(void *arg)
    struct timeval tv;
    int retval;
 
-   /* Wait up to five seconds. */
+   /* wait up to five seconds. */
    tv.tv_sec = 5;
    tv.tv_usec = 0;
 
@@ -369,12 +407,12 @@ void *accept_clients(void *arg)
       data = NULL;
       FD_ZERO(&rfds);
       FD_SET(fd, &rfds);
-      /* Saving loop */
-      /* Initialize time stamp and get time from tmp file */
+      /* saving loop */
+      /* initialize time stamp and get time from tmp file */
       saved_t = mdf_time(SAVE_TMP);
       time(&curr_t);
 
-      /* Wait up to five seconds. */
+      /* wait up to five seconds. */
       tv.tv_sec = 5;
       tv.tv_usec = 0;
       /* check for timeout */
@@ -384,8 +422,8 @@ void *accept_clients(void *arg)
          fprintf(stderr,"Error : select().\n");
          break;
       } else if (!retval) {
-         if (prepare_data(linkNames, link_cnt) > 0) {
-            if (saveData(databuffer) ) {
+         if (prepare_data(links, link_cnt) > 0) {
+            if (save_data(databuffer) ) {
                fprintf(stderr, "Error while saving data.\n");
                break;
             }
@@ -398,10 +436,10 @@ void *accept_clients(void *arg)
             continue;
          }
 
-         if (prepare_data(linkNames, link_cnt) > 0) {
+         if (prepare_data(links, link_cnt) > 0) {
             send_to_sock(client_fd, databuffer);
             if (difftime(curr_t, saved_t) >= interval) {
-               if (saveData(databuffer) ) {
+               if (save_data(databuffer) ) {
                   fprintf(stderr, "Error while saving data.\n");
                   break;
                } else {
@@ -410,13 +448,18 @@ void *accept_clients(void *arg)
             }
          }
       }
+
       if (data) {
          free(data);
       }
    }
 
-   if (linkNames) {
-      free(linkNames);
+   if (links) {
+      for (i = 0; i < link_cnt; ++i) {
+         free(links[i]->m_name);
+         free(links[i]);
+      }
+      free(links);
    }
 
    close(fd);
