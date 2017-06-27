@@ -99,7 +99,7 @@ trap_module_info_t *module_info = NULL;
 
 #define DEF_SOCKET_PATH "/var/run/libtrap/munin_link_traffic"
 
-#define CONFIG_PATH "config.txt"
+#define CONFIG_PATH "config.cfg"
 
 #define CONFIG_VALUES 4 //Definition of how many values link's config has. 
 
