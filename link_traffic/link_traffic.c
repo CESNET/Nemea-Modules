@@ -152,7 +152,6 @@ int save_data(const char *string)
       return 1;
    }
    
-   printf(">File updated.\n");
    fputs(string, fp);
    fclose(fp);
 
