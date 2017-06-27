@@ -175,6 +175,29 @@ time_t mdf_time(char *path) {
    return fst.st_mtime;
 }
 
+/*! @brief function that clears link_conf array 
+ * @return positive value on success otherwise negative 
+ * */
+int clear_links(link_conf_t **links, int *arrCnt) 
+{  
+   int i = 0;
+   /* don't clear when it's empty */
+   if (!links)
+      return -1;
+
+   
+   for(i = 0; i < *arrCnt; ++i) {
+      /* delete link's name */
+      if (links[i]->m_name) {
+         free(links[i]->m_name);
+      }
+      free(links[i]);
+   }
+
+   free(links);
+
+   return 1;
+}
 /*   *** Parsing link names from config file ***
 *   Function goes through text file line by line and search for specific pattern
 *   input arg: fileName is path to config file, arrayCnt is counter for array and size
@@ -219,7 +242,7 @@ link_conf_t **load_links(char *filePath, link_conf_t **links, int *arrCnt)
          if (tok == NULL)
              break;
          switch (i) {
-            case 1: //parsing line number
+            case 1: //parsing link number
                num = 0;
                if(sscanf(tok, "%d", &num) == EOF) {
                   fprintf(stderr, ">config parser error: parsing number failed!");
@@ -228,7 +251,7 @@ link_conf_t **load_links(char *filePath, link_conf_t **links, int *arrCnt)
                new_link->m_num = num;
             break;
 
-            case 2: //parsing line name
+            case 2: //parsing link name
                new_link->m_name  = (char*) calloc(sizeof(char), strlen(tok) + 1);
                if (!new_link->m_name) {
                   goto failure;
@@ -237,8 +260,11 @@ link_conf_t **load_links(char *filePath, link_conf_t **links, int *arrCnt)
             break;
             
             case 3: //parsing UR_FIELD TODO unknow type
-               continue;
-            
+               new_link->m_ur_field  = (char*) calloc(sizeof(char), strlen(tok) + 1);
+               if (!new_link->m_ur_field) {
+                  goto failure;
+               }
+               memcpy(new_link->m_ur_field, tok, strlen(tok));
             break;
 
             case 4: //parsing line color
@@ -258,14 +284,13 @@ link_conf_t **load_links(char *filePath, link_conf_t **links, int *arrCnt)
       len = 0;
    }
    fclose(fp);
+   free(line);
    printf(">Configuration success.\n");
    return links;
 
 failure:
-   for (i = 0; i < *arrCnt; ++i) {
-      free(links[i]);
-   }
-   free(links);
+   clear_links(links, arrCnt);
+   free(line);
    return NULL;
 }
 
@@ -307,9 +332,6 @@ int prepare_data(link_conf_t **links, const int link_cnt)
 
    size = header_len;
    for (i = 0; i < link_cnt; i++) {
-      if ((databuffer_size - size)) {
-         /* realloc */
-      }
       size += snprintf(databuffer + size, databuffer_size - size, "%"
                        PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32",",
                        stats[i].bytes_in, stats[i].flows_in, stats[i].packets_in,
@@ -343,7 +365,7 @@ void send_to_sock(const int client_fd, char *str)
 
 void *accept_clients(void *arg)
 {
-   int client_fd, i;
+   int client_fd;
    struct sockaddr_in clt;
    socklen_t soc_size;
    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -399,22 +421,21 @@ void *accept_clients(void *arg)
    struct timeval tv;
    int retval;
 
-   /* wait up to five seconds. */
-   tv.tv_sec = 5;
-   tv.tv_usec = 0;
-
    while (!stop) {
       data = NULL;
       FD_ZERO(&rfds);
       FD_SET(fd, &rfds);
-      /* saving loop */
-      /* initialize time stamp and get time from tmp file */
-      saved_t = mdf_time(SAVE_TMP);
-      time(&curr_t);
+
+      /* saving loop **************************************/
 
       /* wait up to five seconds. */
       tv.tv_sec = 5;
       tv.tv_usec = 0;
+
+      /* initialize time stamp and get time from tmp file */
+      saved_t = mdf_time(SAVE_TMP);
+      time(&curr_t);
+
       /* check for timeout */
       retval  = select(fd + 1, &rfds, NULL, NULL, &tv);
 
@@ -444,6 +465,8 @@ void *accept_clients(void *arg)
                   break;
                } else {
                   printf(">Data saved.\n");
+                  saved_t = mdf_time(SAVE_TMP);
+
                }
             }
          }
@@ -453,15 +476,8 @@ void *accept_clients(void *arg)
          free(data);
       }
    }
-
-   if (links) {
-      for (i = 0; i < link_cnt; ++i) {
-         free(links[i]->m_name);
-         free(links[i]);
-      }
-      free(links);
-   }
-
+   /* clean up */
+   clear_links(links, &link_cnt);
    close(fd);
    pthread_exit(0);
 }
@@ -575,7 +591,6 @@ cleanup:
    if (in_tmplt) {
       ur_free_template(in_tmplt);
    }
-
    pthread_attr_destroy(&thrAttr);
    TRAP_DEFAULT_FINALIZATION();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
