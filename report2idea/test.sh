@@ -85,6 +85,16 @@ test_conversion()
    # The Test:
    data=$(mktemp)
    errors=0
+   config="
+custom_actions:
+  - id: file
+    file:
+      path: /dev/stdout
+rules:
+- id: 1
+  condition: Null
+  actions:
+  - file"
 
    if [[ -z "$3" || -z "$4" ]]
    then
@@ -96,7 +106,7 @@ test_conversion()
    # prepare stored input
    echo -n "$3" | base64 -d | gunzip > "$data"
    # generate output
-   "$srcdir/${1}2idea.py" -i "f:$data" -n "$2" --file /dev/stdout | tee "$1.idea" |
+   "$srcdir/${1}2idea.py" -i "f:$data" -n "$2" --config <(echo "$config") | tee "$1.idea" |
       # clean it from variable info
       sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
       # compare it with prepared expected data (previously base64 encoded and gzipped)
