@@ -1,0 +1,124 @@
+#!/usr/bin/python
+#%# family=auto
+#%# capabilities=autoconf suggest
+
+import socket
+import sys
+import os
+import time
+import csv
+import json
+
+# path to configuration file 
+CONFIG_FILE = '../config.cfg'
+# path to data saved by link_traffic module 
+SAVED_DATA = '/var/run/libtrap/saved_data'
+# temporary file with downloaded data
+data_temp_file = "/tmp/munin_link_traffic_data.txt"
+# path to munin socket 
+SOCKET_PATH = '/var/run/libtrap/munin_link_traffic'
+
+interval = 60
+
+#=======================================================================
+"""!@fn receiveData 
+  @brief function that connects to file with saved data
+  @return string of data set from socket"""
+def receiveData():
+   sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+   try:
+      sock.connect(SOCKET_PATH)
+   except socket.error as msg:
+      sys.stderr.write(SOCKET_PATH + " " + str(msg) + "\n")
+      sys.exit(1)
+
+   data = ""
+   while True:
+      tmp = sock.recv(4096)
+      data += tmp
+      if tmp == "":
+         break;
+   
+   return data
+#=======================================================================
+"""!@fn getData 
+  @return list of strings (lines).
+   There should be 2 lines: the first one with header,
+   the second one with values. The data is received by
+   receiveData() and stored into a cache file data_temp_file.
+   If data_temp_file is new enough, data is loaded from the 
+   cache file instead of calling receiveData()."""
+def getData():
+    current_time = time.time()
+    last_time = 0
+    data = ""
+    try:
+        last_time = os.stat(data_temp_file).st_mtime
+    except:
+        sys.stderr.write("%s not found or cannot read info.\n" % data_temp_file)
+        pass
+    if (current_time - last_time) > interval:
+        data = receiveData()
+        sys.stderr.write("Reading from socket\n")
+        with open(data_temp_file, "w") as f:
+            f.write(data)
+        data = data.split("\n")
+    else:
+        sys.stderr.write("Reading from file\n")
+        with open(data_temp_file, "r") as f:
+            data = f.read()
+        data = data.split("\n")
+    return data
+#=======================================================================
+"""! @fn getValues() 
+   @brief parses text recieved by getData(), splits it to two lines and
+   createds dict """
+def getValues():
+    data = getData()
+    head = data[0].split(',')
+    vals = data[1].split(',')
+    if len(head) != len(vals):
+        sys.stderr.write("wrong number of columns!!!\n")
+        sys.exit(1)
+    data = zip(head, vals)
+    data.sort()
+    for key, val in data:
+        if key.endswith(suffix):
+            print("{0}.value {1}".format("".join(key.split("-")[:2]), val))
+#=======================================================================
+"""!@fn loadLinkConfig
+  @brief function that loads links configuration, color, name,
+   link number etc.
+  @return list of dictionaries with link's parameters """
+def loadLinkConfig():
+   with open(CONFIG_FILE, 'rb') as f:
+      reader = csv.reader(f)
+      try:
+         config = []
+         for rows in reader:
+            config.append({'num': rows[0],
+                            'name': rows[1],
+                            'ur_field': rows[2], 
+                            'color': rows[3]
+                           })
+         return config
+      except csv.Error as e:
+         sys.exit('file %s, line %d: %s' % (CONFIG_FILE, reader.line_num, e))
+#=======================================================================
+"""!@fn outputToJson
+  @brief function takes configuration list of lines and data
+   from socket and converts it
+   to json format and prints to output"""
+def outputToJson():
+   config = loadLinkConfig()
+   dataDict = []
+   
+   dict = {'data' : dataDict, 'time' : timeDict }
+   print(output)
+
+#suffix is the part after last '_' can be flows, packets, bytes
+suffix = sys.argv[0].split("_")[-1]
+outputToJson()
+  
+   
+
