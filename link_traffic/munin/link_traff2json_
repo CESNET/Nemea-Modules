@@ -6,6 +6,7 @@ import socket
 import sys
 import os
 import time
+import datetime
 import csv
 import json
 
@@ -17,9 +18,8 @@ SAVED_DATA = '/var/run/libtrap/saved_data'
 data_temp_file = "/tmp/munin_link_traffic_data.txt"
 # path to munin socket 
 SOCKET_PATH = '/var/run/libtrap/munin_link_traffic'
-
+# munin refresh interval
 interval = 60
-
 #=======================================================================
 """!@fn receiveData 
   @brief function that connects to file with saved data
@@ -70,22 +70,6 @@ def getData():
         data = data.split("\n")
     return data
 #=======================================================================
-"""! @fn getValues() 
-   @brief parses text recieved by getData(), splits it to two lines and
-   createds dict """
-def getValues():
-    data = getData()
-    head = data[0].split(',')
-    vals = data[1].split(',')
-    if len(head) != len(vals):
-        sys.stderr.write("wrong number of columns!!!\n")
-        sys.exit(1)
-    data = zip(head, vals)
-    data.sort()
-    for key, val in data:
-        if key.endswith(suffix):
-            print("{0}.value {1}".format("".join(key.split("-")[:2]), val))
-#=======================================================================
 """!@fn loadLinkConfig
   @brief function that loads links configuration, color, name,
    link number etc.
@@ -106,19 +90,39 @@ def loadLinkConfig():
          sys.exit('file %s, line %d: %s' % (CONFIG_FILE, reader.line_num, e))
 #=======================================================================
 """! @fn getLineNum @brief function tries to find link in config file 
-      based on it's name 
-     @return link's number
-"""
+      based on its name 
+     @return link's number"""
 def getLineNum( lineName ):
    configData = loadLinkConfig()
    for items in configData:
       if items['name'] == lineName:
          return items['num']
+      else:
+         return None
+#=======================================================================
+def getTimeInfo():
+   dictCurr = {} #!dictionary for current time
+   dictMon = {}  #!dictionary for monitoring time
+   currTime = "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.today())
+   timeStamp = time.time()
+
+   monTime = "todo"
+   monStamp = "todo"
+
+   dictCurr = {'localtime' : currTime, 'timestamp'  : timeStamp}
+   dictMon = {'interval_sec' : interval,
+              'localtime' : monTime,
+              'timestamp' : monStamp
+             }
+   return {'current' : dictCurr,
+           'monitoring' : dictMon
+          }
 #=======================================================================
 """!@fn outputToJson
   @brief function takes configuration list of lines and data
    from socket and converts it
-   to json format and prints to output"""
+   to json format and prints to output 
+   @return dict in json format """
 def outputToJson():
    config = loadLinkConfig()
    data = getData()
@@ -130,19 +134,24 @@ def outputToJson():
    data = zip(head, vals)
    data.sort()
    dataDict = {}
-   timeDict = {} 
+   timeDict = getTimeInfo()
+
+   # dict init name of link and its number 
+   for key, val in data:
+      ln = getLineNum(key.split('-')[0])
+      dataDict[ln] = {"link" : ln, "link name" : key.split('-')[0]}
+   # add the rest of values
    for key, val in data:
       ln = getLineNum(key.split('-')[0])
       keyStrip = key.split('-')[2]+" "+key.split('-')[1]
-      #print("key: " + keyStrip + "=" + val)
-      dataDict[ln] = {keyStrip : val}
-
+      dataDict[ln].update({keyStrip : val})
+   # form up the final dictionary    
    dict = {'data' : dataDict, 'time' : timeDict }
-   print(dict)
-
-#suffix is the part after last '_' can be flows, packets, bytes
-suffix = sys.argv[0].split("_")[-1]
-outputToJson()
+   return dict
+# -------------------------=== Main ===-------------------------------
+jData  = outputToJson()
+j = json.dumps(jData)
+print(j)
   
    
 
