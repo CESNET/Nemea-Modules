@@ -125,8 +125,9 @@ def getTimeInfo(mon_time):
    @return dict in json format """
 def outputToJson():
    config = loadLinkConfig()
-   data = getData()['data']
-   mon_time = getData()['time_st']
+   dataRec = getData()
+   data = dataRec['data']
+   mon_time = dataRec['time_st']
    head = data[0].split(',')
    vals = data[1].split(',')
    if len(head) != len(vals):
