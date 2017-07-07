@@ -20,6 +20,8 @@ data_temp_file = "/tmp/munin_link_traffic_data.txt"
 SOCKET_PATH = '/var/run/libtrap/munin_link_traffic'
 # munin refresh interval
 interval = 60
+time_mon = "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.today())
+time_mon_st = 0
 #=======================================================================
 """!@fn receiveData 
   @brief function that connects to file with saved data
@@ -63,12 +65,15 @@ def getData():
         with open(data_temp_file, "w") as f:
             f.write(data)
         data = data.split("\n")
+        time_mon_st = current_time 
     else:
         sys.stderr.write("Reading from file\n")
         with open(data_temp_file, "r") as f:
             data = f.read()
         data = data.split("\n")
-    return data
+        time_mon_st = last_time 
+
+    return {'data' : data, 'time_st': time_mon_st}
 #=======================================================================
 """!@fn loadLinkConfig
   @brief function that loads links configuration, color, name,
@@ -97,22 +102,17 @@ def getLineNum( lineName ):
    for items in configData:
       if items['name'] == lineName:
          return items['num']
-      else:
-         return None
 #=======================================================================
-def getTimeInfo():
+def getTimeInfo(mon_time):
    dictCurr = {} #!dictionary for current time
    dictMon = {}  #!dictionary for monitoring time
-   currTime = "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.today())
-   timeStamp = time.time()
-
-   monTime = "todo"
-   monStamp = "todo"
-
-   dictCurr = {'localtime' : currTime, 'timestamp'  : timeStamp}
+   time_st = time.time()
+   curr_local = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time_st)) 
+   mon_local = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(mon_time)) 
+   dictCurr = {'localtime' : curr_local, 'timestamp'  : time_st}
    dictMon = {'interval_sec' : interval,
-              'localtime' : monTime,
-              'timestamp' : monStamp
+              'localtime' : mon_local,
+              'timestamp' : mon_time
              }
    return {'current' : dictCurr,
            'monitoring' : dictMon
@@ -125,7 +125,8 @@ def getTimeInfo():
    @return dict in json format """
 def outputToJson():
    config = loadLinkConfig()
-   data = getData()
+   data = getData()['data']
+   mon_time = getData()['time_st']
    head = data[0].split(',')
    vals = data[1].split(',')
    if len(head) != len(vals):
@@ -134,7 +135,7 @@ def outputToJson():
    data = zip(head, vals)
    data.sort()
    dataDict = {}
-   timeDict = getTimeInfo()
+   timeDict = getTimeInfo(mon_time)
 
    # dict init name of link and its number 
    for key, val in data:
@@ -145,9 +146,9 @@ def outputToJson():
       ln = getLineNum(key.split('-')[0])
       keyStrip = key.split('-')[2]+" "+key.split('-')[1]
       dataDict[ln].update({keyStrip : val})
+
    # form up the final dictionary    
-   dict = {'data' : dataDict, 'time' : timeDict }
-   return dict
+   return {'data' : dataDict, 'time' : timeDict }
 # -------------------------=== Main ===-------------------------------
 jData  = outputToJson()
 j = json.dumps(jData)
