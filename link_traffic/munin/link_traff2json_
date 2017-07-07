@@ -105,16 +105,40 @@ def loadLinkConfig():
       except csv.Error as e:
          sys.exit('file %s, line %d: %s' % (CONFIG_FILE, reader.line_num, e))
 #=======================================================================
+"""! @fn getLineNum @brief function tries to find link in config file 
+      based on it's name 
+     @return link's number
+"""
+def getLineNum( lineName ):
+   configData = loadLinkConfig()
+   for items in configData:
+      if items['name'] == lineName:
+         return items['num']
+#=======================================================================
 """!@fn outputToJson
   @brief function takes configuration list of lines and data
    from socket and converts it
    to json format and prints to output"""
 def outputToJson():
    config = loadLinkConfig()
-   dataDict = []
-   
+   data = getData()
+   head = data[0].split(',')
+   vals = data[1].split(',')
+   if len(head) != len(vals):
+      sys.stderr.write("wrong number of columns!!!\n")
+      sys.exit(1)
+   data = zip(head, vals)
+   data.sort()
+   dataDict = {}
+   timeDict = {} 
+   for key, val in data:
+      ln = getLineNum(key.split('-')[0])
+      keyStrip = key.split('-')[2]+" "+key.split('-')[1]
+      #print("key: " + keyStrip + "=" + val)
+      dataDict[ln] = {keyStrip : val}
+
    dict = {'data' : dataDict, 'time' : timeDict }
-   print(output)
+   print(dict)
 
 #suffix is the part after last '_' can be flows, packets, bytes
 suffix = sys.argv[0].split("_")[-1]
