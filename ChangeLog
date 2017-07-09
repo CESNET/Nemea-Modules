@@ -1,3 +1,12 @@
+2017-06-30 Nemea-modules-2.5.5
+        * report2idea:
+		uses new version with config
+		venom2idea: Fixed test.sh
+	* flow_meter:
+		parser is now parsing packets without transport layer
+	* link_traffic:
+		config parser + data saving
+
 2017-06-08 Nemea-modules-2.5.4
 	* report2idea:
 		added ddos reporter
