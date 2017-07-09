@@ -211,58 +211,62 @@ Each reporting module can store its output into file or send alerts into [Warden
 
 ```json
 {
-   "Category": [
-      "Attempt.Login"
-   ],
-   "Node": [
-      {
-         "Type": [
-            "Flow",
-            "Statistical"
-         ],
-         "SW": [
-            "Nemea",
-            "brute_force_detector"
-         ],
-         "Name": "sipbf"
-      }
-   ],
-   "EventTime": "2017-01-05T16:04:36Z",
-   "Target": [
-      {
-         "Port": [
-            5060
-         ],
-         "IP4": [
-            "128.175.220.114"
-         ],
-         "Proto": [
-            "udp", "sip"
-         ]
-      }
-   ],
-   "Source": [
-      {
-         "Port": [
-            5171
-         ],
-         "IP4": [
-            "105.138.15.163"
-         ],
-         "Proto": [
-            "udp", "sip"
-         ]
-      }
-   ],
-   "ID": "0f2e00f5-f1e0-4464-99ec-963bf055aba8",
-   "DetectTime": "2017-02-03T18:43:50Z",
-   "Description": "SIP BruteForce login attempt, user account: 5985@128.175.220.114",
-   "ConnCount": 4380,
-   "Format": "IDEA0",
-   "CeaseTime": "2017-01-05T16:07:28Z",
-   "CreateTime": "2017-02-03T18:43:50Z"
+    "Category": [
+        "Attempt.Login"
+    ],
+    "CeaseTime": "2017-01-05T16:10:59Z",
+    "ConnCount": 4364,
+    "CreateTime": "2017-07-09T19:20:06Z",
+    "Description": "SIP BruteForce login attempt, user account: 6796@84.22.53.170",
+    "DetectTime": "2017-07-09T19:20:06Z",
+    "EventTime": "2017-01-05T16:07:41Z",
+    "Format": "IDEA0",
+    "ID": "b7f0a3b6-05b1-4583-bc46-6e97157d07d3",
+    "Node": [
+        {
+            "Name": "sipbf",
+            "SW": [
+                "Nemea",
+                "brute_force_detector"
+            ],
+            "Type": [
+                "Flow",
+                "Statistical"
+            ]
+        }
+    ],
+    "Source": [
+        {
+            "IP4": [
+                "128.149.253.8"
+            ],
+            "Port": [
+                5171
+            ],
+            "Proto": [
+                "udp",
+                "sip"
+            ]
+        }
+    ],
+    "Target": [
+        {
+            "IP4": [
+                "84.22.53.170"
+            ],
+            "Port": [
+                5060
+            ],
+            "Proto": [
+                "udp",
+                "sip"
+            ]
+        }
+    ]
 }
+```
 
+```json
 {
     "Category": [
         "Attempt.Login"
@@ -317,62 +321,6 @@ Each reporting module can store its output into file or send alerts into [Warden
         }
     ]
 }
-
-{
-    "Category": [
-        "Recon.Scanning"
-    ],
-    "CeaseTime": "2017-01-05T16:11:11Z",
-    "ConnCount": 34,
-    "CreateTime": "2017-07-09T19:20:06Z",
-    "Description": "Scan of SIP user accounts",
-    "DetectTime": "2017-07-09T19:20:06Z",
-    "EventTime": "2017-01-05T16:06:32Z",
-    "Format": "IDEA0",
-    "ID": "10096d48-18cf-4c66-9052-7a3087f88bb2",
-    "Node": [
-        {
-            "Name": "sipbf",
-            "SW": [
-                "Nemea",
-                "brute_force_detector"
-            ],
-            "Type": [
-                "Flow",
-                "Statistical"
-            ]
-        }
-    ],
-    "Source": [
-        {
-            "IP4": [
-                "43.202.103.135"
-            ],
-            "Port": [
-                5080
-            ],
-            "Proto": [
-                "udp",
-                "sip"
-            ]
-        }
-    ],
-    "Target": [
-        {
-            "IP4": [
-                "84.167.47.100"
-            ],
-            "Port": [
-                5060
-            ],
-            "Proto": [
-                "udp",
-                "sip"
-            ]
-        }
-    ]
-}
-
 ```
 
 ### Alerts from the [hoststatsnemea](https://github.com/CESNET/Nemea-Detectors/tree/master/hoststatsnemea) module:
@@ -618,7 +566,64 @@ Each reporting module can store its output into file or send alerts into [Warden
     "CreateTime": "2016-03-23T15:53:55Z"
 }
 ```
+### Alerts from the [sip_bf_detector](https://github.com/CESNET/Nemea-Detectors/tree/master/sip_bf_detector) module:
 
+```json
+{
+    "Category": [
+        "Recon.Scanning"
+    ],
+    "CeaseTime": "2017-01-05T16:11:11Z",
+    "ConnCount": 34,
+    "CreateTime": "2017-07-09T19:20:06Z",
+    "Description": "Scan of SIP user accounts",
+    "DetectTime": "2017-07-09T19:20:06Z",
+    "EventTime": "2017-01-05T16:06:32Z",
+    "Format": "IDEA0",
+    "ID": "10096d48-18cf-4c66-9052-7a3087f88bb2",
+    "Node": [
+        {
+            "Name": "sipbf",
+            "SW": [
+                "Nemea",
+                "brute_force_detector"
+            ],
+            "Type": [
+                "Flow",
+                "Statistical"
+            ]
+        }
+    ],
+    "Source": [
+        {
+            "IP4": [
+                "43.202.103.135"
+            ],
+            "Port": [
+                5080
+            ],
+            "Proto": [
+                "udp",
+                "sip"
+            ]
+        }
+    ],
+    "Target": [
+        {
+            "IP4": [
+                "84.167.47.100"
+            ],
+            "Port": [
+                5060
+            ],
+            "Proto": [
+                "udp",
+                "sip"
+            ]
+        }
+    ]
+}
+```
 ### Alerts from the [vportscan_detector](https://github.com/CESNET/Nemea-Detectors/tree/master/vportscan_detector) module:
 
 ```json
