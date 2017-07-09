@@ -72,7 +72,7 @@ def convert_to_idea(rec, opts=None):
             idea["BreachTime"] = getIDEAtime(rec.SBFD_BREACH_TIME)
             idea["Description"] = "Successful " + idea["Description"]
         else:
-            idea["Description"][0] = "D"
+            idea["Description"] = "Distributed SIP BruteForce login attempt, user account: " + rec.SBFD_USER
     elif rec.SBFD_EVENT_TYPE == 2:
         # scan
         idea["Category"] = [ "Recon.Scanning" ]
