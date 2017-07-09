@@ -29,7 +29,8 @@ bl_conv = {
    16 : 'Feodo',
    32 : 'Spamhaus',
    64 : 'Phishtank',
-   128 : 'Tor'
+   128 : 'Tor',
+   256 : 'Ransomware'
 }
 
 proto_conv = {
@@ -49,7 +50,8 @@ bl_scale_tholds = {
    16 : '1',
    32 : '40',
    64 : '1',
-   128 : '150'
+   128 : '150',
+   256 : '1'
 }
 
 
@@ -69,7 +71,7 @@ def convert_to_idea(rec, opts=None):
     blacklist = rec.SRC_BLACKLIST | rec.DST_BLACKLIST
 
     # report only: 'Malware domains', 'Zeus', 'Feodo', 'TOR'
-    if blacklist not in [1, 2, 16, 128]:
+    if blacklist not in [1, 2, 16, 128, 256]:
         return None
 
     # report TOR only if '--enable-tor' option was passed
