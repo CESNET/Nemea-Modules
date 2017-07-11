@@ -97,13 +97,13 @@ trap_module_info_t *module_info = NULL;
  */
 #define MODULE_PARAMS(PARAM)
 #define DEF_SOCKET_PATH "/var/run/libtrap/munin_link_traffic"
-#define CONFIG_PATH "../link_traffic/config.cfg"
+#define CONFIG_PATH SYSCONFDIR"/link_traffic/config.cfg"
 #define CONFIG_VALUES 4 /* Definition of how many values link's config has. */
 /* Definition of config attributes */
-#define LINK_NUM 		1
-#define LINK_NAME 	2
-#define LINK_UR_F		3
-#define LINK_COL		4
+#define LINK_NUM 		      1
+#define LINK_NAME       	2
+#define LINK_UR_FIELD		3
+#define LINK_COL		      4
 
 static volatile int stop = 0;
 
