@@ -217,6 +217,7 @@ AC_CONFIG_FILES([Makefile
                  json_replay/Makefile
                  link_traffic/Makefile
                  link_traffic/munin/Makefile
+                 link_traffic/munin/link_traff2json.py.in 
                  logger/Makefile
                  logreplay/Makefile
                  merger/Makefile
