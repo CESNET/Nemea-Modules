@@ -11,7 +11,7 @@ import csv
 import json
 
 # path to configuration file 
-CONFIG_FILE = '@SYSCONFDIR@/link_traffic/config.cfg'
+CONFIG_FILE = '@SYSCONFDIR@/link_traffic/link_traff_conf.cfg'
 # path to data saved by link_traffic module 
 SAVED_DATA = '/var/run/libtrap/saved_data'
 # temporary file with downloaded data
