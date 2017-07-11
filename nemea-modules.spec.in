@@ -76,7 +76,6 @@ ldconfig
 %{_bindir}/nemea/voipfraud2idea.py
 %{_bindir}/nemea/vportscan2idea.py
 %{_docdir}/nemea-modules/*/*
-%config(noreplace) %{_sysconfdir}/nemea/link_traffic/config.cfg
 %config(noreplace) %{_sysconfdir}/nemea/email_reporter/example.cfg
 %config(noreplace) %{_sysconfdir}/nemea/email_reporter/generic.cfg
 %config(noreplace) %{_datarootdir}/nemea-supervisor/munin/link_traffic.sup
