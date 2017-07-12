@@ -13,7 +13,7 @@ import json
 # path to configuration file 
 CONFIG_FILE = '@SYSCONFDIR@/link_traffic/link_traff_conf.cfg'
 # path to data saved by link_traffic module 
-SAVED_DATA = '/var/run/libtrap/saved_data'
+SAVED_DATA = '/var/run/libtrap/link_traff_saved_data'
 # temporary file with downloaded data
 data_temp_file = "/tmp/munin_link_traffic_data.txt"
 # path to munin socket 
@@ -64,8 +64,8 @@ def getData():
       sys.stderr.write("%s not found or cannot read info.\n" % data_temp_file)
       pass
    if (current_time - last_time) > interval:
-      data = receiveData()
       sys.stderr.write("Reading from socket\n")
+      data = receiveData()
       with open(data_temp_file, "w") as f:
          f.write(data)
       data = data.split("\n")
@@ -109,9 +109,7 @@ def getLineNum(lineName):
    for items in configData:
       if items['name'] == lineName:
          return items['num']
-      else: 
-         return None
-
+   return None
 
 def getTimeInfo(mon_time):
    """
@@ -156,6 +154,9 @@ def outputToJson():
    # dict init name of link and its number 
    for key, val in data:
       ln = getLineNum(key.split('-')[0])
+      if ln is None:
+         sys.stderr.write("configuration error\n")
+         sys.exit(1)
       dataDict[ln] = {"link" : ln, "link name" : key.split('-')[0]}
 
    # add the rest of values
