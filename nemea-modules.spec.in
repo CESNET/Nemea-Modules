@@ -10,7 +10,7 @@ Vendor: CESNET, z.s.p.o.
 Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 Requires: nemea-framework@RPM_REQUIRES@ openssl
-BuildRequires: gcc make doxygen pkgconfig nemea-framework-devel@RPM_BUILDREQ@
+BuildRequires: gcc gcc-c++ make doxygen pkgconfig nemea-framework-devel@RPM_BUILDREQ@
 Provides: nemea-modules
 
 %description
@@ -50,7 +50,7 @@ ldconfig
 %{_bindir}/nemea/email_reporter.py
 %{_bindir}/nemea/endiverter
 %{_bindir}/nemea/flowcounter
-%{_bindir}/nemea/flow_meter
+%attr(0754, root, nemead) %{_bindir}/nemea/flow_meter
 %{_bindir}/nemea/haddrscan2idea.py
 %{_bindir}/nemea/hoststats2idea.py
 %{_bindir}/nemea/idea2idea.py
