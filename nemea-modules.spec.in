@@ -58,6 +58,7 @@ ldconfig
 %{_bindir}/nemea/json_dump.py
 %{_bindir}/nemea/json_replay.py
 %{_bindir}/nemea/link_traffic
+%{_bindir}/nemea/link_traff2json.py
 %{_bindir}/nemea/logger
 %{_bindir}/nemea/logreplay
 %{_bindir}/nemea/merger
