@@ -96,8 +96,14 @@ trap_module_info_t *module_info = NULL;
  * Module parameter argument types: int8, int16, int32, int64, uint8, uint16, uint32, uint64, float, string
  */
 #define MODULE_PARAMS(PARAM)
-
 #define DEF_SOCKET_PATH "/var/run/libtrap/munin_link_traffic"
+#define CONFIG_PATH SYSCONFDIR"/link_traffic/link_traff_conf.cfg"
+#define CONFIG_VALUES 4 /* Definition of how many values link's config has. */
+/* Definition of config attributes */
+#define LINK_NUM 		1
+#define LINK_NAME       	2
+#define LINK_UR_FIELD		3
+#define LINK_COL		4
 
 #define CONFIG_PATH "config.cfg"
 
@@ -121,14 +127,12 @@ typedef struct link_stats {
 
 link_stats_t stats[8];
 
-typedef struct Link_Conf 
-{
+typedef struct link_conf {
    int         m_num;        /*!int number of link*/
    char        *m_name;      /*!string name of link*/
    char        *m_ur_field;  /*!string link bit field of link*/ 
    int         m_color;      /*!int represents hex value of link's color*/
 } link_conf_t;
-
 
 char *file_header = NULL;
 
@@ -137,8 +141,9 @@ int init_f()
 {
    /* Create tmp file  */
    FILE *tmp;
-   if ( ! (tmp = fopen(SAVE_TMP, "w+")) )
+   if (!(tmp = fopen(SAVE_TMP, "w+"))) {
       return 1;
+   }
    fclose(tmp);
    return 0;
 }
@@ -181,9 +186,9 @@ int clear_links(link_conf_t **links, int *arrCnt)
 {  
    int i = 0;
    /* don't clear when it's empty */
-   if (!links)
+   if (!links) {
       return -1;
-
+   }
    
    for(i = 0; i < *arrCnt; ++i) {
       /* delete link's name */
@@ -206,7 +211,7 @@ link_conf_t **load_links(char *filePath, link_conf_t **links, int *arrCnt)
 {
    FILE *fp;
    char *line = NULL, *tok = NULL, *save_pt1 = NULL, *str1 = NULL;
-   int i = 0, size = 10, num = 0;
+   int attribute = 0, size = 10, num = 0;
    size_t len = 0;
    ssize_t read;
    *arrCnt = 0;
@@ -225,7 +230,7 @@ link_conf_t **load_links(char *filePath, link_conf_t **links, int *arrCnt)
 
    /* start parsig csv config here. */ 
    while ((read = getline(&line, &len, fp)) != -1) {
-      if(*arrCnt >= size) { //check if there is enough space allocated
+      if (*arrCnt >= size) { //check if there is enough space allocated
          size *= 2;        
          link_conf_t **tmp = (link_conf_t **) realloc(links, size * sizeof(link_conf_t **));
          if (!tmp) {
@@ -236,42 +241,44 @@ link_conf_t **load_links(char *filePath, link_conf_t **links, int *arrCnt)
       
       link_conf_t *new_link = (link_conf_t*) malloc(sizeof(link_conf_t));
 
-      for (i = 1, str1 = line; ;i++, str1 = NULL) {
+      for (attribute = LINK_NUM, str1 = line; ;attribute++, str1 = NULL) {
          tok = strtok_r(str1, ",", &save_pt1);
-         if (tok == NULL)
+         if (tok == NULL) {
              break;
-         switch (i) {
-            case 1: //parsing link number
-               num = 0;
-               if(sscanf(tok, "%d", &num) == EOF) {
-                  fprintf(stderr, ">config parser error: parsing number failed!");
-                  goto failure;
-               }
-               new_link->m_num = num;
+         }
+
+         switch (attribute) {
+         case LINK_NUM: //parsing link number
+            num = 0;
+            if(sscanf(tok, "%d", &num) == EOF) {
+               fprintf(stderr, ">config parser error: parsing number failed!");
+               goto failure;
+            }
+            new_link->m_num = num;
             break;
 
-            case 2: //parsing link name
-               new_link->m_name  = (char*) calloc(sizeof(char), strlen(tok) + 1);
-               if (!new_link->m_name) {
-                  goto failure;
-               }
-               memcpy(new_link->m_name, tok, strlen(tok));
+         case LINK_NAME: //parsing link name
+            new_link->m_name  = (char*) calloc(sizeof(char), strlen(tok) + 1);
+            if (!new_link->m_name) {
+               goto failure;
+            }
+            memcpy(new_link->m_name, tok, strlen(tok));
             break;
             
-            case 3: //parsing UR_FIELD TODO unknow type
-               new_link->m_ur_field  = (char*) calloc(sizeof(char), strlen(tok) + 1);
-               if (!new_link->m_ur_field) {
-                  goto failure;
-               }
-               memcpy(new_link->m_ur_field, tok, strlen(tok));
+         case LINK_UR_FIELD: //parsing UR_FIELD 
+            new_link->m_ur_field  = (char*) calloc(sizeof(char), strlen(tok) + 1);
+            if (!new_link->m_ur_field) {
+               goto failure;
+            }
+            memcpy(new_link->m_ur_field, tok, strlen(tok));
             break;
 
-            case 4: //parsing line color
-               num = 0;
-               if(sscanf(tok, "%d", &num) == EOF) {
-                  fprintf(stderr, ">config parser error: parsing number failed!");
-                  goto failure;
-               }
+         case LINK_COL: //parsing line color
+            num = 0;
+            if(sscanf(tok, "%d", &num) == EOF) {
+               fprintf(stderr, ">config parser error: parsing number failed!");
+               goto failure;
+            }
             new_link->m_color = num;
             break;
          }
@@ -300,7 +307,7 @@ static char *databuffer = NULL;
 
 /**
  * Size of allocated memory of databuffer.
-k */
+ */
 size_t databuffer_size = 0;
 
 /**
@@ -323,6 +330,7 @@ int prepare_data(link_conf_t **links, const int link_cnt)
       }
       databuffer_size = 4096;
       header_len = 0;
+
       for (i = 0; i < link_cnt; i++) {
          header_len += snprintf(databuffer + header_len, databuffer_size - header_len, "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,", links[i]->m_name,links[i]->m_name,links[i]->m_name,links[i]->m_name,links[i]->m_name,links[i]->m_name);
       }

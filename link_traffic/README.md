@@ -7,6 +7,9 @@ This module processes flow data (sums flows, bytes, packets for each LINK_BIT_FI
 - Input: 1
 - Output: 0
 
+## Module configuration
+To configure link_traffic module change link_traff_conf.cfg.example and remove ".example" suffix. In this icnluded file is CESNET's configuration for CESNET2 as an inspiration. 
+
 ## Parameters
 ### Common TRAP parameters
 - `-h [trap,1]`      Print help message for this module / for libtrap specific parameters.
