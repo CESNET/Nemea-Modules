@@ -356,7 +356,7 @@ int main(int argc, char *argv[])
    for (int i = 0; i < argc; i++) {
       if (!strcmp(argv[i], "-i")) {
          export_unirec = true;
-      } else if (!strcmp(argv[i], "-x")) {
+      } else if (!strcmp(argv[i], "-x") || !strcmp(argv[i], "--ipfix")) {
          export_ipfix = true;
       } else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
          help = true;
@@ -393,7 +393,7 @@ int main(int argc, char *argv[])
       return error("Cannot export to IPFIX and Unirec at the same time.");
    } else if (!export_unirec && !export_ipfix) {
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-      return error("Specify exporter output Unirec (-i) or IPFIX (-x).");
+      return error("Specify exporter output Unirec (-i) or IPFIX (-x/--ipfix).");
    }
 
    signal(SIGTERM, signal_handler);

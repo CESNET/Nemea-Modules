@@ -58,7 +58,7 @@
 #include "flowifc.h"
 #include "ipfix-elements.h"
 
-#define GCC_CHECK_PRAGMA ((__GNUC__ == 4 && 3 <= __GNUC_MINOR__) || 4 < __GNUC__)
+#define GCC_CHECK_PRAGMA ((__GNUC__ == 4 && 6 <= __GNUC_MINOR__) || 4 < __GNUC__)
 
 #define FIELD_EN_INT(EN, ID, LEN, SRC) EN
 #define FIELD_ID_INT(EN, ID, LEN, SRC) ID

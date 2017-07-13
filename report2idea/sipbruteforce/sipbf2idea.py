@@ -33,6 +33,7 @@ def convert_to_idea(rec, opts=None):
     #    # this alert is not bruteforce
     #    return None
     time = getIDEAtime();
+    proto = "tcp" if rec.SBFD_PROTOCOL == 6 else "udp"
     idea = {
         "Format": "IDEA0",
         "ID": getRandomId(),
@@ -42,11 +43,11 @@ def convert_to_idea(rec, opts=None):
         "CeaseTime": getIDEAtime(rec.SBFD_CEASE_TIME),
         "ConnCount": rec.SBFD_ATTEMPTS,
         "Source": [{
-            "Proto": [ "sip" ],
+            "Proto": [ proto, "sip" ],
             "Port": [rec.SRC_PORT]
          }],
         "Target": [{
-            "Proto": [ "sip" ],
+            "Proto": [ proto, "sip" ],
             "Port": [rec.DST_PORT]
          }],
         'Node': [{
@@ -71,7 +72,7 @@ def convert_to_idea(rec, opts=None):
             idea["BreachTime"] = getIDEAtime(rec.SBFD_BREACH_TIME)
             idea["Description"] = "Successful " + idea["Description"]
         else:
-            idea["Description"][0] = "D"
+            idea["Description"] = "Distributed SIP BruteForce login attempt, user account: " + rec.SBFD_USER
     elif rec.SBFD_EVENT_TYPE == 2:
         # scan
         idea["Category"] = [ "Recon.Scanning" ]
