@@ -105,9 +105,9 @@ void traffic_repeater(void)
             cnt_s++;
             continue;
          }
-         TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, cnt_t++; continue, break);
+         TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, cnt_t++; continue, break)
       } else {
-         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, cnt_t++; do {puts("unexpected ret value"); continue;} while (0);, break);
+         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, cnt_t++; puts("trap_recv timeout"); continue, break)
       }
    }
 
