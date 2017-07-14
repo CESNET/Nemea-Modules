@@ -111,6 +111,7 @@ int main(int argc, char **argv)
             fprintf(stderr, "Invalid argument for parameter -n\n");
             FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
             TRAP_DEFAULT_FINALIZATION();
+            return EXIT_FAILURE;
          }
          break;
 
@@ -120,6 +121,7 @@ int main(int argc, char **argv)
             fprintf(stderr, "Invalid argument for parameter -l\n");
             FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
             TRAP_DEFAULT_FINALIZATION();
+            return EXIT_FAILURE;
          }
          break;
 
@@ -128,7 +130,7 @@ int main(int argc, char **argv)
             fprintf(stderr, "Error during processing -p parameter.\n");
             FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
             TRAP_DEFAULT_FINALIZATION();
-            exit(EXIT_FAILURE);
+            return EXIT_FAILURE;
          }
          break;
 
@@ -137,7 +139,7 @@ int main(int argc, char **argv)
             fprintf(stderr, "Error during processing -m parameter.\n");
             FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
             TRAP_DEFAULT_FINALIZATION();
-            exit(EXIT_FAILURE);
+            return EXIT_FAILURE;
          }
          break;
 
