@@ -13,8 +13,8 @@ SUBDIRS=hoststats \
 		amplificationdetector \
 		minerdetector
 
-EXTRA_DIST=template.py test.sh ${bin_SCRIPTS}
+EXTRA_DIST=template.py test.sh config.yml.example ${bin_SCRIPTS}
 
 tmpldatadir=${docdir}/report2idea
-tmpldata_DATA=template.py
+tmpldata_DATA=template.py config.yml.example
 
