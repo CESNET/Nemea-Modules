@@ -122,7 +122,8 @@ typedef struct link_stats {
    volatile uint64_t bytes_out;
 } link_stats_t;
 
-link_stats_t stats[8];
+/* global dynamic array od link_stats_t structure for statistics */
+link_stats_t *stats = NULL;
 
 typedef struct link_conf {
    int         m_num;        /*!int number of link*/
@@ -133,10 +134,28 @@ typedef struct link_conf {
 
 char *file_header = NULL;
 
-/* Initialize temporary file */
+/* 
+ * @brief allocates memory for link_stats_t structure array 
+ * 
+ * size of array is based on number of links loaded from 
+ * configuration file, @fn load_links has to be run before executing 
+ * this function 
+ * @return allocated array of link_stats_t structure statistics 
+ * */
+link_stats_t *stats_allocator(size_t link_cnt) 
+{
+   if (stats) {
+      free(stats);
+   }
+   link_stats_t *r_stats = (link_stats_t*) 
+                           calloc(sizeof(link_stats_t), link_cnt);
+   return !r_stats ? NULL : r_stats;
+}
+
+/* initialize temporary file */
 int init_f()
 {
-   /* Create tmp file  */
+   /* create tmp file  */
    FILE *tmp;
    if (!(tmp = fopen(SAVE_TMP, "w+"))) {
       return 1;
@@ -145,7 +164,7 @@ int init_f()
    return 0;
 }
 
-/* Saves input string to defined save file */
+/* saves input string to defined save file */
 int save_data(const char *string)
 {
    FILE *fp;
@@ -166,7 +185,7 @@ int save_data(const char *string)
    return 1;
 }
 
-/* Get md_time of file  */
+/* get md_time of file  */
 time_t mdf_time(char *path) {
    struct stat fst;
    bzero(&fst,sizeof(fst));
@@ -179,50 +198,55 @@ time_t mdf_time(char *path) {
 /*! @brief function that clears link_conf array 
  * @return positive value on success otherwise negative 
  * */
-int clear_links(link_conf_t **links, int *arrCnt) 
+void clear_links(link_conf_t **links) 
 {  
-   int i = 0;
+   size_t i = 0;
    /* don't clear when it's empty */
    if (!links) {
-      return -1;
+      return;
    }
    
-   for(i = 0; i < *arrCnt; ++i) {
+   while (links[i]) {
       /* delete link's name */
       if (links[i]->m_name) {
          free(links[i]->m_name);
       }
+   
+      if (links[i]->m_ur_field) {
+         free(links[i]->m_ur_field);
+      }
       free(links[i]);
+      i++;
    }
-
    free(links);
-
-   return 1;
 }
+
 /*   *** Parsing link names from config file ***
 *   Function goes through text file line by line and search for specific pattern
 *   input arg: fileName is path to config file, arrayCnt is counter for array and size
 *   stores size of memory for array 
 *   */
-link_conf_t **load_links(char *filePath, link_conf_t **links, int *arrCnt)
+link_conf_t **load_links(const char *filePath,
+                        link_conf_t **links, 
+                        size_t *arrCnt)
 {
    FILE *fp;
    char *line = NULL, *tok = NULL, *save_pt1 = NULL, *str1 = NULL;
-   int attribute = 0, size = 10, num = 0;
-   size_t len = 0;
+   size_t attribute = 0, len = 0, size = 10;
+   int num = 0;
    ssize_t read;
    *arrCnt = 0;
 
    printf(">Accessing config file %s.\n", filePath);
    links = (link_conf_t**) malloc(size * sizeof(link_conf_t**));
    if (links == NULL) {
-      return NULL;
+      goto failure;
    }
    fp = fopen(filePath, "r");
 
    if (!fp) {
       fprintf(stderr, "Error while opening config file %s\n", filePath);
-      return NULL;
+      goto failure;
    }
 
    /* start parsig csv config here. */ 
@@ -247,7 +271,7 @@ link_conf_t **load_links(char *filePath, link_conf_t **links, int *arrCnt)
          switch (attribute) {
          case LINK_NUM: //parsing link number
             num = 0;
-            if(sscanf(tok, "%d", &num) == EOF) {
+            if (sscanf(tok, "%d", &num) == EOF) {
                fprintf(stderr, ">config parser error: parsing number failed!");
                goto failure;
             }
@@ -272,7 +296,7 @@ link_conf_t **load_links(char *filePath, link_conf_t **links, int *arrCnt)
 
          case LINK_COL: //parsing line color
             num = 0;
-            if(sscanf(tok, "%d", &num) == EOF) {
+            if (sscanf(tok, "%d", &num) == EOF) {
                fprintf(stderr, ">config parser error: parsing number failed!");
                goto failure;
             }
@@ -292,7 +316,7 @@ link_conf_t **load_links(char *filePath, link_conf_t **links, int *arrCnt)
    return links;
 
 failure:
-   clear_links(links, arrCnt);
+   clear_links(links);
    free(line);
    return NULL;
 }
@@ -316,9 +340,9 @@ size_t header_len = 0;
  * Create formated text to be forwarded and parsed by munin_link_flows script
  * \return Positive number with size of string to be sent/stored or 0 on error.
  */
-int prepare_data(link_conf_t **links, const int link_cnt)
+int prepare_data(link_conf_t **links, const size_t link_cnt)
 {
-   int i = 0, size;
+   size_t i = 0, size;
 
    if (databuffer == NULL) {
       databuffer = calloc(4096, sizeof(char));
@@ -375,7 +399,7 @@ void *accept_clients(void *arg)
    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
    link_conf_t **links = NULL;
    char *data = NULL;
-   int link_cnt = 0, interval = 60;
+   size_t link_cnt = 0, interval = 60;
    time_t curr_t;
    time_t saved_t;
 
@@ -388,6 +412,18 @@ void *accept_clients(void *arg)
    /* load names of links form config file */
    if (!(links = load_links(CONFIG_PATH, links, &link_cnt))) {
       fprintf(stderr, "Error loading configuration.\n");
+      stop = 1;
+   }
+
+   /* allocate memory for stats, based on loaded number of links */
+   if (!(stats = stats_allocator(link_cnt))) {
+      fprintf(stderr, "Error while allocating memory for stats.\n");
+      stop = 1;
+   }
+
+   /* allocate memory for link_stats */
+   if (!(stats = stats_allocator(link_cnt))) {
+      fprintf(stderr, "Erro allocatig memory for statistics.\n");
       stop = 1;
    }
 
@@ -484,13 +520,21 @@ void *accept_clients(void *arg)
       }
    }
    /* clean up */
-   clear_links(links, &link_cnt);
+   if (stats) {
+      free(stats);
+   }
+   clear_links(links);
    close(fd);
    pthread_exit(0);
 }
 
 /* adds data to global array of link_stats_t structures "statistics[]" */
-void count_stats (uint64_t link, uint8_t direction, ur_template_t *in_tmplt, const void *in_rec) {
+void count_stats (uint64_t link,
+                  uint8_t direction,
+                  ur_template_t *in_tmplt,
+                  const void *in_rec
+                 ) 
+{
    if (direction == 0) {
       stats[link].flows_in++;
       stats[link].bytes_in += ur_get(in_tmplt, in_rec, F_BYTES);
@@ -561,8 +605,10 @@ int main(int argc, char **argv)
    }
 
    /* **** Main processing loop **** */
-
-   /* reading data from input and calling count_stats function to save processed data */
+   /* 
+    * reading data from input and calling count_stats function to save 
+    * processed data 
+    * */
    while (!stop) {
       const void *in_rec;
       uint16_t in_rec_size;
@@ -570,7 +616,8 @@ int main(int argc, char **argv)
       uint8_t direction;
 
       /* Receive data from input interface 0. */
-      /* Block if data are not available immediately (unless a timeout is set using trap_ifcctl) */
+      /* Block if data are not available immediately (unless a timeout
+       * is set using trap_ifcctl) */
       ret = TRAP_RECEIVE(0, in_rec, in_rec_size, in_tmplt);
 
       /* Handling possible errors. */
@@ -586,7 +633,8 @@ int main(int argc, char **argv)
             break;
          }
       }
-      /* get from what collecto data came and in what direction the flow was comming */
+      /* get from what collecto data came and in what direction the flow 
+       * was comming */
       link_index = __builtin_ctzll(ur_get(in_tmplt, in_rec, F_LINK_BIT_FIELD));
       direction = ur_get(in_tmplt, in_rec, F_DIR_BIT_FIELD);
       /* save data according to information got by the code above */
@@ -598,11 +646,13 @@ cleanup:
    if (in_tmplt) {
       ur_free_template(in_tmplt);
    }
+   if (stats) {
+      free(stats);
+   }
    pthread_attr_destroy(&thrAttr);
    TRAP_DEFAULT_FINALIZATION();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    ur_finalize();
-
    return 0;
 }
 
