@@ -284,6 +284,11 @@ char *load_file(char *filename)
    // Determine the file size for memory allocation
    fseek(f, 0, SEEK_END);
    f_size = ftell(f);
+   if (f_size < 0) {
+      fprintf(stderr, "Error: ftell used on file %s return negative number\n.", filename);
+      return NULL;  
+   }
+
    fseek(f, 0, SEEK_SET);
 
    // Allocate file buffer

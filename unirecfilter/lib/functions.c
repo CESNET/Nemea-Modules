@@ -576,6 +576,9 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
          return (evalAST(ast->l, in_tmplt, in_rec) || evalAST(ast->r, in_tmplt, in_rec) ? 1 : 0);
       } else if (ast->operator == OP_AND) {
          return (evalAST(ast->l, in_tmplt, in_rec) && evalAST(ast->r, in_tmplt, in_rec) ? 1 : 0);
+      } else {
+         fprintf(stderr, "Warning: Unknown operator in NODE_T_AST.\n");
+         return 0;
       }
    case NODE_T_EXPRESSION:
       if (((struct expression*) ast)->id == UR_INVALID_FIELD) {
