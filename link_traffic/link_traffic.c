@@ -100,13 +100,10 @@ trap_module_info_t *module_info = NULL;
 #define CONFIG_PATH SYSCONFDIR"/link_traffic/link_traff_conf.cfg"
 #define CONFIG_VALUES 4 /* Definition of how many values link's config has. */
 /* Definition of config attributes */
-#define LINK_NUM 		1
+#define LINK_NUM 		      1
 #define LINK_NAME       	2
 #define LINK_UR_FIELD		3
-#define LINK_COL		4
-
-#define CONFIG_PATH "config.cfg"
-
+#define LINK_COL		      4
 #define CONFIG_VALUES 4 //Definition of how many values link's config has. 
 
 static volatile int stop = 0;
@@ -389,7 +386,10 @@ void *accept_clients(void *arg)
    }
 
    /* load names of links form config file */
-   links = load_links(CONFIG_PATH, links, &link_cnt);
+   if (!(links = load_links(CONFIG_PATH, links, &link_cnt))) {
+      fprintf(stderr, "Error loading configuration.\n");
+      stop = 1;
+   }
 
    if (fd < 0) {
       fprintf(stderr, "Error: Socket creation failed.\n");
