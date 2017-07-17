@@ -103,7 +103,7 @@ trap_module_info_t *module_info = NULL;
 #define LINK_NAME       	2
 #define LINK_UR_FIELD		3
 #define LINK_COL		      4
-#define CONFIG_VALUES 4 //Definition of how many values link's config has. 
+#define CONFIG_VALUES 4 //Definition of how many values link's config has.
 
 static volatile int stop = 0;
 
@@ -127,7 +127,7 @@ link_stats_t *stats = NULL;
 typedef struct link_conf {
    int         m_num;        /*!int number of link*/
    char        *m_name;      /*!string name of link*/
-   char        *m_ur_field;  /*!string link bit field of link*/ 
+   char        *m_ur_field;  /*!string link bit field of link*/
    int         m_color;      /*!int represents hex value of link's color*/
 } link_conf_t;
 
@@ -140,20 +140,20 @@ typedef struct link_loaded {
 
 char *file_header = NULL;
 
-/* 
- * @brief allocates memory for link_stats_t structure array 
- * 
- * size of array is based on number of links loaded from 
- * configuration file, @fn load_links has to be run before executing 
- * this function 
- * @return allocated array of link_stats_t structure statistics 
+/*
+ * @brief allocates memory for link_stats_t structure array
+ *
+ * size of array is based on number of links loaded from
+ * configuration file, @fn load_links has to be run before executing
+ * this function
+ * @return allocated array of link_stats_t structure statistics
  * */
-link_stats_t *stats_allocator(size_t link_cnt) 
+link_stats_t *stats_allocator(size_t link_cnt)
 {
    if (stats) {
       free(stats);
    }
-   link_stats_t *r_stats = (link_stats_t*) 
+   link_stats_t *r_stats = (link_stats_t*)
                            calloc(sizeof(link_stats_t), link_cnt);
    return !r_stats ? NULL : r_stats;
 }
@@ -178,7 +178,7 @@ int save_data(const char *string)
       fprintf(stderr, "Error while opening %s.\n", SAVE_TMP);
       return 1;
    }
-   
+
    fputs(string, fp);
    fclose(fp);
 
@@ -201,23 +201,23 @@ time_t mdf_time(char *path) {
    return fst.st_mtime;
 }
 
-/*! @brief function that clears link_conf array 
- * @return positive value on success otherwise negative 
+/*! @brief function that clears link_conf array
+ * @return positive value on success otherwise negative
  * */
-void clear_links(link_conf_t **links) 
-{  
+void clear_links(link_conf_t **links)
+{
    size_t i = 0;
    /* don't clear when it's empty */
    if (!links) {
       return;
    }
-   
+
    while (links[i]) {
       /* delete link's name */
       if (links[i]->m_name) {
          free(links[i]->m_name);
       }
-   
+
       if (links[i]->m_ur_field) {
          free(links[i]->m_ur_field);
       }
@@ -230,10 +230,10 @@ void clear_links(link_conf_t **links)
 /*   *** Parsing link names from config file ***
 *   Function goes through text file line by line and search for specific pattern
 *   input arg: fileName is path to config file, arrayCnt is counter for array and size
-*   stores size of memory for array 
+*   stores size of memory for array
 *   */
 link_conf_t **load_links(const char *filePath,
-                        link_conf_t **links, 
+                        link_conf_t **links,
                         size_t *arrCnt)
 {
    FILE *fp;
@@ -245,7 +245,7 @@ link_conf_t **load_links(const char *filePath,
 
    printf(">Accessing config file %s.\n", filePath);
    links = (link_conf_t**) malloc(size * sizeof(link_conf_t**));
-   
+
    if (links == NULL) {
       goto failure;
    }
@@ -257,10 +257,10 @@ link_conf_t **load_links(const char *filePath,
       goto failure;
    }
 
-   /* start parsig csv config here. */ 
+   /* start parsig csv config here. */
    while ((read = getline(&line, &len, fp)) != -1) {
       if (*arrCnt >= size) { //check if there is enough space allocated
-         size *= 2;        
+         size *= 2;
          link_conf_t **tmp = (link_conf_t **)
                              realloc(links, size * sizeof(link_conf_t **));
          if (!tmp) {
@@ -268,7 +268,7 @@ link_conf_t **load_links(const char *filePath,
          }
          links = tmp;
       }
-      
+
       link_conf_t *new_link = (link_conf_t*) malloc(sizeof(link_conf_t));
 
       for (attribute = LINK_NUM, str1 = line; ;attribute++, str1 = NULL) {
@@ -294,8 +294,8 @@ link_conf_t **load_links(const char *filePath,
             }
             memcpy(new_link->m_name, tok, strlen(tok));
             break;
-            
-         case LINK_UR_FIELD: //parsing UR_FIELD 
+
+         case LINK_UR_FIELD: //parsing UR_FIELD
             new_link->m_ur_field  = (char*) calloc(sizeof(char), strlen(tok) + 1);
             if (!new_link->m_ur_field) {
                goto failure;
@@ -417,15 +417,15 @@ void *accept_clients(void *arg)
       fprintf(stderr, "Error: Thread failed to recieve configuration.");
       stop = 1;
       goto cleanup;
-   } 
-   
+   }
+
    /* create tmp file */
    if (init_f()) {
       fprintf(stderr, "Error: Initializing temporary file.\n");
       stop = 1;
       goto cleanup;
    }
-  
+
    if (fd < 0) {
       fprintf(stderr, "Error: Socket creation failed.\n");
       stop = 1;
@@ -533,7 +533,7 @@ void count_stats (uint64_t link,
                   uint8_t direction,
                   ur_template_t *in_tmplt,
                   const void *in_rec
-                 ) 
+                 )
 {
    if (direction == 0) {
       stats[link].flows_in++;
@@ -578,7 +578,7 @@ int main(int argc, char **argv)
       return 1;
    }
    loaded->conf = links;
-   loaded->num = link_cnt; 
+   loaded->num = link_cnt;
 
    /* allocate memory for stats, based on loaded number of links */
    if (!(stats = stats_allocator(link_cnt))) {
@@ -626,20 +626,20 @@ int main(int argc, char **argv)
       goto cleanup;
    }
 
-   ret = pthread_create(&accept_thread, 
+   ret = pthread_create(&accept_thread,
                         &thrAttr,
                         accept_clients,
                         (void*) loaded);
-   
+
    if (ret) {
       fprintf(stderr, "Error: Thread creation failed.\n");
       goto cleanup;
    }
 
    /* **** Main processing loop **** */
-   /* 
-    * reading data from input and calling count_stats function to save 
-    * processed data 
+   /*
+    * reading data from input and calling count_stats function to save
+    * processed data
     * */
    while (!stop) {
       const void *in_rec;
@@ -665,7 +665,7 @@ int main(int argc, char **argv)
             break;
          }
       }
-      /* get from what collecto data came and in what direction the flow 
+      /* get from what collecto data came and in what direction the flow
        * was comming */
       link_index = __builtin_ctzll(ur_get(in_tmplt, in_rec, F_LINK_BIT_FIELD));
       direction = ur_get(in_tmplt, in_rec, F_DIR_BIT_FIELD);
