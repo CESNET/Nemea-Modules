@@ -3,6 +3,7 @@
  * \brief Module used for counting statistics used in Munin.
  * \author Tomas Jansky <janskto1@fit.cvut.cz>
  * \author Jaroslav Hlavac <hlavaj20@fit.cvut.cz>
+ * \author Ladislav Macoun <macoulad@fit.cvut.cz>
  * \date 2017
  */
 /*
@@ -81,13 +82,11 @@ UR_FIELDS (
 
 trap_module_info_t *module_info = NULL;
 
-
 /**
  * Definition of basic module information - module name, module description, number of input and output interfaces
  */
 #define MODULE_BASIC_INFO(BASIC) \
   BASIC("Link Flows Counter","This module counts statistics according to link and direction.", 1, 0)
-
 
 /**
  * Definition of module parameters - every parameter has short_opt, long_opt, description,
@@ -131,6 +130,13 @@ typedef struct link_conf {
    char        *m_ur_field;  /*!string link bit field of link*/ 
    int         m_color;      /*!int represents hex value of link's color*/
 } link_conf_t;
+
+/* structure used for loading configuration from file and passing it
+ * to the thread */
+typedef struct link_loaded {
+   link_conf_t    **conf;    /*! struct of loaded links configuration */
+   size_t         num;       /*! size_t number of loaded links */
+} link_load_t;
 
 char *file_header = NULL;
 
@@ -239,9 +245,11 @@ link_conf_t **load_links(const char *filePath,
 
    printf(">Accessing config file %s.\n", filePath);
    links = (link_conf_t**) malloc(size * sizeof(link_conf_t**));
+   
    if (links == NULL) {
       goto failure;
    }
+
    fp = fopen(filePath, "r");
 
    if (!fp) {
@@ -253,7 +261,8 @@ link_conf_t **load_links(const char *filePath,
    while ((read = getline(&line, &len, fp)) != -1) {
       if (*arrCnt >= size) { //check if there is enough space allocated
          size *= 2;        
-         link_conf_t **tmp = (link_conf_t **) realloc(links, size * sizeof(link_conf_t **));
+         link_conf_t **tmp = (link_conf_t **)
+                             realloc(links, size * sizeof(link_conf_t **));
          if (!tmp) {
             goto failure;
          }
@@ -397,40 +406,30 @@ void *accept_clients(void *arg)
    struct sockaddr_in clt;
    socklen_t soc_size;
    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
-   link_conf_t **links = NULL;
    char *data = NULL;
-   size_t link_cnt = 0, interval = 60;
+   size_t interval = 60;
    time_t curr_t;
    time_t saved_t;
 
+   /* check if configuration is not corrupted */
+   link_load_t *loaded = (link_load_t *) arg;
+   if (!loaded) {
+      fprintf(stderr, "Error: Thread failed to recieve configuration.");
+      stop = 1;
+      goto cleanup;
+   } 
+   
    /* create tmp file */
    if (init_f()) {
-      fprintf(stderr, "Error initializing temporary file.\n");
+      fprintf(stderr, "Error: Initializing temporary file.\n");
       stop = 1;
+      goto cleanup;
    }
-
-   /* load names of links form config file */
-   if (!(links = load_links(CONFIG_PATH, links, &link_cnt))) {
-      fprintf(stderr, "Error loading configuration.\n");
-      stop = 1;
-   }
-
-   /* allocate memory for stats, based on loaded number of links */
-   if (!(stats = stats_allocator(link_cnt))) {
-      fprintf(stderr, "Error while allocating memory for stats.\n");
-      stop = 1;
-   }
-
-   /* allocate memory for link_stats */
-   if (!(stats = stats_allocator(link_cnt))) {
-      fprintf(stderr, "Erro allocatig memory for statistics.\n");
-      stop = 1;
-   }
-
+  
    if (fd < 0) {
       fprintf(stderr, "Error: Socket creation failed.\n");
       stop = 1;
-      pthread_exit(0);
+      goto cleanup;
    }
 
    struct sockaddr_un address;
@@ -442,8 +441,8 @@ void *accept_clients(void *arg)
    if (bind(fd, (struct sockaddr *) &address, sizeof(address)) < 0) {
       close(fd);
       fprintf(stderr, "Error: Bind failed.\n");
+      goto cleanup;
       stop = 1;
-      pthread_exit(0);
    }
 
    /* changing permissions for socket so munin can read data from it */
@@ -455,7 +454,7 @@ void *accept_clients(void *arg)
       close(fd);
       fprintf(stderr, "Error: Listen failed.\n");
       stop = 1;
-      pthread_exit(0);
+      goto cleanup;
    }
 
    soc_size = sizeof(clt);
@@ -486,7 +485,7 @@ void *accept_clients(void *arg)
          fprintf(stderr,"Error : select().\n");
          break;
       } else if (!retval) {
-         if (prepare_data(links, link_cnt) > 0) {
+         if (prepare_data(loaded->conf, loaded->num) > 0) {
             if (save_data(databuffer) ) {
                fprintf(stderr, "Error while saving data.\n");
                break;
@@ -500,7 +499,7 @@ void *accept_clients(void *arg)
             continue;
          }
 
-         if (prepare_data(links, link_cnt) > 0) {
+         if (prepare_data(loaded->conf, loaded->num) > 0) {
             send_to_sock(client_fd, databuffer);
             if (difftime(curr_t, saved_t) >= interval) {
                if (save_data(databuffer) ) {
@@ -519,11 +518,12 @@ void *accept_clients(void *arg)
          free(data);
       }
    }
-   /* clean up */
+/* clean up */
+cleanup:
    if (stats) {
       free(stats);
    }
-   clear_links(links);
+   clear_links(loaded->conf);
    close(fd);
    pthread_exit(0);
 }
@@ -551,6 +551,9 @@ int main(int argc, char **argv)
 {
    signed char opt;
    ur_template_t *in_tmplt = NULL;
+   link_conf_t **links = NULL;
+   size_t link_cnt;
+   link_load_t *loaded = NULL;
 
    pthread_t accept_thread;
    pthread_attr_t thrAttr;
@@ -559,6 +562,31 @@ int main(int argc, char **argv)
 
    /* return value for control of opening sockets and saving loop */
    int ret = 0;
+
+   /* load links configuration file */
+   if (!(links = load_links(CONFIG_PATH, links, &link_cnt))) {
+      fprintf(stderr, "Error loading configuration.\n");
+      clear_links(links);
+      return 1;
+   }
+
+   loaded = (link_load_t *) malloc(sizeof(link_load_t));
+   if (!loaded) {
+      fprintf(stderr, "Error while allocating memory for loaded configuration.\n")
+      clear_links(links);
+      free(loaded);
+      return 1;
+   }
+   loaded->conf = links;
+   loaded->num = link_cnt; 
+
+   /* allocate memory for stats, based on loaded number of links */
+   if (!(stats = stats_allocator(link_cnt))) {
+      fprintf(stderr, "Error while allocating memory for stats.\n");
+      clear_links(links);
+      free(loaded);
+      return 1;
+   }
 
    /* **** TRAP initialization **** */
 
@@ -598,7 +626,11 @@ int main(int argc, char **argv)
       goto cleanup;
    }
 
-   ret = pthread_create(&accept_thread, &thrAttr, accept_clients, NULL);
+   ret = pthread_create(&accept_thread, 
+                        &thrAttr,
+                        accept_clients,
+                        (void*) loaded);
+   
    if (ret) {
       fprintf(stderr, "Error: Thread creation failed.\n");
       goto cleanup;
@@ -648,6 +680,10 @@ cleanup:
    }
    if (stats) {
       free(stats);
+   }
+   clear_links(links);
+   if (loaded) {
+      free(loaded);
    }
    pthread_attr_destroy(&thrAttr);
    TRAP_DEFAULT_FINALIZATION();
