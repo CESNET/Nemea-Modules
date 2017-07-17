@@ -100,7 +100,7 @@ trap_module_info_t *module_info = NULL;
 #define LINK_NAME       	2
 #define LINK_UR_FIELD		3
 #define LINK_COL		      4
-#define CONFIG_VALUES 4 //Definition of how many values link's config has.
+#define CONFIG_VALUES      4 //Definition of how many values link's config has.
 
 static volatile int stop = 0;
 
@@ -310,7 +310,10 @@ int prepare_data(link_load_t *links)
       header_len = 0;
 
       for (i = 0; i < links->num; i++) {
-         header_len += snprintf(databuffer + header_len, databuffer_size - header_len, "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,", links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name);
+         header_len += snprintf(databuffer + header_len, databuffer_size - header_len,
+                                "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,",
+                                 links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name,
+                                 links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name);
       }
       databuffer[header_len - 1] = '\n';
    }
@@ -547,6 +550,7 @@ int main(int argc, char **argv)
       count_stats(link_index, direction, in_tmplt, in_rec);
    }
 
+   pthread_cancel(accept_thread);
    /* **** Cleanup **** */
 cleanup:
    if (databuffer) {
