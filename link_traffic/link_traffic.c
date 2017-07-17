@@ -172,12 +172,12 @@ void clear_conf_struct(link_load_t *links)
 int load_links(const char *filePath, link_load_t *links)
 {
    FILE *fp;
-   char *line = NULL, *tok = NULL, *save_pt1 = NULL, *str1 = NULL;
+   char *line = NULL, *tok = NULL, **save_pt1 = NULL, *str1 = NULL;
    size_t attribute = 0, len = 0, size = 10;
    int num = 0;
    ssize_t read;
 
-   if (!links) {
+   if (!links->conf) {
       fprintf(stderr, "load_links: received NULL pointer\n");
       return 1;
    }
@@ -209,7 +209,7 @@ int load_links(const char *filePath, link_load_t *links)
       }
 
       for (attribute = LINK_NUM, str1 = line; ;attribute++, str1 = NULL) {
-         tok = strtok_r(str1, ",", &save_pt1);
+         tok = strtok_r(str1, ",", save_pt1);
          if (tok == NULL) {
              break;
          }
@@ -406,7 +406,7 @@ void *accept_clients(void *arg)
 /* clean up */
 cleanup:
    stop = 1;
-   if (fd >= 0) {
+   if (fd) {
       close(fd);     
    }
 
