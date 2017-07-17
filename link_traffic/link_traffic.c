@@ -67,9 +67,6 @@
 #include <unistd.h>
 #include <sys/select.h>
 
-#define SAVE_FILE "/var/run/libtrap/saved_data"
-#define SAVE_TMP SAVE_FILE ".tmp"
-
 /**
  * Definition of fields used in unirec templates (for both input and output interfaces)
  */
@@ -122,7 +119,7 @@ typedef struct link_stats {
 } link_stats_t;
 
 /* global dynamic array od link_stats_t structure for statistics */
-link_stats_t *stats = NULL;
+link_stats_t *stats;
 
 typedef struct link_conf {
    int         m_num;        /*!int number of link*/
@@ -134,96 +131,36 @@ typedef struct link_conf {
 /* structure used for loading configuration from file and passing it
  * to the thread */
 typedef struct link_loaded {
-   link_conf_t    **conf;    /*! struct of loaded links configuration */
+   link_conf_t    *conf;    /*! struct of loaded links configuration */
    size_t         num;       /*! size_t number of loaded links */
 } link_load_t;
-
-char *file_header = NULL;
-
-/*
- * @brief allocates memory for link_stats_t structure array
- *
- * size of array is based on number of links loaded from
- * configuration file, @fn load_links has to be run before executing
- * this function
- * @return allocated array of link_stats_t structure statistics
- * */
-link_stats_t *stats_allocator(size_t link_cnt)
-{
-   if (stats) {
-      free(stats);
-   }
-   link_stats_t *r_stats = (link_stats_t*)
-                           calloc(sizeof(link_stats_t), link_cnt);
-   return !r_stats ? NULL : r_stats;
-}
-
-/* initialize temporary file */
-int init_f()
-{
-   /* create tmp file  */
-   FILE *tmp;
-   if (!(tmp = fopen(SAVE_TMP, "w+"))) {
-      return 1;
-   }
-   fclose(tmp);
-   return 0;
-}
-
-/* saves input string to defined save file */
-int save_data(const char *string)
-{
-   FILE *fp;
-   if (!(fp = fopen(SAVE_TMP, "w") )) {
-      fprintf(stderr, "Error while opening %s.\n", SAVE_TMP);
-      return 1;
-   }
-
-   fputs(string, fp);
-   fclose(fp);
-
-   if (rename(SAVE_TMP, SAVE_FILE) == -1 ) {
-      fprintf(stderr, "A rename error occurred check if file %s and %s exists.\n", SAVE_TMP, SAVE_FILE);
-   }
-   if (!init_f())
-      return 0;
-   fprintf(stderr,"Error creating tmp file: %s.\n", SAVE_TMP);
-   return 1;
-}
-
-/* get md_time of file  */
-time_t mdf_time(char *path) {
-   struct stat fst;
-   bzero(&fst,sizeof(fst));
-   if (stat(path, &fst) != 0) {
-      printf("stat() failed with errno %d\n",errno); exit(-1);
-   }
-   return fst.st_mtime;
-}
 
 /*! @brief function that clears link_conf array
  * @return positive value on success otherwise negative
  * */
-void clear_links(link_conf_t **links)
+void clear_conf_struct(link_load_t *links)
 {
-   size_t i = 0;
+   int i;
    /* don't clear when it's empty */
    if (!links) {
       return;
    }
 
-   while (links[i]) {
-      /* delete link's name */
-      if (links[i]->m_name) {
-         free(links[i]->m_name);
+   if (links->conf) {
+      for (i = 0; i < links->num; i++) {
+         if (links->conf[i].m_name) {
+            free(links->conf[i].m_name);
+         }
+
+         if (links->conf[i].m_ur_field) {
+            free(links->conf[i].m_ur_field);
+         }
+
       }
 
-      if (links[i]->m_ur_field) {
-         free(links[i]->m_ur_field);
-      }
-      free(links[i]);
-      i++;
+      free(links->conf);   
    }
+   
    free(links);
 }
 
@@ -232,26 +169,27 @@ void clear_links(link_conf_t **links)
 *   input arg: fileName is path to config file, arrayCnt is counter for array and size
 *   stores size of memory for array
 *   */
-link_conf_t **load_links(const char *filePath,
-                        link_conf_t **links,
-                        size_t *arrCnt)
+int load_links(const char *filePath, link_load_t *links)
 {
    FILE *fp;
    char *line = NULL, *tok = NULL, *save_pt1 = NULL, *str1 = NULL;
    size_t attribute = 0, len = 0, size = 10;
    int num = 0;
    ssize_t read;
-   *arrCnt = 0;
 
-   printf(">Accessing config file %s.\n", filePath);
-   links = (link_conf_t**) malloc(size * sizeof(link_conf_t**));
+   if (!links) {
+      fprintf(stderr, "load_links: received NULL pointer\n");
+      return 1;
+   }
 
+   links->conf = (link_conf_t *) calloc(size, sizeof(link_conf_t));
    if (links == NULL) {
       goto failure;
    }
+   links->num = 0;
 
+   printf(">Accessing config file %s.\n", filePath);   
    fp = fopen(filePath, "r");
-
    if (!fp) {
       fprintf(stderr, "Error while opening config file %s\n", filePath);
       goto failure;
@@ -259,17 +197,16 @@ link_conf_t **load_links(const char *filePath,
 
    /* start parsig csv config here. */
    while ((read = getline(&line, &len, fp)) != -1) {
-      if (*arrCnt >= size) { //check if there is enough space allocated
+      if (links->num >= size) { //check if there is enough space allocated
          size *= 2;
-         link_conf_t **tmp = (link_conf_t **)
-                             realloc(links, size * sizeof(link_conf_t **));
+         link_conf_t *tmp = (link_conf_t *)
+                             realloc(links->conf, size * sizeof(link_conf_t));
          if (!tmp) {
             goto failure;
          }
-         links = tmp;
-      }
 
-      link_conf_t *new_link = (link_conf_t*) malloc(sizeof(link_conf_t));
+         links->conf = tmp;
+      }
 
       for (attribute = LINK_NUM, str1 = line; ;attribute++, str1 = NULL) {
          tok = strtok_r(str1, ",", &save_pt1);
@@ -284,23 +221,25 @@ link_conf_t **load_links(const char *filePath,
                fprintf(stderr, ">config parser error: parsing number failed!");
                goto failure;
             }
-            new_link->m_num = num;
+            links->conf[links->num].m_num = num;
             break;
 
          case LINK_NAME: //parsing link name
-            new_link->m_name  = (char*) calloc(sizeof(char), strlen(tok) + 1);
-            if (!new_link->m_name) {
+            links->conf[links->num].m_name  = (char*) calloc(sizeof(char), strlen(tok) + 1);
+            if (!links->conf[links->num].m_name) {
                goto failure;
             }
-            memcpy(new_link->m_name, tok, strlen(tok));
+
+            memcpy(links->conf[links->num].m_name, tok, strlen(tok));
             break;
 
          case LINK_UR_FIELD: //parsing UR_FIELD
-            new_link->m_ur_field  = (char*) calloc(sizeof(char), strlen(tok) + 1);
-            if (!new_link->m_ur_field) {
+            links->conf[links->num].m_ur_field  = (char*) calloc(sizeof(char), strlen(tok) + 1);
+            if (!links->conf[links->num].m_ur_field) {
                goto failure;
             }
-            memcpy(new_link->m_ur_field, tok, strlen(tok));
+
+            memcpy(links->conf[links->num].m_ur_field, tok, strlen(tok));
             break;
 
          case LINK_COL: //parsing line color
@@ -309,25 +248,34 @@ link_conf_t **load_links(const char *filePath,
                fprintf(stderr, ">config parser error: parsing number failed!");
                goto failure;
             }
-            new_link->m_color = num;
+            links->conf[links->num].m_color = num;
             break;
          }
-         links[*arrCnt] = new_link;
       }
-      ++(*arrCnt);
+      links->num++;
       free(line);
       line = NULL;
       len = 0;
    }
+
    fclose(fp);
-   free(line);
+   if (line) {
+      free(line);   
+   }
+
    printf(">Configuration success.\n");
-   return links;
+   return 0;
 
 failure:
-   clear_links(links);
-   free(line);
-   return NULL;
+   if (fp >= 0) {
+      fclose(fp);   
+   }
+   
+   if (line) {
+      free(line);   
+   }
+
+   return 1;
 }
 
 /**
@@ -349,7 +297,7 @@ size_t header_len = 0;
  * Create formated text to be forwarded and parsed by munin_link_flows script
  * \return Positive number with size of string to be sent/stored or 0 on error.
  */
-int prepare_data(link_conf_t **links, const size_t link_cnt)
+int prepare_data(link_load_t *links)
 {
    size_t i = 0, size;
 
@@ -361,14 +309,14 @@ int prepare_data(link_conf_t **links, const size_t link_cnt)
       databuffer_size = 4096;
       header_len = 0;
 
-      for (i = 0; i < link_cnt; i++) {
-         header_len += snprintf(databuffer + header_len, databuffer_size - header_len, "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,", links[i]->m_name,links[i]->m_name,links[i]->m_name,links[i]->m_name,links[i]->m_name,links[i]->m_name);
+      for (i = 0; i < links->num; i++) {
+         header_len += snprintf(databuffer + header_len, databuffer_size - header_len, "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,", links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name);
       }
       databuffer[header_len - 1] = '\n';
    }
 
    size = header_len;
-   for (i = 0; i < link_cnt; i++) {
+   for (i = 0; i < links->num; i++) {
       size += snprintf(databuffer + size, databuffer_size - size, "%"
                        PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32",",
                        stats[i].bytes_in, stats[i].flows_in, stats[i].packets_in,
@@ -405,126 +353,60 @@ void *accept_clients(void *arg)
    int client_fd;
    struct sockaddr_in clt;
    socklen_t soc_size;
+   struct sockaddr_un address;
+   link_load_t *links = (link_load_t *) arg;
+
    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
-   char *data = NULL;
-   size_t interval = 60;
-   time_t curr_t;
-   time_t saved_t;
-
-   /* check if configuration is not corrupted */
-   link_load_t *loaded = (link_load_t *) arg;
-   if (!loaded) {
-      fprintf(stderr, "Error: Thread failed to recieve configuration.");
-      stop = 1;
-      goto cleanup;
-   }
-
-   /* create tmp file */
-   if (init_f()) {
-      fprintf(stderr, "Error: Initializing temporary file.\n");
-      stop = 1;
-      goto cleanup;
-   }
-
    if (fd < 0) {
       fprintf(stderr, "Error: Socket creation failed.\n");
-      stop = 1;
       goto cleanup;
    }
 
-   struct sockaddr_un address;
    bzero(&address, sizeof(address));
    address.sun_family = AF_UNIX;
    strcpy(address.sun_path, DEF_SOCKET_PATH);
    unlink(DEF_SOCKET_PATH);
 
    if (bind(fd, (struct sockaddr *) &address, sizeof(address)) < 0) {
-      close(fd);
       fprintf(stderr, "Error: Bind failed.\n");
       goto cleanup;
-      stop = 1;
    }
 
    /* changing permissions for socket so munin can read data from it */
    if (chmod(DEF_SOCKET_PATH, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH) != 0) {
       fprintf(stderr, "Error: Changing permissions failed.\n");
+      goto cleanup;
    }
 
    if (listen(fd, 5) < 0) {
-      close(fd);
       fprintf(stderr, "Error: Listen failed.\n");
-      stop = 1;
       goto cleanup;
    }
 
    soc_size = sizeof(clt);
 
-   fd_set rfds;
-   struct timeval tv;
-   int retval;
-
    while (!stop) {
-      data = NULL;
-      FD_ZERO(&rfds);
-      FD_SET(fd, &rfds);
-
-      /* saving loop **************************************/
-
-      /* wait up to five seconds. */
-      tv.tv_sec = 5;
-      tv.tv_usec = 0;
-
-      /* initialize time stamp and get time from tmp file */
-      saved_t = mdf_time(SAVE_TMP);
-      time(&curr_t);
-
-      /* check for timeout */
-      retval  = select(fd + 1, &rfds, NULL, NULL, &tv);
-
-      if (retval == -1 ) {
-         fprintf(stderr,"Error : select().\n");
-         break;
-      } else if (!retval) {
-         if (prepare_data(loaded->conf, loaded->num) > 0) {
-            if (save_data(databuffer) ) {
-               fprintf(stderr, "Error while saving data.\n");
-               break;
-            }
-         }
-
-      } else if (retval) {
-         client_fd = accept(fd, (struct sockaddr *) &clt, &soc_size);
-         if (client_fd < 0) {
-            fprintf(stderr, "Error: Accept failed.\n");
-            continue;
-         }
-
-         if (prepare_data(loaded->conf, loaded->num) > 0) {
-            send_to_sock(client_fd, databuffer);
-            if (difftime(curr_t, saved_t) >= interval) {
-               if (save_data(databuffer) ) {
-                  fprintf(stderr, "Error while saving data.\n");
-                  break;
-               } else {
-                  printf(">Data saved.\n");
-                  saved_t = mdf_time(SAVE_TMP);
-
-               }
-            }
-         }
+      client_fd = accept(fd, (struct sockaddr *) &clt, &soc_size);
+      if (client_fd < 0) {
+         fprintf(stderr, "Error: Accept failed.\n");
+         continue;
       }
 
-      if (data) {
-         free(data);
+      if (prepare_data(links) > 0) {
+         send_to_sock(client_fd, databuffer);
+      } else {
+         fprintf(stderr, "Error: Prepare data failed.\n");
+         close(client_fd);
       }
    }
+
 /* clean up */
 cleanup:
-   if (stats) {
-      free(stats);
+   stop = 1;
+   if (fd >= 0) {
+      close(fd);     
    }
-   clear_links(loaded->conf);
-   close(fd);
+
    pthread_exit(0);
 }
 
@@ -551,9 +433,7 @@ int main(int argc, char **argv)
 {
    signed char opt;
    ur_template_t *in_tmplt = NULL;
-   link_conf_t **links = NULL;
-   size_t link_cnt;
-   link_load_t *loaded = NULL;
+   link_load_t *links = NULL;
 
    pthread_t accept_thread;
    pthread_attr_t thrAttr;
@@ -563,29 +443,23 @@ int main(int argc, char **argv)
    /* return value for control of opening sockets and saving loop */
    int ret = 0;
 
-   /* load links configuration file */
-   if (!(links = load_links(CONFIG_PATH, links, &link_cnt))) {
-      fprintf(stderr, "Error loading configuration.\n");
-      clear_links(links);
-      return 1;
+   links = (link_load_t *) calloc(1, sizeof(link_load_t));
+   if (!links) {
+      fprintf(stderr, "Error while allocating memory for loaded configuration.\n");
+      goto cleanup;
    }
 
-   loaded = (link_load_t *) malloc(sizeof(link_load_t));
-   if (!loaded) {
-      fprintf(stderr, "Error while allocating memory for loaded configuration.\n")
-      clear_links(links);
-      free(loaded);
-      return 1;
+   /* load links configuration file */
+   if (load_links(CONFIG_PATH, links)) {
+      fprintf(stderr, "Error loading configuration.\n");
+      goto cleanup;
    }
-   loaded->conf = links;
-   loaded->num = link_cnt;
 
    /* allocate memory for stats, based on loaded number of links */
-   if (!(stats = stats_allocator(link_cnt))) {
+   stats = (link_stats_t *) calloc(links->num, sizeof(link_stats_t));
+   if (!stats) {
       fprintf(stderr, "Error while allocating memory for stats.\n");
-      clear_links(links);
-      free(loaded);
-      return 1;
+      goto cleanup;
    }
 
    /* **** TRAP initialization **** */
@@ -629,7 +503,7 @@ int main(int argc, char **argv)
    ret = pthread_create(&accept_thread,
                         &thrAttr,
                         accept_clients,
-                        (void*) loaded);
+                        (void*) links);
 
    if (ret) {
       fprintf(stderr, "Error: Thread creation failed.\n");
@@ -675,20 +549,20 @@ int main(int argc, char **argv)
 
    /* **** Cleanup **** */
 cleanup:
+   if (databuffer) {
+      free(databuffer);
+   }
+
    if (in_tmplt) {
       ur_free_template(in_tmplt);
    }
    if (stats) {
       free(stats);
    }
-   clear_links(links);
-   if (loaded) {
-      free(loaded);
-   }
+   clear_conf_struct(links);
    pthread_attr_destroy(&thrAttr);
    TRAP_DEFAULT_FINALIZATION();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    ur_finalize();
    return 0;
 }
-
