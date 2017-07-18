@@ -177,13 +177,13 @@ int load_links(const char *filePath, link_load_t *links)
    int num = 0;
    ssize_t read;
 
-   if (!links->conf) {
+   if (!links) {
       fprintf(stderr, "load_links: received NULL pointer\n");
       return 1;
    }
 
    links->conf = (link_conf_t *) calloc(size, sizeof(link_conf_t));
-   if (links == NULL) {
+   if (!links->conf) {
       goto failure;
    }
    links->num = 0;
@@ -267,7 +267,7 @@ int load_links(const char *filePath, link_load_t *links)
    return 0;
 
 failure:
-   if (fp >= 0) {
+   if (fp) {
       fclose(fp);   
    }
    
@@ -406,7 +406,7 @@ void *accept_clients(void *arg)
 /* clean up */
 cleanup:
    stop = 1;
-   if (fd) {
+   if (fd >= 0) {
       close(fd);     
    }
 
