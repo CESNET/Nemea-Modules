@@ -56,16 +56,18 @@
 #include <unirec/unirec.h>
 #include <pthread.h>
 #include <sys/socket.h>
-#include <sys/time.h>
+#include <sys/time.h> //do i need this
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <stdlib.h>
 #include "fields.h"
-#include <time.h>
+#include <time.h> //do i need this
 #include <errno.h>
 #include <unistd.h>
 #include <sys/select.h>
+#include <sysrepo.h>
+#include <sysrepo/values.h>
 
 /**
  * Definition of fields used in unirec templates (for both input and output interfaces)
@@ -93,14 +95,8 @@ trap_module_info_t *module_info = NULL;
  */
 #define MODULE_PARAMS(PARAM)
 #define DEF_SOCKET_PATH "/var/run/libtrap/munin_link_traffic"
-#define CONFIG_PATH SYSCONFDIR"/link_traffic/link_traff_conf.cfg"
+#define XPATH_MAX_LEN 100
 #define CONFIG_VALUES 4 /* Definition of how many values link's config has. */
-/* Definition of config attributes */
-#define LINK_NUM 		      1
-#define LINK_NAME       	2
-#define LINK_UR_FIELD		3
-#define LINK_COL		      4
-#define CONFIG_VALUES      4 //Definition of how many values link's config has.
 
 static volatile int stop = 0;
 
@@ -125,13 +121,13 @@ typedef struct link_conf {
    int         m_num;        /*!int number of link*/
    char        *m_name;      /*!string name of link*/
    char        *m_ur_field;  /*!string link bit field of link*/
-   int         m_color;      /*!int represents hex value of link's color*/
+   uint32_t    m_color;      /*!int represents hex value of link's color*/
 } link_conf_t;
 
 /* structure used for loading configuration from file and passing it
  * to the thread */
 typedef struct link_loaded {
-   link_conf_t    *conf;    /*! struct of loaded links configuration */
+   link_conf_t    *conf;     /*! struct of loaded links configuration */
    size_t         num;       /*! size_t number of loaded links */
 } link_load_t;
 
@@ -145,7 +141,6 @@ void clear_conf_struct(link_load_t *links)
    if (!links) {
       return;
    }
-
    if (links->conf) {
       for (i = 0; i < links->num; i++) {
          if (links->conf[i].m_name) {
@@ -158,124 +153,10 @@ void clear_conf_struct(link_load_t *links)
 
       }
 
-      free(links->conf);   
+      free(links->conf);
    }
-   
+
    free(links);
-}
-
-/*   *** Parsing link names from config file ***
-*   Function goes through text file line by line and search for specific pattern
-*   input arg: fileName is path to config file, arrayCnt is counter for array and size
-*   stores size of memory for array
-*   */
-int load_links(const char *filePath, link_load_t *links)
-{
-   FILE *fp;
-   char *line = NULL, *tok = NULL, **save_pt1 = NULL, *str1 = NULL;
-   size_t attribute = 0, len = 0, size = 10;
-   int num = 0;
-   ssize_t read;
-
-   if (!links->conf) {
-      fprintf(stderr, "load_links: received NULL pointer\n");
-      return 1;
-   }
-
-   links->conf = (link_conf_t *) calloc(size, sizeof(link_conf_t));
-   if (links == NULL) {
-      goto failure;
-   }
-   links->num = 0;
-
-   printf(">Accessing config file %s.\n", filePath);   
-   fp = fopen(filePath, "r");
-   if (!fp) {
-      fprintf(stderr, "Error while opening config file %s\n", filePath);
-      goto failure;
-   }
-
-   /* start parsig csv config here. */
-   while ((read = getline(&line, &len, fp)) != -1) {
-      if (links->num >= size) { //check if there is enough space allocated
-         size *= 2;
-         link_conf_t *tmp = (link_conf_t *)
-                             realloc(links->conf, size * sizeof(link_conf_t));
-         if (!tmp) {
-            goto failure;
-         }
-
-         links->conf = tmp;
-      }
-
-      for (attribute = LINK_NUM, str1 = line; ;attribute++, str1 = NULL) {
-         tok = strtok_r(str1, ",", save_pt1);
-         if (tok == NULL) {
-             break;
-         }
-
-         switch (attribute) {
-         case LINK_NUM: //parsing link number
-            num = 0;
-            if (sscanf(tok, "%d", &num) == EOF) {
-               fprintf(stderr, ">config parser error: parsing number failed!");
-               goto failure;
-            }
-            links->conf[links->num].m_num = num;
-            break;
-
-         case LINK_NAME: //parsing link name
-            links->conf[links->num].m_name  = (char*) calloc(sizeof(char), strlen(tok) + 1);
-            if (!links->conf[links->num].m_name) {
-               goto failure;
-            }
-
-            memcpy(links->conf[links->num].m_name, tok, strlen(tok));
-            break;
-
-         case LINK_UR_FIELD: //parsing UR_FIELD
-            links->conf[links->num].m_ur_field  = (char*) calloc(sizeof(char), strlen(tok) + 1);
-            if (!links->conf[links->num].m_ur_field) {
-               goto failure;
-            }
-
-            memcpy(links->conf[links->num].m_ur_field, tok, strlen(tok));
-            break;
-
-         case LINK_COL: //parsing line color
-            num = 0;
-            if (sscanf(tok, "%d", &num) == EOF) {
-               fprintf(stderr, ">config parser error: parsing number failed!");
-               goto failure;
-            }
-            links->conf[links->num].m_color = num;
-            break;
-         }
-      }
-      links->num++;
-      free(line);
-      line = NULL;
-      len = 0;
-   }
-
-   fclose(fp);
-   if (line) {
-      free(line);   
-   }
-
-   printf(">Configuration success.\n");
-   return 0;
-
-failure:
-   if (fp >= 0) {
-      fclose(fp);   
-   }
-   
-   if (line) {
-      free(line);   
-   }
-
-   return 1;
 }
 
 /**
@@ -300,13 +181,12 @@ size_t header_len = 0;
 int prepare_data(link_load_t *links)
 {
    size_t i = 0, size;
-
    if (databuffer == NULL) {
-      databuffer = calloc(4096, sizeof(char));
+      databuffer_size = 4096;
+      databuffer = calloc(databuffer_size, sizeof(char));
       if (databuffer == NULL) {
          return 0;
       }
-      databuffer_size = 4096;
       header_len = 0;
 
       for (i = 0; i < links->num; i++) {
@@ -407,7 +287,7 @@ void *accept_clients(void *arg)
 cleanup:
    stop = 1;
    if (fd) {
-      close(fd);     
+      close(fd);
    }
 
    pthread_exit(0);
@@ -432,11 +312,143 @@ void count_stats (uint64_t link,
    return;
 }
 
+const char *ev_to_str(sr_notif_event_t ev) {
+    switch (ev) {
+    case SR_EV_VERIFY:
+        return "verify";
+    case SR_EV_APPLY:
+        return "apply";
+    case SR_EV_ABORT:
+    default:
+        return "abort";
+    }
+}
+
+static int get_links_number(sr_session_ctx_t *session, const char *module_name, size_t *num)
+{
+   sr_val_t *values = NULL;
+   int ret = SR_ERR_OK;
+   char select_xpath[XPATH_MAX_LEN];
+   snprintf(select_xpath, XPATH_MAX_LEN, "/%s:links/*", module_name);
+
+   ret = sr_get_items(session, select_xpath, &values, num);
+   if (SR_ERR_OK != ret) {
+       printf("Error by sr_get_items: %s\n", sr_strerror(ret));
+       return ret;
+   }
+   printf("Number of links in configuration is: %zu\n", *num);
+
+   sr_free_values(values, *num);
+   return ret;
+}
+
+static int get_config(sr_session_ctx_t *session, const char *module_name, const int i, link_load_t *links)
+{
+   sr_val_t *value = NULL;
+   int ret = 0;
+   char select_xpath[XPATH_MAX_LEN];
+
+   /* getting link name */
+   snprintf(select_xpath, XPATH_MAX_LEN, "/%s:links/link[number='%d']/name", module_name, i);
+   ret = sr_get_item(session, select_xpath, &value);
+   if (SR_ERR_OK != ret) {
+       printf("Error by sr_get_item: %s\n", sr_strerror(ret));
+      return ret;
+   }
+   if(value->type == SR_STRING_T){
+      links->conf[i].m_name = strdup(value->data.string_val);
+      printf("Link: %s\n", links->conf[i].m_name);
+   } else if (value->type == SR_UINT8_T){
+      printf("It's an uint8: %d\n", value->data.uint8_val);
+   }
+   sr_free_val(value);
+
+   /* getting link color */
+   snprintf(select_xpath, XPATH_MAX_LEN, "/%s:links/link[number='%d']/color", module_name, i);
+   ret = sr_get_item(session, select_xpath, &value);
+   if (SR_ERR_OK != ret) {
+       printf("Error by sr_get_item: %s\n", sr_strerror(ret));
+      return ret;
+   }
+   if(value->type == SR_STRING_T){
+      uint32_t hex;
+      sscanf(value->data.string_val, "%"SCNx32, &hex);
+      links->conf[i].m_color = hex;
+      printf("---->%x\n", links->conf[i].m_color);
+   } else if (value->type == SR_UINT8_T){
+      printf("It's an uint8: %d\n", value->data.uint8_val);
+   }
+   sr_free_val(value);
+   return ret;
+}
+
+/*   *** Parsing link names from sysrepo ***
+*
+*   */
+int load_links(sr_session_ctx_t *session, const char *module_name, link_load_t *links)
+{
+   printf("Loading configuration.\n");
+   int ret = 0;
+
+   ret = get_links_number(session, module_name, &(links->num));
+   if (SR_ERR_OK != ret) {
+      fprintf(stderr, "load_links: Couldn't retrieve number of links.\n");
+      return ret;
+   }
+
+   links->conf = (link_conf_t *) calloc(links->num, sizeof(link_conf_t));
+   if (links->conf == NULL) {
+      fprintf(stderr, "load_links: Failed to initialise configuration memory.\n");
+      return 1;
+   }
+
+   for(int i = 0; i < links->num; i++){
+      get_config(session, module_name, i, links);
+   }
+   return 0;
+}
+
+static int module_change_cb(sr_session_ctx_t *session, const char *module_name, sr_notif_event_t event, void *change_flag)
+{
+   link_load_t *links = (link_load_t *) change_flag;
+   int ret = 0;
+   printf("I am in the callback function.\n");
+   printf("Loading new config: \n");
+   clear_conf_struct(links);
+   links = (link_load_t *) calloc(1, sizeof(link_load_t));
+   if (!links) {
+      fprintf(stderr, "Error: allocating memory for loaded configuration.\n");
+      return ret;
+   }
+
+   ret = load_links(session, module_name, links);
+   if (SR_ERR_OK != ret) {
+      fprintf(stderr, "Error while loading config from sysrepo.\n");
+      return ret;
+   }
+//   if (stats) {
+//      free(stats);
+//   }
+//   /* allocate memory for stats, based on loaded number of links */
+//   stats = (link_stats_t *) calloc(links->num, sizeof(link_stats_t));
+//   if (!stats) {
+//      fprintf(stderr, "Error while allocating memory for stats.\n");
+//      return 1;
+//   }
+
+   return SR_ERR_OK;
+}
+
 int main(int argc, char **argv)
 {
    signed char opt;
    ur_template_t *in_tmplt = NULL;
    link_load_t *links = NULL;
+
+   sr_conn_ctx_t *connection = NULL;
+   sr_session_ctx_t *session = NULL;
+   sr_subscription_ctx_t *subscription = NULL;
+   char *module_name = "link-traffic";
 
    pthread_t accept_thread;
    pthread_attr_t thrAttr;
@@ -445,25 +457,6 @@ int main(int argc, char **argv)
 
    /* return value for control of opening sockets and saving loop */
    int ret = 0;
-
-   links = (link_load_t *) calloc(1, sizeof(link_load_t));
-   if (!links) {
-      fprintf(stderr, "Error while allocating memory for loaded configuration.\n");
-      goto cleanup;
-   }
-
-   /* load links configuration file */
-   if (load_links(CONFIG_PATH, links)) {
-      fprintf(stderr, "Error loading configuration.\n");
-      goto cleanup;
-   }
-
-   /* allocate memory for stats, based on loaded number of links */
-   stats = (link_stats_t *) calloc(links->num, sizeof(link_stats_t));
-   if (!stats) {
-      fprintf(stderr, "Error while allocating memory for stats.\n");
-      goto cleanup;
-   }
 
    /* **** TRAP initialization **** */
 
@@ -503,14 +496,56 @@ int main(int argc, char **argv)
       goto cleanup;
    }
 
+   /* connect to sysrepo */
+   ret = sr_connect("link_traffic", SR_CONN_DEFAULT, &connection);
+   if (SR_ERR_OK != ret) {
+      fprintf(stderr, "Error: sr_connect to sysrepo: %s\n", sr_strerror(ret));
+      goto cleanup;
+   }
+
+   /* start session */
+   ret = sr_session_start(connection, SR_DS_STARTUP, SR_SESS_DEFAULT, &session);
+   if (SR_ERR_OK != ret) {
+      fprintf(stderr, "Error: sysrepo sr_session_start: %s\n", sr_strerror(ret));
+      goto cleanup;
+   }
+
+   ret = sr_module_change_subscribe(session, module_name, module_change_cb, links,
+           0, SR_SUBSCR_DEFAULT, &subscription);
+   if (SR_ERR_OK != ret) {
+       fprintf(stderr, "Error: sysrepo sr_module_change_subscribe: %s\n", sr_strerror(ret));
+       goto cleanup;
+   }
+
+   links = (link_load_t *) calloc(1, sizeof(link_load_t));
+   if (!links) {
+      fprintf(stderr, "Error: allocating memory for loaded configuration.\n");
+      return 1;
+   }
+
+   ret = load_links(session, module_name, links);
+   if (SR_ERR_OK != ret) {
+      fprintf(stderr, "Error while loading config from sysrepo.\n");
+      return 1;
+   }
+
+   //TODO LOCK IT UP MAAAAN
+
    ret = pthread_create(&accept_thread,
                         &thrAttr,
                         accept_clients,
-                        (void*) links);
+                        (void *) links);
 
    if (ret) {
       fprintf(stderr, "Error: Thread creation failed.\n");
       goto cleanup;
+   }
+
+   /* allocate memory for stats, based on loaded number of links */
+   stats = (link_stats_t *) calloc(links->num, sizeof(link_stats_t));
+   if (!stats) {
+      fprintf(stderr, "Error while allocating memory for stats.\n");
+      return 1;
    }
 
    /* **** Main processing loop **** */
@@ -542,27 +577,36 @@ int main(int argc, char **argv)
             break;
          }
       }
-      /* get from what collecto data came and in what direction the flow
+      /* get from what collector data came and in what direction the flow
        * was comming */
       link_index = __builtin_ctzll(ur_get(in_tmplt, in_rec, F_LINK_BIT_FIELD));
       direction = ur_get(in_tmplt, in_rec, F_DIR_BIT_FIELD);
       /* save data according to information got by the code above */
       count_stats(link_index, direction, in_tmplt, in_rec);
    }
-
    pthread_cancel(accept_thread);
    /* **** Cleanup **** */
 cleanup:
    if (databuffer) {
       free(databuffer);
    }
-
    if (in_tmplt) {
       ur_free_template(in_tmplt);
    }
    if (stats) {
       free(stats);
    }
+   /* sysrepo cleanup */
+   if (NULL != subscription) {
+      sr_unsubscribe(session, subscription);
+   }
+   if (NULL != session) {
+      sr_session_stop(session);
+   }
+   if (NULL != connection) {
+      sr_disconnect(connection);
+   }
+
    clear_conf_struct(links);
    pthread_attr_destroy(&thrAttr);
    TRAP_DEFAULT_FINALIZATION();

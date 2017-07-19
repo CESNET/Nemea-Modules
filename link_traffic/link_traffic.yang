@@ -1,0 +1,30 @@
+module link-traffic {
+   namespace "urn:ietf:xml:ns:yang:link_traffic";
+   prefix link_traffic;
+   organization "CEZNET, z.s.p.o.";
+   contact "hlavaj20@fit.cvut.cz";
+   description "Module checks running links and counts traffic on them.";
+   revision "2017-08-17" {
+      description "Initial revision.";
+   }
+
+   container links {
+      description "Links configuration parameters.";
+      list link {
+         key "number";
+         description "List of links on the collector.";
+         leaf number {
+            type uint8;
+            description "Link number, used for internal purposes.";
+         }
+         leaf name {
+            type string;
+            description "Name of link.";
+         }
+         leaf color {
+            type string;
+            description "Color for munin graphs.";
+         }
+      }
+   }
+} //TODO enabled linx
