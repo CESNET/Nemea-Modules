@@ -1,14 +1,28 @@
 # Link_traffic module - README
 
 ## Description
-This module processes flow data (sums flows, bytes, packets for each LINK_BIT_FIELD). Munin plugin then connects to it via UNIX socket to create graphs.
+link_traffic processes flow data (sums flows, bytes, packets for each LINK_BIT_FIELD). Munin plugin then connects to it via UNIX socket to create graphs.
+
+Module is configured by sysrepo. Data model is in 'link_traffic.yang' and basic configuration in 'link_traffic.data.xml'. More about sysrepo configuration below.
 
 ## Interfaces
 - Input: 1
 - Output: 0
 
 ## Module configuration
-To configure link_traffic module change link_traff_conf.cfg.example and remove ".example" suffix. In this icnluded file is CESNET's configuration for CESNET2 as an inspiration. 
+This module is configured by sysrepo. You load yang module to your sysrepo datastore by:
+```
+sudo sysrepoctl --install --module=link-traffic --yang=link_traffic.yang --owner=user:user --permission=644
+```
+To upload initial configuration to startup datastore use:
+```
+sysrepocfg --datastore=startup --import=link_traffic.data.xml --format=xml link-traffic
+```
+Then if you want to edit running configuration while the module is running use:
+```
+sysrepocfg -e vim link-traffic
+```
+link_traffic will check if you configuration is valid and if it is, it will change the output accordingly.
 
 ## Parameters
 ### Common TRAP parameters

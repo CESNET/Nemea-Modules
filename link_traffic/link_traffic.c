@@ -547,7 +547,6 @@ int main(int argc, char **argv)
       goto cleanup;
    }
 
-   pthread_mutex_lock(&lock_links);
    links = (link_load_t *) calloc(1, sizeof(link_load_t));
    if (!links) {
       fprintf(stderr, "Error: allocating memory for loaded configuration.\n");
@@ -556,7 +555,6 @@ int main(int argc, char **argv)
 
    /* load link configuration from sysrepo */
    ret = load_links(session, module_name, links);
-   pthread_mutex_unlock(&lock_links);
    if (SR_ERR_OK != ret) {
       fprintf(stderr, "Error while loading config from sysrepo.\n");
       goto cleanup;
