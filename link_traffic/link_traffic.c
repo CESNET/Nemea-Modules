@@ -56,13 +56,11 @@
 #include <unirec/unirec.h>
 #include <pthread.h>
 #include <sys/socket.h>
-#include <sys/time.h> //do i need this
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/un.h>
 #include <stdlib.h>
 #include "fields.h"
-#include <time.h> //do i need this
 #include <errno.h>
 #include <unistd.h>
 #include <sys/select.h>
@@ -128,6 +126,9 @@ typedef struct link_loaded {
    size_t         num;       /*!size_t number of loaded links */
 } link_load_t;
 
+/* For locking access to links struct */
+pthread_mutex_t lock_links;
+
 /**
  * Clears all but the initial pointer of link_load_t struct.
  */
@@ -138,18 +139,26 @@ void clear_conf_struct(link_load_t *links)
    if (!links) {
       return;
    }
+   pthread_mutex_lock(&lock_links);
    if (links->conf) {
       for (i = 0; i < links->num; i++) {
          if (links->conf[i].m_name) {
             free(links->conf[i].m_name);
+            links->conf[i].m_name = NULL;
          }
          if (links->conf[i].m_ur_field) {
             free(links->conf[i].m_ur_field);
+            links->conf[i].m_ur_field = NULL;
          }
       }
       free(links->conf);
-      free(links->stats);
+      links->conf = NULL;
+      if(links->stats){
+         free(links->stats);
+         links->stats = NULL;
+      }
    }
+   pthread_mutex_unlock(&lock_links);
 }
 
 /**
@@ -175,18 +184,36 @@ int prepare_data(link_load_t *links)
 {
    /* every time somebody connects to socket header and data is created again \
       could be improved in the future for header to change only if config changes. */
-   size_t i = 0, size;
-   /* TODO dynamically get size of buffer -- now limit for name of link \
-   is 100 characters then starts to behave strangely, this could be \
-   limited in yang model, so no higher size. Is it a good practice though? */
-   databuffer_size = 208 * links->num;
-   databuffer = calloc(databuffer_size, sizeof(char));
+   size_t i = 0, size = 0;
+   databuffer_size = 0;
+   header_len = 0;
+
+   /* determining size of the buffer needed for output text */
+   pthread_mutex_lock(&lock_links);
+   for (i = 0; i < links->num; i++) {
+      databuffer_size += snprintf(NULL, 0,
+                             "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,\n%"
+                             PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32",",
+                             links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name,
+                             links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name,
+                             links->stats[i].bytes_in, links->stats[i].flows_in, links->stats[i].packets_in,
+                             links->stats[i].bytes_out, links->stats[i].flows_out, links->stats[i].packets_out);
+   }
+   pthread_mutex_unlock(&lock_links);
+
+   /* freeing any previous databuffer */
+   if (databuffer) {
+      free(databuffer);
+   }
+
+   databuffer = NULL;
+   databuffer = calloc(databuffer_size + 2, sizeof(char)); /* the '+ 2' is for last \n and \0 */
    if (databuffer == NULL) {
       fprintf(stderr, "prepare_data: Cannot allocate memory for output data string.\n");
       return 0;
    }
-   header_len = 0;
 
+   pthread_mutex_lock(&lock_links);
    for (i = 0; i < links->num; i++) {
       header_len += snprintf(databuffer + header_len, databuffer_size - header_len,
                              "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,",
@@ -202,6 +229,7 @@ int prepare_data(link_load_t *links)
                        links->stats[i].bytes_in, links->stats[i].flows_in, links->stats[i].packets_in,
                        links->stats[i].bytes_out, links->stats[i].flows_out, links->stats[i].packets_out);
    }
+   pthread_mutex_unlock(&lock_links);
    databuffer[size - 1] = '\n';
    databuffer[size] = '\0';
 
@@ -319,18 +347,6 @@ void count_stats (uint64_t link,
    return;
 }
 
-const char *ev_to_str(sr_notif_event_t ev) {
-    switch (ev) {
-    case SR_EV_VERIFY:
-        return "verify";
-    case SR_EV_APPLY:
-        return "apply";
-    case SR_EV_ABORT:
-    default:
-        return "abort";
-    }
-}
-
 /*
  * Getting number of links from sysrepo.
  */
@@ -355,37 +371,48 @@ static int get_links_number(sr_session_ctx_t *session, const char *module_name, 
 /*
  * Loading configuration of one leaf of leaf list to stats[i] from sysrepo.
  */
-static int get_config(sr_session_ctx_t *session, const char *module_name, const int i, link_load_t *links)
+static int get_config(sr_session_ctx_t *session, const char *module_name, link_load_t *links)
 {
    sr_val_t *value = NULL;
-   int ret = 0;
+   sr_val_iter_t *iter = NULL;
+   int ret = 0, i = 0;
    char select_xpath[XPATH_MAX_LEN];
 
    /* getting link name */
-   snprintf(select_xpath, XPATH_MAX_LEN, "/%s:links/link[link_id='%d']/name", module_name, i);
-   ret = sr_get_item(session, select_xpath, &value);
+   snprintf(select_xpath, XPATH_MAX_LEN, "/%s:links/link/name", module_name);
+   ret = sr_get_items_iter(session, select_xpath, &iter);
    if (SR_ERR_OK != ret) {
-       printf("Error by sr_get_item: %s\n", sr_strerror(ret));
-      return ret;
+      return 1;
    }
-   if(value->type == SR_STRING_T){
-      links->conf[i].m_name = strdup(value->data.string_val);
+
+   while (sr_get_item_next(session, iter, &value) == SR_ERR_OK){
+      if(value->type == SR_STRING_T){
+         links->conf[i].m_name = strdup(value->data.string_val);
+      }
+      sr_free_val(value);
+      i++;
    }
-   sr_free_val(value);
+   sr_free_val_iter(iter);
 
    /* getting link color */
-   snprintf(select_xpath, XPATH_MAX_LEN, "/%s:links/link[link_id='%d']/color", module_name, i);
-   ret = sr_get_item(session, select_xpath, &value);
+   i = 0;
+   snprintf(select_xpath, XPATH_MAX_LEN, "/%s:links/link/color", module_name);
+   ret = sr_get_items_iter(session, select_xpath, &iter);
    if (SR_ERR_OK != ret) {
-       printf("Error by sr_get_item: %s\n", sr_strerror(ret));
-      return ret;
+      return 1;
    }
+
+   while (sr_get_item_next(session, iter, &value) == SR_ERR_OK){
    if(value->type == SR_STRING_T){
       uint32_t hex;
       sscanf(value->data.string_val, "%"SCNx32, &hex);
       links->conf[i].m_color = hex;
-   }
+      }
    sr_free_val(value);
+           i++;
+   }
+   sr_free_val_iter(iter);
+
    return ret;
 }
 
@@ -415,9 +442,7 @@ int load_links(sr_session_ctx_t *session, const char *module_name, link_load_t *
       return 1;
    }
 
-   for(int i = 0; i < links->num; i++){
-      get_config(session, module_name, i, links);
-   }
+   get_config(session, module_name, links);
    return 0;
 }
 
@@ -427,13 +452,27 @@ static int module_change_cb(sr_session_ctx_t *session, const char *module_name, 
    int ret = 0;
    clear_conf_struct(links);
 
+   switch (event) {
+   case SR_EV_VERIFY:
+      fprintf(stdout, "Verifying configuration.\n");
+      return 0;
+   case SR_EV_APPLY:
+      printf("New config has been loaded from sysrepo.\n");
+      break;
+   case SR_EV_ABORT:
+   default:
+      fprintf(stderr, "Could not verify configuration.\n");
+      return 1;
+   }
+
+   pthread_mutex_lock(&lock_links);
    ret = load_links(session, module_name, links);
+   pthread_mutex_unlock(&lock_links);
    if (SR_ERR_OK != ret) {
       fprintf(stderr, "Error while loading config from sysrepo.\n");
       return ret;
    }
 
-   printf("New config has been loaded from sysrepo.\n");
    return SR_ERR_OK;
 }
 
@@ -508,17 +547,19 @@ int main(int argc, char **argv)
       goto cleanup;
    }
 
+   pthread_mutex_lock(&lock_links);
    links = (link_load_t *) calloc(1, sizeof(link_load_t));
    if (!links) {
       fprintf(stderr, "Error: allocating memory for loaded configuration.\n");
-      return 1;
+      goto cleanup;
    }
 
    /* load link configuration from sysrepo */
    ret = load_links(session, module_name, links);
+   pthread_mutex_unlock(&lock_links);
    if (SR_ERR_OK != ret) {
       fprintf(stderr, "Error while loading config from sysrepo.\n");
-      return 1;
+      goto cleanup;
    }
 
    /* set up subscription to sysrepo */
@@ -575,7 +616,9 @@ int main(int argc, char **argv)
       link_index = __builtin_ctzll(ur_get(in_tmplt, in_rec, F_LINK_BIT_FIELD));
       direction = ur_get(in_tmplt, in_rec, F_DIR_BIT_FIELD);
       /* save data according to information got by the code above */
+      pthread_mutex_lock(&lock_links);
       count_stats(link_index, direction, in_tmplt, in_rec, links->stats);
+      pthread_mutex_unlock(&lock_links);
    }
    stop = 1;
    pthread_join(accept_thread, NULL);
