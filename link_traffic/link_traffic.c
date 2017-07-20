@@ -173,23 +173,27 @@ size_t header_len = 0;
  */
 int prepare_data(link_load_t *links)
 {
+   /* every time somebody connects to socket header and data is created again \
+      could be improved in the future for header to change only if config changes. */
    size_t i = 0, size;
+   /* TODO dynamically get size of buffer -- now limit for name of link \
+   is 100 characters then starts to behave strangely, this could be \
+   limited in yang model, so no higher size. Is it a good practice though? */
+   databuffer_size = 208 * links->num;
+   databuffer = calloc(databuffer_size, sizeof(char));
    if (databuffer == NULL) {
-      databuffer_size = 4096;
-      databuffer = calloc(databuffer_size, sizeof(char));
-      if (databuffer == NULL) {
-         return 0;
-      }
-      header_len = 0;
-
-      for (i = 0; i < links->num; i++) {
-         header_len += snprintf(databuffer + header_len, databuffer_size - header_len,
-                                "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,",
-                                 links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name,
-                                 links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name);
-      }
-      databuffer[header_len - 1] = '\n';
+      fprintf(stderr, "prepare_data: Cannot allocate memory for output data string.\n");
+      return 0;
    }
+   header_len = 0;
+
+   for (i = 0; i < links->num; i++) {
+      header_len += snprintf(databuffer + header_len, databuffer_size - header_len,
+                             "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,",
+                              links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name,
+                              links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name);
+   }
+   databuffer[header_len - 1] = '\n';
 
    size = header_len;
    for (i = 0; i < links->num; i++) {
@@ -285,7 +289,7 @@ void *accept_clients(void *arg)
 /* clean up */
 cleanup:
    stop = 1;
-   trap_terminate(); //TODO wtf je tohle, muze to tu vubec byt
+   trap_terminate();
    if (fd) {
       close(fd);
    }
@@ -525,7 +529,7 @@ int main(int argc, char **argv)
        goto cleanup;
    }
 
-   //TODO LOCK IT UP MAAAAN
+   //TODO thread locking for safe access to links structure
 
    ret = pthread_create(&accept_thread,
                         &thrAttr,
@@ -573,7 +577,8 @@ int main(int argc, char **argv)
       /* save data according to information got by the code above */
       count_stats(link_index, direction, in_tmplt, in_rec, links->stats);
    }
-   pthread_cancel(accept_thread);
+   stop = 1;
+   pthread_join(accept_thread, NULL);
    /* **** Cleanup **** */
 cleanup:
    if (databuffer) {
