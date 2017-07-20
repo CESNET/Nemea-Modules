@@ -96,7 +96,6 @@ trap_module_info_t *module_info = NULL;
 #define MODULE_PARAMS(PARAM)
 #define DEF_SOCKET_PATH "/var/run/libtrap/munin_link_traffic"
 #define XPATH_MAX_LEN 100
-#define CONFIG_VALUES 4 /* Definition of how many values link's config has. */
 
 static volatile int stop = 0;
 
@@ -106,12 +105,12 @@ static volatile int stop = 0;
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 typedef struct link_stats {
-   volatile uint64_t flows_in;
-   volatile uint32_t packets_in;
-   volatile uint64_t bytes_in;
-   volatile uint64_t flows_out;
-   volatile uint32_t packets_out;
-   volatile uint64_t bytes_out;
+   volatile uint64_t flows_in; /*!uint64_t incomming flows */
+   volatile uint32_t packets_in; /*!uint32_t incomming packets */
+   volatile uint64_t bytes_in; /*!uint64_t incomming bytes */
+   volatile uint64_t flows_out; /*!uint64_t outgoing flows */
+   volatile uint32_t packets_out; /*!uint32_t outgoing packets */
+   volatile uint64_t bytes_out; /*!uint64_t outgoing bytes */
 } link_stats_t;
 
 typedef struct link_conf {
@@ -121,23 +120,22 @@ typedef struct link_conf {
    uint32_t    m_color;      /*!int represents hex value of link's color*/
 } link_conf_t;
 
-/* structure used for loading configuration from file and passing it
+/* structure used for loading configuration and passing it
  * to the thread */
 typedef struct link_loaded {
-   link_conf_t    *conf;     /*! struct of loaded links configuration */
-   link_stats_t   *stats;    /*| array of link_stats_t structure for statistics */
-   size_t         num;       /*! size_t number of loaded links */
+   link_conf_t    *conf;     /*!struct of loaded links configuration */
+   link_stats_t   *stats;    /*!array of link_stats_t structure for statistics */
+   size_t         num;       /*!size_t number of loaded links */
 } link_load_t;
 
-/*! @brief function that clears link_conf array
- * @return positive value on success otherwise negative
- * */
+/**
+ * Clears all but the initial pointer of link_load_t struct.
+ */
 void clear_conf_struct(link_load_t *links)
 {
    int i;
    /* don't clear when it's empty */
    if (!links) {
-      printf("clear_conf_struct: Nothing to be freed.\n");
       return;
    }
    if (links->conf) {
@@ -152,7 +150,6 @@ void clear_conf_struct(link_load_t *links)
       free(links->conf);
       free(links->stats);
    }
-
 }
 
 /**
@@ -207,6 +204,9 @@ int prepare_data(link_load_t *links)
    return size;
 }
 
+/**
+ * Sending prepared data - string to open socket.
+ */
 void send_to_sock(const int client_fd, char *str)
 {
    size_t size = strlen(str), sent = 0;
@@ -227,6 +227,9 @@ void send_to_sock(const int client_fd, char *str)
    close(client_fd);
 }
 
+/**
+ * Waiting for clients to connect to unix socket.
+ */
 void *accept_clients(void *arg)
 {
    int client_fd;
@@ -282,6 +285,7 @@ void *accept_clients(void *arg)
 /* clean up */
 cleanup:
    stop = 1;
+   trap_terminate(); //TODO wtf je tohle, muze to tu vubec byt
    if (fd) {
       close(fd);
    }
@@ -289,7 +293,9 @@ cleanup:
    pthread_exit(0);
 }
 
-/* adds data to global array of link_stats_t structures "statistics[]" */
+/*
+ * Adds data to global array of link_stats_t structures "stats[]".
+ */
 void count_stats (uint64_t link,
                   uint8_t direction,
                   ur_template_t *in_tmplt,
@@ -321,6 +327,9 @@ const char *ev_to_str(sr_notif_event_t ev) {
     }
 }
 
+/*
+ * Getting number of links from sysrepo.
+ */
 static int get_links_number(sr_session_ctx_t *session, const char *module_name, size_t *num)
 {
    sr_val_t *values = NULL;
@@ -339,6 +348,9 @@ static int get_links_number(sr_session_ctx_t *session, const char *module_name, 
    return ret;
 }
 
+/*
+ * Loading configuration of one leaf of leaf list to stats[i] from sysrepo.
+ */
 static int get_config(sr_session_ctx_t *session, const char *module_name, const int i, link_load_t *links)
 {
    sr_val_t *value = NULL;
@@ -354,9 +366,6 @@ static int get_config(sr_session_ctx_t *session, const char *module_name, const 
    }
    if(value->type == SR_STRING_T){
       links->conf[i].m_name = strdup(value->data.string_val);
-      printf("Link: %s\n", links->conf[i].m_name);
-   } else if (value->type == SR_UINT8_T){
-      printf("It's an uint8: %d\n", value->data.uint8_val);
    }
    sr_free_val(value);
 
@@ -371,17 +380,14 @@ static int get_config(sr_session_ctx_t *session, const char *module_name, const 
       uint32_t hex;
       sscanf(value->data.string_val, "%"SCNx32, &hex);
       links->conf[i].m_color = hex;
-      printf("---->%x\n", links->conf[i].m_color);
-   } else if (value->type == SR_UINT8_T){
-      printf("It's an uint8: %d\n", value->data.uint8_val);
    }
    sr_free_val(value);
    return ret;
 }
 
-/*   *** Parsing link names from sysrepo ***
-*
-*   */
+/*
+ * Loading whole configuration from sysrepo to stats[].
+ */
 int load_links(sr_session_ctx_t *session, const char *module_name, link_load_t *links)
 {
    int ret = 0;
@@ -398,6 +404,13 @@ int load_links(sr_session_ctx_t *session, const char *module_name, link_load_t *
       return 1;
    }
 
+   /* allocate memory for stats, based on loaded number of links */
+   links->stats = (link_stats_t *) calloc(links->num, sizeof(link_stats_t));
+   if (!links->stats) {
+      fprintf(stderr, "Error while allocating memory for stats.\n");
+      return 1;
+   }
+
    for(int i = 0; i < links->num; i++){
       get_config(session, module_name, i, links);
    }
@@ -408,7 +421,6 @@ static int module_change_cb(sr_session_ctx_t *session, const char *module_name, 
 {
    link_load_t *links = (link_load_t *) change_flag;
    int ret = 0;
-   printf("Loading new config: \n");
    clear_conf_struct(links);
 
    ret = load_links(session, module_name, links);
@@ -416,13 +428,8 @@ static int module_change_cb(sr_session_ctx_t *session, const char *module_name, 
       fprintf(stderr, "Error while loading config from sysrepo.\n");
       return ret;
    }
-   /* allocate memory for stats, based on loaded number of links */
-   links->stats = (link_stats_t *) calloc(links->num, sizeof(link_stats_t));
-   if (!links->stats) {
-      fprintf(stderr, "Error while allocating memory for stats.\n");
-      return 1;
-   }
 
+   printf("New config has been loaded from sysrepo.\n");
    return SR_ERR_OK;
 }
 
@@ -503,12 +510,14 @@ int main(int argc, char **argv)
       return 1;
    }
 
+   /* load link configuration from sysrepo */
    ret = load_links(session, module_name, links);
    if (SR_ERR_OK != ret) {
       fprintf(stderr, "Error while loading config from sysrepo.\n");
       return 1;
    }
 
+   /* set up subscription to sysrepo */
    ret = sr_module_change_subscribe(session, module_name, module_change_cb, links,
            0, SR_SUBSCR_DEFAULT, &subscription);
    if (SR_ERR_OK != ret) {
@@ -526,13 +535,6 @@ int main(int argc, char **argv)
    if (ret) {
       fprintf(stderr, "Error: Thread creation failed.\n");
       goto cleanup;
-   }
-
-   /* allocate memory for stats, based on loaded number of links */
-   links->stats = (link_stats_t *) calloc(links->num, sizeof(link_stats_t));
-   if (!links->stats) {
-      fprintf(stderr, "Error while allocating memory for stats.\n");
-      return 1;
    }
 
    /* **** Main processing loop **** */
