@@ -1,46 +1,46 @@
 <links xmlns="urn:ietf:xml:ns:yang:link_traffic">
    <link>
-      <number>0</number>
+      <link_id>0</link_id>
       <name>aconet</name>
       <color>490099</color>
    </link>
    <link>
-      <number>1</number>
+      <link_id>1</link_id>
       <name>geant</name>
       <color>008000</color>
    </link>
    <link>
-      <number>2</number>
+      <link_id>2</link_id>
       <name>nix4</name>
       <color>99a0a9</color>
    </link>
    <link>
-      <number>3</number>
+      <link_id>3</link_id>
       <name>nix3</name>
       <color>af69bc</color>
    </link>
    <link>
-      <number>4</number>
+      <link_id>4</link_id>
       <name>pioneer</name>
       <color>ff0000</color>
    </link>
    <link>
-      <number>5</number>
+      <link_id>5</link_id>
       <name>sanet</name>
       <color>1e90ff</color>
    </link>
    <link>
-      <number>6</number>
+      <link_id>6</link_id>
       <name>telia</name>
       <color>776655</color>
    </link>
    <link>
-      <number>7</number>
+      <link_id>7</link_id>
       <name>telia2</name>
       <color>bc9269</color>
    </link>
    <link>
-      <number>8</number>
+      <link_id>8</link_id>
       <name>amsix</name>
       <color>af99dc</color>
    </link>

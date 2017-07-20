@@ -10,7 +10,3 @@ SUBDIRS=munin
 muninsupdir=${nemeasupdir}/munin
 muninsup_DATA=link_traffic.sup
 include ../aminclude.am
-
-confdir=${pkgsysconfdir}/link_traffic
-conf_DATA=link_traff_conf.cfg.example
-

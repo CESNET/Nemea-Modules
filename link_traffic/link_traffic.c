@@ -114,9 +114,6 @@ typedef struct link_stats {
    volatile uint64_t bytes_out;
 } link_stats_t;
 
-/* global dynamic array od link_stats_t structure for statistics */
-link_stats_t *stats;
-
 typedef struct link_conf {
    int         m_num;        /*!int number of link*/
    char        *m_name;      /*!string name of link*/
@@ -128,6 +125,7 @@ typedef struct link_conf {
  * to the thread */
 typedef struct link_loaded {
    link_conf_t    *conf;     /*! struct of loaded links configuration */
+   link_stats_t   *stats;    /*| array of link_stats_t structure for statistics */
    size_t         num;       /*! size_t number of loaded links */
 } link_load_t;
 
@@ -139,6 +137,7 @@ void clear_conf_struct(link_load_t *links)
    int i;
    /* don't clear when it's empty */
    if (!links) {
+      printf("clear_conf_struct: Nothing to be freed.\n");
       return;
    }
    if (links->conf) {
@@ -146,17 +145,14 @@ void clear_conf_struct(link_load_t *links)
          if (links->conf[i].m_name) {
             free(links->conf[i].m_name);
          }
-
          if (links->conf[i].m_ur_field) {
             free(links->conf[i].m_ur_field);
          }
-
       }
-
       free(links->conf);
+      free(links->stats);
    }
 
-   free(links);
 }
 
 /**
@@ -202,8 +198,8 @@ int prepare_data(link_load_t *links)
    for (i = 0; i < links->num; i++) {
       size += snprintf(databuffer + size, databuffer_size - size, "%"
                        PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32",",
-                       stats[i].bytes_in, stats[i].flows_in, stats[i].packets_in,
-                       stats[i].bytes_out, stats[i].flows_out, stats[i].packets_out);
+                       links->stats[i].bytes_in, links->stats[i].flows_in, links->stats[i].packets_in,
+                       links->stats[i].bytes_out, links->stats[i].flows_out, links->stats[i].packets_out);
    }
    databuffer[size - 1] = '\n';
    databuffer[size] = '\0';
@@ -297,7 +293,8 @@ cleanup:
 void count_stats (uint64_t link,
                   uint8_t direction,
                   ur_template_t *in_tmplt,
-                  const void *in_rec
+                  const void *in_rec,
+                  link_stats_t *stats
                  )
 {
    if (direction == 0) {
@@ -349,7 +346,7 @@ static int get_config(sr_session_ctx_t *session, const char *module_name, const 
    char select_xpath[XPATH_MAX_LEN];
 
    /* getting link name */
-   snprintf(select_xpath, XPATH_MAX_LEN, "/%s:links/link[number='%d']/name", module_name, i);
+   snprintf(select_xpath, XPATH_MAX_LEN, "/%s:links/link[link_id='%d']/name", module_name, i);
    ret = sr_get_item(session, select_xpath, &value);
    if (SR_ERR_OK != ret) {
        printf("Error by sr_get_item: %s\n", sr_strerror(ret));
@@ -364,7 +361,7 @@ static int get_config(sr_session_ctx_t *session, const char *module_name, const 
    sr_free_val(value);
 
    /* getting link color */
-   snprintf(select_xpath, XPATH_MAX_LEN, "/%s:links/link[number='%d']/color", module_name, i);
+   snprintf(select_xpath, XPATH_MAX_LEN, "/%s:links/link[link_id='%d']/color", module_name, i);
    ret = sr_get_item(session, select_xpath, &value);
    if (SR_ERR_OK != ret) {
        printf("Error by sr_get_item: %s\n", sr_strerror(ret));
@@ -387,7 +384,6 @@ static int get_config(sr_session_ctx_t *session, const char *module_name, const 
 *   */
 int load_links(sr_session_ctx_t *session, const char *module_name, link_load_t *links)
 {
-   printf("Loading configuration.\n");
    int ret = 0;
 
    ret = get_links_number(session, module_name, &(links->num));
@@ -412,29 +408,20 @@ static int module_change_cb(sr_session_ctx_t *session, const char *module_name, 
 {
    link_load_t *links = (link_load_t *) change_flag;
    int ret = 0;
-   printf("I am in the callback function.\n");
    printf("Loading new config: \n");
    clear_conf_struct(links);
-   links = (link_load_t *) calloc(1, sizeof(link_load_t));
-   if (!links) {
-      fprintf(stderr, "Error: allocating memory for loaded configuration.\n");
-      return ret;
-   }
 
    ret = load_links(session, module_name, links);
    if (SR_ERR_OK != ret) {
       fprintf(stderr, "Error while loading config from sysrepo.\n");
       return ret;
    }
-//   if (stats) {
-//      free(stats);
-//   }
-//   /* allocate memory for stats, based on loaded number of links */
-//   stats = (link_stats_t *) calloc(links->num, sizeof(link_stats_t));
-//   if (!stats) {
-//      fprintf(stderr, "Error while allocating memory for stats.\n");
-//      return 1;
-//   }
+   /* allocate memory for stats, based on loaded number of links */
+   links->stats = (link_stats_t *) calloc(links->num, sizeof(link_stats_t));
+   if (!links->stats) {
+      fprintf(stderr, "Error while allocating memory for stats.\n");
+      return 1;
+   }
 
    return SR_ERR_OK;
 }
@@ -510,13 +497,6 @@ int main(int argc, char **argv)
       goto cleanup;
    }
 
-   ret = sr_module_change_subscribe(session, module_name, module_change_cb, links,
-           0, SR_SUBSCR_DEFAULT, &subscription);
-   if (SR_ERR_OK != ret) {
-       fprintf(stderr, "Error: sysrepo sr_module_change_subscribe: %s\n", sr_strerror(ret));
-       goto cleanup;
-   }
-
    links = (link_load_t *) calloc(1, sizeof(link_load_t));
    if (!links) {
       fprintf(stderr, "Error: allocating memory for loaded configuration.\n");
@@ -527,6 +507,13 @@ int main(int argc, char **argv)
    if (SR_ERR_OK != ret) {
       fprintf(stderr, "Error while loading config from sysrepo.\n");
       return 1;
+   }
+
+   ret = sr_module_change_subscribe(session, module_name, module_change_cb, links,
+           0, SR_SUBSCR_DEFAULT, &subscription);
+   if (SR_ERR_OK != ret) {
+       fprintf(stderr, "Error: sysrepo sr_module_change_subscribe: %s\n", sr_strerror(ret));
+       goto cleanup;
    }
 
    //TODO LOCK IT UP MAAAAN
@@ -542,8 +529,8 @@ int main(int argc, char **argv)
    }
 
    /* allocate memory for stats, based on loaded number of links */
-   stats = (link_stats_t *) calloc(links->num, sizeof(link_stats_t));
-   if (!stats) {
+   links->stats = (link_stats_t *) calloc(links->num, sizeof(link_stats_t));
+   if (!links->stats) {
       fprintf(stderr, "Error while allocating memory for stats.\n");
       return 1;
    }
@@ -582,7 +569,7 @@ int main(int argc, char **argv)
       link_index = __builtin_ctzll(ur_get(in_tmplt, in_rec, F_LINK_BIT_FIELD));
       direction = ur_get(in_tmplt, in_rec, F_DIR_BIT_FIELD);
       /* save data according to information got by the code above */
-      count_stats(link_index, direction, in_tmplt, in_rec);
+      count_stats(link_index, direction, in_tmplt, in_rec, links->stats);
    }
    pthread_cancel(accept_thread);
    /* **** Cleanup **** */
@@ -592,9 +579,6 @@ cleanup:
    }
    if (in_tmplt) {
       ur_free_template(in_tmplt);
-   }
-   if (stats) {
-      free(stats);
    }
    /* sysrepo cleanup */
    if (NULL != subscription) {
@@ -608,8 +592,11 @@ cleanup:
    }
 
    clear_conf_struct(links);
+   if (links){
+      free(links);
+   }
    pthread_attr_destroy(&thrAttr);
-   TRAP_DEFAULT_FINALIZATION();
+   TRAP_DEFAULT_FINALIZATION()
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    ur_finalize();
    return 0;
