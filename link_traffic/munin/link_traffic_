@@ -8,14 +8,16 @@ import socket
 import sys
 import os
 import time
+import json
 
 SOCKET_PATH = '/var/run/libtrap/munin_link_traffic'
 
 # temporary file with downloaded data
 data_temp_file = "/tmp/munin_link_traffic_data.txt"
+cfg_temp_file = "/tmp/munin_link_traffic_cfg.json"
 
 # munin interval, if data file is older then munin_interval, get newer
-munin_interval = 3
+munin_interval = 60
 
 #connecting to socket if created by C module link_flows
 def receiveData():
@@ -33,6 +35,33 @@ def receiveData():
         if tmp == "":
             break
     return data
+
+#reading config for line colors from sysrepo
+def getColors():
+    current_time = time.time()
+    last_time = 0
+    try:
+        last_time = os.stat(cfg_temp_file).st_mtime
+    except:
+        sys.stderr.write("%s not found or cannot read info.\n" % data)
+        pass
+    if (current_time - last_time) > munin_interval:
+        config = os.system("sysrepocfg --export=%s --format=json --datastore=running link-traffic" % cfg_temp_file)
+        if config != 0:
+            sys.stderr.write("Loading startup configuration!\n")
+            config = os.system("sysrepocfg --export=%s --format=json --datastore=startup link-traffic" % cfg_temp_file)
+            if config != 0:
+                print("Could not read any configuration. Exiting!\n")
+                sys.exit(1)
+
+    with open(cfg_temp_file) as f:
+        data = json.load(f)
+        data = data["link-traffic:links"]
+        data = data["link"]
+        col = {}
+        for item in data:
+            col.update({item["name"]:item["color"]})
+        return col
 
 def getData():
     """Returns the list of strings (lines).
@@ -66,17 +95,7 @@ receiveData().
     return data
 
 # Color settings (name of link: color in RRGGBB)
-col = {
-    "aconet":  "490099",
-    "geant":   "008000",
-    "nix2":    "99a0A9",
-    "nix3":    "af69bc",
-    "pioneer": "ff0000",
-    "sanet":   "1e90ff",
-    "telia":   "776655",
-    "telia2":  "bc9269",
-    "amsix":   "af99dc"
-}
+col = getColors()
 
 #configures munin graph for the munin-node
 def getConfig():
