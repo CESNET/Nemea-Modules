@@ -17,7 +17,7 @@ data_temp_file = "/tmp/munin_link_traffic_data.txt"
 cfg_temp_file = "/tmp/munin_link_traffic_cfg.json"
 
 # munin interval, if data file is older then munin_interval, get newer
-munin_interval = 60
+munin_interval = 3
 
 #connecting to socket if created by C module link_flows
 def receiveData():
