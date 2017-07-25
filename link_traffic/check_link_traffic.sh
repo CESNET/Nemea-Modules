@@ -17,11 +17,6 @@ if [ -z "$curval" ]; then
    exit 2
 fi
 
-if [ `echo "$headers" | wc -w` -ne `echo "$curval" | wc -w` ]; then
-   echo "Configuration has changed.\n"
-   exit 1
-fi
-
 #checking if there is any previous value and creating one if there was not
 if [ -e "$pf" ]; then
   prevval=`cat "$pf" | head -2`
@@ -33,6 +28,11 @@ prevtime="`echo "$prevval" | awk 'FNR==2'`"
 prevval="`echo "$prevval" | awk 'FNR==1'`"
 echo -e "$curval\n$curtime" > "$pf"
 down_flag=0
+
+if [ `echo "$headers" | wc -w` -ne `echo "$prevval" | wc -w` ]; then
+   echo "Configuration has changed."
+   exit 1
+fi
 
 #comparing values in curval and prev val
 #if they are the same shell exits with critical 2 (one link is down)
