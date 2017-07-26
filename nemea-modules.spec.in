@@ -79,6 +79,7 @@ ldconfig
 %{_docdir}/nemea-modules/*/*
 %config(noreplace) %{_sysconfdir}/nemea/email_reporter/example.cfg
 %config(noreplace) %{_sysconfdir}/nemea/email_reporter/generic.cfg
+%config(noreplace) %{_sysconfdir}/nemea/link_traffic/link_traff_conf.cfg.example
 %config(noreplace) %{_datarootdir}/nemea-supervisor/munin/link_traffic.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/munin/proto_traffic.sup
 %config(noreplace) %{_sysconfdir}/bash_completion.d/flow_meter.bash
