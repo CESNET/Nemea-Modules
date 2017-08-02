@@ -158,9 +158,9 @@ void clear_conf_struct(link_load_t *links)
 
       }
 
-      free(links->conf);   
+      free(links->conf);
    }
-   
+
    free(links);
 }
 
@@ -188,7 +188,7 @@ int load_links(const char *filePath, link_load_t *links)
    }
    links->num = 0;
 
-   printf(">Accessing config file %s.\n", filePath);   
+   printf(">Accessing config file %s.\n", filePath);
    fp = fopen(filePath, "r");
    if (!fp) {
       fprintf(stderr, "Error while opening config file %s\n", filePath);
@@ -260,7 +260,7 @@ int load_links(const char *filePath, link_load_t *links)
 
    fclose(fp);
    if (line) {
-      free(line);   
+      free(line);
    }
 
    printf(">Configuration success.\n");
@@ -268,11 +268,11 @@ int load_links(const char *filePath, link_load_t *links)
 
 failure:
    if (fp) {
-      fclose(fp);   
+      fclose(fp);
    }
-   
+
    if (line) {
-      free(line);   
+      free(line);
    }
 
    return 1;
