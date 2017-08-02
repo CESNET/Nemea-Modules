@@ -22,8 +22,8 @@ To configure link_traffic module change link_traff_conf.cfg.example and remove "
 Module collects statistics about flows according to LINK_BIT_FIELD. Running module creates a UNIX socket (/var/run/libtrap/munin_link_traffic). Munin plugin then connects to this socket and gets formatted string with data. The format is the following (the number of headers is not limited):
 
 ```
-"header1, header2, header3\n
-value1, value2, value3"
+"header1,header2,header3\n
+value1,value2,value3"
 ```
 When munin plugin starts it checks /tmp/munin_link_traffic_data.txt. If it is actual enough it uses cached data, if its not actual it connects to UNIX socket and creates new cache file.
 
