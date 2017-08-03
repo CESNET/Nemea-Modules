@@ -128,7 +128,6 @@ typedef struct link_conf {
    char           *m_ur_field;      /*!string link bit field of link*/
    int            m_color;          /*!int represents hex value of link color*/
    uint16_t       m_id;             /*!uint16_t a unique link identificator */
-   link_stats_t   *m_stats;
 } link_conf_t;
 
 /* structure used for loading configuration from file and passing it
@@ -165,6 +164,22 @@ void clear_conf_struct(link_load_t *links)
    }
    
    free(links);
+}
+
+/* */
+int confcmp(const void *cfg1, const void *cfg2) 
+{
+   link_conf_t *cfg_val1, *cfg_val2;
+   cfg_val1 = (link_conf_t *) cfg1;
+   cfg_val2 = (link_conf_t *) cfg2;
+
+   if (cfg_val1->m_val < cfg_val2->m_val) {
+      return 1;
+   } else if (cfg_val1->m_val > cfg_val2->m_val) {
+      return -1;
+   } else {
+      return 0;
+   }
 }
 
 /*   *** Parsing link names from config file ***
@@ -438,7 +453,6 @@ void count_stats (uint64_t link,
 int main(int argc, char **argv)
 {
    signed char opt;
-   size_t i;
    ur_template_t *in_tmplt = NULL;
    link_load_t *links = NULL;
 
@@ -468,6 +482,9 @@ int main(int argc, char **argv)
       fprintf(stderr, "Error while allocating memory for stats.\n");
       goto cleanup;
    }
+   
+   // sort links unirec_fields 
+   qsort(links->conf, links->num, sizeof(link_conf_t), confcmp);
 
    /* **** TRAP initialization **** */
 
@@ -525,9 +542,7 @@ int main(int argc, char **argv)
    while (!stop) {
       const void *in_rec;
       uint16_t in_rec_size;
-      uint64_t link_index;
       uint8_t direction;
-      uint8_t found = 0;
 
       /* Receive data from input interface 0. */
       /* Block if data are not available immediately (unless a timeout
@@ -550,20 +565,17 @@ int main(int argc, char **argv)
       }
       /* get from what collecto data came and in what direction the flow
        * was comming */
-      link_index = ur_get(in_tmplt, in_rec, F_LINK_BIT_FIELD);
       direction = ur_get(in_tmplt, in_rec, F_DIR_BIT_FIELD);
       /* save data according to information got by the code above */
-      found = 0;
-      for (i = 0; i < links->num; ++i) {
-         if (links->conf[i].m_val == link_index) {
-            count_stats(links->conf.m_id, direction, in_tmplt, in_rec);
-            found = 1;
-            break;
-         }
-      }
+      link_conf_t *key = NULL, *found = NULL;
+      key->m_val = ur_get(in_tmplt, in_rec, F_LINK_BIT_FIELD);
+      found = bsearch(key, links->conf, links->num, sizeof(link_conf_t), confcmp);
       if (!found) {
          count_stats(links->num, direction, in_tmplt, in_rec);
+      } else {
+         count_stats(links->conf[found->m_id].m_val, direction, in_tmplt, in_rec);
       }
+      
    }
 
    pthread_cancel(accept_thread);
