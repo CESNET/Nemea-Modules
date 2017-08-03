@@ -567,13 +567,13 @@ int main(int argc, char **argv)
        * was comming */
       direction = ur_get(in_tmplt, in_rec, F_DIR_BIT_FIELD);
       /* save data according to information got by the code above */
-      link_conf_t *key = NULL, *found = NULL;
-      key->m_val = ur_get(in_tmplt, in_rec, F_LINK_BIT_FIELD);
-      found = bsearch(key, links->conf, links->num, sizeof(link_conf_t), confcmp);
-      if (!found) {
-         count_stats(links->num, direction, in_tmplt, in_rec);
+      link_conf_t key, *found = NULL;
+      key.m_val = ur_get(in_tmplt, in_rec, F_LINK_BIT_FIELD);
+      found = bsearch(&key, links->conf, links->num, sizeof(link_conf_t), confcmp);
+      if (found != NULL) {
+         count_stats(found->m_id, direction, in_tmplt, in_rec);
       } else {
-         count_stats(links->conf[found->m_id].m_val, direction, in_tmplt, in_rec);
+         count_stats(links->num, direction, in_tmplt, in_rec);
       }
       
    }
