@@ -229,7 +229,7 @@ int load_links(const char *filePath, link_load_t *links)
 
          case LINK_NAME: //parsing link name
             links->conf[links->num].m_name = strdup(tok);
-            if (!(links->conf[links->num].m_name = strdup(tok))) {
+            if (!(links->conf[links->num].m_name)) {
                fprintf(stderr, "Error: Cannot parse LINK_NAME.\n");
                goto failure;
             }
@@ -527,6 +527,7 @@ int main(int argc, char **argv)
       uint16_t in_rec_size;
       uint64_t link_index;
       uint8_t direction;
+      uint8_t found = 0;
 
       /* Receive data from input interface 0. */
       /* Block if data are not available immediately (unless a timeout
@@ -541,7 +542,8 @@ int main(int argc, char **argv)
          if (in_rec_size <= 1) {
             break; // End of data (used for testing purposes)
          } else {
-            fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
+            fprintf(stderr, "Error: data with wrong size received \
+                           (expected size: >= %hu, received size: %hu)\n",
                     ur_rec_fixlen_size(in_tmplt), in_rec_size);
             break;
          }
@@ -551,12 +553,16 @@ int main(int argc, char **argv)
       link_index = ur_get(in_tmplt, in_rec, F_LINK_BIT_FIELD);
       direction = ur_get(in_tmplt, in_rec, F_DIR_BIT_FIELD);
       /* save data according to information got by the code above */
+      found = 0;
       for (i = 0; i < links->num; ++i) {
          if (links->conf[i].m_val == link_index) {
-            count_stats(link_index, direction, in_tmplt, in_rec);
-         } else { // add to failed statistics 
-            count_stats(links->num + 1, direction, in_tmplt, in_rec);
+            count_stats(links->conf.m_id, direction, in_tmplt, in_rec);
+            found = 1;
+            break;
          }
+      }
+      if (!found) {
+         count_stats(links->num, direction, in_tmplt, in_rec);
       }
    }
 
