@@ -74,7 +74,8 @@ UR_FIELDS (
    uint64 BYTES,
    uint64 LINK_BIT_FIELD,
    uint32 PACKETS,
-   uint8 DIR_BIT_FIELD
+   uint8 DIR_BIT_FIELD,
+   uint32 ODIT
 )
 
 trap_module_info_t *module_info = NULL;
@@ -119,13 +120,15 @@ typedef struct link_stats {
 } link_stats_t;
 
 /* global dynamic array od link_stats_t structure for statistics */
-link_stats_t *stats;
+link_stats_t *stats = NULL;
 
 typedef struct link_conf {
-   int         m_num;        /*!int number of link*/
-   char        *m_name;      /*!string name of link*/
-   char        *m_ur_field;  /*!string link bit field of link*/
-   int         m_color;      /*!int represents hex value of link's color*/
+   uint64_t       m_val;            /*!int number of link*/
+   char           *m_name;          /*!string name of link*/
+   char           *m_ur_field;      /*!string link bit field of link*/
+   int            m_color;          /*!int represents hex value of link color*/
+   uint16_t       m_id;             /*!uint16_t a unique link identificator */
+   link_stats_t   *m_stats;
 } link_conf_t;
 
 /* structure used for loading configuration from file and passing it
@@ -221,25 +224,22 @@ int load_links(const char *filePath, link_load_t *links)
                fprintf(stderr, ">config parser error: parsing number failed!");
                goto failure;
             }
-            links->conf[links->num].m_num = num;
+            links->conf[links->num].m_val = num;
             break;
 
          case LINK_NAME: //parsing link name
-            links->conf[links->num].m_name  = (char*) calloc(sizeof(char), strlen(tok) + 1);
-            if (!links->conf[links->num].m_name) {
+            links->conf[links->num].m_name = strdup(tok);
+            if (!(links->conf[links->num].m_name = strdup(tok))) {
+               fprintf(stderr, "Error: Cannot parse LINK_NAME.\n");
                goto failure;
             }
-
-            memcpy(links->conf[links->num].m_name, tok, strlen(tok));
             break;
 
          case LINK_UR_FIELD: //parsing UR_FIELD
-            links->conf[links->num].m_ur_field  = (char*) calloc(sizeof(char), strlen(tok) + 1);
+            links->conf[links->num].m_ur_field = strdup(tok);
             if (!links->conf[links->num].m_ur_field) {
-               goto failure;
+               fprintf(stderr, "Error: Cannot parse LINK_UR_FIELD.\n");
             }
-
-            memcpy(links->conf[links->num].m_ur_field, tok, strlen(tok));
             break;
 
          case LINK_COL: //parsing line color
@@ -252,17 +252,19 @@ int load_links(const char *filePath, link_load_t *links)
             break;
          }
       }
+      links->conf[links->num].m_id = links->num;
       links->num++;
       free(line);
       line = NULL;
       len = 0;
    }
-
+   
    fclose(fp);
+   
    if (line) {
       free(line);   
    }
-
+   
    printf(">Configuration success.\n");
    return 0;
 
@@ -436,6 +438,7 @@ void count_stats (uint64_t link,
 int main(int argc, char **argv)
 {
    signed char opt;
+   size_t i;
    ur_template_t *in_tmplt = NULL;
    link_load_t *links = NULL;
 
@@ -460,7 +463,7 @@ int main(int argc, char **argv)
    }
 
    /* allocate memory for stats, based on loaded number of links */
-   stats = (link_stats_t *) calloc(links->num, sizeof(link_stats_t));
+   stats = (link_stats_t *) calloc(links->num + 1, sizeof(link_stats_t));
    if (!stats) {
       fprintf(stderr, "Error while allocating memory for stats.\n");
       goto cleanup;
@@ -545,10 +548,16 @@ int main(int argc, char **argv)
       }
       /* get from what collecto data came and in what direction the flow
        * was comming */
-      link_index = __builtin_ctzll(ur_get(in_tmplt, in_rec, F_LINK_BIT_FIELD));
+      link_index = ur_get(in_tmplt, in_rec, F_LINK_BIT_FIELD);
       direction = ur_get(in_tmplt, in_rec, F_DIR_BIT_FIELD);
       /* save data according to information got by the code above */
-      count_stats(link_index, direction, in_tmplt, in_rec);
+      for (i = 0; i < links->num; ++i) {
+         if (links->conf[i].m_val == link_index) {
+            count_stats(link_index, direction, in_tmplt, in_rec);
+         } else { // add to failed statistics 
+            count_stats(links->num + 1, direction, in_tmplt, in_rec);
+         }
+      }
    }
 
    pthread_cancel(accept_thread);
