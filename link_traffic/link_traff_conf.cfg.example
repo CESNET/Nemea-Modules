@@ -1,3 +1,4 @@
+#LINK_BIT_FIELD(uint64),NAME(string),UR_FIELD(string),COLOR(hex value/integer)
 0,nix2,LINK_BIT_FIELD,99a0A9
 1,nix3,LINK_BIT_FIELD,af69bc
 2,telia,LINK_BIT_FIELD,776655
