@@ -66,7 +66,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/select.h>
-
+#include <ctype.h>
 /**
  * Definition of fields used in unirec templates (for both input and output interfaces)
  */
@@ -190,7 +190,7 @@ int confcmp(const void *cfg1, const void *cfg2)
 int load_links(const char *filePath, link_load_t *links)
 {
    FILE *fp = NULL;
-   char *line = NULL, *tok = NULL, *save_pt1 = NULL, *str1 = NULL;
+   char *line = NULL, *tok = NULL, *save_pt1 = NULL, *str1 = NULL, *it;
    size_t attribute = 0, len = 0, size = 10;
    int num = 0;
    ssize_t read;
@@ -224,6 +224,16 @@ int load_links(const char *filePath, link_load_t *links)
          }
 
          links->conf = tmp;
+      }
+      
+      it = line;
+     
+      while (isspace(*it) && *it != '\0' && *it != '\n') {
+         ++it;
+      }
+   
+      if (*it == '#') {
+         continue;
       }
 
       for (attribute = LINK_NUM, str1 = line; ;attribute++, str1 = NULL) {
@@ -327,6 +337,9 @@ int prepare_data(link_load_t *links)
       header_len = 0;
 
       for (i = 0; i < links->num; i++) {
+         if (!links->conf[i].m_name) {
+            fprintf(stderr, "Error: No links names loaded.\n");
+         }
          header_len += snprintf(databuffer + header_len, databuffer_size - header_len,
                                 "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,",
                                  links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name,
@@ -337,6 +350,9 @@ int prepare_data(link_load_t *links)
 
    size = header_len;
    for (i = 0; i < links->num; i++) {
+      if (!stats) {
+         fprintf(stderr, "Error: Cannot read from stats.\n");
+      }
       size += snprintf(databuffer + size, databuffer_size - size, "%"
                        PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32",",
                        stats[i].bytes_in, stats[i].flows_in, stats[i].packets_in,
@@ -575,7 +591,6 @@ int main(int argc, char **argv)
       } else {
          count_stats(links->num, direction, in_tmplt, in_rec);
       }
-      
    }
 
    pthread_cancel(accept_thread);
