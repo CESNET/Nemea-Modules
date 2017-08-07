@@ -194,8 +194,8 @@ int load_links(const char *filePath, link_load_t *links)
       fprintf(stderr, "Error: Cannot allocate memory for links.\n");
       goto failure;
    }
-   links->num = 0;
 
+   links->num = 0;
    printf("Accessing config file %s.\n", filePath);
    fp = fopen(filePath, "r");
    if (!fp) {
