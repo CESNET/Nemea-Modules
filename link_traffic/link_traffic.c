@@ -75,7 +75,6 @@ UR_FIELDS (
    uint64 LINK_BIT_FIELD,
    uint32 PACKETS,
    uint8 DIR_BIT_FIELD,
-   uint32 ODIT
 )
 
 trap_module_info_t *module_info = NULL;
@@ -126,7 +125,7 @@ typedef struct link_conf {
    uint64_t       m_val;            /*!int number of link*/
    char           *m_name;          /*!string name of link*/
    char           *m_ur_field;      /*!string link bit field of link*/
-   int            m_color;          /*!int represents hex value of link color*/
+   uint64_t       m_color;          /*!int represents hex value of link color*/
    uint16_t       m_id;             /*!uint16_t a unique link identificator */
 } link_conf_t;
 
@@ -166,20 +165,10 @@ void clear_conf_struct(link_load_t *links)
    free(links);
 }
 
-/* */
+/*! @brief a compare function for quick sort using link_conf_t structure */
 int confcmp(const void *cfg1, const void *cfg2) 
 {
-   link_conf_t *cfg_val1, *cfg_val2;
-   cfg_val1 = (link_conf_t *) cfg1;
-   cfg_val2 = (link_conf_t *) cfg2;
-
-   if (cfg_val1->m_val < cfg_val2->m_val) {
-      return 1;
-   } else if (cfg_val1->m_val > cfg_val2->m_val) {
-      return -1;
-   } else {
-      return 0;
-   }
+   return ((link_conf_t *) cfg2)->m_val - ((link_conf_t *) cfg1)->m_val;   
 }
 
 /*   *** Parsing link names from config file ***
@@ -196,17 +185,18 @@ int load_links(const char *filePath, link_load_t *links)
    ssize_t read;
 
    if (!links) {
-      fprintf(stderr, "load_links: received NULL pointer\n");
+      fprintf(stderr, "Error: load_links received NULL pointer\n");
       return 1;
    }
 
    links->conf = (link_conf_t *) calloc(size, sizeof(link_conf_t));
    if (!links->conf) {
+      fprintf(stderr, "Error: Cannot allocate memory for links.\n");
       goto failure;
    }
    links->num = 0;
 
-   printf(">Accessing config file %s.\n", filePath);   
+   printf("Accessing config file %s.\n", filePath);   
    fp = fopen(filePath, "r");
    if (!fp) {
       fprintf(stderr, "Error while opening config file %s\n", filePath);
@@ -220,6 +210,7 @@ int load_links(const char *filePath, link_load_t *links)
          link_conf_t *tmp = (link_conf_t *)
                              realloc(links->conf, size * sizeof(link_conf_t));
          if (!tmp) {
+            fprintf(stderr, "Error while reallocating memory for links.\n");
             goto failure;
          }
 
@@ -246,7 +237,7 @@ int load_links(const char *filePath, link_load_t *links)
          case LINK_NUM: //parsing link number
             num = 0;
             if (sscanf(tok, "%d", &num) == EOF) {
-               fprintf(stderr, ">config parser error: parsing number failed!");
+               fprintf(stderr, "Error: Parsing link value failed.\n");
                goto failure;
             }
             links->conf[links->num].m_val = num;
@@ -264,13 +255,14 @@ int load_links(const char *filePath, link_load_t *links)
             links->conf[links->num].m_ur_field = strdup(tok);
             if (!links->conf[links->num].m_ur_field) {
                fprintf(stderr, "Error: Cannot parse LINK_UR_FIELD.\n");
+               goto failure;
             }
             break;
 
          case LINK_COL: //parsing line color
             num = 0;
             if (sscanf(tok, "%d", &num) == EOF) {
-               fprintf(stderr, ">config parser error: parsing number failed!");
+               fprintf(stderr, "Error: Parsing color failed.\n");
                goto failure;
             }
             links->conf[links->num].m_color = num;
@@ -339,6 +331,7 @@ int prepare_data(link_load_t *links)
       for (i = 0; i < links->num; i++) {
          if (!links->conf[i].m_name) {
             fprintf(stderr, "Error: No links names loaded.\n");
+            return 0;
          }
          header_len += snprintf(databuffer + header_len, databuffer_size - header_len,
                                 "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,",
@@ -352,6 +345,7 @@ int prepare_data(link_load_t *links)
    for (i = 0; i < links->num; i++) {
       if (!stats) {
          fprintf(stderr, "Error: Cannot read from stats.\n");
+         return 0;
       }
       size += snprintf(databuffer + size, databuffer_size - size, "%"
                        PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32",",
