@@ -158,9 +158,9 @@ void clear_conf_struct(link_load_t *links)
 
       }
 
-      free(links->conf);   
+      free(links->conf);
    }
-   
+
    free(links);
 }
 
@@ -172,7 +172,7 @@ void clear_conf_struct(link_load_t *links)
 int load_links(const char *filePath, link_load_t *links)
 {
    FILE *fp = NULL;
-   char *line = NULL, *tok = NULL, **save_pt1 = NULL, *str1 = NULL;
+   char *line = NULL, *tok = NULL, *save_pt1 = NULL, *str1 = NULL;
    size_t attribute = 0, len = 0, size = 10;
    int num = 0;
    ssize_t read;
@@ -188,7 +188,7 @@ int load_links(const char *filePath, link_load_t *links)
    }
    links->num = 0;
 
-   printf(">Accessing config file %s.\n", filePath);   
+   printf(">Accessing config file %s.\n", filePath);
    fp = fopen(filePath, "r");
    if (!fp) {
       fprintf(stderr, "Error while opening config file %s\n", filePath);
@@ -209,7 +209,7 @@ int load_links(const char *filePath, link_load_t *links)
       }
 
       for (attribute = LINK_NUM, str1 = line; ;attribute++, str1 = NULL) {
-         tok = strtok_r(str1, ",", save_pt1);
+         tok = strtok_r(str1, ",", &save_pt1);
          if (tok == NULL) {
              break;
          }
@@ -260,7 +260,7 @@ int load_links(const char *filePath, link_load_t *links)
 
    fclose(fp);
    if (line) {
-      free(line);   
+      free(line);
    }
 
    printf(">Configuration success.\n");
@@ -268,11 +268,11 @@ int load_links(const char *filePath, link_load_t *links)
 
 failure:
    if (fp) {
-      fclose(fp);   
+      fclose(fp);
    }
-   
+
    if (line) {
-      free(line);   
+      free(line);
    }
 
    return 1;
