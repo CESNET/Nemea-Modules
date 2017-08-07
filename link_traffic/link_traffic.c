@@ -125,7 +125,7 @@ typedef struct link_conf {
    uint64_t       m_val;            /*!int number of link*/
    char           *m_name;          /*!string name of link*/
    char           *m_ur_field;      /*!string link bit field of link*/
-   uint64_t       m_color;          /*!int represents hex value of link color*/
+   uint32_t       m_color;          /*!int represents hex value of link color*/
    uint16_t       m_id;             /*!uint16_t a unique link identificator */
 } link_conf_t;
 
@@ -159,16 +159,16 @@ void clear_conf_struct(link_load_t *links)
 
       }
 
-      free(links->conf);   
+      free(links->conf);
    }
-   
+
    free(links);
 }
 
 /*! @brief a compare function for quick sort using link_conf_t structure */
-int confcmp(const void *cfg1, const void *cfg2) 
+int confcmp(const void *cfg1, const void *cfg2)
 {
-   return ((link_conf_t *) cfg2)->m_val - ((link_conf_t *) cfg1)->m_val;   
+   return ((link_conf_t *) cfg2)->m_val - ((link_conf_t *) cfg1)->m_val;
 }
 
 /*   *** Parsing link names from config file ***
@@ -196,7 +196,7 @@ int load_links(const char *filePath, link_load_t *links)
    }
    links->num = 0;
 
-   printf("Accessing config file %s.\n", filePath);   
+   printf("Accessing config file %s.\n", filePath);
    fp = fopen(filePath, "r");
    if (!fp) {
       fprintf(stderr, "Error while opening config file %s\n", filePath);
@@ -216,13 +216,13 @@ int load_links(const char *filePath, link_load_t *links)
 
          links->conf = tmp;
       }
-      
+
       it = line;
-     
+
       while (isspace(*it) && *it != '\0' && *it != '\n') {
          ++it;
       }
-   
+
       if (*it == '#') {
          continue;
       }
@@ -275,23 +275,23 @@ int load_links(const char *filePath, link_load_t *links)
       line = NULL;
       len = 0;
    }
-   
+
    fclose(fp);
-   
+
    if (line) {
-      free(line);   
+      free(line);
    }
-   
+
    printf(">Configuration success.\n");
    return 0;
 
 failure:
    if (fp) {
-      fclose(fp);   
+      fclose(fp);
    }
-   
+
    if (line) {
-      free(line);   
+      free(line);
    }
 
    return 1;
@@ -435,7 +435,7 @@ cleanup:
    stop = 1;
    trap_terminate();
    if (fd >= 0) {
-      close(fd);     
+      close(fd);
    }
 
    pthread_exit(0);
@@ -492,8 +492,8 @@ int main(int argc, char **argv)
       fprintf(stderr, "Error while allocating memory for stats.\n");
       goto cleanup;
    }
-   
-   // sort links unirec_fields 
+
+   // sort links unirec_fields
    qsort(links->conf, links->num, sizeof(link_conf_t), confcmp);
 
    /* **** TRAP initialization **** */
