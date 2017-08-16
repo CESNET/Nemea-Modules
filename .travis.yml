@@ -31,7 +31,9 @@ addons:
       - automake
       - libxml2-dev
       - libxml2
+      - git
       - python
+      - python-setuptools
       - python-dev
   coverity_scan:
     project:
@@ -43,16 +45,11 @@ addons:
     branch_pattern: coverity
 
 before_install:
-   - pyenv install 2.7.10
-   - pyenv global 2.7.10
-   - export PATH=$(pyenv prefix)/bin:$PATH
-   - ( git clone --depth 1 -q https://github.com/CESNET/nemea-framework; cd nemea-framework; ./bootstrap.sh && ./configure -q --prefix=/usr --bindir=/usr/bin/nemea && make -j10 && sudo make install; (cd pytrap && python setup.py install;); (cd pycommon && python setup.py install;); )
+   - ( git clone --depth 2 -q https://github.com/CESNET/nemea-framework; cd nemea-framework; ./bootstrap.sh && ./configure -q --prefix=/usr --bindir=/usr/bin/nemea && make -j10 && sudo make install; (cd pytrap && python setup.py install;); (cd pycommon && python setup.py install;); )
    - sudo rm -rf nemea-framework
    - python -c 'import pytrap'
-   - grep -e '\<22/tcp' -e '\<23/tcp' -e '\<2179/tcp' -e '\<5900/tcp' /etc/services
 
 
 script:
-  - python -V
-  - ./bootstrap.sh && ./configure --disable-repobuild && make check || { find . \( -name '*.log' -o -name '*.trs' \) -print -exec cat {} \;; exit 1; } && make distcheck
+  - ./bootstrap.sh && ./configure --disable-repobuild && make check || { find . \( -name '*.sh.log' -o -name '*.test.log' -o -name '*.trs' \) -print -exec cat {} \;; exit 1; } && make distcheck
 
