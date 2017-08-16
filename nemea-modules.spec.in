@@ -9,16 +9,21 @@ License: BSD
 Vendor: CESNET, z.s.p.o.
 Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
-Requires: nemea-framework@RPM_REQUIRES@ openssl
-BuildRequires: gcc gcc-c++ make doxygen pkgconfig nemea-framework-devel@RPM_BUILDREQ@
+Requires: nemea-framework
+Requires: libnf
+Requires: openssl
+Requires: libpcap
 Provides: nemea-modules
+BuildRequires: gcc gcc-c++ make doxygen pkgconfig nemea-framework-devel bison flex
+BuildRequires: libpcap-devel openssl-devel libnf-devel
 
 %description
 
 %package devel
 Summary: Nemea-modules development package contains files for liburfilter
 Group: Liberouter
-Requires: nemea-modules = %{version}-%{release} libxml2-devel openssl-devel
+Requires: nemea-modules = %{version}-%{release}
+Requires: nemea-framework-devel
 Provides: nemea-modules-devel
 
 %description devel
