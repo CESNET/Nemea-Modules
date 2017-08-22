@@ -1,3 +1,21 @@
+2017-08-21 Nemea-modules-2.5.8
+	* link_traffic:
+		changed datatype of link_conf_t color
+		added possibility to use comments in configuration file
+		updated README.md
+		bugfixes
+
+	* report2idea:
+		test: BUGFIX different behaviour of awk asort()
+		blacklist: removed PalevoTracker
+
+	* unirecfilter:
+		do not assume double quotes around IPv6 addresses
+
+	* removed CFLAGS/CXXFLAGS/LDFLAGS setting in libtrap check macro
+	* add libpcap-dev, use disabled repobuild by default
+	* ignore build artefacts
+
 2017-07-24 Nemea-modules-2.5.7
 	* link_traffic:
 		new configuration file with lines

@@ -78,6 +78,32 @@
 # do not forget to add test to the Makefile.am
 #
 
+# usage: json_cleanup reads from stdin and writes modified data into stdout
+# It removes keys from JSON that change and sorts the remaining ones alphabetically.
+# The sorting is important because of diff(1) that is used.  (Note: JSON has not fixed
+# order of keys)
+json_cleanup()
+{
+    gawk '{
+       gsub(/,* *"[^"]*Time": *"[^"]*",*/, ",")
+       gsub(/,* *"ID": *"[^"]*",*/, ",")
+       gsub(/[{[]/, "")
+       gsub("}", ",")
+       gsub("]", ",")
+       gsub(":", ",")
+       n = split($0, fields, ",")
+       j=1
+       for (i=1; i<=n; i++) {
+         gsub(" ", "", fields[i])
+         arr[j++]=fields[i]
+       }
+       asort(arr);
+       for (i=1; i<length(arr)) {
+          printf("%s, ", arr[i]);
+       }
+       printf("%s\n", arr[i]);
+   }'
+}
 
 #usage: test_conversion <script name> <node name> <input data> <output data>
 test_conversion()
@@ -108,9 +134,9 @@ rules:
    # generate output
    "$srcdir/${1}2idea.py" -i "f:$data" -n "$2" --config <(echo "$config") | tee "$1.idea" |
       # clean it from variable info
-      sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g' |
+      json_cleanup |
       # compare it with prepared expected data (previously base64 encoded and gzipped)
-      diff -u - <(echo -n "$4" | base64 -d | gunzip | sed 's/"CreateTime": "[^"]*"//g; s/"DetectTime": "[^"]*"//g; s/"ID": "[^"]*"//g') ||
+      diff -u - <(echo -n "$4" | base64 -d | gunzip | json_cleanup) ||
       { echo "${1}2idea FAILED :-("; ((errors++)); }
 
    # cleanup

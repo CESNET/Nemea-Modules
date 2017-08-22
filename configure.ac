@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-modules], [2.5.7], [nemea@cesnet.cz])
+AC_INIT([nemea-modules], [2.5.8], [nemea@cesnet.cz])
 AC_CONFIG_SRCDIR([flowcounter/flowcounter.c])
 AC_CONFIG_HEADERS([config.h])
 RELEASE=1
@@ -70,13 +70,13 @@ AX_PTHREAD([LIBS="$PTHREAD_LIBS $LIBS"
     CC="$PTHREAD_CC"],
     [AC_MSG_ERROR([pthread not found])])
 
-AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--disable-repobuild],
+AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--enable-repobuild],
 		[disable local compilation without system installed Nemea libraries, default: yes]),
 [case "${enableval}" in
 	yes) repobuild=true ;;
 	no)  repobuild=false ;;
 	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-repobuild]) ;;
-esac], [repobuild=true])
+esac], [repobuild=false])
 
 AX_C_BIGENDIAN_CROSS
 
