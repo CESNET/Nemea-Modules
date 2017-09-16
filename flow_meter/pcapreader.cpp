@@ -224,6 +224,7 @@ inline uint16_t parse_ipv6_hdr(const u_char *data_ptr, Packet *pkt)
    pkt->ip_version = 6;
    pkt->ip_tos = (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0x0ff00000) >> 20;
    pkt->ip_proto = ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;
+   pkt->ip_ttl = ip6->ip6_ctlun.ip6_un1.ip6_un1_hlim;
    pkt->ip_length = ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);
    memcpy(pkt->src_ip.v6, (const char *) &ip6->ip6_src, 16);
    memcpy(pkt->dst_ip.v6, (const char *) &ip6->ip6_dst, 16);

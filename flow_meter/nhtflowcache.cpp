@@ -86,6 +86,7 @@ void FlowRecord::create(const Packet &pkt, uint64_t pkt_hash)
       flow.ip_version = pkt.ip_version;
       flow.ip_proto = pkt.ip_proto;
       flow.ip_tos = pkt.ip_tos;
+      flow.ip_ttl = pkt.ip_ttl;
       memcpy(flow.src_ip.v6, pkt.src_ip.v6, 16);
       memcpy(flow.dst_ip.v6, pkt.dst_ip.v6, 16);
       flow.octet_total_length = pkt.ip_length;
