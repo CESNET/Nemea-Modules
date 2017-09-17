@@ -149,7 +149,7 @@ def outputToJson():
    head = data[0].split(',')
    vals = data[1].split(',')
    if len(head) != len(vals):
-      sys.stderr.write("incorrected number of columns!\n")
+      sys.stderr.write("incorrect number of columns!\n")
       sys.exit(1)
    data = zip(head, vals)
    data.sort()
@@ -160,7 +160,7 @@ def outputToJson():
    head = data_old[0].split(',')
    vals = data_old[1].split(',')
    if len(head) != len(vals):
-      sys.stderr.write("incorrected number of columns!\n")
+      sys.stderr.write("incorrect number of columns!\n")
       sys.exit(1)
    data_old = zip(head, vals)
    data_old = dict(data_old)
