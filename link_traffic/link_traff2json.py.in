@@ -50,7 +50,6 @@ def receiveData():
 
 def getData():
    """
-TODO update
    Return list of strings (lines).
    There should be 2 lines: the first one with header,
    the second one with values. The data is received by
@@ -68,13 +67,12 @@ TODO update
       pass
    data = receiveData()
    if (current_time - last_time) > interval:
-      sys.stderr.write("Write into file with previous values\n")
       with open(data_temp_file, "w") as f:
          f.write(data)
       data_old = data
       time_mon_st = current_time
    else:
-      sys.stderr.write("Reading from file\n")
+      # Read from file 
       with open(data_temp_file, "r") as f:
          data_old = f.read()
       time_mon_st = last_time
@@ -151,7 +149,7 @@ def outputToJson():
    head = data[0].split(',')
    vals = data[1].split(',')
    if len(head) != len(vals):
-      sys.stderr.write("wrong number of columns!!!\n")
+      sys.stderr.write("incorrected number of columns!\n")
       sys.exit(1)
    data = zip(head, vals)
    data.sort()
@@ -162,14 +160,13 @@ def outputToJson():
    head = data_old[0].split(',')
    vals = data_old[1].split(',')
    if len(head) != len(vals):
-      sys.stderr.write("wrong number of columns!!!\n")
+      sys.stderr.write("incorrected number of columns!\n")
       sys.exit(1)
    data_old = zip(head, vals)
    data_old = dict(data_old)
 
    # dict init name of link and its number
    for key, val in data:
-      sys.stderr.write(str(dataDict) + "\n")
       ln = getLineNum(key.split('-')[0])
       if ln is None:
          sys.stderr.write("configuration error {} {}\n".format(key, data))
@@ -180,10 +177,8 @@ def outputToJson():
    for key, val in data:
       ln = getLineNum(key.split('-')[0])
       keyStrip = key.split('-')[2]+" "+key.split('-')[1]
-      sys.stderr.write(key + data_old[key] + "\n")
       dataDict[ln].update({keyStrip : int(val) - int(data_old[key])})
 
-   sys.stderr.write(str(dataDict) + "\n")
    # form up the final dictionary
    return {'data' : dataDict, 'time' : timeDict}
 
