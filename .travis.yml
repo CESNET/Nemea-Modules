@@ -36,6 +36,7 @@ addons:
       - python-setuptools
       - python-dev
       - libpcap-dev
+      - libyaml-dev
   coverity_scan:
     project:
       name: "CESNET/Nemea-Modules"
@@ -48,6 +49,7 @@ addons:
 before_install:
    - pyenv global 2.7.13
    - export PATH=$(pyenv prefix)/bin:$PATH
+   - pip install PyYAML pynspect ply
    - ( git clone --depth 2 -q https://github.com/CESNET/nemea-framework nf; cd nf; ./bootstrap.sh && ./configure -q --prefix=/usr --bindir=/usr/bin/nemea && make -j10 && sudo make install; (cd pytrap && $(pyenv which python) setup.py install;); (cd pycommon && $(pyenv which python) setup.py install;); )
    - sudo rm -rf nemea-framework
    - python -c 'import pytrap'
