@@ -12,7 +12,12 @@ from report2idea import *
 MODULE_NAME = "haddrscan2idea"
 MODULE_DESC = "Converts output of haddrscan detector (horizontal scans) to IDEA."
 REQ_TYPE = pytrap.FMT_UNIREC
-REQ_FORMAT = "ipaddr SRC_IP,uint32 ADDR_CNT,time TIME_FIRST,time TIME_LAST,uint16 DST_PORT,uint16 SRC_PORT,uint8 EVENT_TYPE,uint8 PROTOCOL"
+REQ_FORMAT = "ipaddr SRC_IP,uint32 ADDR_CNT,time TIME_FIRST,time TIME_LAST," + \
+             "uint16 DST_PORT,uint8 EVENT_TYPE,uint8 PROTOCOL," + \
+             "ipaddr DST_IP0,ipaddr DST_IP1,ipaddr DST_IP2,ipaddr DST_IP3," + \
+             "ipaddr DST_IP4,ipaddr DST_IP5,ipaddr DST_IP6,ipaddr DST_IP7," + \
+             "ipaddr DST_IP8,ipaddr DST_IP9,ipaddr DST_IP10,ipaddr DST_IP11," + \
+             "ipaddr DST_IP12,ipaddr DST_IP13,ipaddr DST_IP14,ipaddr DST_IP15"
 
 # Main conversion function
 def convert_to_idea(rec, opts=None):
@@ -28,13 +33,13 @@ def convert_to_idea(rec, opts=None):
        "FlowCount": int(rec.ADDR_CNT),
        "Description": "Horizontal scan using TCP SYN",
        "Source": [{
-             "Proto": ["tcp"],
-             "Port": [rec.SRC_PORT]
+             "Proto": ["tcp"]
         }],
        "Target": [{
-             "Proto": ["tcp"],
-             "Port": [rec.DST_PORT]
-       }],
+         "Proto": ["tcp"],
+         "Port": [rec.DST_PORT],
+         "Imprecise": True
+       }], # Target addresses are added later
        'Node': [{
           'Name': 'undefined',
           'SW': ['Nemea','haddrscan_detector'],
@@ -44,6 +49,11 @@ def convert_to_idea(rec, opts=None):
     }
     # Set IP addresses (IPv4 / IPv6)
     setAddr(idea['Source'][0], rec.SRC_IP)
+    # Set Tartget IP addresses
+    for ip in range(16):
+        dstip = getattr(rec, "DST_IP" + str(ip), None)
+        if dstip:
+            setAddr(idea["Target"][0], dstip)
     return idea
 
 
