@@ -124,7 +124,8 @@ def convert_to_idea(rec, opts=None):
         src_addr = {
             "Proto": [ protocol ]
         }
-        if rec.PROTOCOL != 1:
+        # Add Port for TCP (6) or UDP (17)
+        if rec.PROTOCOL in [6, 17]:
             src_addr["Port"] = [ rec.SRC_PORT ]
         setAddr(src_addr, rec.SRC_IP)
     if rec.DST_IP:
@@ -152,8 +153,6 @@ def convert_to_idea(rec, opts=None):
         tor = False
         if cur_bl_name == "tor":
             tor = True
-            if not opts.enable_tor:
-                continue
             category.add( "Suspicious.TOR" )
             if rec.SRC_IP and bit & rec.SRC_BLACKLIST:
                 src_type.add("TOR")
@@ -185,14 +184,16 @@ def convert_to_idea(rec, opts=None):
             dst_entries.add(cur_bl["name"])
         sources.add(cur_bl["source"])
 
-    idea["category"] = list(category)
-    idea["Note"] = ""
+    idea["Category"] = list(category)
+    note = ""
     if src_entries:
-        idea['Note'] = 'Source IP {0} was found on blacklist(s): {1}.'.format(rec.SRC_IP, ", ".join(list(src_entries)))
+        note = 'Source IP {0} was found on blacklist(s): {1}.'.format(rec.SRC_IP, ", ".join(list(src_entries)))
     if dst_entries:
-        if idea["Note"]:
-            idea["Note"] = idea["Note"] + " "
-        idea['Note'] = 'Destination IP {0} was found on blacklist(s): {1}.'.format(rec.DST_IP, ", ".join(list(dst_entries)))
+        if note:
+            note = note + " "
+        note = 'Destination IP {0} was found on blacklist(s): {1}.'.format(rec.DST_IP, ", ".join(list(dst_entries)))
+    if note:
+        idea["Note"] = note
 
     if src_addr:
         src_addr["Type"] = list(src_type)
@@ -211,16 +212,16 @@ def convert_to_idea(rec, opts=None):
     else:
         descDST = "{0}".format(rec.DST_IP)
 
-    idea['Description'] = "{0} connected to {1}. Sources: {2}".format(descSRC, descDST, ", ".join(list(sources)))
+    idea['Description'] = "{0} connected to {1}.".format(descSRC, descDST)
+    if sources:
+        idea['Ref'] = list(sources)
     return idea
 
 
 # If conversion functionality needs to be parametrized, an ArgumentParser can be passed to Run function.
 # These parameters are then parsed from command line and passed as "opts" parameter of the conversion function.
 parser = argparse.ArgumentParser()
-parser.add_argument('--enable-tor', action='store_true',
-                    help="Don't skip alerts about communication with TOR exit nodes (they are ignored by default)")
-parser.add_argument('--blacklist-config', help="Set path to userConfigFile.xml of ipblacklistfilter. Default: /etc/nemea/ipblacklistfilter/userConfigFile.xml", default="/etc/nemea/ipblacklistfilter/bld_userConfigFile.xml")
+parser.add_argument('--blacklist-config', help="Set path to bld_userConfigFile.xml of ipblacklistfilter. Default: /etc/nemea/ipblacklistfilter/bld_userConfigFile.xml", default="/etc/nemea/ipblacklistfilter/bld_userConfigFile.xml")
 
 # Run the module
 if __name__ == "__main__":
