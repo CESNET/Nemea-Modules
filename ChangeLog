@@ -1,3 +1,7 @@
+2017-09-23 Nemea-modules-2.5.9
+	* report2idea:
+		ipblacklist, haddrscan: changed format
+		
 2017-08-21 Nemea-modules-2.5.8
 	* link_traffic:
 		changed datatype of link_conf_t color
