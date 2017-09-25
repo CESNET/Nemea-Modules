@@ -183,7 +183,9 @@ def convert_to_idea(rec, opts=None):
         if rec.DST_IP and bit & rec.DST_BLACKLIST and not tor:
             dst_entries.add(cur_bl["name"])
         sources.add(cur_bl["source"])
-
+    if not category:
+        # No threshold reached
+        return None
     idea["Category"] = list(category)
     note = ""
     if src_entries:
