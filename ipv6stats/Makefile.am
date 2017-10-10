@@ -4,4 +4,5 @@ ipv6stats_LDADD=-ltrap -lunirec
 ipv6stats_CXXFLAGS=-std=c++98 -Wno-write-strings
 pkgdocdir=${docdir}/ipv6stats
 pkgdoc_DATA=README.md
+EXTRA_DIST=README.md
 include ../aminclude.am

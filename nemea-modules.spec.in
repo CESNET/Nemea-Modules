@@ -60,6 +60,7 @@ ldconfig
 %{_bindir}/nemea/hoststats2idea.py
 %{_bindir}/nemea/idea2idea.py
 %{_bindir}/nemea/ipblacklist2idea.py
+%{_bindir}/nemea/ipv6stats
 %{_bindir}/nemea/json_dump.py
 %{_bindir}/nemea/json_replay.py
 %{_bindir}/nemea/link_traffic
