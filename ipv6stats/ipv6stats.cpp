@@ -105,7 +105,7 @@ static int stop = 0;
 
 static uint32_t actual_time;
 
-TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
+TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 /**
  * Clear a structure for a statistics

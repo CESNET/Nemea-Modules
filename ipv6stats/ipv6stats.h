@@ -106,7 +106,7 @@ enum cnt_indexes
 enum stat_type
 {
   STSHORT=0,
-  STLONG,
+  STLONG
 };
 
 enum tunnel_types
