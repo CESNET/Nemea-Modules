@@ -213,11 +213,12 @@ AC_CONFIG_FILES([Makefile
                  flow_meter/Makefile
                  flow_meter/flow_meter.bash
                  flow_meter/tests/Makefile
+                 ipv6stats/Makefile
                  json_dump/Makefile
                  json_replay/Makefile
                  link_traffic/Makefile
                  link_traffic/munin/Makefile
-                 link_traffic/link_traff2json.py 
+                 link_traffic/link_traff2json.py
                  logger/Makefile
                  logreplay/Makefile
                  merger/Makefile
