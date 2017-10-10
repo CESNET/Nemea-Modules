@@ -42,7 +42,7 @@
  *
  */
 
-// Information if sigaction is available for nemea signal macro registration
+/* Information if sigaction is available for nemea signal macro registration */
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -70,12 +70,12 @@
    do { fprintf(stderr, "%s\n", msg); exit(EXIT_FAILURE); } while (0)
 
 UR_FIELDS(
-   uint32 PACKETS,     //Number of packets in a flow or in an interval
-   uint64 BYTES,       //Number of bytes in a flow or in an interval
-   uint64 FLOWS,       //Number of flows
+   uint32 PACKETS,     /* Number of packets in a flow or in an interval */
+   uint64 BYTES,       /* Number of bytes in a flow or in an interval */
+   uint64 FLOWS,       /* Number of flows */
 )
 
-// Struct with information about module
+/* Struct with information about module */
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
@@ -84,7 +84,7 @@ trap_module_info_t *module_info = NULL;
 #define MODULE_PARAMS(PARAM) \
    PARAM('p', "print", "Show progress - print a dot every N flows.", required_argument, "int32") \
    PARAM('P', "print_c", "When showing progress, print CHAR instead of dot.", required_argument, "string") \
-   PARAM('o', "send_time", "Send @VOLUME record filled with current counters every SEC second(s).", required_argument, "int32")
+   PARAM('o', "send_time", "Send record with current counters of FLOWS, BYTES, PACKETS every SEC second(s).", required_argument, "int32")
 
 
 
@@ -100,10 +100,10 @@ ur_template_t *out_tmplt;           /* output template */
 void *out_rec;                      /* output record */
 
 
-// Function to handle SIGTERM and SIGINT signals (used to stop the module)
+/* Function to handle SIGTERM and SIGINT signals (used to stop the module) */
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
-// Declares progress structure prototype
+/* Declares progress structure prototype */
 NMCM_PROGRESS_DECL
 
 void signal_handler(int signal)
@@ -137,11 +137,11 @@ void get_o_param(int argc, char **argv, const char *module_getopt_string, const 
    char *bck_optarg = optarg;
    signed char opt;
 
-   // Add "i:" to getopt_string
-   /* This is necessary because getopt rearragnes arguments in such a way that
-      all positional agruments (i.e. not options) are put at the end of argv.
+   /* Add "i:" to getopt_string */
+   /* This is necessary because getopt rearanges arguments in such a way that
+      all positional arguments (i.e. not options) are put at the end of argv.
       If it wouldn't know about "-i" and that it requires argument, it would
-      move the argument (ifc specifier) to the end of argv (but doesn't move 
+      move the argument (ifc specifier) to the end of argv (but doesn't move
       the "-i").
       trap_parse_params (within TRAP_DEFAULT_INITIALIZATION) would than fail.
    */
@@ -192,20 +192,20 @@ int main(int argc, char **argv)
 	int ret;
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
-   // Declare progress structure, pointer to this struct, initialize progress limit
+   /* Declare progress structure, pointer to this struct, initialize progress limit */
    NMCM_PROGRESS_DEF;
 
-   get_o_param(argc, argv, module_getopt_string, long_options);     /* output have to be known before TRAP init */
+   get_o_param(argc, argv, module_getopt_string, long_options); /* output have to be known before TRAP init */
 
-   // ***** TRAP initialization *****
+   /* ***** TRAP initialization ***** */
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
 
-   // Register signal handler.
-   TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER(); // Handles SIGTERM and SIGINT
+   /* Register signal handler. */
+   TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER(); /* Handles SIGTERM and SIGINT */
    signal(SIGUSR1, signal_handler);
    signal(SIGALRM, send_handler);
 
-   // ***** Create UniRec template *****
+   /* ***** Create UniRec template ***** */
    char *unirec_specifier = "PACKETS,BYTES";
    signed char opt;
 
@@ -270,23 +270,23 @@ int main(int argc, char **argv)
       alarm(send_interval);     /* arrange SIGARLM in send_interval seconds */
    }
 
-   // ***** Main processing loop *****
+   /* ***** Main processing loop ***** */
    while (!stop) {
-      // Receive data from input interface (block until data are available)
+      /* Receive data from input interface (block until data are available) */
       const void *data;
       uint16_t data_size;
       ret = TRAP_RECEIVE(0, data, data_size, tmplt);
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
 
-      // Check for end-of-stream message
+      /* Check for end-of-stream message */
       if (data_size <= 1) {
          break;
       }
 
-      // Printing progress
+      /* Printing progress */
       NMCM_PROGRESS_PRINT;
 
-      // Update counters
+      /* Update counters */
       cnt_flows += 1;
       cnt_packets += ur_get(tmplt, data, F_PACKETS);
       cnt_bytes += ur_get(tmplt, data, F_BYTES);
@@ -300,18 +300,18 @@ int main(int argc, char **argv)
       }
    }
 
-   // ***** Print results *****
+   /* ***** Print results ***** */
 
    NMCM_PROGRESS_NEWLINE;
    printf("Flows:   %20lu\n", cnt_flows);
    printf("Packets: %20lu\n", cnt_packets);
    printf("Bytes:   %20lu\n", cnt_bytes);
 
-   // ***** Cleanup *****
+   /* ***** Cleanup ***** */
 
-   alarm(0); // Potential pending alarm have to be cancelled before cleanup
+   alarm(0); /* Potential pending alarm has to be cancelled before cleanup */
 
-   // Do all necessary cleanup before exiting
+   /* Do all necessary cleanup before exiting */
    TRAP_DEFAULT_FINALIZATION();
 
    if (send_interval) {         /* in case of -o option */
