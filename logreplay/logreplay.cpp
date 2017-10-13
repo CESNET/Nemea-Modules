@@ -148,7 +148,7 @@ string replace_string(string subject, const string &search, const string &replac
 
 int main(int argc, char **argv)
 {
-   int ret;
+   int ret = 0;
    int tmp;
    int send_eof = 1;
    int time_flag = 0;
@@ -163,24 +163,13 @@ int main(int argc, char **argv)
    unsigned int num_records = 0; // Number of records received (total of all inputs)
    unsigned int max_num_records = 0; // Exit after this number of records is received
    char is_limited = 0;
-   trap_ctx_t *ctx = NULL;
 
+   // initialize TRAP interface
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+   TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
+   // set signal handling for termination
+   TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
    // ***** Process parameters *****
-
-   // Let TRAP library parse command-line arguments and extract its parameters
-   trap_ifc_spec_t ifc_spec;
-   ret = trap_parse_params(&argc, argv, &ifc_spec);
-   if (ret != TRAP_E_OK) {
-      if (ret == TRAP_E_HELP) { // "-h" was found
-         trap_print_help(module_info);
-         trap_free_ifc_spec(ifc_spec);
-         return 0;
-      }
-      trap_free_ifc_spec(ifc_spec);
-      fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
-      return 1;
-   }
 
    verbose = trap_get_verbose_level();
    if (verbose >= 0) {
@@ -216,11 +205,13 @@ int main(int argc, char **argv)
          //   break;
          default:
             fprintf(stderr, "Error: Invalid arguments.\n");
+            ret = 1;
             goto exit;
       }
    }
    if (in_filename == NULL) {
       fprintf(stderr, "Error: Missing parameter -f with input file.\n");
+      ret = 1;
       goto exit;
    }
 
@@ -238,29 +229,18 @@ int main(int argc, char **argv)
          goto exit;
       }
 
-      // Initialize TRAP library (create and init all interfaces)
-      if (verbose >= 0) {
-         printf("Initializing TRAP library ...\n");
-      }
-      ctx = trap_ctx_init(module_info, ifc_spec);
-      if (ctx == NULL) {
-         fprintf(stderr, "ERROR in TRAP initialization.\n");
-         ret = 2;
-         goto exit;
-      }
-
       // Set interface timeout to TRAP_WAIT (and disable buffering (why?))
-      trap_ctx_ifcctl(ctx, TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
+      trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
       //trap_ctx_ifcctl(ctx, TRAPIFC_OUTPUT, 0, TRAPCTL_BUFFERSWITCH, 0);
 
-      char * f_names = ur_ifc_data_fmt_to_field_names(line.c_str());
+      char *f_names = ur_ifc_data_fmt_to_field_names(line.c_str());
       if (f_names == NULL) {
          fprintf(stderr, "Error: Cannot convert data format to field names\n");
          ret = 1;
          goto exit;
       }
       line = string(f_names);
-      utmpl = ur_ctx_create_output_template(ctx, 0, f_names, NULL);
+      utmpl = ur_create_output_template(0, f_names, NULL);
       free(f_names);
       if (utmpl == NULL) {
          fprintf(stderr, "Error: Cannot create unirec template from header fields.\n");
@@ -347,8 +327,7 @@ int main(int argc, char **argv)
             }
          }
          if (valid) {
-            trap_ctx_send(ctx, 0, data, ur_rec_size(utmpl, data));
-            //trap_ctx_send_flush(ctx, 0);
+            trap_send(0, data, ur_rec_size(utmpl, data));
          }
 
       }
@@ -362,7 +341,6 @@ int main(int argc, char **argv)
    // ***** Cleanup *****
 
 exit:
-   trap_free_ifc_spec(ifc_spec);
    if (f_in.is_open()) {
       f_in.close();
    }
@@ -372,11 +350,11 @@ exit:
 
    if (send_eof) {
       char dummy[1] = {0};
-      trap_ctx_send(ctx, 0, dummy, 1);
+      trap_send(0, dummy, 1);
    }
 
-   trap_ctx_send_flush(ctx, 0);
-   trap_ctx_finalize(&ctx);
+   trap_send_flush(0);
+   trap_finalize();
 
    if (utmpl != NULL) {
       ur_free_template(utmpl);
