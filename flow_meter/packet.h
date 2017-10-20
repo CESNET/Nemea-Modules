@@ -67,6 +67,8 @@ struct Packet : public Record {
    struct timeval timestamp;
    uint16_t   field_indicator;
 
+   uint8_t     dst_mac[6];
+   uint8_t     src_mac[6];
    uint16_t    ethertype;
 
    uint16_t    ip_length;

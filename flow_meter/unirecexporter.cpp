@@ -58,7 +58,7 @@
 
 using namespace std;
 
-#define BASIC_FLOW_TEMPLATE "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,DIR_BIT_FIELD,TOS,TTL" /* LINK_BIT_FIELD or ODID will be added at init. */
+#define BASIC_FLOW_TEMPLATE "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,DIR_BIT_FIELD,TOS,TTL,SRC_MAC,DST_MAC" /* LINK_BIT_FIELD or ODID will be added at init. */
 
 #define PACKET_TEMPLATE "SRC_MAC,DST_MAC,ETHERTYPE,TIME"
 
@@ -79,8 +79,8 @@ UR_FIELDS (
    uint8 TOS,
    uint8 TTL,
 
-   bytes SRC_MAC,
-   bytes DST_MAC,
+   macaddr SRC_MAC,
+   macaddr DST_MAC,
    uint16 ETHERTYPE
    time TIME,
 )
@@ -360,6 +360,9 @@ void UnirecExporter::fill_basic_flow(Flow &flow, ur_template_t *tmplt_ptr, void 
    ur_set(tmplt_ptr, record_ptr, F_TCP_FLAGS, flow.tcp_control_bits);
    ur_set(tmplt_ptr, record_ptr, F_TOS, flow.ip_tos);
    ur_set(tmplt_ptr, record_ptr, F_TTL, flow.ip_ttl);
+
+   ur_set(tmplt_ptr, record_ptr, F_DST_MAC, mac_from_bytes(flow.dst_mac));
+   ur_set(tmplt_ptr, record_ptr, F_SRC_MAC, mac_from_bytes(flow.src_mac));
 }
 
 
@@ -373,8 +376,8 @@ void UnirecExporter::fill_packet_fields(Packet &pkt, ur_template_t *tmplt_ptr, v
 {
    ur_time_t tmp_time = ur_time_from_sec_msec(pkt.timestamp.tv_sec, pkt.timestamp.tv_usec / 1000.0);
 
-   ur_set_var(tmplt_ptr, record_ptr, F_DST_MAC, pkt.packet, 6);
-   ur_set_var(tmplt_ptr, record_ptr, F_SRC_MAC, pkt.packet + 6, 6);
+   ur_set(tmplt_ptr, record_ptr, F_DST_MAC, mac_from_bytes((uint8_t *) pkt.packet));
+   ur_set(tmplt_ptr, record_ptr, F_SRC_MAC, mac_from_bytes((uint8_t *) pkt.packet + 6));
    ur_set(tmplt_ptr, record_ptr, F_ETHERTYPE, pkt.ethertype);
    ur_set(tmplt_ptr, record_ptr, F_TIME, tmp_time);
 }

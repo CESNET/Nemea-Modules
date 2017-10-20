@@ -71,6 +71,8 @@ Basic unirec fields exported on interface with basic (pseudo) plugin. These fiel
 
 | Unirec field           | Type             | Description                                         |
 |:----------------------:|:----------------:|:---------------------------------------------------:|
+| DST_MAC                | macaddr          | destination MAC address                             |
+| SRC_MAC                | macaddr          | source MAC address                                  |
 | DST_IP                 | ipaddr           | destination IP address                              |
 | SRC_IP                 | ipaddr           | source IP address                                   |
 | BYTES                  | uint64           | number of bytes in data flow                        |
@@ -180,19 +182,19 @@ List of unirec fields exported together with basic flow fields on interface by N
 ### ARP
 List of unirec fields exported on interface by ARP plugin.
 
-| Unirec field    | Type   | Description                        |
-|:---------------:|:------:|:----------------------------------:|
-| SRC_MAC         | bytes  | source MAC address                 |
-| DST_MAC         | bytes  | destinaton MAC address             |
-| ETHERTYPE       | uint16 | protocol encapsulated in L2 frame  |
-| TIME            | time   | time packet was received           |
-| ARP_HA_FORMAT   | uint16 | hardware address format            |
-| ARP_PA_FORMAT   | uint16 | protocol address format            |
-| ARP_OPCODE      | uint16 | type of ARP message                |
-| ARP_SRC_HA      | bytes  | source hardware address            |
-| ARP_SRC_PA      | bytes  | source protocol address            |
-| ARP_DST_HA      | bytes  | destination hardware address       |
-| ARP_DST_PA      | bytes  | destination protocol address       |
+| Unirec field    | Type     | Description                        |
+|:---------------:|:--------:|:----------------------------------:|
+| SRC_MAC         | macaddr  | source MAC address                 |
+| DST_MAC         | macaddr  | destinaton MAC address             |
+| ETHERTYPE       | uint16   | protocol encapsulated in L2 frame  |
+| TIME            | time     | time packet was received           |
+| ARP_HA_FORMAT   | uint16   | hardware address format            |
+| ARP_PA_FORMAT   | uint16   | protocol address format            |
+| ARP_OPCODE      | uint16   | type of ARP message                |
+| ARP_SRC_HA      | bytes    | source hardware address            |
+| ARP_SRC_PA      | bytes    | source protocol address            |
+| ARP_DST_HA      | bytes    | destination hardware address       |
+| ARP_DST_PA      | bytes    | destination protocol address       |
 
 
 ## Simplified function diagram

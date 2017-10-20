@@ -203,6 +203,9 @@ struct Flow : public Record {
    uint16_t dst_port;
    ipaddr_t src_ip;
    ipaddr_t dst_ip;
+
+   uint8_t src_mac[6];
+   uint8_t dst_mac[6];
 };
 
 #endif

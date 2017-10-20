@@ -71,8 +71,8 @@
 #define OBSERVATION_MSEC(F)           F(0,      323,    8,   NULL)
 #define INPUT_INTERFACE(F)            F(0,       10,    2,   &this->dir_bit_field)
 #define OUTPUT_INTERFACE(F)           F(0,       14,    2,   NULL)
-#define L2_SRC_MAC(F)                 F(0,       56,    6,   NULL)
-#define L2_DST_MAC(F)                 F(0,       80,    6,   NULL)
+#define L2_SRC_MAC(F)                 F(0,       56,    6,   flow.src_mac)
+#define L2_DST_MAC(F)                 F(0,       80,    6,   flow.dst_mac)
 #define ETHERTYPE(F)                  F(0,      256,    2,   NULL)
 #define L3_PROTO(F)                   F(0,       60,    1,   &flow.ip_version)
 #define L3_IPV4_ADDR_SRC(F)           F(0,        8,    4,   &flow.src_ip.v4)
@@ -180,7 +180,9 @@
    F(L3_IPV4_TTL) \
    F(INPUT_INTERFACE) \
    F(L3_IPV4_ADDR_SRC) \
-   F(L3_IPV4_ADDR_DST)
+   F(L3_IPV4_ADDR_DST) \
+   F(L2_SRC_MAC) \
+   F(L2_DST_MAC)
 
 #define BASIC_TMPLT_V6(F) \
    F(BYTES) \
@@ -195,7 +197,9 @@
    F(L3_IPV6_TTL) \
    F(INPUT_INTERFACE) \
    F(L3_IPV6_ADDR_SRC) \
-   F(L3_IPV6_ADDR_DST)
+   F(L3_IPV6_ADDR_DST) \
+   F(L2_SRC_MAC) \
+   F(L2_DST_MAC)
 
 #define IPFIX_HTTP_TEMPLATE(F) \
    F(HTTP_USERAGENT) \
