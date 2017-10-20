@@ -68,6 +68,7 @@ enum extTypeEnum {
    sip,
    ntp,
    arp,
+   passivedns,
    /* Add extension header identifiers for your plugins here */
    EXTENSION_CNT
 };
@@ -94,6 +95,23 @@ struct RecordExt {
     */
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
+   }
+
+   /**
+    * \brief Add extension at the end of linked list.
+    * \param [in] ext Extension to add.
+    */
+   void addExtension(RecordExt *ext)
+   {
+      if (next == NULL) {
+         next = ext;
+      } else {
+         RecordExt *tmp = next;
+         while (tmp->next != NULL) {
+            tmp = tmp->next;
+         }
+         tmp->next = ext;
+      }
    }
 
    /**
@@ -129,14 +147,12 @@ struct Record {
    {
       if (exts == NULL) {
          exts = ext;
-         exts->next = NULL;
       } else {
          RecordExt *ext_ptr = exts;
          while (ext_ptr->next != NULL) {
             ext_ptr = ext_ptr->next;
          }
          ext_ptr->next = ext;
-         ext_ptr->next->next = NULL;
       }
    }
 

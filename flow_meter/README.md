@@ -18,7 +18,7 @@ This NEMEA module creates flows from input PCAP file / network interface and exp
 
 ## Parameters
 ### Module specific parameters
-- `-p STRING`        Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. For example: '-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,dns,sip,ntp,basic,arp
+- `-p STRING`        Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. For example: '-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,dns,sip,ntp,basic,arp,passivedns
 - `-c NUMBER`        Quit after `NUMBER` of packets are captured.
 - `-I STRING`        Capture from given network interface. Parameter require interface name (eth0 for example).
 - `-r STRING`        Pcap file to read. `-` to read from stdin.
@@ -48,7 +48,7 @@ When capturing from network interface, flows are continuously send to output int
 
 ## Extension
 `flow_meter` can be extended by new plugins for exporting various new information from flow.
-There are already some existing plugins that export e.g. `DNS`, `HTTP`, `SIP`, `NTP`.
+There are already some existing plugins that export e.g. `DNS`, `HTTP`, `SIP`, `NTP`, `PassiveDNS`.
 
 ## Adding new plugin
 To create new plugin use [create_plugin.sh](create_plugin.sh) script. This interactive script will generate .cpp and .h
@@ -142,6 +142,17 @@ Same as [here](https://www.liberouter.org/technologies/exporter/dns-plugin/):
 | other  | <not impl\>\* |
 
  \* binary data are skipped and not printed
+
+### PassiveDNS
+List of unirec fields exported together with basic flow fields on interface by PassiveDNS plugin.
+
+| Unirec field | Type   | Description                     |
+|:------------:|:------:|:-------------------------------:|
+| DNS_ID       | uint16 | transaction ID                  |
+| DNS_RCODE    | uint8  | response code field             |
+| DNS_NAME     | string | question domain name            |
+| DNS_RR_TTL   | uint32 | resource record TTL field       |
+| DNS_IP       | ipaddr | IP address in A or AAAA record  |
 
 ### SIP
 List of unirec fields exported together with basic flow fields on interface by SIP plugin.

@@ -120,6 +120,9 @@
 #define DNS_PSIZE(F)                  F(8057,     8,    2,   NULL)
 #define DNS_DO(F)                     F(8057,     9,    1,   NULL)
 #define DNS_ID(F)                     F(8057,    10,    2,   NULL)
+#define DNS_ATYPE(F)                  F(8057,    11,    2,   NULL)
+#define DNS_A(F)                      F(8057,    12,    4,   NULL)
+#define DNS_AAAA(F)                   F(8057,    13,    16,  NULL)
 #define SIP_MSG_TYPE(F)               F(8057,   100,    2,   NULL)
 #define SIP_STATUS_CODE(F)            F(8057,   101,    2,   NULL)
 #define SIP_CALL_ID(F)                F(8057,   102,   -1,   NULL)
@@ -243,6 +246,15 @@
    F(DNS_NAME) \
    F(DNS_RDATA)
 
+#define IPFIX_PASSIVEDNS_TEMPLATE(F) \
+   F(DNS_ID) \
+   F(DNS_RCODE) \
+   F(DNS_RR_TTL) \
+   F(DNS_ATYPE) \
+   F(DNS_A) \
+   F(DNS_AAAA) \
+   F(DNS_NAME)
+
 #define IPFIX_SIP_TEMPLATE(F) \
    F(SIP_MSG_TYPE) \
    F(SIP_STATUS_CODE) \
@@ -268,7 +280,8 @@
    IPFIX_NTP_TEMPLATE(F) \
    IPFIX_ARP_TEMPLATE(F) \
    IPFIX_SIP_TEMPLATE(F) \
-   IPFIX_DNS_TEMPLATE(F)
+   IPFIX_DNS_TEMPLATE(F) \
+   IPFIX_PASSIVEDNS_TEMPLATE(F)
 
 
 /**
