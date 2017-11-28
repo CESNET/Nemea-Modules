@@ -12,7 +12,7 @@ from report2idea import *
 MODULE_NAME = "vportscan2idea"
 MODULE_DESC = "Converts output of vportscan detector (vertical scans) to IDEA."
 REQ_TYPE = pytrap.FMT_JSON
-#REQ_FORMAT = "ipaddr DST_IP,ipaddr SRC_IP,uint32 PORT_CNT,time TIME_FIRST,time TIME_LAST,uint16 DST_PORT,uint16 SRC_PORT,uint8 EVENT_TYPE,uint8 PROTOCOL"
+# REQ_FORMAT must match the value set by vportscan_aggregator.py
 REQ_FORMAT = "aggregated_portscan"
 
 # Main conversion function
