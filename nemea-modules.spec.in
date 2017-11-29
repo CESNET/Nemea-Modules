@@ -15,7 +15,7 @@ Requires: openssl
 Requires: libpcap
 Provides: nemea-modules
 BuildRequires: gcc gcc-c++ make doxygen pkgconfig nemea-framework-devel bison flex
-BuildRequires: libpcap-devel openssl-devel libnf-devel
+BuildRequires: libpcap-devel openssl-devel libnf-devel bzip2-devel
 
 %description
 
