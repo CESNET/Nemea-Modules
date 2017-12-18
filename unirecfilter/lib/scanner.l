@@ -43,7 +43,7 @@ IPv6    ({h16}:){6}{ls32}|::({h16}:){5}{ls32}|({h16})?::({h16}:){4}{ls32}|(({h16
 "TCP"|"ICMP"|"UDP"                                       { yylval.string = copyString(yytext, yyleng); return PROTO_NAME; }
 [a-zA-Z_]+                                               { yylval.string = copyString(yytext, yyleng); return COLUMN; }
 \"(\\.|[^"])*\"                                          { yylval.string = cutString(yytext, yyleng); return STRING; }
-'(\\.|[^"])*'                                            { yylval.string = cutString(yytext, yyleng); return STRING; }
+'(\\.|[^'])*'                                            { yylval.string = cutString(yytext, yyleng); return STRING; }
 "("                                                      { return LEFT; }
 ")"                                                      { return RIGHT; }
 " "+|\t+|\n+                                             { /* skip whitespaces */ }
