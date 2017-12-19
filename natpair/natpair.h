@@ -2,10 +2,10 @@
  * \file natpair.h
  * \brief Module for pairing flows which undergone Network address translation (NAT) process.
  * \author Tomas Jansky <janskto1@fit.cvut.cz>
- * \date 2018
+ * \date 2017
  */
 /*
- * Copyright (C) 2013,2014,2015,2016 CESNET
+ * Copyright (C) 2017 CESNET
  *
  * LICENSE TERMS
  *
@@ -60,7 +60,7 @@ using namespace std;
 }
 
 #define UNIREC_INPUT_TEMPLATE "DST_IP,SRC_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST"
-#define UNIREC_OUTPUT_TEMPLATE "DST_IP,SRC_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST"
+#define UNIREC_OUTPUT_TEMPLATE "LAN_IP,RTR_IP,WAN_IP,LAN_PORT,RTR_PORT,WAN_PORT,TIME_FIRST,TIME_LAST,PROTOCOL,DIRECTION"
 #define THREAD_CNT 2
 
 #define IP_P_1_START 167772160   // 10.0.0.0
@@ -96,6 +96,7 @@ public:
    void complete(const Flow &other);
    ur_time_t getTime() const;
    net_scope_t getScope() const;
+   int sendToOutput(const ur_template_t *tmplt, void *rec) const;
 
    friend ostream& operator<<(ostream& str, const Flow &other);
 private:

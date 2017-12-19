@@ -2,10 +2,10 @@
  * \file natpair.cpp
  * \brief Module for pairing flows which undergone the Network address translation (NAT) process.
  * \author Tomas Jansky <janskto1@fit.cvut.cz>
- * \date 2018
+ * \date 2017
  */
 /*
- * Copyright (C) 2013,2014,2015,2016 CESNET
+ * Copyright (C) 2017 CESNET
  *
  * LICENSE TERMS
  *
@@ -60,9 +60,16 @@ UR_FIELDS (
    ipaddr SRC_IP,
    uint16 DST_PORT,
    uint16 SRC_PORT,
-   uint8 PROTOCOL,
-   time TIME_FIRST,
-   time TIME_LAST
+   ipaddr LAN_IP,    // IP address of the client in LAN
+   ipaddr RTR_IP,    // IP address of the WAN interface of the router performing NAT proccess
+   ipaddr WAN_IP,    // IP address of the host in WAN
+   uint16 LAN_PORT,  // port of the client in LAN
+   uint16 RTR_PORT,  // port on the WAN interface of the router performing NAT proccess
+   uint16 WAN_PORT,  // port of the host in LAN
+   time TIME_FIRST,  // time of the first packet in the flow
+   time TIME_LAST,   // time of the last packet in the flow
+   uint8 PROTOCOL,   // protocol used (TCP, UDP...)
+   uint8 DIRECTION   // 0 stands for LAN to WAN, 1 stands for WAN to LAN
 )
 
 trap_module_info_t *module_info = NULL;
@@ -83,7 +90,6 @@ TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 #define MODULE_PARAMS(PARAM) \
    PARAM('c', "checktime", "Frequency of flow cache cleaning. [sec] (default: 600s)", required_argument, "uint32") \
    PARAM('f', "freetime", "Maximum time for which unpaired flows can remain in flow cache. [sec] (default: 5s)", required_argument, "uint32") \
-   PARAM('o', "offline", "Starts the module in offline mode.", no_argument, "none") \
    PARAM('r', "router", "IPv4 address of WAN interface of the router which performs the NAT process.", required_argument, "string") \
    PARAM('s', "size", "Number of elements in the flow cache which triggers chache cleaning. (default: 2000)", required_argument, "uint32")
 
@@ -245,6 +251,29 @@ bool Flow::prepare(const ur_template_t *tmplt, const void *rec, net_scope_t sc)
    return true;
 }
 
+int Flow::sendToOutput(const ur_template_t *tmplt, void *rec) const
+{
+   ur_set(tmplt, rec, F_LAN_IP, ip_from_int(lan_ip));
+   ur_set(tmplt, rec, F_RTR_IP, ip_from_int(g_router_ip));
+   ur_set(tmplt, rec, F_WAN_IP, ip_from_int(wan_ip));
+   ur_set(tmplt, rec, F_LAN_PORT, lan_port);
+   ur_set(tmplt, rec, F_RTR_PORT, router_port);
+   ur_set(tmplt, rec, F_WAN_PORT, wan_port);
+
+   if (direction == LANtoWAN) {
+      ur_set(tmplt, rec, F_TIME_FIRST, lan_time_first);
+      ur_set(tmplt, rec, F_TIME_LAST, wan_time_last);
+   } else {
+      ur_set(tmplt, rec, F_TIME_FIRST, wan_time_first);
+      ur_set(tmplt, rec, F_TIME_LAST, lan_time_last);
+   }
+
+   ur_set(tmplt, rec, F_PROTOCOL, protocol);
+   ur_set(tmplt, rec, F_DIRECTION, direction);
+
+   return trap_send(0, rec, ur_rec_fixlen_size(tmplt)); 
+}
+
 ostream& operator<<(ostream& str, const Flow &other)
 {
    char buf[32];
@@ -373,7 +402,6 @@ int main(int argc, char **argv)
    int ret;
    signed char opt;
    ip_addr_t tmp;
-   bool online_m = true;
 
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
@@ -400,9 +428,6 @@ int main(int argc, char **argv)
          }
 
          g_free_time *= 1000;
-         break;
-      case 'o':
-         online_m = false;
          break;
       case 'r':
          if (ip_from_str(optarg, &tmp) != 1 || ip_is6(&tmp)) {
@@ -509,7 +534,9 @@ int main(int argc, char **argv)
                it->second.erase(v);
             }
 
-            cout << f << endl;
+            ret = f.sendToOutput(tmplt, out_rec);
+            TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, continue, break);
+            //cout << f << endl;
             break;
          }
       }
@@ -538,10 +565,6 @@ int main(int argc, char **argv)
          t_last = t_now;
          flowcache = newcache;
       }
-
-      //ur_set(out_tmplt, out_rec, F_BAZ, mult * baz);
-      //ret = trap_send(0, out_rec, ur_rec_fixlen_size(out_tmplt));
-      //TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, continue, break);
    }
 
 cleanup:
