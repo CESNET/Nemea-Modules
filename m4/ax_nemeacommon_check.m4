@@ -32,7 +32,7 @@ AC_DEFUN([AX_NEMEACOMMON_CHECK], [
       NEMEACOMMONLIB='${top_builddir}/../nemea-framework/common/.libs'
     fi
     if test -n "$NEMEACOMMONLIB"; then
-      nemeacommon_LDFLAGS="-L$NEMEACOMMONLIB"
+      nemeacommon_LIBS="-L$NEMEACOMMONLIB"
       nemeacommon_CFLAGS="-I$NEMEACOMMONINC"
       AC_MSG_RESULT([yes])
     else

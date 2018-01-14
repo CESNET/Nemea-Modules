@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-modules], [2.5.9], [nemea@cesnet.cz])
+AC_INIT([nemea-modules], [2.6.1], [nemea@cesnet.cz])
 AC_CONFIG_SRCDIR([flowcounter/flowcounter.c])
 AC_CONFIG_HEADERS([config.h])
 RELEASE=1
@@ -71,7 +71,7 @@ AX_PTHREAD([LIBS="$PTHREAD_LIBS $LIBS"
     [AC_MSG_ERROR([pthread not found])])
 
 AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--enable-repobuild],
-		[disable local compilation without system installed Nemea libraries, default: yes]),
+		[enable local compilation without system installed NEMEA libraries, default: no]),
 [case "${enableval}" in
 	yes) repobuild=true ;;
 	no)  repobuild=false ;;
@@ -213,11 +213,12 @@ AC_CONFIG_FILES([Makefile
                  flow_meter/Makefile
                  flow_meter/flow_meter.bash
                  flow_meter/tests/Makefile
+                 ipv6stats/Makefile
                  json_dump/Makefile
                  json_replay/Makefile
                  link_traffic/Makefile
                  link_traffic/munin/Makefile
-                 link_traffic/link_traff2json.py 
+                 link_traffic/link_traff2json.py
                  logger/Makefile
                  logreplay/Makefile
                  merger/Makefile

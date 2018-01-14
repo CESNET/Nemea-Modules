@@ -5,6 +5,7 @@ debug_sender \
 device_classifier \
 email_reporter \
 flowcounter \
+ipv6stats \
 json_dump \
 json_replay \
 link_traffic \
