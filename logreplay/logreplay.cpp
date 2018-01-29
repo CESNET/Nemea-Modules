@@ -88,7 +88,12 @@ static int stop = 0;
 
 int verbose;
 
-TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
+void trap_default_signal_handler(int signal)
+{
+   if (signal == SIGTERM || signal == SIGINT) {
+      stop = 1;
+   }
+}
 
 using namespace std;
 
@@ -300,7 +305,7 @@ int main(int argc, char **argv)
 
 
       /* main loop */
-      while (f_in.good()) {
+      while (f_in.good() && stop == 0) {
          if ((num_records++ >= max_num_records) && (is_limited == 1)) {
             break;
          }
