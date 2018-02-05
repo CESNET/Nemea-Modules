@@ -73,7 +73,7 @@ int verbose = 0;
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("demux", "This module split united input to more outputs", 1, -1)
+  BASIC("demux", "This module splits united input to more outputs", 1, -1)
 #define MODULE_PARAMS(PARAM) \
 PARAM('n', "link_count", "Sets count of output links. Must correspond to parameter -i (trap).", required_argument, "int32")
 

@@ -69,7 +69,7 @@ typedef struct meta_info_s {
 } meta_info_t;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("mux", "This module unite more input interfaces into one output interface", -1, 1)
+  BASIC("mux", "This module unites more input interfaces into one output interface", -1, 1)
 #define MODULE_PARAMS(PARAM) \
 PARAM('n', "link_count", "Sets count of input links. Must correspond to parameter -i (trap).", required_argument, "int32")
 
