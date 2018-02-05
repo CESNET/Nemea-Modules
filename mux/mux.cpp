@@ -50,7 +50,6 @@
 #include <getopt.h>
 #include <omp.h>
 #include <signal.h>
-#include "fields.h"
 
 using namespace std;
 int exit_value=0;
@@ -142,9 +141,9 @@ void capture_thread(int index)
 
 int main (int argc, char ** argv)
 {
-   //Allocate and initialize module_info structure and all its members
+   //allocate and initialize module_info structure and all its members
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-   // trap parameters processing
+   //trap parameters processing
    trap_ifc_spec_t ifc_spec;
    ret = trap_parse_params(&argc, argv, &ifc_spec);
    if (ret != TRAP_E_OK) {
@@ -156,7 +155,7 @@ int main (int argc, char ** argv)
       return 1;
    }
 
-   // Parse remaining parameters and get configuration
+   //parse remaining parameters and get configuration
    signed char opt;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
@@ -182,13 +181,13 @@ int main (int argc, char ** argv)
    //check input parameter
    if (n_inputs < 1) {
       cerr <<  "Error: Number of input interfaces must be positive integer." << endl;
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-      return 0;
+      exit_value = 2;
+      goto cleanup;
    }
    if (n_inputs > 32) {
       cerr << "Error: More than 32 interfaces is not allowed by TRAP library." << endl;
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-      return 4;
+      exit_value = 2;
+      goto cleanup;
    }
 
    // Set number of input interfaces
@@ -202,7 +201,7 @@ int main (int argc, char ** argv)
 
    if (ctx == NULL) {
       cerr << "ERROR in TRAP initialization: " << trap_last_error_msg << endl;
-      exit_value=1;
+      exit_value = 3;
       goto cleanup;
    }
 
@@ -210,27 +209,29 @@ int main (int argc, char ** argv)
    //check if number of interfaces is correct
    if (strlen(ifc_spec.types) <= 1) {
       cerr << "ERROR expected at least 1 input and 1 output interface. Got only 1." << endl;
-      return 1;
+      return 2;
    }
 
    //check if number of input interfaces is correct
    if (strlen(ifc_spec.types)-1 != n_inputs) {
       cerr << "ERROR number of input interfaces is incorrect" << endl;
+      exit_value = 2;
       goto cleanup;
    }
 
    //output interface control settings
    if (trap_ctx_ifcctl(ctx, TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_NO_WAIT) != TRAP_E_OK) {
       cerr << "ERROR in output interface initialization" << endl;
-      exit_value=2;
+      exit_value = 3;
       goto cleanup;
    }
 
 
-   //allocace memory for input templates
+   //allocate memory for input templates
    in_templates = (ur_template_t**) calloc(n_inputs, sizeof(*in_templates));
    if (in_templates == NULL) {
       cerr <<  "Memory allocation error." << endl;
+      exit_value = 3;
       goto cleanup;
    }
 
@@ -239,13 +240,14 @@ int main (int argc, char ** argv)
       //input interfaces control settings
       if (trap_ctx_ifcctl(ctx, TRAPIFC_INPUT, i, TRAPCTL_SETTIMEOUT, TRAP_WAIT) != TRAP_E_OK) {
          cerr << "ERROR in input interface initialization" << endl;
-         exit_value=2;
+         exit_value = 3;
          goto cleanup;
       }
       //create empty input template
       in_templates[i] = ur_ctx_create_input_template(ctx, i, NULL, NULL);
       if (in_templates[i] == NULL) {
          cerr <<  "Memory allocation error." << endl;
+         exit_value = 3;
          goto cleanup;
       }
       //set required incoming format
@@ -263,7 +265,8 @@ int main (int argc, char ** argv)
 
 cleanup:
    //cleaning
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    trap_ctx_finalize(&ctx);
-   return 0;
+   return exit_value;
 }
 
