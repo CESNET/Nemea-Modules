@@ -52,6 +52,7 @@
 #include <unirec/unirec.h>
 #include "fields.h"
 
+#include "Keyword.h"
 
 trap_module_info_t *module_info = NULL;
 /**
@@ -174,6 +175,8 @@ int main(int argc, char **argv)
    /**
     * Develop purposes end
     */
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+   TRAP_DEFAULT_FINALIZATION();
    return 0;
    /**
     * Develop purposes end
