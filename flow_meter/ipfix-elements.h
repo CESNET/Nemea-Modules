@@ -248,11 +248,9 @@
 
 #define IPFIX_PASSIVEDNS_TEMPLATE(F) \
    F(DNS_ID) \
-   F(DNS_RCODE) \
    F(DNS_RR_TTL) \
    F(DNS_ATYPE) \
-   F(DNS_A) \
-   F(DNS_AAAA) \
+   F(DNS_RDATA) \
    F(DNS_NAME)
 
 #define IPFIX_SIP_TEMPLATE(F) \

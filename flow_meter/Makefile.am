@@ -36,7 +36,9 @@ flow_meter_SOURCES=flow_meter.cpp \
 		    ipfixexporter.h \
 		    xxhash.c \
 		    xxhash.h \
-		    dns.h
+		    dns.h \
+		    conversion.h \
+		    conversion.cpp
 
 flow_meter_LDADD=-ltrap -lunirec -lpcap
 flow_meter_CXXFLAGS=-std=c++98 -Wno-write-strings

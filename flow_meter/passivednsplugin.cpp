@@ -47,6 +47,10 @@
 #include <sstream>
 #include <arpa/inet.h>
 #include <unirec/unirec.h>
+#include <limits>
+#include <stdlib.h>
+#include <stdint.h>
+#include <errno.h>
 
 #include "passivednsplugin.h"
 #include "flowifc.h"
@@ -54,6 +58,7 @@
 #include "packet.h"
 #include "flow_meter.h"
 #include "ipfix-elements.h"
+#include "conversion.h"
 
 using namespace std;
 
@@ -85,11 +90,11 @@ using namespace std;
  */
 #define GET_OFFSET(half1, half2) ((((uint8_t)(half1) & 0x3F) << 8) | (uint8_t)(half2))
 
-#define DNS_UNIREC_TEMPLATE "DNS_ID,DNS_RCODE,DNS_NAME,DNS_RR_TTL,DNS_IP"
+#define DNS_UNIREC_TEMPLATE "DNS_ID,DNS_ATYPE,DNS_NAME,DNS_RR_TTL,DNS_IP"
 
 UR_FIELDS (
    uint16 DNS_ID,
-   uint8  DNS_RCODE,
+   uint16 DNS_ATYPE,
    string DNS_NAME,
    uint32 DNS_RR_TTL,
    ipaddr DNS_IP
@@ -105,6 +110,7 @@ PassiveDNSPlugin::PassiveDNSPlugin(const options_t &module_options)
    total = 0;
    parsed_a = 0;
    parsed_aaaa = 0;
+   parsed_ptr = 0;
 }
 
 PassiveDNSPlugin::PassiveDNSPlugin(const options_t &module_options, vector<plugin_opt> plugin_options) : FlowCachePlugin(plugin_options)
@@ -113,6 +119,7 @@ PassiveDNSPlugin::PassiveDNSPlugin(const options_t &module_options, vector<plugi
    total = 0;
    parsed_a = 0;
    parsed_aaaa = 0;
+   parsed_ptr = 0;
 }
 
 int PassiveDNSPlugin::post_create(Flow &rec, const Packet &pkt)
@@ -140,6 +147,7 @@ void PassiveDNSPlugin::finish()
       cout << "   Parsed dns responses: " << total << endl;
       cout << "   Parsed A records: " << parsed_a << endl;
       cout << "   Parsed AAAA records: " << parsed_aaaa << endl;
+      cout << "   Parsed PTR records: " << parsed_ptr << endl;
    }
 }
 
@@ -263,7 +271,7 @@ RecordExtPassiveDNS *PassiveDNSPlugin::parse_dns(const char *data, unsigned int 
       data_len = payload_len;
 
       struct dns_hdr *dns = (struct dns_hdr *) data;
-      uint16_t flags = ntohs(dns->flags);
+      //uint16_t flags = ntohs(dns->flags);
       uint16_t question_cnt = ntohs(dns->question_rec_cnt);
       uint16_t answer_rr_cnt = ntohs(dns->answer_rec_cnt);
 
@@ -311,7 +319,6 @@ RecordExtPassiveDNS *PassiveDNSPlugin::parse_dns(const char *data, unsigned int 
       *****                    DNS Answers section                    *****
       ********************************************************************/
       size_t rdlength;
-      ostringstream rdata;
       for (int i = 0; i < answer_rr_cnt; i++) { // Process answers section.
          DEBUG_MSG("DNS answer #%d\n", i + 1);
          DEBUG_MSG("\tAnswer name:\t\t%s\n",          get_name(data).c_str());
@@ -347,7 +354,6 @@ RecordExtPassiveDNS *PassiveDNSPlugin::parse_dns(const char *data, unsigned int 
             rec->aname[length] = 0;
 
             rec->id = ntohs(dns->id);
-            rec->rcode = DNS_HDR_GET_RESPCODE(flags);
             rec->rr_ttl = ntohl(answer->ttl);
             rec->atype = type;
 
@@ -355,10 +361,12 @@ RecordExtPassiveDNS *PassiveDNSPlugin::parse_dns(const char *data, unsigned int 
                // IPv4
                rec->ip.v4 = *(uint32_t *) data;
                parsed_a++;
+               rec->ip_version = 4;
             } else {
                // IPv6
                memcpy(rec->ip.v6, data, 16);
                parsed_aaaa++;
+               rec->ip_version = 6;
             }
 
             if (list == NULL) {
@@ -366,7 +374,35 @@ RecordExtPassiveDNS *PassiveDNSPlugin::parse_dns(const char *data, unsigned int 
             } else {
                list->addExtension(rec);
             }
+         } else if (type == DNS_TYPE_PTR) {
+            RecordExtPassiveDNS *rec = new RecordExtPassiveDNS();
+
+            rec->id = ntohs(dns->id);
+            rec->rr_ttl = ntohl(answer->ttl);
+            rec->atype = type;
+
+            /* Copy domain name. */
+            string tmp = get_name(data);
+            size_t length = tmp.length();
+            if (length >= sizeof(rec->aname)) {
+               DEBUG_MSG("Truncating aname (length = %lu) to %lu.\n", length, sizeof(rec->aname) - 1);
+               length = sizeof(rec->aname) - 1;
+            }
+            memcpy(rec->aname, tmp.c_str(), length);
+            rec->aname[length] = 0;
+
+            if (!process_ptr_record(name, rec)) {
+               delete rec;
+            } else {
+               parsed_ptr++;
+               if (list == NULL) {
+                  list = rec;
+               } else {
+                  list->addExtension(rec);
+               }
+            }
          }
+
          data += rdlength;
       }
 
@@ -376,6 +412,102 @@ RecordExtPassiveDNS *PassiveDNSPlugin::parse_dns(const char *data, unsigned int 
    }
 
    return list;
+}
+
+/**
+ * \brief Provides conversion from string to uint4_t.
+ * \param [in] str String representation of value.
+ * \param [out] dst Destination variable.
+ * \return True on success, false otherwise.
+ */
+bool PassiveDNSPlugin::str_to_uint4(string str, uint8_t &dst)
+{
+   char *check;
+   errno = 0;
+   trim_str(str);
+   unsigned long long value = strtoull(str.c_str(), &check, 16);
+   if (errno == ERANGE || str[0] == '-' || str[0] == '\0' || *check ||
+      value > 15) {
+      return false;
+   }
+
+   dst = value;
+   return true;
+}
+
+/**
+ * \brief Get IP address from domain name.
+ *
+ * \param [in] name Domain name string.
+ * \param [out] rec Plugin data record.
+ * \return True on success, false otherwise.
+ */
+bool PassiveDNSPlugin::process_ptr_record(string name, RecordExtPassiveDNS *rec)
+{
+   memset(&rec->ip, 0, sizeof(rec->ip));
+
+   if (name[name.length() - 1] == '.') {
+      name.erase(name.length() - 1);
+   }
+
+   for (unsigned i = 0; i < name.length(); i++) {
+      name[i] = tolower(name[i]);
+   }
+
+   string octet;
+   string type_str = ".in-addr.arpa";
+   size_t type_pos = name.find(type_str);
+   size_t begin = 0, end = 0, cnt = 0;
+   uint8_t *ip;
+   if (type_pos + type_str.length() == name.length()) {
+      // IPv4
+      name.erase(type_pos);
+      rec->ip_version = 4;
+      ip = (uint8_t *) &rec->ip.v4;
+
+      while (end != string::npos) {
+         end = name.find(".", begin);
+         octet = name.substr(begin, (end == string::npos ? (name.length() - begin) : (end - begin)));
+         if (cnt > 3 || !str_to_uint8(octet, ip[3 - cnt])) {
+            return false;
+         }
+
+         cnt++;
+         begin = end + 1;
+      }
+      return cnt == 4;
+   } else {
+      type_str = ".ip6.arpa";
+      type_pos = name.find(type_str);
+      if (type_pos + type_str.length() == name.length()) {
+         // IPv6
+         name.erase(type_pos);
+         rec->ip_version = 6;
+         ip = (uint8_t *) &rec->ip.v6;
+
+         uint8_t nums[32];
+         while (end != string::npos) {
+            end = name.find(".", begin);
+            octet = name.substr(begin, (end == string::npos ? (name.length() - begin) : (end - begin)));
+            if (cnt > 31 || !str_to_uint4(octet, nums[31 - cnt])) {
+               return false;
+            }
+
+            cnt++;
+            begin = end + 1;
+         }
+         if (cnt != 32) {
+            return false;
+         }
+
+         for (int i = 0; i < 16; i++) {
+            rec->ip.v6[i] = (nums[i] << 4) | nums[i];
+         }
+         return true;
+      }
+   }
+
+   return false;
 }
 
 /**

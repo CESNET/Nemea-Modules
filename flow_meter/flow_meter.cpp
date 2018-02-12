@@ -53,8 +53,6 @@
 #include <cstring>
 #include <signal.h>
 #include <stdlib.h>
-#include <limits>
-#include <errno.h>
 
 #include "flow_meter.h"
 #include "packet.h"
@@ -65,6 +63,7 @@
 #include "ipfixexporter.h"
 #include "stats.h"
 #include "fields.h"
+#include "conversion.h"
 
 #include "httpplugin.h"
 #include "dnsplugin.h"
@@ -190,120 +189,6 @@ int count_trap_interfaces(int argc, char *argv[])
    }
 
    return ifc_cnt;
-}
-
-/**
- * \brief Remove whitespaces from beginning and end of string.
- * \param [in,out] str String to be trimmed.
- */
-void trim_str(string &str)
-{
-   str.erase(0, str.find_first_not_of(" \t\n\r"));
-   str.erase(str.find_last_not_of(" \t\n\r") + 1);
-}
-
-/**
- * \brief Provides conversion from string to uint64_t.
- * \param [in] str String representation of value.
- * \param [out] dst Destination variable.
- * \return True on success, false otherwise.
- */
-bool str_to_uint64(string str, uint64_t &dst)
-{
-   char *check;
-   errno = 0;
-   trim_str(str);
-   unsigned long long value = strtoull(str.c_str(), &check, 0);
-   if (errno == ERANGE || str[0] == '-' || str[0] == '\0' || *check ||
-      value > numeric_limits<uint64_t>::max()) {
-      return false;
-   }
-
-   dst = value;
-   return true;
-}
-
-/**
- * \brief Provides conversion from string to uint32_t.
- * \param [in] str String representation of value.
- * \param [out] dst Destination variable.
- * \return True on success, false otherwise.
- */
-bool str_to_uint32(string str, uint32_t &dst)
-{
-   char *check;
-   errno = 0;
-   trim_str(str);
-   unsigned long long value = strtoull(str.c_str(), &check, 0);
-   if (errno == ERANGE || str[0] == '-' || str[0] == '\0' || *check ||
-      value > numeric_limits<uint32_t>::max()) {
-      return false;
-   }
-
-   dst = value;
-   return true;
-}
-
-/**
- * \brief Provides conversion from string to uint16_t.
- * \param [in] str String representation of value.
- * \param [out] dst Destination variable.
- * \return True on success, false otherwise.
- */
-bool str_to_uint16(string str, uint16_t &dst)
-{
-   char *check;
-   errno = 0;
-   trim_str(str);
-   unsigned long long value = strtoull(str.c_str(), &check, 0);
-   if (errno == ERANGE || str[0] == '-' || str[0] == '\0' || *check ||
-      value > numeric_limits<uint16_t>::max()) {
-      return false;
-   }
-
-   dst = value;
-   return true;
-}
-
-/**
- * \brief Provides conversion from string to uint8_t.
- * \param [in] str String representation of value.
- * \param [out] dst Destination variable.
- * \return True on success, false otherwise.
- */
-bool str_to_uint8(string str, uint8_t &dst)
-{
-   char *check;
-   errno = 0;
-   trim_str(str);
-   unsigned long long value = strtoull(str.c_str(), &check, 0);
-   if (errno == ERANGE || str[0] == '-' || str[0] == '\0' || *check ||
-      value > numeric_limits<uint8_t>::max()) {
-      return false;
-   }
-
-   dst = value;
-   return true;
-}
-
-/**
- * \brief Provides conversion from string to double.
- * \param [in] str String representation of value.
- * \param [out] dst Destination variable.
- * \return True on success, false otherwise.
- */
-bool str_to_double(string str, double &dst)
-{
-   char *check;
-   errno = 0;
-   trim_str(str);
-   double value = strtod(str.c_str(), &check);
-   if (errno == ERANGE || *check || str[0] == '\0') {
-      return false;
-   }
-
-   dst = value;
-   return true;
 }
 
 /**

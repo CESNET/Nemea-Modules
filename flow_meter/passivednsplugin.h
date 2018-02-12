@@ -62,7 +62,7 @@ using namespace std;
 struct RecordExtPassiveDNS : RecordExt {
    uint16_t atype;
    uint16_t id;
-   uint8_t rcode;
+   uint8_t ip_version;
    char aname[255];
    uint32_t rr_ttl;
    ipaddr_t ip;
@@ -74,7 +74,7 @@ struct RecordExtPassiveDNS : RecordExt {
    {
       id = 0;
       atype = 0;
-      rcode = 0;
+      ip_version = 0;
       aname[0] = 0;
       rr_ttl = 0;
    }
@@ -82,39 +82,38 @@ struct RecordExtPassiveDNS : RecordExt {
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
       ur_set(tmplt, record, F_DNS_ID, id);
-      ur_set(tmplt, record, F_DNS_RCODE, rcode);
+      ur_set(tmplt, record, F_DNS_ATYPE, atype);
       ur_set_string(tmplt, record, F_DNS_NAME, aname);
       ur_set(tmplt, record, F_DNS_RR_TTL, rr_ttl);
-      if (atype == DNS_TYPE_A) {
+      if (ip_version == 4) {
          ur_set(tmplt, record, F_DNS_IP, ip_from_4_bytes_be((char *) &ip.v4));
-      } else if (atype == DNS_TYPE_AAAA) {
+      } else if (ip_version == 6) {
          ur_set(tmplt, record, F_DNS_IP, ip_from_16_bytes_be((char *) ip.v6));
       }
    }
    virtual int fillIPFIX(uint8_t *buffer, int size)
    {
       int length;
+      int rdata_len = (ip_version == 4 ? 4 : 16);
 
       length = strlen(aname);
-      if (length + 30 > size) {
+      if (length + rdata_len + 10 > size) {
          return -1;
       }
 
       *(uint16_t *) (buffer) = ntohs(id);
-      *(uint8_t *) (buffer + 2) = rcode;
-      *(uint32_t *) (buffer + 3) = ntohl(rr_ttl);
-      *(uint16_t *) (buffer + 7) = ntohs(atype);
-      if (atype == DNS_TYPE_A) {
+      *(uint32_t *) (buffer + 2) = ntohl(rr_ttl);
+      *(uint16_t *) (buffer + 6) = ntohs(atype);
+      buffer[8] = rdata_len;
+      if (ip_version == 4) {
          *(uint32_t *) (buffer + 9) = ntohl(ip.v4);
-         memset(buffer + 13, 0, sizeof(ip.v6));
       } else {
-         *(uint32_t *) (buffer + 9) = 0;
-         memcpy(buffer + 13, ip.v6, sizeof(ip.v6));
+         memcpy(buffer + 9, ip.v6, sizeof(ip.v6));
       }
-      buffer[29] = length;
-      memcpy(buffer + 30, aname, length);
+      buffer[9 + rdata_len] = length;
+      memcpy(buffer + rdata_len + 10, aname, length);
 
-      return 30 + length;
+      return length + rdata_len + 10;
    }
 };
 
@@ -134,15 +133,18 @@ public:
 
 private:
    RecordExtPassiveDNS *parse_dns(const char *data, unsigned int payload_len, bool tcp);
-   int  add_ext_dns(const char *data, unsigned int payload_len, bool tcp, Flow &rec);
+   int add_ext_dns(const char *data, unsigned int payload_len, bool tcp, Flow &rec);
 
    string get_name(const char *data) const;
    size_t get_name_length(const char *data) const;
+   bool process_ptr_record(string name, RecordExtPassiveDNS *rec);
+   bool str_to_uint4(string str, uint8_t &dst);
 
    bool print_stats;       /**< Indicator whether to print stats when flow cache is finishing or not. */
    uint32_t total;         /**< Total number of parsed DNS responses. */
    uint32_t parsed_a;      /**< Number of parsed A records. */
    uint32_t parsed_aaaa;   /**< Number of parsed AAAA records. */
+   uint32_t parsed_ptr;    /**< Number of parsed PTR records. */
 
    const char *data_begin; /**< Pointer to begin of payload. */
    uint32_t data_len;      /**< Length of packet payload. */

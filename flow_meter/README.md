@@ -146,13 +146,13 @@ Same as [here](https://www.liberouter.org/technologies/exporter/dns-plugin/):
 ### PassiveDNS
 List of unirec fields exported together with basic flow fields on interface by PassiveDNS plugin.
 
-| Unirec field | Type   | Description                     |
-|:------------:|:------:|:-------------------------------:|
-| DNS_ID       | uint16 | transaction ID                  |
-| DNS_RCODE    | uint8  | response code field             |
-| DNS_NAME     | string | question domain name            |
-| DNS_RR_TTL   | uint32 | resource record TTL field       |
-| DNS_IP       | ipaddr | IP address in A or AAAA record  |
+| Unirec field | Type   | Description                             |
+|:------------:|:------:|:---------------------------------------:|
+| DNS_ID       | uint16 | transaction ID                          |
+| DNS_ATYPE    | uint8  | response record type                    |
+| DNS_NAME     | string | question domain name                    |
+| DNS_RR_TTL   | uint32 | resource record TTL field               |
+| DNS_IP       | ipaddr | IP address from PTR, A or AAAA record   |
 
 ### SIP
 List of unirec fields exported together with basic flow fields on interface by SIP plugin.
