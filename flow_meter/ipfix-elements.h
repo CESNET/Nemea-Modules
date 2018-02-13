@@ -149,6 +149,17 @@
 #define ARP_SRC_PA(F)                 F(8057,    35,   -1,   NULL)
 #define ARP_DST_HA(F)                 F(8057,    36,   -1,   NULL)
 #define ARP_DST_PA(F)                 F(8057,    37,   -1,   NULL)
+#define SMTP_COMMANDS(F)              F(8057,    810,   4,   NULL)
+#define SMTP_MAIL_COUNT(F)            F(8057,    811,   4,   NULL)
+#define SMTP_RCPT_COUNT(F)            F(8057,    812,   4,   NULL)
+#define SMTP_SENDER(F)                F(8057,    813,  -1,   NULL)
+#define SMTP_RECIPIENT(F)             F(8057,    814,  -1,   NULL)
+#define SMTP_STATUS_CODES(F)          F(8057,    815,   4,   NULL)
+#define SMTP_CODE_2XX_COUNT(F)        F(8057,    816,   4,   NULL)
+#define SMTP_CODE_3XX_COUNT(F)        F(8057,    817,   4,   NULL)
+#define SMTP_CODE_4XX_COUNT(F)        F(8057,    818,   4,   NULL)
+#define SMTP_CODE_5XX_COUNT(F)        F(8057,    819,   4,   NULL)
+#define SMTP_DOMAIN(F)                F(8057,    820,  -1,   NULL)
 
 /**
  * IPFIX Templates - list of elements
@@ -243,6 +254,19 @@
    F(DNS_NAME) \
    F(DNS_RDATA)
 
+#define IPFIX_SMTP_TEMPLATE(F) \
+   F(SMTP_COMMANDS) \
+   F(SMTP_MAIL_COUNT) \
+   F(SMTP_RCPT_COUNT) \
+   F(SMTP_STATUS_CODES) \
+   F(SMTP_CODE_2XX_COUNT) \
+   F(SMTP_CODE_3XX_COUNT) \
+   F(SMTP_CODE_4XX_COUNT) \
+   F(SMTP_CODE_5XX_COUNT) \
+   F(SMTP_DOMAIN) \
+   F(SMTP_SENDER) \
+   F(SMTP_RECIPIENT)
+
 #define IPFIX_SIP_TEMPLATE(F) \
    F(SIP_MSG_TYPE) \
    F(SIP_STATUS_CODE) \
@@ -268,6 +292,7 @@
    IPFIX_NTP_TEMPLATE(F) \
    IPFIX_ARP_TEMPLATE(F) \
    IPFIX_SIP_TEMPLATE(F) \
+   IPFIX_SMTP_TEMPLATE(F) \
    IPFIX_DNS_TEMPLATE(F)
 
 

@@ -68,6 +68,7 @@ enum extTypeEnum {
    sip,
    ntp,
    arp,
+   smtp,
    /* Add extension header identifiers for your plugins here */
    EXTENSION_CNT
 };
