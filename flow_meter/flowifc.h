@@ -64,6 +64,7 @@ struct template_t;
 enum extTypeEnum {
    http_request = 0,
    http_response,
+   https,
    dns,
    sip,
    ntp,

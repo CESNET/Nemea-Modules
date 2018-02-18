@@ -18,7 +18,7 @@ This NEMEA module creates flows from input PCAP file / network interface and exp
 
 ## Parameters
 ### Module specific parameters
-- `-p STRING`        Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. For example: '-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,dns,sip,ntp,basic,arp
+- `-p STRING`        Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. For example: '-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,https,dns,sip,ntp,basic,arp
 - `-c NUMBER`        Quit after `NUMBER` of packets are captured.
 - `-I STRING`        Capture from given network interface. Parameter require interface name (eth0 for example).
 - `-r STRING`        Pcap file to read. `-` to read from stdin.
@@ -98,6 +98,13 @@ List of unirec fields exported together with basic flow fields on interface by H
 | HTTP_REFERER        | string | HTTP request referer        |
 | HTTP_RESPONSE_CODE  | uint16 | HTTP response code          |
 | HTTP_CONTENT_TYPE   | string | HTTP response content type  |
+
+### HTTPS
+List of unirec fields exported together with basic flow fields on interface by HTTPS plugin.
+
+| Unirec field        | Type   | Description                  |
+|:-------------------:|:------:|:----------------------------:|
+| HTTPS_SNI           | string | HTTPS server name indication |
 
 ### DNS
 List of unirec fields exported together with basic flow fields on interface by DNS plugin.

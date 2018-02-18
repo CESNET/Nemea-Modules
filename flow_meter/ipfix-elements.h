@@ -109,6 +109,7 @@
 #define HTTP_REQUEST_REFERER(F)       F(16982,  505,   -1,   NULL)
 #define HTTP_RESPONSE_STATUS_CODE(F)  F(16982,  506,    4,   NULL)
 #define HTTP_RESPONSE_CONTENT_TYPE(F) F(16982,  507,   -1,   NULL)
+#define HTTPS_SNI(F)                  F(8057,   808,   -1,   NULL)
 #define DNS_ANSWERS(F)                F(8057,     0,    2,   NULL)
 #define DNS_RCODE(F)                  F(8057,     1,    1,   NULL)
 #define DNS_NAME(F)                   F(8057,     2,   -1,   NULL)
@@ -206,6 +207,9 @@
    F(HTTP_CONTENT_TYPE) \
    F(HTTP_STATUS)
 
+#define IPFIX_HTTPS_TEMPLATE(F) \
+   F(HTTPS_SNI)
+
 #define IPFIX_NTP_TEMPLATE(F) \
    F(NTP_LEAP) \
    F(NTP_VERSION) \
@@ -265,6 +269,7 @@
    BASIC_TMPLT_V4(F) \
    BASIC_TMPLT_V6(F) \
    IPFIX_HTTP_TEMPLATE(F) \
+   IPFIX_HTTPS_TEMPLATE(F) \
    IPFIX_NTP_TEMPLATE(F) \
    IPFIX_ARP_TEMPLATE(F) \
    IPFIX_SIP_TEMPLATE(F) \

@@ -20,6 +20,8 @@ flow_meter_SOURCES=flow_meter.cpp \
 		    httpplugin.h \
 		    sipplugin.cpp \
 		    sipplugin.h \
+		    httpsplugin.cpp \
+		    httpsplugin.h \
 		    fields.c \
 		    fields.h \
 		    dnsplugin.cpp \
