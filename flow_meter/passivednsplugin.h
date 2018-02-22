@@ -1,12 +1,11 @@
 /**
- * \file dnsplugin.h
- * \brief Plugin for parsing DNS traffic.
+ * \file passivednsplugin.h
+ * \brief Plugin for exporting DNS A and AAAA records.
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
- * \date 2015
- * \date 2016
+ * \date 2017
  */
 /*
- * Copyright (C) 2014-2016 CESNET
+ * Copyright (C) 2017 CESNET
  *
  * LICENSE TERMS
  *
@@ -42,8 +41,8 @@
  *
  */
 
-#ifndef DNSPLUGIN_H
-#define DNSPLUGIN_H
+#ifndef PASSIVEDNSPLUGIN_H
+#define PASSIVEDNSPLUGIN_H
 
 #include <string>
 #include <sstream>
@@ -60,85 +59,72 @@ using namespace std;
 /**
  * \brief Flow record extension header for storing parsed DNS packets.
  */
-struct RecordExtDNS : RecordExt {
+struct RecordExtPassiveDNS : RecordExt {
+   uint16_t atype;
    uint16_t id;
-   uint16_t answers;
-   uint8_t rcode;
-   char qname[128];
-   uint16_t qtype;
-   uint16_t qclass;
+   uint8_t ip_version;
+   char aname[255];
    uint32_t rr_ttl;
-   uint16_t rlength;
-   char data[160];
-   uint16_t psize;
-   uint8_t dns_do;
+   ipaddr_t ip;
 
    /**
     * \brief Constructor.
     */
-   RecordExtDNS() : RecordExt(dns)
+   RecordExtPassiveDNS() : RecordExt(passivedns)
    {
       id = 0;
-      answers = 0;
-      rcode = 0;
-      qname[0] = 0;
-      qtype = 0;
-      qclass = 0;
+      atype = 0;
+      ip_version = 0;
+      aname[0] = 0;
       rr_ttl = 0;
-      rlength = 0;
-      data[0] = 0;
-      psize = 0;
-      dns_do = 0;
    }
 
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
-         ur_set(tmplt, record, F_DNS_ID, id);
-         ur_set(tmplt, record, F_DNS_ANSWERS, answers);
-         ur_set(tmplt, record, F_DNS_RCODE, rcode);
-         ur_set_string(tmplt, record, F_DNS_NAME, qname);
-         ur_set(tmplt, record, F_DNS_QTYPE, qtype);
-         ur_set(tmplt, record, F_DNS_CLASS, qclass);
-         ur_set(tmplt, record, F_DNS_RR_TTL, rr_ttl);
-         ur_set(tmplt, record, F_DNS_RLENGTH, rlength);
-         ur_set_var(tmplt, record, F_DNS_RDATA, data, rlength);
-         ur_set(tmplt, record, F_DNS_PSIZE, psize);
-         ur_set(tmplt, record, F_DNS_DO, dns_do);
+      ur_set(tmplt, record, F_DNS_ID, id);
+      ur_set(tmplt, record, F_DNS_ATYPE, atype);
+      ur_set_string(tmplt, record, F_DNS_NAME, aname);
+      ur_set(tmplt, record, F_DNS_RR_TTL, rr_ttl);
+      if (ip_version == 4) {
+         ur_set(tmplt, record, F_DNS_IP, ip_from_4_bytes_be((char *) &ip.v4));
+      } else if (ip_version == 6) {
+         ur_set(tmplt, record, F_DNS_IP, ip_from_16_bytes_be((char *) ip.v6));
+      }
    }
    virtual int fillIPFIX(uint8_t *buffer, int size)
    {
       int length;
+      int rdata_len = (ip_version == 4 ? 4 : 16);
 
-      length = strlen(qname);
-      if (length + rlength + 20 > size) {
+      length = strlen(aname);
+      if (length + rdata_len + 10 > size) {
          return -1;
       }
-      *(uint16_t *) (buffer) = ntohs(answers);
-      *(uint8_t *) (buffer + 2) = rcode;
-      *(uint16_t *) (buffer + 3) = ntohs(qtype);
-      *(uint16_t *) (buffer + 5) = ntohs(qclass);
-      *(uint32_t *) (buffer + 7) = ntohl(rr_ttl);
-      *(uint16_t *) (buffer + 11) = ntohs(rlength);
-      *(uint16_t *) (buffer + 13) = ntohs(psize);
-      *(uint8_t *) (buffer + 15) = dns_do;
-      *(uint16_t *) (buffer + 16) = ntohs(id);
-      buffer[18] = length;
-      memcpy(buffer + 19, qname, length);
-      buffer[length + 19] = rlength;
-      memcpy(buffer + 20 + length, data, rlength);
 
-      return 20 + rlength + length;
+      *(uint16_t *) (buffer) = ntohs(id);
+      *(uint32_t *) (buffer + 2) = ntohl(rr_ttl);
+      *(uint16_t *) (buffer + 6) = ntohs(atype);
+      buffer[8] = rdata_len;
+      if (ip_version == 4) {
+         *(uint32_t *) (buffer + 9) = ntohl(ip.v4);
+      } else {
+         memcpy(buffer + 9, ip.v6, sizeof(ip.v6));
+      }
+      buffer[9 + rdata_len] = length;
+      memcpy(buffer + rdata_len + 10, aname, length);
+
+      return length + rdata_len + 10;
    }
 };
 
 /**
  * \brief Flow cache plugin for parsing DNS packets.
  */
-class DNSPlugin : public FlowCachePlugin
+class PassiveDNSPlugin : public FlowCachePlugin
 {
 public:
-   DNSPlugin(const options_t &module_options);
-   DNSPlugin(const options_t &module_options, vector<plugin_opt> plugin_options);
+   PassiveDNSPlugin(const options_t &module_options);
+   PassiveDNSPlugin(const options_t &module_options, vector<plugin_opt> plugin_options);
    int post_create(Flow &rec, const Packet &pkt);
    int pre_update(Flow &rec, Packet &pkt);
    void finish();
@@ -146,18 +132,19 @@ public:
    const char **get_ipfix_string();
 
 private:
-   bool parse_dns(const char *data, unsigned int payload_len, bool tcp, RecordExtDNS *rec);
-   int  add_ext_dns(const char *data, unsigned int payload_len, bool tcp, Flow &rec);
-   void process_srv(string &str) const;
-   void process_rdata(const char *record_begin, const char *data, ostringstream &rdata, uint16_t type, size_t length) const;
+   RecordExtPassiveDNS *parse_dns(const char *data, unsigned int payload_len, bool tcp);
+   int add_ext_dns(const char *data, unsigned int payload_len, bool tcp, Flow &rec);
 
    string get_name(const char *data) const;
    size_t get_name_length(const char *data) const;
+   bool process_ptr_record(string name, RecordExtPassiveDNS *rec);
+   bool str_to_uint4(string str, uint8_t &dst);
 
    bool print_stats;       /**< Indicator whether to print stats when flow cache is finishing or not. */
-   uint32_t queries;       /**< Total number of parsed DNS queries. */
-   uint32_t responses;     /**< Total number of parsed DNS responses. */
-   uint32_t total;         /**< Total number of parsed DNS packets. */
+   uint32_t total;         /**< Total number of parsed DNS responses. */
+   uint32_t parsed_a;      /**< Number of parsed A records. */
+   uint32_t parsed_aaaa;   /**< Number of parsed AAAA records. */
+   uint32_t parsed_ptr;    /**< Number of parsed PTR records. */
 
    const char *data_begin; /**< Pointer to begin of payload. */
    uint32_t data_len;      /**< Length of packet payload. */

@@ -514,7 +514,7 @@ int main(int argc, char **argv)
 
    // Create input template
    trap_set_required_fmt(0, TRAP_FMT_UNIREC, "");
-   ret = trap_recv(0, &in_rec, &in_rec_size);
+   ret = trap_recv(0, &in_rec, &in_rec_size); // receive first record and template specification
    if (ret == TRAP_E_FORMAT_CHANGED) {
       const char *spec = NULL;
       uint8_t data_fmt;
@@ -610,21 +610,8 @@ int main(int argc, char **argv)
    // Main loop
    // Copy data from input to output
    while (!stop) {
-      // Receive data from any input interface, wait until data are available
-      ret = TRAP_RECEIVE(0, in_rec, in_rec_size, in_tmplt);
-      TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
-      // Check size of received data
-      if (in_rec_size < ur_rec_fixlen_size(in_tmplt)) {
-         if (in_rec_size <= 1) {
-            break;   // End of data (used for testing purposes)
-         } else {
-            fprintf(stderr,
-               "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
-               ur_rec_fixlen_size(in_tmplt),
-               in_rec_size);
-            break;
-         }
-      }
+      // The first record should be already loaded, process it first,
+      // then load another one at the end of the loop 
 
       // PROCESS THE DATA
       for (i = 0; i < n_outputs; i++) {
@@ -634,7 +621,7 @@ int main(int argc, char **argv)
             break;
          } else if (ret == URFILTER_TRUE) {
             if (verbose >= 1) {
-               printf("ADVANCED VERBOSE: Record %ud accepted on interface %d\n", num_records, i);
+               printf("ADVANCED VERBOSE: Record %u accepted on interface %d\n", num_records, i);
             }
             //Iterate over all output fields; if the field is present in input template, copy it to output record
             // If missing, set null
@@ -668,7 +655,7 @@ int main(int argc, char **argv)
             TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, continue, {stop=1; break;});
          } else {
             if (verbose >= 1) {
-               printf("ADVANCED VERBOSE: Record %ud declined on interface %d\n", num_records, i);
+               printf("ADVANCED VERBOSE: Record %u declined on interface %d\n", num_records, i);
             }
          }
       }
@@ -686,7 +673,23 @@ int main(int argc, char **argv)
       // Quit if maximum number of records has been reached
       num_records++;
       if (max_num_records && max_num_records == num_records) {
-         stop = 1;
+         break;
+      }
+
+      // Receive data from any input interface, wait until data are available
+      ret = TRAP_RECEIVE(0, in_rec, in_rec_size, in_tmplt);
+      TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
+      // Check size of received data
+      if (in_rec_size < ur_rec_fixlen_size(in_tmplt)) {
+         if (in_rec_size <= 1) {
+            break;   // End of data (used for testing purposes)
+         } else {
+            fprintf(stderr,
+               "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
+               ur_rec_fixlen_size(in_tmplt),
+               in_rec_size);
+            break;
+         }
       }
    }
 

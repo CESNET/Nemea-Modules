@@ -1,3 +1,6 @@
+2017-11-28 Nemea-modules-2.6.1
+	* vportscan2idea: adapt to the new output of aggregator
+
 2017-10-10 Nemea-modules-2.6.0
 	* added new module:
 		ipv6stats (for counting statistics about IPv4 and IPv6 traffic)

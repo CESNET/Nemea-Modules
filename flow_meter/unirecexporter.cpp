@@ -88,7 +88,7 @@ UR_FIELDS (
 /**
  * \brief Constructor.
  */
-UnirecExporter::UnirecExporter(bool send_eof) : out_ifc_cnt(0), ifc_mapping(NULL), ifc_to_export(NULL),
+UnirecExporter::UnirecExporter(bool send_eof) : out_ifc_cnt(0), ifc_mapping(NULL),
 tmplt(NULL), record(NULL), eof(send_eof), send_odid(false)
 {
 }
@@ -141,10 +141,6 @@ int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, 
    ifc_mapping = new int[EXTENSION_CNT];
    for (int i = 0; i < EXTENSION_CNT; i++) {
       ifc_mapping[i] = -1;
-   }
-   ifc_to_export = new bool[out_ifc_cnt];
-   for (int i = 0; i < out_ifc_cnt; i++) {
-      ifc_to_export[i] = false;
    }
 
    string template_str;
@@ -238,10 +234,6 @@ void UnirecExporter::free_unirec_resources()
       delete [] ifc_mapping;
       ifc_mapping = NULL;
    }
-   if (ifc_to_export) {
-      delete [] ifc_to_export;
-      ifc_to_export = NULL;
-   }
 }
 
 int UnirecExporter::export_packet(Packet &pkt)
@@ -255,23 +247,15 @@ int UnirecExporter::export_packet(Packet &pkt)
       if (ifc_num >= 0) {
          tmplt_ptr = tmplt[ifc_num];
          record_ptr = record[ifc_num];
-         ifc_to_export[ifc_num] = true;
 
          ur_clear_varlen(tmplt_ptr, record_ptr);
          memset(record_ptr, 0, ur_rec_fixlen_size(tmplt_ptr));
          fill_packet_fields(pkt, tmplt_ptr, record_ptr);
          ext->fillUnirec(tmplt_ptr, record_ptr); /* Add each extension header into unirec record. */
+
+         trap_send(ifc_num, record_ptr, ur_rec_fixlen_size(tmplt_ptr) + ur_rec_varlen_size(tmplt_ptr, record_ptr));
       }
       ext = ext->next;
-   }
-
-   for (int i = 0; i < out_ifc_cnt; i++) {
-      if (ifc_to_export[i]) {
-         tmplt_ptr = tmplt[i];
-         record_ptr = record[i];
-         trap_send(i, record_ptr, ur_rec_fixlen_size(tmplt_ptr) + ur_rec_varlen_size(tmplt_ptr, record_ptr));
-         ifc_to_export[i] = false;
-      }
    }
 
    return 0;
@@ -290,7 +274,8 @@ int UnirecExporter::export_flow(Flow &flow)
       ur_clear_varlen(tmplt_ptr, record_ptr);
 
       fill_basic_flow(flow, tmplt_ptr, record_ptr);
-      ifc_to_export[basic_ifc_num] = true;
+
+      trap_send(basic_ifc_num, record_ptr, ur_rec_fixlen_size(tmplt_ptr) + ur_rec_varlen_size(tmplt_ptr, record_ptr));
    }
 
    while (ext != NULL) {
@@ -298,24 +283,16 @@ int UnirecExporter::export_flow(Flow &flow)
       if (ifc_num >= 0) {
          tmplt_ptr = tmplt[ifc_num];
          record_ptr = record[ifc_num];
-         ifc_to_export[ifc_num] = true;
 
          ur_clear_varlen(tmplt_ptr, record_ptr);
          memset(record_ptr, 0, ur_rec_fixlen_size(tmplt_ptr));
 
          fill_basic_flow(flow, tmplt_ptr, record_ptr);
          ext->fillUnirec(tmplt_ptr, record_ptr); /* Add each extension header into unirec record. */
+
+         trap_send(ifc_num, record_ptr, ur_rec_fixlen_size(tmplt_ptr) + ur_rec_varlen_size(tmplt_ptr, record_ptr));
       }
       ext = ext->next;
-   }
-
-   for (int i = 0; i < out_ifc_cnt; i++) {
-      if (ifc_to_export[i]) {
-         tmplt_ptr = tmplt[i];
-         record_ptr = record[i];
-         trap_send(i, record_ptr, ur_rec_fixlen_size(tmplt_ptr) + ur_rec_varlen_size(tmplt_ptr, record_ptr));
-         ifc_to_export[i] = false;
-      }
    }
 
    return 0;

@@ -11,21 +11,33 @@ from report2idea import *
 # Moudle name, description and required input data format
 MODULE_NAME = "vportscan2idea"
 MODULE_DESC = "Converts output of vportscan detector (vertical scans) to IDEA."
-REQ_TYPE = pytrap.FMT_UNIREC
-REQ_FORMAT = "ipaddr DST_IP,ipaddr SRC_IP,uint32 PORT_CNT,time TIME_FIRST,time TIME_LAST,uint16 DST_PORT,uint16 SRC_PORT,uint8 EVENT_TYPE,uint8 PROTOCOL"
+REQ_TYPE = pytrap.FMT_JSON
+# REQ_FORMAT must match the value set by vportscan_aggregator.py
+REQ_FORMAT = "aggregated_portscan"
 
 # Main conversion function
 def convert_to_idea(rec, opts=None):
-    endTime = getIDEAtime(rec.TIME_LAST)
+    """ Convert rec, which is a JSON object similar to the following examples:
+
+    {"src_ip": "1.8.9.39", "dst_ips": {"88.5.17.23": 400, "69.7.18.27": 2100,
+    "98.4.48.85": 400}, "ts_first": 1455131428.0, "protocol": 6, "ts_last":
+    1455131910.327}
+
+    {"src_ip": "98.4.48.82", "dst_ips": {"1.8.9.39": 1350}, "ts_first":
+    1455131462.223, "protocol": 6, "ts_last": 1455132113.437}
+
+    "dst_ips" is a dict of IP addresses and their portcounts (number of scanned ports)
+    """
+
+    endTime = getIDEAtime(pytrap.UnirecTime(rec["ts_last"]))
     idea={
        "Format": "IDEA0",
        "ID": getRandomId(),
        'CreateTime': getIDEAtime(),
-       "EventTime": getIDEAtime(rec.TIME_FIRST),
+       "EventTime": getIDEAtime(pytrap.UnirecTime(rec["ts_first"])),
        'CeaseTime': endTime,
        "DetectTime": endTime,
        "Category": ["Recon.Scanning"],
-       "FlowCount": int(rec.PORT_CNT),
        "Description": "Vertical scan using TCP SYN",
        "Source": [{
              "Proto": ["tcp"]
@@ -40,9 +52,15 @@ def convert_to_idea(rec, opts=None):
           'AggrWin': '00:10:00',
        }],
     }
-    # Set IP addresses (IPv4 / IPv6)
-    setAddr(idea['Source'][0], rec.SRC_IP)
-    setAddr(idea['Target'][0], rec.DST_IP)
+    # Set IP addresses (IPv4 / IPv6) and portcount
+    setAddr(idea['Source'][0], pytrap.UnirecIPAddr(rec["src_ip"]))
+    portcount = 0
+    for ip in rec["dst_ips"]:
+        setAddr(idea["Target"][0], pytrap.UnirecIPAddr(ip))
+        portcount += rec["dst_ips"][ip]
+    idea["FlowCount"] = portcount
+    if len(rec["dst_ips"]) > 1:
+        idea["Description"] = "Block portscan using TCP SYN"
     return idea
 
 
