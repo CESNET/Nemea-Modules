@@ -102,7 +102,7 @@ bool HTTPSPlugin::parse_sni(const char *data, int payload_len, RecordExtHTTPS *r
    tls_rec *tls = (tls_rec *) data;
 
    total++;
-   if (payload_len < sizeof(tls_rec) || tls->type != TLS_HANDSHAKE ||
+   if (payload_len - sizeof(tls_rec) < 0 || tls->type != TLS_HANDSHAKE ||
          tls->version.major != 3 || tls->version.minor > 3) {
       return false;
    }
