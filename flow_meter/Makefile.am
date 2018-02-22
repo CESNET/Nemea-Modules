@@ -22,10 +22,14 @@ flow_meter_SOURCES=flow_meter.cpp \
 		    sipplugin.h \
 		    httpsplugin.cpp \
 		    httpsplugin.h \
+		    smtpplugin.cpp \
+		    smtpplugin.h \
 		    fields.c \
 		    fields.h \
 		    dnsplugin.cpp \
 		    dnsplugin.h \
+		    passivednsplugin.cpp \
+		    passivednsplugin.h \
 		    ntpplugin.cpp \
 		    ntpplugin.h \
 		    ipaddr.h \
@@ -35,7 +39,10 @@ flow_meter_SOURCES=flow_meter.cpp \
 		    ipfix-elements.h \
 		    ipfixexporter.h \
 		    xxhash.c \
-		    xxhash.h
+		    xxhash.h \
+		    dns.h \
+		    conversion.h \
+		    conversion.cpp
 
 flow_meter_LDADD=-ltrap -lunirec -lpcap
 flow_meter_CXXFLAGS=-std=c++98 -Wno-write-strings

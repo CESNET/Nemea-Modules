@@ -53,8 +53,6 @@
 #include <cstring>
 #include <signal.h>
 #include <stdlib.h>
-#include <limits>
-#include <errno.h>
 
 #include "flow_meter.h"
 #include "packet.h"
@@ -65,6 +63,7 @@
 #include "ipfixexporter.h"
 #include "stats.h"
 #include "fields.h"
+#include "conversion.h"
 
 #include "httpplugin.h"
 #include "httpsplugin.h"
@@ -72,6 +71,8 @@
 #include "sipplugin.h"
 #include "ntpplugin.h"
 #include "arpplugin.h"
+#include "passivednsplugin.h"
+#include "smtpplugin.h"
 
 using namespace std;
 
@@ -84,7 +85,7 @@ static int stop = 0;
 #define MODULE_PARAMS(PARAM) \
   PARAM('p', "plugins", "Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. "\
   "For example: \'-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter"\
-  " will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,https,dns,sip,ntp,basic,arp", required_argument, "string")\
+  " will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,https,dns,sip,ntp,smtp,basic,arp,passivedns", required_argument, "string")\
   PARAM('c', "count", "Quit after number of packets are captured.", required_argument, "uint32")\
   PARAM('I', "interface", "Capture from given network interface. Parameter require interface name (eth0 for example).", required_argument, "string")\
   PARAM('r', "file", "Pcap file to read. - to read from stdin.", required_argument, "string") \
@@ -151,11 +152,21 @@ int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plu
          tmp.push_back(plugin_opt("ntp", ntp, ifc_num++));
 
          plugins.push_back(new NTPPlugin(module_options, tmp));
+      } else if (proto == "smtp"){
+         vector<plugin_opt> tmp;
+         tmp.push_back(plugin_opt("smtp", smtp, ifc_num++));
+
+         plugins.push_back(new SMTPPlugin(module_options, tmp));
       } else if (proto == "arp"){
          vector<plugin_opt> tmp;
          tmp.push_back(plugin_opt("arp", arp, ifc_num++));
 
          plugins.push_back(new ARPPlugin(module_options, tmp));
+      } else if (proto == "passivedns"){
+         vector<plugin_opt> tmp;
+         tmp.push_back(plugin_opt("passivedns", passivedns, ifc_num++));
+
+         plugins.push_back(new PassiveDNSPlugin(module_options, tmp));
       } else {
          fprintf(stderr, "Unsupported plugin: \"%s\"\n", proto.c_str());
          return -1;
@@ -191,120 +202,6 @@ int count_trap_interfaces(int argc, char *argv[])
    }
 
    return ifc_cnt;
-}
-
-/**
- * \brief Remove whitespaces from beginning and end of string.
- * \param [in,out] str String to be trimmed.
- */
-void trim_str(string &str)
-{
-   str.erase(0, str.find_first_not_of(" \t\n\r"));
-   str.erase(str.find_last_not_of(" \t\n\r") + 1);
-}
-
-/**
- * \brief Provides conversion from string to uint64_t.
- * \param [in] str String representation of value.
- * \param [out] dst Destination variable.
- * \return True on success, false otherwise.
- */
-bool str_to_uint64(string str, uint64_t &dst)
-{
-   char *check;
-   errno = 0;
-   trim_str(str);
-   unsigned long long value = strtoull(str.c_str(), &check, 0);
-   if (errno == ERANGE || str[0] == '-' || str[0] == '\0' || *check ||
-      value > numeric_limits<uint64_t>::max()) {
-      return false;
-   }
-
-   dst = value;
-   return true;
-}
-
-/**
- * \brief Provides conversion from string to uint32_t.
- * \param [in] str String representation of value.
- * \param [out] dst Destination variable.
- * \return True on success, false otherwise.
- */
-bool str_to_uint32(string str, uint32_t &dst)
-{
-   char *check;
-   errno = 0;
-   trim_str(str);
-   unsigned long long value = strtoull(str.c_str(), &check, 0);
-   if (errno == ERANGE || str[0] == '-' || str[0] == '\0' || *check ||
-      value > numeric_limits<uint32_t>::max()) {
-      return false;
-   }
-
-   dst = value;
-   return true;
-}
-
-/**
- * \brief Provides conversion from string to uint16_t.
- * \param [in] str String representation of value.
- * \param [out] dst Destination variable.
- * \return True on success, false otherwise.
- */
-bool str_to_uint16(string str, uint16_t &dst)
-{
-   char *check;
-   errno = 0;
-   trim_str(str);
-   unsigned long long value = strtoull(str.c_str(), &check, 0);
-   if (errno == ERANGE || str[0] == '-' || str[0] == '\0' || *check ||
-      value > numeric_limits<uint16_t>::max()) {
-      return false;
-   }
-
-   dst = value;
-   return true;
-}
-
-/**
- * \brief Provides conversion from string to uint8_t.
- * \param [in] str String representation of value.
- * \param [out] dst Destination variable.
- * \return True on success, false otherwise.
- */
-bool str_to_uint8(string str, uint8_t &dst)
-{
-   char *check;
-   errno = 0;
-   trim_str(str);
-   unsigned long long value = strtoull(str.c_str(), &check, 0);
-   if (errno == ERANGE || str[0] == '-' || str[0] == '\0' || *check ||
-      value > numeric_limits<uint8_t>::max()) {
-      return false;
-   }
-
-   dst = value;
-   return true;
-}
-
-/**
- * \brief Provides conversion from string to double.
- * \param [in] str String representation of value.
- * \param [out] dst Destination variable.
- * \return True on success, false otherwise.
- */
-bool str_to_double(string str, double &dst)
-{
-   char *check;
-   errno = 0;
-   trim_str(str);
-   double value = strtod(str.c_str(), &check);
-   if (errno == ERANGE || *check || str[0] == '\0') {
-      return false;
-   }
-
-   dst = value;
-   return true;
 }
 
 /**
@@ -660,7 +557,7 @@ int main(int argc, char *argv[])
 
    Packet packet;
    int ret = 0;
-   uint32_t pkt_total = 0, pkt_parsed = 0;
+   uint64_t pkt_total = 0, pkt_parsed = 0;
 
    packet.packet = new char[MAXPCKTSIZE + 1];
 

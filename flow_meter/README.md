@@ -18,7 +18,7 @@ This NEMEA module creates flows from input PCAP file / network interface and exp
 
 ## Parameters
 ### Module specific parameters
-- `-p STRING`        Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. For example: '-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,https,dns,sip,ntp,basic,arp
+- `-p STRING`        Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. For example: '-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,https,dns,sip,ntp,smtp,basic,arp,passivedns
 - `-c NUMBER`        Quit after `NUMBER` of packets are captured.
 - `-I STRING`        Capture from given network interface. Parameter require interface name (eth0 for example).
 - `-r STRING`        Pcap file to read. `-` to read from stdin.
@@ -48,7 +48,7 @@ When capturing from network interface, flows are continuously send to output int
 
 ## Extension
 `flow_meter` can be extended by new plugins for exporting various new information from flow.
-There are already some existing plugins that export e.g. `DNS`, `HTTP`, `SIP`, `NTP`.
+There are already some existing plugins that export e.g. `DNS`, `HTTP`, `SIP`, `NTP`, `PassiveDNS`.
 
 ## Adding new plugin
 To create new plugin use [create_plugin.sh](create_plugin.sh) script. This interactive script will generate .cpp and .h
@@ -150,6 +150,17 @@ Same as [here](https://www.liberouter.org/technologies/exporter/dns-plugin/):
 
  \* binary data are skipped and not printed
 
+### PassiveDNS
+List of unirec fields exported together with basic flow fields on interface by PassiveDNS plugin.
+
+| Unirec field | Type   | Description                             |
+|:------------:|:------:|:---------------------------------------:|
+| DNS_ID       | uint16 | transaction ID                          |
+| DNS_ATYPE    | uint8  | response record type                    |
+| DNS_NAME     | string | question domain name                    |
+| DNS_RR_TTL   | uint32 | resource record TTL field               |
+| DNS_IP       | ipaddr | IP address from PTR, A or AAAA record   |
+
 ### SIP
 List of unirec fields exported together with basic flow fields on interface by SIP plugin.
 
@@ -183,6 +194,75 @@ List of unirec fields exported together with basic flow fields on interface by N
 | NTP_ORIG       | string | NTP origin timestamp      |
 | NTP_RECV       | string | NTP receive timestamp     |
 | NTP_SENT       | string | NTP transmit timestamp    |
+
+### SMTP
+List of unirec fields exported on interface by SMTP plugin
+
+| Unirec field              | Type   | Description                         |
+|:-------------------------:|:------:|:-----------------------------------:|
+| SMTP_2XX_STAT_CODE_COUNT  | uint32 | number of 2XX status codes          |
+| SMTP_3XX_STAT_CODE_COUNT  | uint32 | number of 3XX status codes          |
+| SMTP_4XX_STAT_CODE_COUNT  | uint32 | number of 4XX status codes          |
+| SMTP_5XX_STAT_CODE_COUNT  | uint32 | number of 5XX status codes          |
+| SMTP_COMMAND_FLAGS        | uint32 | bit array of commands present       |
+| SMTP_MAIL_CMD_COUNT       | uint32 | number of MAIL commands             |
+| SMTP_RCPT_CMD_COUNT       | uint32 | number of RCPT commands             |
+| SMTP_STAT_CODE_FLAGS      | uint32 | bit array of status codes present   |
+| SMTP_DOMAIN               | string | domain name of the SMTP client      |
+| SMTP_FIRST_SENDER         | string | first sender in MAIL command        |
+| SMTP_FIRST_RECIPIENT      | string | first recipient in RCPT command     |
+
+#### SMTP\_COMMAND\_FLAGS
+The following table shows bit values of `SMTP\_COMMAND\_FLAGS` for each SMTP command present in communication.
+
+| Command  | Value  |
+|:--------:|:------:|
+| EHLO     | 0x0001 |
+| HELO     | 0x0002 |
+| MAIL     | 0x0004 |
+| RCPT     | 0x0008 |
+| DATA     | 0x0010 |
+| RSET     | 0x0020 |
+| VRFY     | 0x0040 |
+| EXPN     | 0x0080 |
+| HELP     | 0x0100 |
+| NOOP     | 0x0200 |
+| QUIT     | 0x0400 |
+| UNKNOWN  | 0x8000 |
+
+#### SMTP\_STAT\_CODE\_FLAGS
+The following table shows bit values of `SMTP\_STAT_CODE\_FLAGS` for each present in communication.
+
+| Status code | Value      |
+|:-----------:|:----------:|
+| 211         | 0x00000001 |
+| 214         | 0x00000002 |
+| 220         | 0x00000004 |
+| 221         | 0x00000008 |
+| 250         | 0x00000010 |
+| 251         | 0x00000020 |
+| 252         | 0x00000040 |
+| 354         | 0x00000080 |
+| 421         | 0x00000100 |
+| 450         | 0x00000200 |
+| 451         | 0x00000400 |
+| 452         | 0x00000800 |
+| 455         | 0x00001000 |
+| 500         | 0x00002000 |
+| 501         | 0x00004000 |
+| 502         | 0x00008000 |
+| 503         | 0x00010000 |
+| 504         | 0x00020000 |
+| 550         | 0x00040000 |
+| 551         | 0x00080000 |
+| 552         | 0x00100000 |
+| 553         | 0x00200000 |
+| 554         | 0x00400000 |
+| 555         | 0x00800000 |
+| *           | 0x40000000 |
+| UNKNOWN     | 0x80000000 |
+
+* Bit is set if answer contains SPAM keyword.
 
 ### ARP
 List of unirec fields exported on interface by ARP plugin.

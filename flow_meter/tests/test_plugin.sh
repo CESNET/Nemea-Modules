@@ -33,8 +33,7 @@ run_plugin_test() {
    "$logger_bin"     -i f:"$output_dir/$file_out" -t | sort > "$output_dir/$1"
    rm "$output_dir/$file_out"
 
-   sort "$ref_dir/$1" | diff -u "$output_dir/$1" -
-   if [ $? -eq 0 ]; then
+   if sort "$ref_dir/$1" | diff -u "$output_dir/$1" -s - ; then
       echo "$1 plugin test OK"
    else
       echo "$1 plugin test FAILED"

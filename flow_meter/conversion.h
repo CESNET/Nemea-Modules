@@ -1,14 +1,10 @@
 /**
- * \file unirecexporter.h
- * \brief Flow exporter converting flows to UniRec and sending them to TRAP ifc
- * \author Vaclav Bartos <bartos@cesnet.cz>
+ * \file conversion.h
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
- * \date 2014
- * \date 2015
- * \date 2016
+ * \date 2018
  */
 /*
- * Copyright (C) 2014-2016 CESNET
+ * Copyright (C) 2014-2018 CESNET
  *
  * LICENSE TERMS
  *
@@ -44,48 +40,19 @@
  *
  */
 
-#ifndef UNIREC_EXPORTER_H
-#define UNIREC_EXPORTER_H
+#ifndef NUM_CONVERSION_H
+#define NUM_CONVERSION_H
 
+#include <stdint.h>
 #include <string>
-#include <vector>
-#include <map>
-#include <libtrap/trap.h>
-#include <unirec/unirec.h>
-
-#include "flowcacheplugin.h"
-#include "flowexporter.h"
-#include "packet.h"
 
 using namespace std;
 
-/**
- * \brief Class for exporting flow records.
- */
-class UnirecExporter : public FlowExporter
-{
-public:
-   UnirecExporter(bool send_eof);
-   int init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, int basic_ifc_num, uint64_t link, uint8_t dir, bool odid);
-   void close();
-   int export_flow(Flow &flow);
-   int export_packet(Packet &pkt);
-
-private:
-   void fill_basic_flow(Flow &flow, ur_template_t *tmplt_ptr, void *record_ptr);
-   void fill_packet_fields(Packet &pkt, ur_template_t *tmplt_ptr, void *record_ptr);
-   void free_unirec_resources();
-
-   int out_ifc_cnt;           /**< Number of output interfaces. */
-   int basic_ifc_num;         /**< Basic output interface number. */
-   int *ifc_mapping;          /**< Contain extension id (as index) -> output interface number mapping. */
-   ur_template_t **tmplt;     /**< Pointer to unirec templates. */
-   void **record;             /**< Pointer to unirec records. */
-   bool eof;                  /**< Send eof when module exits. */
-   bool send_odid;            /**< Export ODID field instead of LINK_BIT_FIELD. */
-
-   uint64_t link_bit_field;   /**< Link bit field value. */
-   uint8_t dir_bit_field;     /**< Direction bit field value. */
-};
+void trim_str(string &str);
+bool str_to_uint64(string str, uint64_t &dst);
+bool str_to_uint32(string str, uint32_t &dst);
+bool str_to_uint16(string str, uint16_t &dst);
+bool str_to_uint8(string str, uint8_t &dst);
+bool str_to_double(string str, double &dst);
 
 #endif
