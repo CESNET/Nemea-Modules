@@ -67,6 +67,7 @@ enum extTypeEnum {
    dns,
    sip,
    ntp,
+   smtp,
    arp,
    passivedns,
    /* Add extension header identifiers for your plugins here */

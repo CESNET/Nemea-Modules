@@ -15,7 +15,7 @@ Requires: openssl
 Requires: libpcap
 Provides: nemea-modules
 BuildRequires: gcc gcc-c++ make doxygen pkgconfig nemea-framework-devel bison flex
-BuildRequires: libpcap-devel openssl-devel libnf-devel
+BuildRequires: libpcap-devel openssl-devel libnf-devel bzip2-devel
 
 %description
 
@@ -67,6 +67,8 @@ ldconfig
 %{_bindir}/nemea/link_traff2json.py
 %{_bindir}/nemea/logger
 %{_bindir}/nemea/logreplay
+%{_bindir}/nemea/mux
+%{_bindir}/nemea/demux
 %{_bindir}/nemea/merger
 %{_bindir}/nemea/minerdetector2idea.py
 %{_bindir}/nemea/nfdump_reader
