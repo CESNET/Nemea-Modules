@@ -1,0 +1,13 @@
+<module>
+<name>minerdetector2idea</name>
+<enabled>false</enabled>
+<path>/usr/bin/nemea/minerdetector2idea.py</path>
+<params>--name=cz.cesnet.nemea.miner_detector --mongodb=nemeadb --mongodb-coll=alerts_new</params>
+<trapinterfaces>
+<interface>
+  <type>UNIXSOCKET</type>
+  <direction>IN</direction>
+  <params>miner_detector_data_out</params>
+</interface>
+</trapinterfaces>
+</module>

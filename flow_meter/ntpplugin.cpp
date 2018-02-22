@@ -53,6 +53,7 @@
 #include "flow_meter.h"
 #include "ntpplugin.h"
 #include "packet.h"
+#include "ipfix-elements.h"
 
 
 using namespace std;
@@ -140,6 +141,14 @@ void NTPPlugin::finish()
 string NTPPlugin::get_unirec_field_string()
 {
    return NTP_UNIREC_TEMPLATE;
+}
+const char *ntp_ipfix_string[] = {
+   IPFIX_NTP_TEMPLATE(IPFIX_FIELD_NAMES)
+   NULL
+};
+const char **NTPPlugin::get_ipfix_string()
+{
+   return ntp_ipfix_string;
 }
 
 /**

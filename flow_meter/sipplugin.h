@@ -57,7 +57,7 @@
 
 using namespace std;
 
-#define SIP_FIELD_LEN				256
+#define SIP_FIELD_LEN				128
 
 #define SIP_MSG_TYPE_INVALID     0
 #define SIP_MSG_TYPE_INVITE      1
@@ -380,6 +380,71 @@ struct RecordExtSIP : RecordExt {
       ur_set_string(tmplt, record, F_SIP_REQUEST_URI, request_uri);
       ur_set_string(tmplt, record, F_SIP_VIA, via);
    }
+   virtual int fillIPFIX(uint8_t *buffer, int size)
+   {
+      int length, total_length = 4;
+
+      length = strlen(cseq);
+      if (total_length + length + 1 > size) {
+         return -1;
+      }
+      *(uint16_t *) (buffer) = ntohs(msg_type);
+      *(uint16_t *) (buffer + 2) = ntohs(status_code);
+
+      buffer[total_length] = length;
+      memcpy(buffer + total_length + 1, cseq, length);
+      total_length += length + 1;
+
+      length = strlen(calling_party);
+      if (total_length + length + 1 > size) {
+         return -1;
+      }
+      buffer[total_length] = length;
+      memcpy(buffer + total_length + 1, calling_party, length);
+      total_length += length + 1;
+
+      length = strlen(called_party);
+      if (total_length + length + 1 > size) {
+         return -1;
+      }
+      buffer[total_length] = length;
+      memcpy(buffer + total_length + 1, called_party, length);
+      total_length += length + 1;
+
+      length = strlen(call_id);
+      if (total_length + length + 1 > size) {
+         return -1;
+      }
+      buffer[total_length] = length;
+      memcpy(buffer + total_length + 1, call_id, length);
+      total_length += length + 1;
+
+      length = strlen(user_agent);
+      if (total_length + length + 1 > size) {
+         return -1;
+      }
+      buffer[total_length] = length;
+      memcpy(buffer + total_length + 1, user_agent, length);
+      total_length += length + 1;
+
+      length = strlen(request_uri);
+      if (total_length + length + 1 > size) {
+         return -1;
+      }
+      buffer[total_length] = length;
+      memcpy(buffer + total_length + 1, request_uri, length);
+      total_length += length + 1;
+
+      length = strlen(via);
+      if (total_length + length + 1 > size) {
+         return -1;
+      }
+      buffer[total_length] = length;
+      memcpy(buffer + total_length + 1, via, length);
+      total_length += length + 1;
+
+      return total_length;
+   }
 };
 
 class SIPPlugin : public FlowCachePlugin {
@@ -390,6 +455,7 @@ public:
    int pre_update(Flow &rec, Packet &pkt);
    void finish();
    string get_unirec_field_string();
+   const char **get_ipfix_string();
 
 private:
    uint16_t parse_msg_type(const Packet &pkt);

@@ -4,9 +4,11 @@
  * \author Klara Drhova <drhovkla@fit.cvut.cz>
  * \author Zdenek Kasner <kasnezde@fit.cvut.cz>
  * \author Tomas Cejka <cejkat@cesnet.cz>
+ * \author Miroslav Kalina <kalinmi2@fit.cvut.cz>
  * \date 2013
  * \date 2014
  * \date 2015
+ * \date 2016
  */
 /*
  * Copyright (C) 2013-2015 CESNET
@@ -59,9 +61,9 @@
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 
-#include "parser.tab.h"
 #include "unirecfilter.h"
 #include "fields.h"
+#include <liburfilter.h>
 
 UR_FIELDS ()
 // Struct with information about module
@@ -106,8 +108,8 @@ void reload_filter_signal_handler(int signum) {
 struct unirec_output_t {
    char *output_specifier_str;
    char *unirec_output_specifier;
-   char *filter;
-   struct ast *tree;
+   char *filter_str;
+   urfilter_t *filter;
    ur_template_t *out_tmplt;
    void *out_rec;
 };
@@ -222,17 +224,17 @@ int parse_file(char *str, struct unirec_output_t **output_specifiers, int n_outp
          }
          else if (end_ptr == beg_ptr) {
             // Empty filter
-            output_specifiers[iface_index]->filter = NULL;
+            output_specifiers[iface_index]->filter_str = NULL;
          }
          else {
             // Allocate and fill field for filter for this interface
-            if ((output_specifiers[iface_index]->filter = (char *) calloc(end_ptr - beg_ptr + 1, 1)) == NULL) {
+            if ((output_specifiers[iface_index]->filter_str = (char *) calloc(end_ptr - beg_ptr + 1, 1)) == NULL) {
                fprintf(stderr, "Filter is too large, not enough memory.\n");
                   return -1;
             }
-            memcpy(output_specifiers[iface_index]->filter, beg_ptr, end_ptr - beg_ptr);
+            memcpy(output_specifiers[iface_index]->filter_str, beg_ptr, end_ptr - beg_ptr);
             if (verbose >= 0) {
-               printf("VERBOSE: Filter for interface %d as string: %s\n", iface_index, output_specifiers[iface_index]->filter);
+               printf("VERBOSE: Filter for interface %d as string: %s\n", iface_index, output_specifiers[iface_index]->filter_str);
             }
          }
          iface_index++;
@@ -282,6 +284,11 @@ char *load_file(char *filename)
    // Determine the file size for memory allocation
    fseek(f, 0, SEEK_END);
    f_size = ftell(f);
+   if (f_size < 0) {
+      fprintf(stderr, "Error: ftell used on file %s return negative number\n.", filename);
+      return NULL;  
+   }
+
    fseek(f, 0, SEEK_SET);
 
    // Allocate file buffer
@@ -356,7 +363,7 @@ float, double, ipaddr, string, bytes\n");
       }
 
       // Get Abstract syntax tree from filter
-      output_specifiers[i]->tree = getTree(output_specifiers[i]->filter, port_numbers[i]);
+      output_specifiers[i]->filter = urfilter_create(output_specifiers[i]->filter_str, port_numbers[i]);
 
       // Calculate maximum needed memory for dynamic fields
       ur_field_id_t field_id = UR_ITER_BEGIN;
@@ -507,7 +514,7 @@ int main(int argc, char **argv)
 
    // Create input template
    trap_set_required_fmt(0, TRAP_FMT_UNIREC, "");
-   ret = trap_recv(0, &in_rec, &in_rec_size);
+   ret = trap_recv(0, &in_rec, &in_rec_size); // receive first record and template specification
    if (ret == TRAP_E_FORMAT_CHANGED) {
       const char *spec = NULL;
       uint8_t data_fmt;
@@ -553,7 +560,7 @@ int main(int argc, char **argv)
          printf("VERBOSE: Filter and output specifier loaded from command line\n");
       }
       output_specifiers[0]->output_specifier_str = output_specifier_str;
-      output_specifiers[0]->filter = filter;
+      output_specifiers[0]->filter_str = filter;
    } else {  // From file
       if (verbose >= 0) {
          printf("VERBOSE: Filter and output specifier will be loaded from file %s\n", filename);
@@ -603,27 +610,18 @@ int main(int argc, char **argv)
    // Main loop
    // Copy data from input to output
    while (!stop) {
-      // Receive data from any input interface, wait until data are available
-      ret = TRAP_RECEIVE(0, in_rec, in_rec_size, in_tmplt);
-      TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
-      // Check size of received data
-      if (in_rec_size < ur_rec_fixlen_size(in_tmplt)) {
-         if (in_rec_size <= 1) {
-            break;   // End of data (used for testing purposes)
-         } else {
-            fprintf(stderr,
-               "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
-               ur_rec_fixlen_size(in_tmplt),
-               in_rec_size);
-            break;
-         }
-      }
+      // The first record should be already loaded, process it first,
+      // then load another one at the end of the loop 
 
       // PROCESS THE DATA
       for (i = 0; i < n_outputs; i++) {
-         if (!(output_specifiers[i]->tree) || (output_specifiers[i]->tree && evalAST(output_specifiers[i]->tree, in_tmplt, in_rec))) {
+         ret = urfilter_match(output_specifiers[i]->filter, in_tmplt, in_rec);
+         if (ret == URFILTER_ERROR) {
+            stop = 1;
+            break;
+         } else if (ret == URFILTER_TRUE) {
             if (verbose >= 1) {
-               printf("ADVANCED VERBOSE: Record %d accepted on interface %d\n", num_records, i);
+               printf("ADVANCED VERBOSE: Record %u accepted on interface %d\n", num_records, i);
             }
             //Iterate over all output fields; if the field is present in input template, copy it to output record
             // If missing, set null
@@ -657,7 +655,7 @@ int main(int argc, char **argv)
             TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, continue, {stop=1; break;});
          } else {
             if (verbose >= 1) {
-                  printf("ADVANCED VERBOSE: Record %d declined on interface %d\n", num_records, i);
+               printf("ADVANCED VERBOSE: Record %u declined on interface %d\n", num_records, i);
             }
          }
       }
@@ -675,7 +673,23 @@ int main(int argc, char **argv)
       // Quit if maximum number of records has been reached
       num_records++;
       if (max_num_records && max_num_records == num_records) {
-         stop = 1;
+         break;
+      }
+
+      // Receive data from any input interface, wait until data are available
+      ret = TRAP_RECEIVE(0, in_rec, in_rec_size, in_tmplt);
+      TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
+      // Check size of received data
+      if (in_rec_size < ur_rec_fixlen_size(in_tmplt)) {
+         if (in_rec_size <= 1) {
+            break;   // End of data (used for testing purposes)
+         } else {
+            fprintf(stderr,
+               "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
+               ur_rec_fixlen_size(in_tmplt),
+               in_rec_size);
+            break;
+         }
       }
    }
 
@@ -696,9 +710,9 @@ int main(int argc, char **argv)
    free(req_format);
 
    for (i = 0; i < n_outputs; i++) {
-      if (output_specifiers[i]->tree != NULL) {
-         freeAST(output_specifiers[i]->tree);
-         output_specifiers[i]->tree = NULL;
+      if (output_specifiers[i]->filter != NULL) {
+         urfilter_destroy(output_specifiers[i]->filter);
+         output_specifiers[i]->filter = NULL;
       }
       if (output_specifiers[i]->output_specifier_str != NULL) {
          free(output_specifiers[i]->output_specifier_str);
@@ -708,9 +722,9 @@ int main(int argc, char **argv)
          free(output_specifiers[i]->unirec_output_specifier);
          output_specifiers[i]->unirec_output_specifier = NULL;
       }
-      if (output_specifiers[i]->filter != NULL) {
-         free(output_specifiers[i]->filter);
-         output_specifiers[i]->filter = NULL;
+      if (output_specifiers[i]->filter_str != NULL) {
+         free(output_specifiers[i]->filter_str);
+         output_specifiers[i]->filter_str = NULL;
       }
       ur_free_record(output_specifiers[i]->out_rec);
       ur_free_template(output_specifiers[i]->out_tmplt);
@@ -723,4 +737,3 @@ int main(int argc, char **argv)
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    return 0;
 }
-

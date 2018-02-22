@@ -7,6 +7,9 @@ This module processes flow data (sums flows, bytes, packets for each LINK_BIT_FI
 - Input: 1
 - Output: 0
 
+## Module configuration
+To configure link_traffic module change link_traff_conf.cfg.example and remove ".example" suffix. In this icnluded file is CESNET's configuration for CESNET2 as an inspiration. 
+
 ## Parameters
 ### Common TRAP parameters
 - `-h [trap,1]`      Print help message for this module / for libtrap specific parameters.
@@ -19,8 +22,8 @@ This module processes flow data (sums flows, bytes, packets for each LINK_BIT_FI
 Module collects statistics about flows according to LINK_BIT_FIELD. Running module creates a UNIX socket (/var/run/libtrap/munin_link_traffic). Munin plugin then connects to this socket and gets formatted string with data. The format is the following (the number of headers is not limited):
 
 ```
-"header1, header2, header3\n
-value1, value2, value3"
+"header1,header2,header3\n
+value1,value2,value3"
 ```
 When munin plugin starts it checks /tmp/munin_link_traffic_data.txt. If it is actual enough it uses cached data, if its not actual it connects to UNIX socket and creates new cache file.
 

@@ -60,6 +60,7 @@
 #include <unirec/unirec.h>
 #include <pthread.h>
 #include <ctype.h>
+#include <inttypes.h>
 #include "fields.h"
 
 UR_FIELDS()
@@ -249,7 +250,7 @@ void *capture_thread(void *arg)
                   fprintf(file, "%u", *(uint32_t*)ptr);
                   break;
                case UR_TYPE_UINT64:
-                  fprintf(file, "%lu", *(uint64_t*)ptr);
+                  fprintf(file, "%" PRIu64, *(uint64_t*)ptr);
                   break;
                case UR_TYPE_INT8:
                   fprintf(file, "%i", *(int8_t*)ptr);
@@ -261,7 +262,7 @@ void *capture_thread(void *arg)
                   fprintf(file, "%i", *(int32_t*)ptr);
                   break;
                case UR_TYPE_INT64:
-                  fprintf(file, "%li", *(int64_t*)ptr);
+                  fprintf(file, "%" PRIi64, *(int64_t*)ptr);
                   break;
                case UR_TYPE_CHAR:
                   fprintf(file, "%c", *(char*)ptr);
@@ -277,6 +278,14 @@ void *capture_thread(void *arg)
                      // IP address - convert to human-readable format and print
                      char str[46];
                      ip_to_str((ip_addr_t*)ptr, str);
+                     fprintf(file, "%s", str);
+                  }
+                  break;
+               case UR_TYPE_MAC:
+                  {
+                     // MAC address - convert to human-readable format and print
+                     char str[MAC_STR_LEN];
+                     mac_to_str((mac_addr_t*)ptr, str);
                      fprintf(file, "%s", str);
                   }
                   break;
@@ -442,7 +451,6 @@ int main(int argc, char **argv)
 
    // ***** TRAP initialization *****
 
-   // Create UniRec templates
    if (verbose >= 0) {
       printf("Number of inputs: %i\n", n_inputs);
    }
@@ -484,6 +492,7 @@ int main(int argc, char **argv)
    // Register signal handler.
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
+   // Create UniRec templates
    if (verbose >= 0) {
       printf("Creating UniRec templates ...\n");
    }
@@ -511,7 +520,7 @@ int main(int argc, char **argv)
 It should be: \"type1 name1,type2 name2,...\".\n \
 Name of field may be any string matching the reqular expression [A-Za-z][A-Za-z0-9_]*\n\
 Available types are: int8, int16, int32, int64, uint8, uint16, uint32, uint64, char,\
- float, double, ipaddr, time, string, bytes\n");
+ float, double, ipaddr, macaddr, time, string, bytes\n");
          ret = 2;
          goto exit;
       }

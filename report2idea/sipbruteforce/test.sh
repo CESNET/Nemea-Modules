@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# input data:
+in='
+H4sIAH+AYlkAA2NiAAFGucyCxJSUIoVgJzeX+GD/0CBnVx1koRDHIHfXEJ2SzNxUiIBTkKujs0d8
+iKevK5Kos6tjsCtEsDQzr8TMBCLsGubqFxLv6YKkEiKEodLH08873skzJN7N09XHBSxlbASRcgwJ
+cfUNCAlGFQxzR5UwNFNwCQ6JD/APCoHxg4OcEXwLFOsjA1yRRQOC/EP8nf19dIpLijLz0iGCocGu
+QcAQsmTIZoCChql/Of4DAYwfIma6CpkPAsIFeREBTx+u5px2hgnE983Pi3CAyvEIQvARYWMRBiAt
+yGBmbmnmYGGiZ2SkZ2qsZ2huQD3LWGwZGKTYQJYBPQGzzADVsiiYQdqn0ttRLFuun4JumTzQsgbn
+i3DLOICWcUDllEBpiQFk2Q1hJkFI0mIAABb0jBljAgAA
+'
+
+# output data:
+out='
+H4sIAOKBYlkAA+2TzWvCMBjG7/srQs4akvRLe5rzA4QhZRUGGyKxRgnYpKTphoj/+5L0ojI2FA87
+jPaQvE/4vcnz8B7gkBm+VXoPU/AOB8bwsjLoWW2FhIsOgDO15k46wPm+8is42alPaKXcMCNqIwq2
+80fzVy/PeMmZ01e6MXy5UbrgyzU3vDBKt0xWOhKsRbXawKMrjT+4NHPR1ikmSReTLo7mJE5xkobk
+zQHnTG+5aW+TKe1XEY6xA0yz0HfvhYhSFAWIJNg3y7QyykvNunIU2xUufNNcNfZuFzySkFMeoT1E
+wj6iFtn7Beg+OOJ1oUVlhJLuLfk0A0/OiInzAeycsYC1NndAU3MNWFGoRpoUxEk/fjx7gOUNlZRD
+p1taGMShLVlUydweTkfjQXuKs5p/7x/BadR3/h0fDv9pn/PwPaMeWXu0WFkb1uDK2PGPsZMopviO
+ub/wQkmUF0xKIbd/Jfg4Deg1wZM4QWGCCL5tznHvDBgGiGJqaTaBILpl0K2dQG188qf51pdpBjeM
+MLF/G+UXORfTj7EFAAA=
+'
+test -z "$srcdir" && export srcdir=.
+
+. $srcdir/../test.sh
+
+test_conversion "sipbf" "sipbf" "$in" "$out"
+

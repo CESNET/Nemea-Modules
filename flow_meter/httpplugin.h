@@ -87,6 +87,57 @@ struct RecordExtHTTPReq : RecordExt {
       ur_set_string(tmplt, record, F_HTTP_USER_AGENT, user_agent);
       ur_set_string(tmplt, record, F_HTTP_REFERER, referer);
    }
+
+   virtual int fillIPFIX(uint8_t *buffer, int size)
+   {
+      int length, total_length = 0;
+
+      length = strlen(user_agent);
+      if (length + 1 > size) {
+         return -1;
+      }
+      buffer[0] = length;
+      memcpy(buffer + 1, user_agent, length);
+      total_length = length + 1;
+
+      length = strlen(method);
+      if (total_length + length + 1 > size) {
+         return -1;
+      }
+      buffer[total_length] = length;
+      memcpy(buffer + total_length + 1, method, length);
+      total_length += length + 1;
+
+      length = strlen(host);
+      if (total_length + length + 1 > size) {
+         return -1;
+      }
+      buffer[total_length] = length;
+      memcpy(buffer + total_length + 1, host, length);
+      total_length += length + 1;
+
+      length = strlen(referer);
+      if (total_length + length + 1 > size) {
+         return -1;
+      }
+      buffer[total_length] = length;
+      memcpy(buffer + total_length + 1, referer, length);
+      total_length += length + 1;
+
+      length = strlen(uri);
+      if (total_length + length + 4 > size) {
+         return -1;
+      }
+      buffer[total_length] = length;
+      memcpy(buffer + total_length + 1, uri, length);
+      total_length += length + 1;
+
+      buffer[total_length] = 0;
+      *(uint16_t *) (buffer + total_length + 1) = 0;
+      total_length += 3;
+
+      return total_length;
+   }
 };
 
 /**
@@ -110,6 +161,25 @@ struct RecordExtHTTPResp : RecordExt {
       ur_set(tmplt, record, F_HTTP_RESPONSE_CODE, code);
       ur_set_string(tmplt, record, F_HTTP_CONTENT_TYPE, content_type);
    }
+   virtual int fillIPFIX(uint8_t *buffer, int size)
+   {
+      int length = strlen(content_type);
+      if (size - length - 8 < 0) {
+         return -1;
+      }
+
+      buffer[0] = 0;
+      buffer[1] = 0;
+      buffer[2] = 0;
+      buffer[3] = 0;
+      buffer[4] = 0;
+      buffer[5] = length;
+
+      memcpy(buffer + 6, content_type, length);
+      *(uint16_t *) (buffer + length + 6) = ntohs(code);
+
+      return length + 8;
+   }
 };
 
 /**
@@ -124,19 +194,22 @@ public:
    int pre_update(Flow &rec, Packet &pkt);
    void finish();
    string get_unirec_field_string();
+   const char **get_ipfix_string();
 
 private:
    bool parse_http_request(const char *data, int payload_len, RecordExtHTTPReq *rec, bool create);
    bool parse_http_response(const char *data, int payload_len, RecordExtHTTPResp *rec, bool create);
-   int add_ext_http_request(const char *data, int payload_len, Flow &rec);
-   int add_ext_http_response(const char *data, int payload_len, Flow &rec);
+   void add_ext_http_request(const char *data, int payload_len, Flow &rec);
+   void add_ext_http_response(const char *data, int payload_len, Flow &rec);
    bool valid_http_method(const char *method) const;
 
-   bool print_stats;       /**< Print stats when flow cache is finishing. */
-   bool flush_flow;        /**< Tell FlowCache to flush current Flow. */
-   uint32_t requests;      /**< Total number of parsed HTTP requests. */
-   uint32_t responses;     /**< Total number of parsed HTTP responses. */
-   uint32_t total;         /**< Total number of parsed HTTP packets. */
+   RecordExtHTTPReq *req;     /**< Preallocated request extension. */
+   RecordExtHTTPResp *resp;   /**< Preallocated response extension. */
+   bool print_stats;          /**< Print stats when flow cache is finishing. */
+   bool flush_flow;           /**< Tell FlowCache to flush current Flow. */
+   uint32_t requests;         /**< Total number of parsed HTTP requests. */
+   uint32_t responses;        /**< Total number of parsed HTTP responses. */
+   uint32_t total;            /**< Total number of parsed HTTP packets. */
 };
 
 #endif

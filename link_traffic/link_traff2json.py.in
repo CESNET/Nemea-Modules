@@ -1,0 +1,189 @@
+#!/usr/bin/python
+#%# family=auto
+#%# capabilities=autoconf suggest
+
+import socket
+import sys
+import os
+import time
+import datetime
+import csv
+import json
+
+print("Content-type:application/json\r\n\r\n")
+
+# path to configuration file
+CONFIG_FILE = '@SYSCONFDIR@/link_traffic/link_traff_conf.cfg'
+# path to data saved by link_traffic module
+SAVED_DATA = '/var/run/libtrap/link_traff_saved_data'
+# temporary file with downloaded data
+data_temp_file = "/tmp/munin_link_traffic_data.txt"
+# path to munin socket
+SOCKET_PATH = '/var/run/libtrap/munin_link_traffic'
+# munin refresh interval
+interval = 5*60
+time_mon = "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.today())
+time_mon_st = 0
+
+
+def receiveData():
+   """
+   Connects to a file with saved data
+   return string of data set from socket
+   """
+   sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+   try:
+      sock.connect(SOCKET_PATH)
+   except socket.error as msg:
+      sys.stderr.write(SOCKET_PATH + " " + str(msg) + "\n")
+      sys.exit(1)
+
+   data = ""
+   while True:
+      tmp = sock.recv(4096)
+      data += tmp
+      if tmp == "":
+         break;
+
+   return data
+
+
+def getData():
+   """
+   Return list of strings (lines).
+   There should be 2 lines: the first one with header,
+   the second one with values. The data is received by
+   receiveData() and stored into a cache file data_temp_file.
+   If data_temp_file is new enough, data is loaded from the
+   cache file instead of calling receiveData().
+   """
+   current_time = time.time()
+   last_time = 0
+   data = ""
+   try:
+      last_time = os.stat(data_temp_file).st_mtime
+   except:
+      sys.stderr.write("%s not found or cannot read info.\n" % data_temp_file)
+      pass
+   data = receiveData()
+   if (current_time - last_time) > interval:
+      with open(data_temp_file, "w") as f:
+         f.write(data)
+      data_old = data
+      time_mon_st = current_time
+   else:
+      # Read from file 
+      with open(data_temp_file, "r") as f:
+         data_old = f.read()
+      time_mon_st = last_time
+
+   data = data.split("\n")
+   data_old = data_old.split("\n")
+
+   return {'data' : data, 'data_old': data_old, 'time_st': time_mon_st}
+
+
+def loadLinkConfig():
+   """
+   Loads links configuration, color, name,link number etc.
+   Return list of dictionaries with link's parameters.
+   """
+   with open(CONFIG_FILE, 'rb') as f:
+      reader = csv.reader(f)
+      try:
+         config = []
+         for rows in reader:
+            config.append({'num': rows[0],
+                            'name': rows[1],
+                            'ur_field': rows[2],
+                            'color': rows[3]
+                           })
+         return config
+      except csv.Error as e:
+         sys.exit('file %s, line %d: %s' % (CONFIG_FILE, reader.line_num, e))
+
+
+def getLineNum(lineName):
+   """
+   Goes through every link from config file and seeks for <lineName>
+   Return <lineName> link's number.
+   """
+   configData = loadLinkConfig()
+   for items in configData:
+      if items['name'] == lineName:
+         return items['num']
+   return None
+
+def getTimeInfo(mon_time):
+   """
+   Creates a dictionary with current time info and monitoring time
+   """
+   dictCurr = {} #!dictionary for current time
+   dictMon = {}  #!dictionary for monitoring time
+   time_st = time.time()
+   curr_local = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time_st))
+   mon_local = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(mon_time))
+   dictCurr = {'localtime' : curr_local, 'timestamp'  : time_st}
+   dictMon = {'interval_sec' : interval,
+              'localtime' : mon_local,
+              'timestamp' : mon_time
+             }
+   return {'current' : dictCurr,
+           'monitoring' : dictMon
+          }
+
+
+def outputToJson():
+   """
+   Takes configuration list of lines and data
+   from socket and converts it
+   to json format and prints to output
+   """
+   config = loadLinkConfig()
+   dataRec = getData()
+   data = dataRec['data']
+   data_old = dataRec['data_old']
+   mon_time = dataRec['time_st']
+
+   # current values
+   head = data[0].split(',')
+   vals = data[1].split(',')
+   if len(head) != len(vals):
+      sys.stderr.write("incorrect number of columns!\n")
+      sys.exit(1)
+   data = zip(head, vals)
+   data.sort()
+   dataDict = {}
+   timeDict = getTimeInfo(mon_time)
+
+   # previously stored data
+   head = data_old[0].split(',')
+   vals = data_old[1].split(',')
+   if len(head) != len(vals):
+      sys.stderr.write("incorrect number of columns!\n")
+      sys.exit(1)
+   data_old = zip(head, vals)
+   data_old = dict(data_old)
+
+   # dict init name of link and its number
+   for key, val in data:
+      ln = getLineNum(key.split('-')[0])
+      if ln is None:
+         sys.stderr.write("configuration error {} {}\n".format(key, data))
+         sys.exit(1)
+      dataDict[ln] = {"link" : ln, "link name" : key.split('-')[0]}
+
+   # add the rest of values
+   for key, val in data:
+      ln = getLineNum(key.split('-')[0])
+      keyStrip = key.split('-')[2]+" "+key.split('-')[1]
+      dataDict[ln].update({keyStrip : int(val) - int(data_old[key])})
+
+   # form up the final dictionary
+   return {'data' : dataDict, 'time' : timeDict}
+
+
+jData  = outputToJson()
+j = json.dumps(jData)
+print(j)
+exit(0)

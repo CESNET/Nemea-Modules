@@ -109,6 +109,9 @@ inline uint16_t parse_eth_hdr(const u_char *data_ptr, Packet *pkt)
    DEBUG_MSG("\tSrc mac:\t%s\n",          ether_ntoa((struct ether_addr *) eth->h_source));
    DEBUG_MSG("\tEthertype:\t%#06x\n",     ethertype);
 
+   memcpy(pkt->dst_mac, eth->h_dest, 6);
+   memcpy(pkt->src_mac, eth->h_source, 6);
+
    if (ethertype == ETH_P_8021AD) {
       DEBUG_CODE(uint16_t vlan = ntohs(*(uint16_t *) (data_ptr + hdr_len)));
       DEBUG_MSG("\t802.1ad field:\n");
@@ -120,7 +123,7 @@ inline uint16_t parse_eth_hdr(const u_char *data_ptr, Packet *pkt)
       ethertype = ntohs(*(uint16_t *) (data_ptr + hdr_len - 2));
       DEBUG_MSG("\t\tEthertype:\t%#06x\n", ethertype);
    }
-   if (ethertype == ETH_P_8021Q) {
+   while (ethertype == ETH_P_8021Q) {
       DEBUG_CODE(uint16_t vlan = ntohs(*(uint16_t *) (data_ptr + hdr_len)));
       DEBUG_MSG("\t802.1q field:\n");
       DEBUG_MSG("\t\tPriority:\t%u\n",    ((vlan & 0xE000) >> 12));
@@ -147,8 +150,7 @@ inline uint16_t parse_ipv4_hdr(const u_char *data_ptr, Packet *pkt)
 {
    struct iphdr *ip = (struct iphdr *) data_ptr;
 
-   pkt->field_indicator |= PCKT_IPV4_MASK;
-   pkt->ip_version = ip->version;
+   pkt->ip_version = 4;
    pkt->ip_proto = ip->protocol;
    pkt->ip_tos = ip->tos;
    pkt->ip_length = ntohs(ip->tot_len);
@@ -222,10 +224,10 @@ inline uint16_t parse_ipv6_hdr(const u_char *data_ptr, Packet *pkt)
    struct ip6_hdr *ip6 = (struct ip6_hdr *) data_ptr;
    uint16_t hdr_len = 40;
 
-   pkt->field_indicator |= PCKT_IPV6_MASK;
-   pkt->ip_version = (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0xf0000000) >> 28;
+   pkt->ip_version = 6;
    pkt->ip_tos = (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0x0ff00000) >> 20;
    pkt->ip_proto = ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;
+   pkt->ip_ttl = ip6->ip6_ctlun.ip6_un1.ip6_un1_hlim;
    pkt->ip_length = ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);
    memcpy(pkt->src_ip.v6, (const char *) &ip6->ip6_src, 16);
    memcpy(pkt->dst_ip.v6, (const char *) &ip6->ip6_dst, 16);
@@ -261,8 +263,7 @@ inline uint16_t parse_tcp_hdr(const u_char *data_ptr, Packet *pkt)
 {
    struct tcphdr *tcp = (struct tcphdr *) data_ptr;
 
-   pkt->field_indicator |= PCKT_PAYLOAD_MASK;
-   pkt->field_indicator |= PCKT_TCP_MASK;
+   pkt->field_indicator |= (PCKT_TCP | PCKT_PAYLOAD);
    pkt->src_port = ntohs(tcp->source);
    pkt->dst_port = ntohs(tcp->dest);
    pkt->tcp_control_bits = (uint8_t) *(data_ptr + 13) & 0x3F;
@@ -295,8 +296,7 @@ inline uint16_t parse_udp_hdr(const u_char *data_ptr, Packet *pkt)
 {
    struct udphdr *udp = (struct udphdr *) data_ptr;
 
-   pkt->field_indicator |= PCKT_PAYLOAD_MASK;
-   pkt->field_indicator |= PCKT_UDP_MASK;
+   pkt->field_indicator |= (PCKT_UDP | PCKT_PAYLOAD);
    pkt->src_port = ntohs(udp->source);
    pkt->dst_port = ntohs(udp->dest);
 
@@ -351,6 +351,90 @@ inline uint16_t parse_icmpv6_hdr(const u_char *data_ptr, Packet *pkt)
    return 0;
 }
 
+uint16_t process_mpls_stack(const u_char *data_ptr)
+{
+   uint32_t *mpls;
+   uint16_t length = 0;
+
+   do {
+      mpls = (uint32_t *) (data_ptr + length);
+      length += sizeof(uint32_t);
+
+      DEBUG_MSG("MPLS:\n");
+      DEBUG_MSG("\tLabel:\t%u\n",   ntohl(*mpls) >> 12);
+      DEBUG_MSG("\tTC:\t%u\n",      (ntohl(*mpls) & 0xE00) >> 9);
+      DEBUG_MSG("\tBOS:\t%u\n",     (ntohl(*mpls) & 0x100) >> 8);
+      DEBUG_MSG("\tTTL:\t%u\n",     ntohl(*mpls) & 0xFF);
+
+    } while (!(ntohl(*mpls) & 0x100));
+
+   return length;
+}
+
+uint16_t process_mpls(const u_char *data_ptr, Packet *pkt)
+{
+   Packet tmp;
+   uint16_t length = process_mpls_stack(data_ptr);
+   uint8_t next_hdr = (*(data_ptr + length) & 0xF0) >> 4;
+
+   if (next_hdr == 4) {
+      length += parse_ipv4_hdr(data_ptr + length, pkt);
+   } else if (next_hdr == 6) {
+      length += parse_ipv6_hdr(data_ptr + length, pkt);
+   } else if (next_hdr == 0) {
+      /* Process EoMPLS */
+      length += 4; /* Skip Pseudo Wire Ethernet control word. */
+      length = parse_eth_hdr(data_ptr + length, &tmp);
+      if (tmp.ethertype == ETH_P_IP) {
+         length += parse_ipv4_hdr(data_ptr + length, pkt);
+      } else if (tmp.ethertype == ETH_P_IPV6) {
+         length += parse_ipv6_hdr(data_ptr + length, pkt);
+      }
+   }
+
+   return length;
+}
+
+struct __attribute__((packed)) pppoe_hdr {
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+   uint8_t type:4;
+   uint8_t version:4;
+#elif __BYTE_ORDER == __BIG_ENDIAN
+   uint8_t version:4;
+   uint8_t type:4;
+#endif
+   uint8_t code;
+   uint16_t sid;
+   uint16_t length;
+};
+
+inline uint16_t process_pppoe(const u_char *data_ptr, Packet *pkt)
+{
+   struct pppoe_hdr *pppoe = (struct pppoe_hdr *) data_ptr;
+   uint16_t next_hdr = ntohs(*(uint16_t *) (data_ptr + sizeof(struct pppoe_hdr)));
+   uint16_t length = sizeof(struct pppoe_hdr) + 2;
+
+   DEBUG_MSG("PPPoE header:\n");
+   DEBUG_MSG("\tVer:\t%u\n",     pppoe->version);
+   DEBUG_MSG("\tType:\t%u\n",    pppoe->type);
+   DEBUG_MSG("\tCode:\t%u\n",    pppoe->code);
+   DEBUG_MSG("\tSID:\t%u\n",     ntohs(pppoe->sid));
+   DEBUG_MSG("\tLength:\t%u\n",  ntohs(pppoe->length));
+   DEBUG_MSG("PPP header:\n");
+   DEBUG_MSG("\tProtocol:\t%#04x\n", next_hdr);
+   if (pppoe->code != 0) {
+      return length;
+   }
+
+   if (next_hdr == 0x0021) {
+      length += parse_ipv4_hdr(data_ptr + length, pkt);
+   } else if (next_hdr == 0x0057) {
+      length += parse_ipv6_hdr(data_ptr + length, pkt);
+   }
+
+   return length;
+}
+
 /**
  * \brief Parsing callback function for pcap_dispatch() call. Parse packets up to transport layer.
  * \param [in,out] arg Serves for passing pointer to Packet structure into callback function.
@@ -371,17 +455,23 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
    DEBUG_MSG("Time:\t\t\t%s.%06lu\n",     timestamp, h->ts.tv_usec);
    DEBUG_MSG("Packet length:\t\tcaplen=%uB len=%uB\n\n", h->caplen, h->len);
 
-   pkt->field_indicator = PCKT_PCAP_MASK;
    pkt->timestamp = h->ts;
+   pkt->field_indicator = 0;
    pkt->src_port = 0;
    pkt->dst_port = 0;
    pkt->ip_proto = 0;
+   pkt->ip_version = 0;
+   pkt->tcp_control_bits = 0;
 
    data_offset = parse_eth_hdr(data, pkt);
    if (pkt->ethertype == ETH_P_IP) {
       data_offset += parse_ipv4_hdr(data + data_offset, pkt);
    } else if (pkt->ethertype == ETH_P_IPV6) {
       data_offset += parse_ipv6_hdr(data + data_offset, pkt);
+   } else if (pkt->ethertype == ETH_P_MPLS_UC || pkt->ethertype == ETH_P_MPLS_MC) {
+      data_offset += process_mpls(data + data_offset, pkt);
+   } else if (pkt->ethertype == ETH_P_PPP_SES) {
+      data_offset += process_pppoe(data + data_offset, pkt);
    } else if (!parse_all) {
       DEBUG_MSG("Unknown ethertype %x\n", pkt->ethertype);
       return;
@@ -395,9 +485,6 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
       data_offset += parse_icmp_hdr(data + data_offset, pkt);
    } else if (pkt->ip_proto == IPPROTO_ICMPV6) {
       data_offset += parse_icmpv6_hdr(data + data_offset, pkt);
-   } else if (!parse_all) {
-      DEBUG_MSG("Unknown transport protocol %x\n", pkt->ip_proto);
-      return;
    }
 
    uint32_t len = h->caplen;
@@ -420,7 +507,7 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
 /**
  * \brief Constructor.
  */
-PcapReader::PcapReader() : handle(NULL), print_pcap_stats(false)
+PcapReader::PcapReader() : handle(NULL), print_pcap_stats(false), netmask(PCAP_NETMASK_UNKNOWN)
 {
 }
 
@@ -428,7 +515,7 @@ PcapReader::PcapReader() : handle(NULL), print_pcap_stats(false)
  * \brief Constructor.
  * \param [in] options Module options.
  */
-PcapReader::PcapReader(const options_t &options) : handle(NULL)
+PcapReader::PcapReader(const options_t &options) : handle(NULL), netmask(PCAP_NETMASK_UNKNOWN)
 {
    print_pcap_stats = options.print_pcap_stats;
    last_ts.tv_sec = 0;
@@ -505,6 +592,11 @@ int PcapReader::init_interface(const string &interface, int snaplen, bool parse_
       return 3;
    }
 
+   bpf_u_int32 net;
+   if (pcap_lookupnet(interface.c_str(), &net, &netmask, errbuf) != 0) {
+      netmask = PCAP_NETMASK_UNKNOWN;
+   }
+
    if (print_pcap_stats) {
       /* Print stats header. */
       printf("# recv   - number of packets received\n");
@@ -516,6 +608,33 @@ int PcapReader::init_interface(const string &interface, int snaplen, bool parse_
    live_capture = true;
    parse_all = parse_every_pkt;
    error_msg = "";
+   return 0;
+}
+
+/**
+ * \brief Install BPF filter to pcap handle.
+ * \param [in] filter_str String containing program.
+ * \return 0 on success, non 0 on failure.
+ */
+int PcapReader::set_filter(const string &filter_str)
+{
+   if (handle == NULL) {
+      error_msg = "No live capture or file opened.";
+      return 1;
+   }
+
+   struct bpf_program filter;
+   if (pcap_compile(handle, &filter, filter_str.c_str(), 0, netmask) == -1) {
+      error_msg = "Couldn't parse filter " + string(filter_str) + ": " + string(pcap_geterr(handle));
+      return 1;
+   }
+   if (pcap_setfilter(handle, &filter) == -1) {
+      pcap_freecode(&filter);
+      error_msg = "Couldn't install filter " + string(filter_str) + ": " + string(pcap_geterr(handle));
+      return 1;
+   }
+
+   pcap_freecode(&filter);
    return 0;
 }
 

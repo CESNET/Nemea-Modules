@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# input data:
+in='
+H4sIAIoyxVkAA2NiAAHGpMyCxJSUIgWX4JB4zwADHRSuIRoXXRpd3giNb4zGN0Hjm6Ly0bSj6UbT
+jKbXDJVrjsq1QOVawrjBQc5Ark5JZm6qQoinr2u8m2dQcAgS38cRyC3NzCsxNlJwdHEJinf2g/AN
+zcBmBfgHQfgWCq5hrn4h8SGRAa5QgYAg/xB/Z38fBgamcEYNBijgYmA0+w8ESPxWZD6tAdC+RjT7
+z6HxTdH4dWh8OTQ+JynuP7CC8SVIvXN3jvpJzaORKz9eyj0FpFOAcgEMjGwoIbUJzaYqNL40Gl8d
+jb8Un8uA8rpo6mei8c3R+Gpo/Go0vjEa3wqNr4nGl0fjMyHzYSF13793+zFgCBXYcoWDQiyOkYFh
+NyMjGwMjAwCsyeuAxQMAAA==
+'
+
+# output data:
+out='
+H4sIAPEyxVkAA9WTXWvbMBSG7/crjK4nc/ThD/muOC3LTQhLoGyjDFkSriGxgqxsdKH/fZZSigLt
+tu5isMtX5z1fPo9PqJXe9NY9oCb7gj4aZcd8o+Q4DmOP7t5naGW1CbETuup7dzuMs0AADYEGAM2G
+zW1MXZm9kUHfS63dNJf4qo03ylsX62wfDrEOutnZ7zHPSz9MflByd24k98GA7if0GPT1NzP67XB+
+pEAqDAJTuiVFQ+qGsc+hyFa63vjzfMv9wRk1TCHBu6OZw2vrYrCGUHG55nECAjnkJC94qPAkCGOp
+oiJRFMpEFZfGNMQgESJutXbW29jVqwO6i5vdWLeXYS60XFxfxZzWyMm8viyPy7bOzMd62VVUDaui
+a2OPTj2d7HljQXNS1mGXec9X55ov09rjGEYjAPPLIl7wd3MtFyGqSyC044AVMxpzVipcg9CYdbXg
+kvG61PHLLcyk3HDwg40ofbBu+GFHL3dZgCY7TjN52bZdZ5tPK/T47vTfEgpvIZRz9gKipKovYKMp
+h0VK3qUvRbQgqUh9PI2wVKR9aJW60v+ClOkIPBWk+AVmb8af/XP8WfEn+LMEf0Y7IoVRuKKaYV6r
+CnedoViLTpRQdaUU3V/g/xNyuZAToQUAAA==
+'
+
+test -z "$srcdir" && export srcdir=.
+
+. $srcdir/../test.sh
+
+test_conversion "haddrscan" "haddrscan" "$in" "$out"
+

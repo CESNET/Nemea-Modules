@@ -1,11 +1,13 @@
 /*!
  * \file traffic_repeater.c
  * \author Jan Neuzil <neuzija1@fit.cvut.cz>
+ * \author Tomas Cejka <cejkat@cesnet.cz>
  * \date 2013
  * \date 2014
+ * \date 2017
  */
 /*
- * Copyright (C) 2013,2014 CESNET
+ * Copyright (C) 2013-2017 CESNET
  *
  * LICENSE TERMS
  *
@@ -48,10 +50,11 @@ trap_module_info_t *module_info = NULL;
 #define MODULE_BASIC_INFO(BASIC) \
   BASIC("traffic_repeater","This module receive data from input interface and resend it to the output interface based on given arguments in -i option.",1,1)
 
-#define MODULE_PARAMS(PARAM)
+#define MODULE_PARAMS(PARAM) PARAM('n', "no-eof", "Do not send terminate message vie output IFC.", no_argument, "none")
 
 static char stop = 0; /*!< Global variable used by signal handler to end the traffic repeater. */
 static int verb = 0; /*< Global variable used to print verbose messages. */
+static char sendeof = 1;
 
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
@@ -72,7 +75,7 @@ void traffic_repeater(void)
    clock_gettime(CLOCK_MONOTONIC, &start);
 
    //set NULL to required format on input interface
-   trap_set_required_fmt(0, TRAP_FMT_UNIREC, NULL);
+   trap_set_required_fmt(0, TRAP_FMT_UNIREC, "");
 
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
@@ -100,23 +103,28 @@ void traffic_repeater(void)
             trap_set_data_fmt(0, TRAP_FMT_UNIREC, spec);
          }
 
-         ret = trap_send(0, data, data_size);
-         if (ret == TRAP_E_OK) {
-            cnt_s++;
-            continue;
+         if (stop == 1 && sendeof == 0){
+            /* terminating module without eof message */
+            break;
+         } else {
+            ret = trap_send(0, data, data_size);
+            if (ret == TRAP_E_OK) {
+               cnt_s++;
+               continue;
+            }
+            TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, cnt_t++; continue, break)
          }
-         TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, cnt_t++; continue, break);
       } else {
-         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, cnt_t++; do {puts("unexpected ret value"); continue;} while (0);, break);
+         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, cnt_t++; puts("trap_recv timeout"); continue, break)
       }
    }
 
    clock_gettime(CLOCK_MONOTONIC, &end);
    diff = (end.tv_sec * NS + end.tv_nsec) - (start.tv_sec * NS + start.tv_nsec);
-   fprintf(stderr, "Info: Flows received:  %16lu\n", cnt_r > 0 ? cnt_r - 1 : cnt_r);
-   fprintf(stderr, "Info: Flows sent:      %16lu\n", cnt_s > 0 ? cnt_s - 1 : cnt_s);
-   fprintf(stderr, "Info: Timeouts:        %16lu\n", cnt_t);
-   fprintf(stderr, "Info: Time elapsed:    %12lu.%03lus\n", diff / NS, (diff % NS) / 1000000);
+   fprintf(stderr, "Info: Flows received:  %16" PRIu64 "\n", cnt_r > 0 ? cnt_r - 1 : cnt_r);
+   fprintf(stderr, "Info: Flows sent:      %16" PRIu64 "\n", cnt_s > 0 ? cnt_s - 1 : cnt_s);
+   fprintf(stderr, "Info: Timeouts:        %16" PRIu64 "\n", cnt_t);
+   fprintf(stderr, "Info: Time elapsed:    %12" PRIu64 ".%03" PRIu64 "s\n", diff / NS, (diff % NS) / 1000000);
 }
 
 int main(int argc, char **argv)
@@ -124,6 +132,16 @@ int main(int argc, char **argv)
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
    verb = (trap_get_verbose_level() >= 0);
+   signed char opt;
+
+   while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
+      switch (opt) {
+      case 'n':
+         sendeof = 0;
+         break;
+      }
+   }
+
    traffic_repeater();
    TRAP_DEFAULT_FINALIZATION();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)

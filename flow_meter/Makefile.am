@@ -1,7 +1,4 @@
-include ../aminclude.am
-
 SUBDIRS=. tests
-
 bin_PROGRAMS=flow_meter
 flow_meter_SOURCES=flow_meter.cpp \
 		    flow_meter.h \
@@ -23,30 +20,34 @@ flow_meter_SOURCES=flow_meter.cpp \
 		    httpplugin.h \
 		    sipplugin.cpp \
 		    sipplugin.h \
+		    httpsplugin.cpp \
+		    httpsplugin.h \
+		    smtpplugin.cpp \
+		    smtpplugin.h \
 		    fields.c \
 		    fields.h \
 		    dnsplugin.cpp \
 		    dnsplugin.h \
+		    passivednsplugin.cpp \
+		    passivednsplugin.h \
 		    ntpplugin.cpp \
 		    ntpplugin.h \
 		    ipaddr.h \
 		    arpplugin.cpp \
-		    arpplugin.h
+		    arpplugin.h \
+		    ipfixexporter.cpp \
+		    ipfix-elements.h \
+		    ipfixexporter.h \
+		    xxhash.c \
+		    xxhash.h \
+		    dns.h \
+		    conversion.h \
+		    conversion.cpp
 
-
-flow_meter_LDADD=-ltrap -lunirec -lnemea-common -lpcap
+flow_meter_LDADD=-ltrap -lunirec -lpcap
 flow_meter_CXXFLAGS=-std=c++98 -Wno-write-strings
 pkgdocdir=${docdir}/flow_meter
 pkgdoc_DATA=README.md
 EXTRA_DIST=README.md traffic-samples/arp-sample.pcap traffic-samples/dns-sample.pcap traffic-samples/http-sample.pcap traffic-samples/ntp-sample.pcap traffic-samples/sip-sample.pcap
-
-mansources := $(addprefix $(srcdir)/,$(flow_meter_SOURCES))
-flow_meter.1: $(mansources)
-	$(TRAP2MAN) $^ > $@
-
-man_MANS=flow_meter.1
-
-CLEANFILES+=flow_meter.1
-
 bashcompl_DATA=flow_meter.bash
-
+include ../aminclude.am

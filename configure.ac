@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-modules], [2.5.1], [nemea@cesnet.cz])
+AC_INIT([nemea-modules], [2.6.1], [nemea@cesnet.cz])
 AC_CONFIG_SRCDIR([flowcounter/flowcounter.c])
 AC_CONFIG_HEADERS([config.h])
-RELEASE=8
+RELEASE=1
 AC_SUBST(RELEASE)
 USERNAME=`git config --get user.name`
 USERMAIL=`git config --get user.email`
@@ -22,8 +22,8 @@ AC_ARG_ENABLE([debug],
         [if test "$enableval" = "yes"; then
                 CFLAGS="-Wall -g -O0 $CFLAGS"
                 CXXFLAGS="-Wall -g -O0 $CXXFLAGS"
-        fi], [CFLAGS="-Wall -O3 $CFLAGS"
-              CXXFLAGS="-Wall -O3 $CXXFLAGS"
+        fi], [CFLAGS="-Wall -g -O3 $CFLAGS"
+              CXXFLAGS="-Wall -g -O3 $CXXFLAGS"
               CPPFLAGS="-DNDEBUG=1 $CPPFLAGS"])
 AM_CONDITIONAL(DEBUG, test x"$debug" = x"true")
 
@@ -70,13 +70,13 @@ AX_PTHREAD([LIBS="$PTHREAD_LIBS $LIBS"
     CC="$PTHREAD_CC"],
     [AC_MSG_ERROR([pthread not found])])
 
-AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--disable-repobuild],
-		[disable local compilation without system installed Nemea libraries, default: yes]),
+AC_ARG_ENABLE(repobuild, AS_HELP_STRING([--enable-repobuild],
+		[enable local compilation without system installed NEMEA libraries, default: no]),
 [case "${enableval}" in
 	yes) repobuild=true ;;
 	no)  repobuild=false ;;
 	*)   AC_MSG_ERROR([bad value ${enableval} for --enable-repobuild]) ;;
-esac], [repobuild=true])
+esac], [repobuild=false])
 
 AX_C_BIGENDIAN_CROSS
 
@@ -87,13 +87,21 @@ AX_LIBTRAP_CHECK
 AX_UNIREC_CHECK
 AX_NEMEACOMMON_CHECK
 
-AC_CHECK_HEADER(idna.h,
-         AC_CHECK_LIB(idn, stringprep_check_version, [libidn=yes], AC_MSG_WARN([libidn not found. The ipdetect module from blacklistfilter will not be compiled.])), AC_MSG_WARN([libidn.h not found. Blacklistfilter modules will not be compiled.]))
+AC_ARG_WITH([openssl],
+        [AS_HELP_STRING([--without-openssl], [Force to disable openssl])],
+        [if test x$withval = xyes; then
+        PKG_CHECK_MODULES([openssl], [openssl], [have_openssl="yes"], [have_openssl="no"])
+        fi],
+        [PKG_CHECK_MODULES([openssl], [openssl], [have_openssl="yes"], [have_openssl="no"])])
 
-AM_CONDITIONAL(HAVE_LIBIDN, test x${libidn} = xyes)
-if [[ -z "$HAVE_LIBIDN_TRUE" ]]; then
-RPM_REQUIRES+=" libidn"
-RPM_BUILDREQ+=" libidn-devel"
+AM_CONDITIONAL([HAVE_OPENSSL], [test x$have_openssl = xyes])
+if test x$have_openssl = xyes; then
+  AC_DEFINE([HAVE_OPENSSL], [1], [Define to 1 if the openssl is available])
+  RPM_REQUIRES+=" openssl"
+  RPM_BUILDREQ+=" openssl-devel"
+else
+  AC_DEFINE([HAVE_OPENSSL], [0], [Define to 1 if the openssl is available])
+  AC_MSG_WARN([openssl not found. The aggregator module will not be compiled.])
 fi
 
 AC_ARG_WITH([flowcachesize],
@@ -119,10 +127,9 @@ AC_ARG_WITH([nfreader],
 
 if test x${withnfreader} = xyes; then
 	# Checks for libraries.
-	AC_CHECK_LIB(nf, lnf_open, [libnf=yes],
+	AC_CHECK_HEADER(libnf.h, AC_CHECK_LIB(nf, lnf_open, [libnf=yes],
 	  [AC_MSG_WARN([libnf not found. The nfreader module will not be compiled.])]
-	)
-
+	), AC_MSG_WARN([libnf.h not found. The nfreader module will not be compiled.]))
 fi
 
 AM_CONDITIONAL(HAVE_LIBNF, test x${libnf} = xyes && test x${withnfreader} = xyes)
@@ -191,6 +198,7 @@ AM_CONDITIONAL(MAKE_RPMS, test x$RPMBUILD != x)
 
 # list of all *.in (and Makefile.am) files to process by configure script
 AC_CONFIG_FILES([Makefile
+                 aggregator/Makefile
                  anonymizer/Makefile
                  debug_sender/Makefile
                  device_classifier/Makefile
@@ -205,20 +213,39 @@ AC_CONFIG_FILES([Makefile
                  flow_meter/Makefile
                  flow_meter/flow_meter.bash
                  flow_meter/tests/Makefile
+                 ipv6stats/Makefile
                  json_dump/Makefile
                  json_replay/Makefile
                  link_traffic/Makefile
                  link_traffic/munin/Makefile
+                 link_traffic/link_traff2json.py
                  logger/Makefile
                  logreplay/Makefile
                  merger/Makefile
+                 mux/Makefile
+                 demux/Makefile
                  nemea-modules.spec
                  nfreader/Makefile
                  proto_traffic/Makefile
                  proto_traffic/munin/Makefile
                  report2idea/Makefile
+                 report2idea/amplificationdetector/Makefile
+                 report2idea/bruteforce/Makefile
+                 report2idea/ddos/Makefile
+                 report2idea/dnstunnel/Makefile
+                 report2idea/haddrscan/Makefile
+                 report2idea/hoststats/Makefile
+                 report2idea/ipblacklist/Makefile
+                 report2idea/minerdetector/Makefile
+                 report2idea/sipbruteforce/Makefile
+                 report2idea/venom/Makefile
+                 report2idea/voipfraud/Makefile
+                 report2idea/vportscan/Makefile
+                 topn/Makefile
                  traffic_repeater/Makefile
                  unirec2json/Makefile
+                 unirecfilter/lib/Makefile
+                 unirecfilter/lib/liburfilter.pc
                  unirecfilter/Makefile
                  endiverter/Makefile
                  nfwriter/Makefile

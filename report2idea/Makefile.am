@@ -1,23 +1,20 @@
-bin_SCRIPTS=hoststats2idea.py \
-			idea2idea.py \
-			ipblacklist2idea.py \
-			vportscan2idea.py \
-			voipfraud2idea.py \
-			dnstunnel2idea.py \
-			bruteforce2idea.py \
-			haddrscan2idea.py \
-			sipbf2idea.py \
-			amplification2idea.py \
-			minerdetector2idea.py
+bin_SCRIPTS=idea2idea.py
 
-EXTRA_DIST=template.py test.sh ${bin_SCRIPTS}
+SUBDIRS=hoststats \
+		ipblacklist \
+		venom \
+		vportscan \
+		voipfraud \
+		dnstunnel \
+		ddos \
+		bruteforce \
+		haddrscan \
+		sipbruteforce \
+		amplificationdetector \
+		minerdetector
 
+EXTRA_DIST=template.py test.sh config.yml.example ${bin_SCRIPTS}
 
 tmpldatadir=${docdir}/report2idea
-tmpldata_DATA=template.py
-
-TESTS = test.sh
-
-clean-local:
-	rm -f *.idea
+tmpldata_DATA=template.py config.yml.example
 

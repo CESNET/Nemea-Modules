@@ -5,9 +5,12 @@
  * \author Sabik Erik <xsabik02@stud.fit.vutbr.cz>
  * \date 2014
  * \date 2015
+ * \date 2016
+ * \date 2017
+ * \date 2018
  */
 /*
- * Copyright (C) 2014,2015 CESNET
+ * Copyright (C) 2014-2018 CESNET
  *
  * LICENSE TERMS
  *
@@ -59,6 +62,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <getopt.h>
+#include <unistd.h>
 #include <libtrap/trap.h>
 #include <map>
 #include "fields.h"
@@ -77,13 +81,19 @@ trap_module_info_t *module_info = NULL;
 #define MODULE_PARAMS(PARAM) \
   PARAM('f', "file", "Specify path to a file to be read.", required_argument, "string") \
   PARAM('c', "cut", "Quit after N records are received.", required_argument, "uint32") \
+  PARAM('d', "disable_timing", "Disable time delays during sending data according to the `time` column.", no_argument, "none") \
   PARAM('n', "no_eof", "Don't send 'EOF message' at the end.", no_argument, "none")
 
 static int stop = 0;
 
 int verbose;
 
-TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
+void trap_default_signal_handler(int signal)
+{
+   if (signal == SIGTERM || signal == SIGINT) {
+      stop = 1;
+   }
+}
 
 using namespace std;
 
@@ -146,11 +156,21 @@ string replace_string(string subject, const string &search, const string &replac
    return subject;
 }
 
+
+time_t convert_timestamp(string &t)
+{
+   struct tm tm;
+   strptime(t.c_str(), "%FT%T", &tm);
+   return mktime(&tm);
+}
+
 int main(int argc, char **argv)
 {
-   int ret;
+   int ret = 0;
+   int tmp;
    int send_eof = 1;
    int time_flag = 0;
+   int disable_timing = 0;
    char *in_filename = NULL;
    char record_delim = '\n';
    char field_delim = ',';
@@ -162,24 +182,14 @@ int main(int argc, char **argv)
    unsigned int num_records = 0; // Number of records received (total of all inputs)
    unsigned int max_num_records = 0; // Exit after this number of records is received
    char is_limited = 0;
-   trap_ctx_t *ctx = NULL;
+   time_t last_timestamp = 0, cur_timestamp = 0;
 
+   // initialize TRAP interface
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+   TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
+   // set signal handling for termination
+   TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
    // ***** Process parameters *****
-
-   // Let TRAP library parse command-line arguments and extract its parameters
-   trap_ifc_spec_t ifc_spec;
-   ret = trap_parse_params(&argc, argv, &ifc_spec);
-   if (ret != TRAP_E_OK) {
-      if (ret == TRAP_E_HELP) { // "-h" was found
-         trap_print_help(module_info);
-         trap_free_ifc_spec(ifc_spec);
-         return 0;
-      }
-      trap_free_ifc_spec(ifc_spec);
-      fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
-      return 1;
-   }
 
    verbose = trap_get_verbose_level();
    if (verbose >= 0) {
@@ -205,6 +215,9 @@ int main(int argc, char **argv)
          case 'n':
             send_eof = 0;
             break;
+         case 'd':
+            disable_timing = 1;
+            break;
          //case 's':
          //   field_delim = (optarg[0] != '\\' ? optarg[0] : (optarg[1] == 't'?'\t':'\n'));
          //   printf("Field delimiter: 0x%02X\n", field_delim);
@@ -215,11 +228,13 @@ int main(int argc, char **argv)
          //   break;
          default:
             fprintf(stderr, "Error: Invalid arguments.\n");
+            ret = 1;
             goto exit;
       }
    }
    if (in_filename == NULL) {
       fprintf(stderr, "Error: Missing parameter -f with input file.\n");
+      ret = 1;
       goto exit;
    }
 
@@ -230,36 +245,25 @@ int main(int argc, char **argv)
       if (line.compare(0, 5, "time,") == 0) {
          time_flag = 1;
          line.erase(0,5);
-      }
-      if (ur_define_set_of_fields(line.c_str()) != UR_OK) {
-         fprintf(stderr, "Error: Cannot define UniRec fields from header fields.\n");
+      } 
+      if ((tmp = ur_define_set_of_fields(line.c_str())) != UR_OK) {
+         fprintf(stderr, "Error: Cannot define UniRec fields from header fields (%i).\n", tmp);
          ret = 1;
          goto exit;
       }
 
-      // Initialize TRAP library (create and init all interfaces)
-      if (verbose >= 0) {
-         printf("Initializing TRAP library ...\n");
-      }
-      ctx = trap_ctx_init(module_info, ifc_spec);
-      if (ctx == NULL) {
-         fprintf(stderr, "ERROR in TRAP initialization.\n");
-         ret = 2;
-         goto exit;
-      }
-
-      // Set interface tineout to TRAP_WAIT (and disable buffering (why?))
-      trap_ctx_ifcctl(ctx, TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
+      // Set interface timeout to TRAP_WAIT (and disable buffering (why?))
+      trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
       //trap_ctx_ifcctl(ctx, TRAPIFC_OUTPUT, 0, TRAPCTL_BUFFERSWITCH, 0);
 
-      char * f_names = ur_ifc_data_fmt_to_field_names(line.c_str());
+      char *f_names = ur_ifc_data_fmt_to_field_names(line.c_str());
       if (f_names == NULL) {
          fprintf(stderr, "Error: Cannot convert data format to field names\n");
          ret = 1;
          goto exit;
       }
       line = string(f_names);
-      utmpl = ur_ctx_create_output_template(ctx, 0, f_names, NULL);
+      utmpl = ur_create_output_template(0, f_names, NULL);
       free(f_names);
       if (utmpl == NULL) {
          fprintf(stderr, "Error: Cannot create unirec template from header fields.\n");
@@ -301,7 +305,7 @@ int main(int argc, char **argv)
 
 
       /* main loop */
-      while (f_in.good()) {
+      while (f_in.good() && stop == 0) {
          if ((num_records++ >= max_num_records) && (is_limited == 1)) {
             break;
          }
@@ -317,6 +321,7 @@ int main(int argc, char **argv)
             column = get_next_field(sl);
             // Skip timestamp added by logger
             if (!skipped_time && time_flag) {
+               cur_timestamp = convert_timestamp(column);
                column = get_next_field(sl);
                skipped_time = 1;
             }
@@ -345,9 +350,17 @@ int main(int argc, char **argv)
                };
             }
          }
+
+         /* time delay according to the `time` column */
+         if (!disable_timing && time_flag) {
+            if ((cur_timestamp > last_timestamp) && (last_timestamp != 0)) {
+               sleep(cur_timestamp - last_timestamp);
+            }
+            last_timestamp = cur_timestamp;
+         }
+
          if (valid) {
-            trap_ctx_send(ctx, 0, data, ur_rec_size(utmpl, data));
-            //trap_ctx_send_flush(ctx, 0);
+            trap_send(0, data, ur_rec_size(utmpl, data));
          }
 
       }
@@ -361,7 +374,6 @@ int main(int argc, char **argv)
    // ***** Cleanup *****
 
 exit:
-   trap_free_ifc_spec(ifc_spec);
    if (f_in.is_open()) {
       f_in.close();
    }
@@ -371,11 +383,11 @@ exit:
 
    if (send_eof) {
       char dummy[1] = {0};
-      trap_ctx_send(ctx, 0, dummy, 1);
+      trap_send(0, dummy, 1);
    }
 
-   trap_ctx_send_flush(ctx, 0);
-   trap_ctx_finalize(&ctx);
+   trap_send_flush(0);
+   trap_finalize();
 
    if (utmpl != NULL) {
       ur_free_template(utmpl);

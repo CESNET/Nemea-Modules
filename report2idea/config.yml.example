@@ -1,0 +1,20 @@
+custom_actions:
+  - id store_mongo
+    mongo:
+      host: localhost
+      db: nemeadb
+      collection: alerts_new
+      port: 12001
+  - id store_warden
+    warden:
+      url: https://localhost/warden/
+  - id: file
+    file:
+      path: /dev/stdout
+rules:
+- id: 1
+  condition: Null
+  actions:
+  - store_mongo
+  #- store_warden
+

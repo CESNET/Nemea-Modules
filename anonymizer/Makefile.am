@@ -1,5 +1,3 @@
-include ../aminclude.am
-
 bin_PROGRAMS=anonymizer
 anonymizer_SOURCES=anonymizer.c \
                    anonymizer.h \
@@ -14,12 +12,4 @@ anonymizer_CFLAGS=-fno-strict-aliasing
 anonymizer_LDADD=-ltrap -lunirec -lnemea-common
 pkgdocdir=${docdir}/anonymizer
 pkgdoc_DATA=README
-
-mansources := $(addprefix $(srcdir)/,$(anonymizer_SOURCES))
-anonymizer.1: $(mansources)
-	$(TRAP2MAN) $^ > $@
-
-man_MANS=anonymizer.1
-
-CLEANFILES+=anonymizer.1
-
+include ../aminclude.am

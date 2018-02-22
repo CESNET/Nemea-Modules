@@ -183,6 +183,15 @@ public:
    }
 
    /**
+    * \brief Get IPFIX template string from plugin.
+    * \return IPFIX template string.
+    */
+   virtual const char **get_ipfix_string()
+   {
+      return NULL;
+   }
+
+   /**
     * \brief Check if plugin require basic flow fields in unirec template.
     * \return True if basic flow is need to be included, false otherwise.
     */

@@ -49,6 +49,7 @@
 #include "packet.h"
 #include "flowifc.h"
 #include "sipplugin.h"
+#include "ipfix-elements.h"
 
 using namespace std;
 
@@ -100,6 +101,7 @@ int SIPPlugin::post_create(Flow &rec, const Packet &pkt)
 
    return 0;
 }
+
 int SIPPlugin::pre_update(Flow &rec, Packet &pkt)
 {
    uint16_t msg_type;
@@ -111,6 +113,7 @@ int SIPPlugin::pre_update(Flow &rec, Packet &pkt)
 
    return 0;
 }
+
 void SIPPlugin::finish()
 {
    if (print_stats) {
@@ -120,14 +123,25 @@ void SIPPlugin::finish()
       cout << "   Total sip packets processed: " << total << endl;
    }
 }
+
 string SIPPlugin::get_unirec_field_string()
 {
    return SIP_UNIREC_TEMPLATE;
 }
 
+const char *sip_ipfix_string[] = {
+   IPFIX_SIP_TEMPLATE(IPFIX_FIELD_NAMES)
+   NULL
+};
+
+const char **SIPPlugin::get_ipfix_string()
+{
+   return sip_ipfix_string;
+}
+
 uint16_t SIPPlugin::parse_msg_type(const Packet &pkt)
 {
-   if ((pkt.field_indicator & PCKT_PAYLOAD_MASK) != PCKT_PAYLOAD_MASK) { // If payload is not present, return.
+   if (!(pkt.field_indicator & PCKT_PAYLOAD)) {
       return SIP_MSG_TYPE_INVALID;
    }
 
@@ -577,3 +591,4 @@ int SIPPlugin::parser_process_sip(const Packet &pkt, RecordExtSIP *sip_data)
 
    return 0;
 }
+

@@ -53,8 +53,6 @@
 #include <cstring>
 #include <signal.h>
 #include <stdlib.h>
-#include <limits>
-#include <errno.h>
 
 #include "flow_meter.h"
 #include "packet.h"
@@ -62,14 +60,19 @@
 #include "pcapreader.h"
 #include "nhtflowcache.h"
 #include "unirecexporter.h"
+#include "ipfixexporter.h"
 #include "stats.h"
 #include "fields.h"
+#include "conversion.h"
 
 #include "httpplugin.h"
+#include "httpsplugin.h"
 #include "dnsplugin.h"
 #include "sipplugin.h"
 #include "ntpplugin.h"
 #include "arpplugin.h"
+#include "passivednsplugin.h"
+#include "smtpplugin.h"
 
 using namespace std;
 
@@ -82,18 +85,22 @@ static int stop = 0;
 #define MODULE_PARAMS(PARAM) \
   PARAM('p', "plugins", "Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. "\
   "For example: \'-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter"\
-  " will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,dns,sip,ntp,basic,arp", required_argument, "string")\
+  " will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,https,dns,sip,ntp,smtp,basic,arp,passivedns", required_argument, "string")\
   PARAM('c', "count", "Quit after number of packets are captured.", required_argument, "uint32")\
   PARAM('I', "interface", "Capture from given network interface. Parameter require interface name (eth0 for example).", required_argument, "string")\
   PARAM('r', "file", "Pcap file to read. - to read from stdin.", required_argument, "string") \
-  PARAM('n', "no_eof", "Don't send EOF message when flow_meter exits.", no_argument, "none") \
+  PARAM('n', "no_eof", "Don't send NULL record message when flow_meter exits.", no_argument, "none") \
   PARAM('l', "snapshot_len", "Snapshot length when reading packets. Set value between 120-65535.", required_argument, "uint32") \
   PARAM('t', "timeout", "Active and inactive timeout in seconds. Format: DOUBLE:DOUBLE. Value default means use default value 300.0:30.0.", required_argument, "string") \
-  PARAM('s', "cache_size", "Size of flow cache in number of flow records. Each flow record has 176 bytes. default means use value 65536.", required_argument, "string") \
+  PARAM('s', "cache_size", "Size of flow cache. Parameter is used as an exponent to the power of two. Valid numbers are in range 4-30. default is 17 (131072 records).", required_argument, "string") \
   PARAM('S', "cache-statistics", "Print flow cache statistics. NUMBER specifies interval between prints.", required_argument, "float") \
   PARAM('P', "pcap-statistics", "Print pcap statistics every 5 seconds. The statistics do not behave the same way on all platforms.", no_argument, "none") \
   PARAM('L', "link_bit_field", "Link bit field value.", required_argument, "uint64") \
-  PARAM('D', "dir_bit_field", "Direction bit field value.", required_argument, "uint8")
+  PARAM('D', "dir_bit_field", "Direction bit field value.", required_argument, "uint8") \
+  PARAM('F', "filter", "String containing filter expression to filter traffic. See man pcap-filter.", required_argument, "string") \
+  PARAM('O', "odid", "Send ODID field instead of LINK_BIT_FIELD in unirec message.", no_argument, "none") \
+  PARAM('x', "ipfix", "Export to IPFIX collector. Format: HOST:PORT or [HOST]:PORT", required_argument, "string") \
+  PARAM('u', "udp", "Use UDP when exporting to IPFIX collector.", no_argument, "none")
 
 /**
  * \brief Parse input plugin settings.
@@ -124,6 +131,12 @@ int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plu
          tmp.push_back(plugin_opt("http-resp", http_response, ifc_num++));
 
          plugins.push_back(new HTTPPlugin(module_options, tmp));
+      } else if (proto == "https") {
+         vector<plugin_opt> tmp;
+
+         tmp.push_back(plugin_opt("https", https, ifc_num++));
+
+         plugins.push_back(new HTTPSPlugin(module_options, tmp));
       } else if (proto == "dns"){
          vector<plugin_opt> tmp;
          tmp.push_back(plugin_opt("dns", dns, ifc_num++));
@@ -139,11 +152,21 @@ int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plu
          tmp.push_back(plugin_opt("ntp", ntp, ifc_num++));
 
          plugins.push_back(new NTPPlugin(module_options, tmp));
+      } else if (proto == "smtp"){
+         vector<plugin_opt> tmp;
+         tmp.push_back(plugin_opt("smtp", smtp, ifc_num++));
+
+         plugins.push_back(new SMTPPlugin(module_options, tmp));
       } else if (proto == "arp"){
          vector<plugin_opt> tmp;
          tmp.push_back(plugin_opt("arp", arp, ifc_num++));
 
          plugins.push_back(new ARPPlugin(module_options, tmp));
+      } else if (proto == "passivedns"){
+         vector<plugin_opt> tmp;
+         tmp.push_back(plugin_opt("passivedns", passivedns, ifc_num++));
+
+         plugins.push_back(new PassiveDNSPlugin(module_options, tmp));
       } else {
          fprintf(stderr, "Unsupported plugin: \"%s\"\n", proto.c_str());
          return -1;
@@ -168,7 +191,6 @@ int count_trap_interfaces(int argc, char *argv[])
          interfaces = argv[i + 1];
       }
    }
-
    int ifc_cnt = 1;
    if (interfaces != NULL) {
       while(*interfaces) { // Count number of specified interfaces.
@@ -180,99 +202,6 @@ int count_trap_interfaces(int argc, char *argv[])
    }
 
    return ifc_cnt;
-}
-
-/**
- * \brief Remove whitespaces from beginning and end of string.
- * \param [in,out] str String to be trimmed.
- */
-void trim_str(string &str)
-{
-   str.erase(0, str.find_first_not_of(" \t\n\r"));
-   str.erase(str.find_last_not_of(" \t\n\r") + 1);
-}
-
-/**
- * \brief Provides conversion from string to uint64_t.
- * \param [in] str String representation of value.
- * \param [out] dst Destination variable.
- * \return True on success, false otherwise.
- */
-bool str_to_uint64(string str, uint64_t &dst)
-{
-   char *check;
-   errno = 0;
-   trim_str(str);
-   unsigned long long value = strtoull(str.c_str(), &check, 0);
-   if (errno == ERANGE || str[0] == '-' || str[0] == '\0' || *check ||
-      value > numeric_limits<uint64_t>::max()) {
-      return false;
-   }
-
-   dst = value;
-   return true;
-}
-
-/**
- * \brief Provides conversion from string to uint32_t.
- * \param [in] str String representation of value.
- * \param [out] dst Destination variable.
- * \return True on success, false otherwise.
- */
-bool str_to_uint32(string str, uint32_t &dst)
-{
-   char *check;
-   errno = 0;
-   trim_str(str);
-   unsigned long long value = strtoull(str.c_str(), &check, 0);
-   if (errno == ERANGE || str[0] == '-' || str[0] == '\0' || *check ||
-      value > numeric_limits<uint32_t>::max()) {
-      return false;
-   }
-
-   dst = value;
-   return true;
-}
-
-/**
- * \brief Provides conversion from string to uint8_t.
- * \param [in] str String representation of value.
- * \param [out] dst Destination variable.
- * \return True on success, false otherwise.
- */
-bool str_to_uint8(string str, uint8_t &dst)
-{
-   char *check;
-   errno = 0;
-   trim_str(str);
-   unsigned long long value = strtoull(str.c_str(), &check, 0);
-   if (errno == ERANGE || str[0] == '-' || str[0] == '\0' || *check ||
-      value > numeric_limits<uint8_t>::max()) {
-      return false;
-   }
-
-   dst = value;
-   return true;
-}
-
-/**
- * \brief Provides conversion from string to double.
- * \param [in] str String representation of value.
- * \param [out] dst Destination variable.
- * \return True on success, false otherwise.
- */
-bool str_to_double(string str, double &dst)
-{
-   char *check;
-   errno = 0;
-   trim_str(str);
-   double value = strtod(str.c_str(), &check);
-   if (errno == ERANGE || *check || str[0] == '\0') {
-      return false;
-   }
-
-   dst = value;
-   return true;
 }
 
 /**
@@ -321,17 +250,59 @@ int main(int argc, char *argv[])
    options.snaplen = 0;
    options.eof = true;
 
-   uint32_t pkt_limit = 0; // Limit of packets for packet parser. 0 = no limit
-   uint64_t link = 0;
+   bool odid = false, export_unirec = false, export_ipfix = false, help = false, udp = false;
+   int ifc_cnt = 0, verbose = -1;
+   uint64_t link = 1;
+   uint32_t pkt_limit = 0; /* Limit of packets for packet parser. 0 = no limit */
    uint8_t dir = 0;
+   string host = "", port = "", filter = "";
 
-   // ***** TRAP initialization *****
+   for (int i = 0; i < argc; i++) {
+      if (!strcmp(argv[i], "-i")) {
+         export_unirec = true;
+      } else if (!strcmp(argv[i], "-x") || !strcmp(argv[i], "--ipfix")) {
+         export_ipfix = true;
+      } else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
+         help = true;
+      } else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "-vv") || !strcmp(argv[i], "-vvv")) {
+         if (verbose >= 0) {
+            for (int j = verbose; j + 1 < argc; j++) {
+               argv[j] = argv[j + 1];
+            }
+            argc--;
+            verbose = --i;
+         } else {
+            verbose = i;
+         }
+      }
+   }
+
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-   module_info->num_ifc_out = count_trap_interfaces(argc, argv);
-   TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
+
+   if ((export_unirec && !export_ipfix) || help) {
+      /* TRAP initialization */
+      ifc_cnt = count_trap_interfaces(argc, argv);
+      module_info->num_ifc_out = ifc_cnt;
+      TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
+   } else if (verbose >= 0) {
+      for (int i = verbose; i + 1 < argc; i++) {
+         argv[i] = argv[i + 1];
+      }
+      argc--;
+   }
+
+   if (export_unirec && export_ipfix) {
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      TRAP_DEFAULT_FINALIZATION();
+      return error("Cannot export to IPFIX and Unirec at the same time.");
+   } else if (!export_unirec && !export_ipfix) {
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      return error("Specify exporter output Unirec (-i) or IPFIX (-x/--ipfix).");
+   }
 
    signal(SIGTERM, signal_handler);
    signal(SIGINT, signal_handler);
+   signal(SIGPIPE, SIG_IGN);
 
    signed char opt;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
@@ -341,11 +312,10 @@ int main(int argc, char *argv[])
             options.basic_ifc_num = -1;
             int ret = parse_plugin_settings(string(optarg), plugin_wrapper.plugins, options);
             if (ret < 0) {
-               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                TRAP_DEFAULT_FINALIZATION();
                return error("Invalid argument for option -p");
             }
-            if (ret != module_info->num_ifc_out) {
+            if (ifc_cnt && ret != ifc_cnt) {
                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                TRAP_DEFAULT_FINALIZATION();
                return error("Number of output ifc interfaces does not correspond number of items in -p parameter.");
@@ -415,12 +385,13 @@ int main(int argc, char *argv[])
       case 's':
          if (strcmp(optarg, "default")) {
             uint32_t tmp;
-            if (!str_to_uint32(optarg, tmp) || tmp == 0) {
+            if (!str_to_uint32(optarg, tmp) || tmp <= 3 || tmp > 30) {
                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                TRAP_DEFAULT_FINALIZATION();
                return error("Invalid argument for option -s");
             }
-            options.flow_cache_size = tmp;
+
+            options.flow_cache_size = (1 << tmp);
          } else {
             options.flow_cache_size = DEFAULT_FLOW_CACHE_SIZE;
          }
@@ -454,6 +425,43 @@ int main(int argc, char *argv[])
             return error("Invalid argument for option -D");
          }
          break;
+      case 'F':
+         filter = string(optarg);
+         break;
+      case 'O':
+         odid = true;
+         break;
+      case 'x':
+         {
+            host = optarg;
+            size_t tmp = host.find_last_of(":");
+            if (tmp == string::npos) {
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               TRAP_DEFAULT_FINALIZATION();
+               return error("Invalid argument for option -x");
+            }
+
+
+            port = string(host, tmp + 1);
+            host = host.erase(tmp);
+            trim_str(host);
+            trim_str(port);
+
+            if (host == "" || port == "") {
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               TRAP_DEFAULT_FINALIZATION();
+               return error("Invalid argument for option -x");
+            }
+
+            if (host[0] == '[' && host[host.size() - 1] == ']') {
+               host = host.erase(0, 1);
+               host = host.erase(host.size() - 1, 1);
+            }
+         }
+         break;
+      case 'u':
+         udp = true;
+         break;
       default:
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
@@ -461,18 +469,14 @@ int main(int argc, char *argv[])
       }
    }
 
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+
    if (options.interface != "" && options.pcap_file != "") {
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       TRAP_DEFAULT_FINALIZATION();
       return error("Cannot capture from file and from interface at the same time.");
    } else if (options.interface == "" && options.pcap_file == "") {
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       TRAP_DEFAULT_FINALIZATION();
       return error("Specify capture interface (-I) or file for reading (-r). ");
-   }
-
-   if (options.flow_cache_size % options.flow_line_size != 0) {
-      options.flow_cache_size += options.flow_line_size - (options.flow_cache_size % options.flow_line_size);
    }
 
    bool parse_every_pkt = false;
@@ -500,27 +504,46 @@ int main(int argc, char *argv[])
    PcapReader packetloader(options);
    if (options.interface == "") {
       if (packetloader.open_file(options.pcap_file, parse_every_pkt) != 0) {
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
          return error("Can't open input file: " + options.pcap_file);
       }
    } else {
+      if (export_unirec) {
+         for (int i = 0; i < ifc_cnt; i++) {
+            trap_ifcctl(TRAPIFC_OUTPUT, i, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT);
+         }
+      }
+
       if (packetloader.init_interface(options.interface, options.snaplen, parse_every_pkt) != 0) {
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
          return error("Unable to initialize libpcap: " + packetloader.error_msg);
       }
    }
 
+   if (filter != "") {
+      if (packetloader.set_filter(filter) != 0) {
+         TRAP_DEFAULT_FINALIZATION();
+         return error(packetloader.error_msg);
+      }
+   }
+
    NHTFlowCache flowcache(options);
    UnirecExporter flowwriter(options.eof);
+   IPFIXExporter flow_writer_ipfix;
 
-   if (flowwriter.init(plugin_wrapper.plugins, module_info->num_ifc_out, options.basic_ifc_num, link, dir) != 0) {
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-      TRAP_DEFAULT_FINALIZATION();
-      return error("Unable to initialize UnirecExporter.");
+   if (export_unirec) {
+      if (flowwriter.init(plugin_wrapper.plugins, ifc_cnt, options.basic_ifc_num, link, dir, odid) != 0) {
+         TRAP_DEFAULT_FINALIZATION();
+         return error("Unable to initialize UnirecExporter.");
+      }
+      flowcache.set_exporter(&flowwriter);
+   } else {
+      if (flow_writer_ipfix.init(plugin_wrapper.plugins, options.basic_ifc_num, link, host, port, udp, (verbose >= 0), dir) != 0) {
+         TRAP_DEFAULT_FINALIZATION();
+         return error("Unable to initialize IPFIXExporter.");
+      }
+      flowcache.set_exporter(&flow_writer_ipfix);
    }
-   flowcache.set_exporter(&flowwriter);
 
    if (!options.print_stats) {
       plugin_wrapper.plugins.push_back(new StatsPlugin(options.cache_stats_interval, cout));
@@ -534,13 +557,14 @@ int main(int argc, char *argv[])
 
    Packet packet;
    int ret = 0;
-   uint32_t pkt_total = 0, pkt_parsed = 0;
+   uint64_t pkt_total = 0, pkt_parsed = 0;
+
    packet.packet = new char[MAXPCKTSIZE + 1];
 
    /* Main packet capture loop. */
    while (!stop && (ret = packetloader.get_pkt(packet)) > 0) {
       if (ret == 3) { /* Process timeout. */
-         flowcache.export_expired(false);
+         flowcache.export_expired(time(NULL));
          continue;
       }
 
@@ -560,14 +584,13 @@ int main(int argc, char *argv[])
       packetloader.close();
       flowwriter.close();
       delete [] packet.packet;
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       TRAP_DEFAULT_FINALIZATION();
       return error("Error during reading: " + packetloader.error_msg);
    }
 
    if (options.print_stats) {
-      cout << "Total packets processed: "<< pkt_total << endl;
-      cout << "Packet headers parsed: "<< pkt_parsed << endl;
+      cout << "Total packets captured: " << pkt_total << endl;
+      cout << "Packets parsed: " << pkt_parsed << endl;
    }
 
    /* Cleanup. */
@@ -576,7 +599,6 @@ int main(int argc, char *argv[])
    packetloader.close();
 
    delete [] packet.packet;
-   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
    TRAP_DEFAULT_FINALIZATION();
 
    return EXIT_SUCCESS;

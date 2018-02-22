@@ -52,6 +52,7 @@
 #include "flowcacheplugin.h"
 #include "packet.h"
 #include "flow_meter.h"
+#include "ipfix-elements.h"
 
 using namespace std;
 
@@ -213,6 +214,16 @@ void ARPPlugin::finish()
 string ARPPlugin::get_unirec_field_string()
 {
    return ARP_UNIREC_TEMPLATE;
+}
+
+const char *ipfix_arp_fields[] = {
+   IPFIX_ARP_TEMPLATE(IPFIX_FIELD_NAMES)
+   NULL
+};
+
+const char **ARPPlugin::get_ipfix_string()
+{
+   return ipfix_arp_fields;
 }
 
 bool ARPPlugin::include_basic_flow_fields()

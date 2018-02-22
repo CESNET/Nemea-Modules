@@ -27,10 +27,10 @@ AC_DEFUN([AX_LIBTRAP_CHECK], [
 
   TRAPLIB=""
   if test "${repobuild}" = "false"; then
-    PKG_CHECK_MODULES([libtrap], [libtrap], [TRAPLIB="yes"])
+    PKG_CHECK_MODULES([libtrap], [libtrap], [HAVE_TRAPLIB="yes"])
   fi
-  if test "${TRAPLIB}" != "yes"; then
-    # repobuild 
+  if test "${HAVE_TRAPLIB}" != "yes"; then
+    # repobuild
     AC_MSG_CHECKING([for libtrap in parent directory])
     if test -d "$srcdir/../libtrap"; then
       TRAPINC='$(top_srcdir)/../libtrap/include'
@@ -52,19 +52,21 @@ AC_DEFUN([AX_LIBTRAP_CHECK], [
     else
       AC_MSG_RESULT([no])
       TRAPLIB=""
-      PKG_CHECK_MODULES([libtrap], [libtrap], [TRAPLIB="yes"])
+      PKG_CHECK_MODULES([libtrap], [libtrap], [HAVE_TRAPLIB="yes"])
     fi
   fi
   if test -n "$TRAPLIB"; then
-    LDFLAGS="$libtrap_LDFLAGS $LDFLAGS"
-    LIBS="$libtrap_LIBS $LIBS"
-    CFLAGS="$libtrap_CFLAGS $CFLAGS"
-    CXXFLAGS="$libtrap_CFLAGS $CXXFLAGS"
+    CPPFLAGS="-I${TRAPINC} $CPPFLAGS"
+    LIBS="-L${TRAPLIB} $LIBS"
+  elif test "x$HAVE_TRAPLIB" = "xyes"; then
+    CPPFLAGS="${libtrap_CFLAGS} $CPPFLAGS"
+    LIBS="${libtrap_LIBS} $LIBS"
   else
     AC_MSG_ERROR([Libtrap was not found.])
   fi
-  nemeasupdir=${pkgsysconfdir}
+  nemeasupdir=${datarootdir}/nemea-supervisor
   AC_SUBST(nemeasupdir)
   AC_PATH_PROG([TRAP2MAN], [trap2man.sh], [], [/usr/bin/nemea$PATH_SEPARATOR$PATH$PATH_SEPARATOR$PWD/../nemea-framework/libtrap/tools])
+  AM_CONDITIONAL([HAVE_TRAP2MAN], [test -x "$TRAP2MAN"])
 ])
 

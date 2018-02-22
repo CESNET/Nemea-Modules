@@ -5,14 +5,18 @@ debug_sender \
 device_classifier \
 email_reporter \
 flowcounter \
+ipv6stats \
 json_dump \
 json_replay \
 link_traffic \
 logger \
 logreplay \
 merger \
+mux \
+demux \
 proto_traffic \
 report2idea \
+topn \
 traffic_repeater \
 unirec2json \
 endiverter
@@ -26,11 +30,15 @@ endif
 
 if HAVE_BISON
 SUBDIRS += unirecfilter
+if HAVE_OPENSSL
+SUBDIRS += aggregator
+endif
 endif
 
 if HAVE_LIBPCAP
 SUBDIRS += flow_meter
 endif
+
 
 RPMDIR = RPMBUILD
 

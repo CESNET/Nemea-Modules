@@ -9,11 +9,25 @@ License: BSD
 Vendor: CESNET, z.s.p.o.
 Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
-Requires: nemea-framework@RPM_REQUIRES@
-BuildRequires: gcc make doxygen pkgconfig nemea-framework-devel@RPM_BUILDREQ@
+Requires: nemea-framework
+Requires: libnf
+Requires: openssl
+Requires: libpcap
 Provides: nemea-modules
+BuildRequires: gcc gcc-c++ make doxygen pkgconfig nemea-framework-devel bison flex
+BuildRequires: libpcap-devel openssl-devel libnf-devel bzip2-devel
 
 %description
+
+%package devel
+Summary: Nemea-modules development package contains files for liburfilter
+Group: Liberouter
+Requires: nemea-modules = %{version}-%{release}
+Requires: nemea-framework-devel
+Provides: nemea-modules-devel
+
+%description devel
+This package contains header file for liburfilter.
 
 %prep
 %setup
@@ -27,27 +41,34 @@ make -j5 DESTDIR=$RPM_BUILD_ROOT install
 
 %post
 test -x %{_bindir}/nemea/flow_meter && setcap "CAP_NET_RAW+eip" %{_bindir}/nemea/flow_meter || true
+ldconfig
 
 %files
+%{_bindir}/nemea/aggregator
 %{_bindir}/nemea/amplification2idea.py
 %{_bindir}/nemea/anonymizer
 %{_bindir}/nemea/bruteforce2idea.py
+%{_bindir}/nemea/ddos_detector2idea.py
 %{_bindir}/nemea/debug_sender.py
 %{_bindir}/nemea/device_classifier
 %{_bindir}/nemea/dnstunnel2idea.py
 %{_bindir}/nemea/email_reporter.py
 %{_bindir}/nemea/endiverter
 %{_bindir}/nemea/flowcounter
-%{_bindir}/nemea/flow_meter
+%attr(0754, root, nemead) %{_bindir}/nemea/flow_meter
 %{_bindir}/nemea/haddrscan2idea.py
 %{_bindir}/nemea/hoststats2idea.py
 %{_bindir}/nemea/idea2idea.py
 %{_bindir}/nemea/ipblacklist2idea.py
+%{_bindir}/nemea/ipv6stats
 %{_bindir}/nemea/json_dump.py
 %{_bindir}/nemea/json_replay.py
 %{_bindir}/nemea/link_traffic
+%{_bindir}/nemea/link_traff2json.py
 %{_bindir}/nemea/logger
 %{_bindir}/nemea/logreplay
+%{_bindir}/nemea/mux
+%{_bindir}/nemea/demux
 %{_bindir}/nemea/merger
 %{_bindir}/nemea/minerdetector2idea.py
 %{_bindir}/nemea/nfdump_reader
@@ -56,21 +77,55 @@ test -x %{_bindir}/nemea/flow_meter && setcap "CAP_NET_RAW+eip" %{_bindir}/nemea
 %{_bindir}/nemea/proto_traffic
 %{_bindir}/nemea/sipbf2idea.py
 %{_bindir}/nemea/svm-tools
+%{_bindir}/nemea/topn
 %{_bindir}/nemea/traffic_repeater
 %{_bindir}/nemea/unirec2json.py
 %{_bindir}/nemea/unirecfilter
+%{_bindir}/nemea/venom2idea.py
 %{_bindir}/nemea/voipfraud2idea.py
 %{_bindir}/nemea/vportscan2idea.py
 %{_docdir}/nemea-modules/*/*
 %config(noreplace) %{_sysconfdir}/nemea/email_reporter/example.cfg
 %config(noreplace) %{_sysconfdir}/nemea/email_reporter/generic.cfg
-%config(noreplace) %{_sysconfdir}/nemea/munin/link_traffic.sup
-%config(noreplace) %{_sysconfdir}/nemea/munin/proto_traffic.sup
+%config(noreplace) %{_sysconfdir}/nemea/link_traffic/link_traff_conf.cfg.example
+%config(noreplace) %{_datarootdir}/nemea-supervisor/munin/link_traffic.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/munin/proto_traffic.sup
 %config(noreplace) %{_sysconfdir}/bash_completion.d/flow_meter.bash
+
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/amplification2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/bruteforce2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/dnstunnel2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/haddrscan2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/hoststats2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/ipblacklist2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/miner2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/sipbf2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/venom2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/voipfraud2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/vportscan2idea.sup
+
+%config(noreplace) %{_sysconfdir}/warden/amplificationdetector/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/bruteforce/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/dnstunnel/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/haddrscan/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/hoststats/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/ipblacklist/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/minerdetector/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/sipbruteforce/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/venom/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/vportscan/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/voipfraud/config.cfg
+
 %{_datadir}/munin/plugins/link_traffic_
 %{_datadir}/munin/plugins/proto_traffic_
 %{_datadir}/nemea/*
+%{_libdir}/liburfilter.so.*
 %{_mandir}/man1/*.1.gz
 
-
+%files devel
+%{_includedir}/liburfilter.h
+%{_libdir}/liburfilter.a
+%{_libdir}/liburfilter.la
+%{_libdir}/liburfilter.so
+%{_libdir}/pkgconfig/liburfilter.pc
 

@@ -47,7 +47,7 @@
 
 // Information if sigaction is available for nemea signal macro registration
 #ifdef HAVE_CONFIG_H
-#include <config.h> 
+#include <config.h>
 #endif
 
 #include <stdio.h>
@@ -58,11 +58,12 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <getopt.h>
+#include <inttypes.h>
 #include <libtrap/trap.h>
 
 /*!
  * \name Default values
- *  Defines macros used by traffic repeater. 
+ *  Defines macros used by traffic repeater.
  * \{ */
 #define IFC_IN_NUM 1 /*< Number of input interfaces expected by module. */
 #define IFC_OUT_NUM 1 /*< Number of output interfaces expected by module. */
@@ -72,7 +73,7 @@
 
 /*!
  * \brief Traffic repeater function
- * Function to resend received data from input interface to output interface. 
+ * Function to resend received data from input interface to output interface.
  */
 void traffic_repeater(void);
 

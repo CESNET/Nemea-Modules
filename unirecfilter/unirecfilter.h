@@ -3,9 +3,11 @@
  * \brief NEMEA module selecting records and sending specified fields.
  * \author Zdenek Kasner <kasnezde@fit.cvut.cz>
  * \author Tomas Cejka <cejkat@cesnet.cz>
+ * \author Miroslav Kalina <kalinmi2@fit.cvut.cz>
  * \date 2013
  * \date 2014
  * \date 2015
+ * \date 2016
  */
 /*
  * Copyright (C) 2013-2015 CESNET
@@ -50,84 +52,10 @@
 #include <sys/types.h>
 #include <regex.h>
 
-#define SPEC_COND_DELIM   ':'
 #define DYN_FIELD_MAX_SIZE 1024 // Maximal size of dynamic field, longer fields will be cutted to this size
 
 #define SET_NULL(field_id, tmpl, data) \
 memset(ur_get_ptr_by_id(tmpl, data, field_id), 0, ur_get_size(field_id));
-
-/* Used for types of expression nodes in abstract syntax tree */
-typedef enum { NODE_T_AST, NODE_T_EXPRESSION, NODE_T_EXPRESSION_FP,
-               NODE_T_PROTOCOL, NODE_T_IP, NODE_T_STRING,
-               NODE_T_BRACKET, NODE_T_NEGATION } node_type;
-
-/* Used for describing comparison operators */
-typedef enum { OP_EQ, OP_NE, OP_LT, OP_LE, OP_GT, OP_GE, OP_RE /* regex match */, OP_INVALID } cmp_op;
-
-/* Used for describing logical operators */
-typedef enum { OP_AND, OP_OR, OP_NOP } log_op;
-
-
-/* AST nodes */
-struct ast {
-   node_type type;
-   log_op operator;
-   struct ast *l;
-   struct ast *r;
-};
-
-struct expression {
-   node_type type;
-   cmp_op cmp;
-   char *column;
-   int64_t number;
-   ur_field_id_t id;
-   int is_signed;
-};
-
-struct expression_fp {
-   node_type type;
-   cmp_op cmp;
-   char *column;
-   double number;
-   ur_field_id_t id;
-};
-
-struct protocol {
-   node_type type;
-   char *data;
-   char *cmp;
-};
-
-struct ip {
-   node_type type;
-   cmp_op cmp;
-   char *column;
-   ip_addr_t ipAddr;
-   ur_field_id_t id;
-};
-
-struct str {
-   node_type type;
-   cmp_op cmp;
-   char *column;
-   char *s;
-   regex_t re;
-   ur_field_id_t id;
-};
-
-struct brack {
-   node_type type;
-   struct ast *b;
-};
-
-int yylex();
-int yyparse();
-void printAST(struct ast *ast);
-int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec);
-void freeAST(struct ast *tree);
-struct ast *getTree(const char *str, const char *port_number);
-void changeProtocol(struct ast **ast);
 
 extern char * str_buffer;
 

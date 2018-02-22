@@ -50,6 +50,7 @@
 #include "packet.h"
 #include "flowifc.h"
 #include "httpplugin.h"
+#include "ipfix-elements.h"
 
 using namespace std;
 
@@ -95,6 +96,8 @@ HTTPPlugin::HTTPPlugin(const options_t &module_options)
    responses = 0;
    total = 0;
    flush_flow = false;
+   req = NULL;
+   resp = NULL;
 }
 
 HTTPPlugin::HTTPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options) : FlowCachePlugin(plugin_options)
@@ -104,14 +107,16 @@ HTTPPlugin::HTTPPlugin(const options_t &module_options, vector<plugin_opt> plugi
    responses = 0;
    total = 0;
    flush_flow = false;
+   req = NULL;
+   resp = NULL;
 }
 
 int HTTPPlugin::post_create(Flow &rec, const Packet &pkt)
 {
    if (pkt.src_port == 80) {
-      return add_ext_http_response(pkt.payload, pkt.payload_length, rec);
+      add_ext_http_response(pkt.payload, pkt.payload_length, rec);
    } else if (pkt.dst_port == 80) {
-      return add_ext_http_request(pkt.payload, pkt.payload_length, rec);
+      add_ext_http_request(pkt.payload, pkt.payload_length, rec);
    }
 
    return 0;
@@ -123,21 +128,23 @@ int HTTPPlugin::pre_update(Flow &rec, Packet &pkt)
    if (pkt.src_port == 80) {
       ext = rec.getExtension(http_response);
       if (ext == NULL) { /* Check if header is present in flow. */
-         return add_ext_http_response(pkt.payload, pkt.payload_length, rec);
+         add_ext_http_response(pkt.payload, pkt.payload_length, rec);
+         return 0;
       }
 
-      parse_http_response(pkt.payload, pkt.payload_length, dynamic_cast<RecordExtHTTPResp *>(ext), false);
+      parse_http_response(pkt.payload, pkt.payload_length, NULL, false);
       if (flush_flow) {
          flush_flow = false;
          return FLOW_FLUSH;
       }
    } else if (pkt.dst_port == 80) {
       ext = rec.getExtension(http_request);
-      if(ext == NULL) { /* Check if header is present in flow. */
-         return add_ext_http_request(pkt.payload, pkt.payload_length, rec);
+      if (ext == NULL) { /* Check if header is present in flow. */
+         add_ext_http_request(pkt.payload, pkt.payload_length, rec);
+         return 0;
       }
 
-      parse_http_request(pkt.payload, pkt.payload_length, dynamic_cast<RecordExtHTTPReq *>(ext), false);
+      parse_http_request(pkt.payload, pkt.payload_length, NULL, false);
       if (flush_flow) {
          flush_flow = false;
          return FLOW_FLUSH;
@@ -160,6 +167,16 @@ void HTTPPlugin::finish()
 string HTTPPlugin::get_unirec_field_string()
 {
    return HTTP_UNIREC_TEMPLATE;
+}
+
+const char *ipfix_http_template[] = {
+   IPFIX_HTTP_TEMPLATE(IPFIX_FIELD_NAMES)
+   NULL
+};
+
+const char **HTTPPlugin::get_ipfix_string()
+{
+   return ipfix_http_template;
 }
 
 /**
@@ -237,9 +254,9 @@ bool HTTPPlugin::parse_http_request(const char *data, int payload_len, RecordExt
    }
 
    /* Copy and check HTTP method */
-   copy_str(rec->method, sizeof(rec->method), data, begin);
-   if (!valid_http_method(rec->method)) {
-      DEBUG_MSG("Parser quits:\tundefined http method: %s\n", rec->method);
+   copy_str(buffer, sizeof(buffer), data, begin);
+   if (!valid_http_method(buffer)) {
+      DEBUG_MSG("Parser quits:\tundefined http method: %s\n", buffer);
       return false;
    }
 
@@ -249,6 +266,7 @@ bool HTTPPlugin::parse_http_request(const char *data, int payload_len, RecordExt
       DEBUG_MSG("Parser quits:\tflushing flow\n");
       return false;
    }
+   strcpy(rec->method, buffer);
 
    copy_str(rec->uri, sizeof(rec->uri), begin + 1, end);
    DEBUG_MSG("\tMethod: %s\n",   rec->method);
@@ -271,6 +289,9 @@ bool HTTPPlugin::parse_http_request(const char *data, int payload_len, RecordExt
     * --------------------- begin
     */
 
+   rec->host[0] = 0;
+   rec->user_agent[0] = 0;
+   rec->referer[0] = 0;
    /* Process headers. */
    while (begin - data < payload_len) {
       end = strchr(begin, HTTP_LINE_DELIMITER);
@@ -321,6 +342,7 @@ bool HTTPPlugin::parse_http_response(const char *data, int payload_len, RecordEx
 {
    char buffer[64];
    const char *begin, *end, *keyval_delimiter;
+   int code;
 
    total++;
 
@@ -364,20 +386,20 @@ bool HTTPPlugin::parse_http_response(const char *data, int payload_len, RecordEx
 
    /* Copy and check HTTP response code. */
    copy_str(buffer, sizeof(buffer), begin + 1, end);
-   rec->code = atoi(buffer);
-   if (rec->code <= 0) {
+   code = atoi(buffer);
+   if (code <= 0) {
       DEBUG_MSG("Parser quits:\twrong response code: %d\n", rec->code);
       return false;
    }
 
    DEBUG_MSG("\tCode: %d\n", rec->code);
-
    if (!create) {
       flush_flow = true;
       total--;
       DEBUG_MSG("Parser quits:\tflushing flow\n");
       return false;
    }
+   rec->code = code;
 
    /* Find begin of next line after request line. */
    begin = strchr(end, HTTP_LINE_DELIMITER);
@@ -396,6 +418,7 @@ bool HTTPPlugin::parse_http_response(const char *data, int payload_len, RecordEx
     * --------------------- begin
     */
 
+   rec->content_type[0] = 0;
    /* Process headers. */
    while (begin - data < payload_len) {
       end = strchr(begin, HTTP_LINE_DELIMITER);
@@ -449,18 +472,17 @@ bool HTTPPlugin::valid_http_method(const char *method) const
  * \param [in] data Packet payload data.
  * \param [in] payload_len Length of packet payload.
  * \param [out] rec Flow record where to store created extension header.
- * \return 0 on success.
  */
-int HTTPPlugin::add_ext_http_request(const char *data, int payload_len, Flow &rec)
+void HTTPPlugin::add_ext_http_request(const char *data, int payload_len, Flow &rec)
 {
-   RecordExtHTTPReq *req = new RecordExtHTTPReq();
-   if (!parse_http_request(data, payload_len, req, true)) {
-      delete req;
-   } else {
-      rec.addExtension(req);
+   if (req == NULL) {
+      req = new RecordExtHTTPReq();
    }
 
-   return 0;
+   if (parse_http_request(data, payload_len, req, true)) {
+      rec.addExtension(req);
+      req = NULL;
+   }
 }
 
 /**
@@ -468,17 +490,16 @@ int HTTPPlugin::add_ext_http_request(const char *data, int payload_len, Flow &re
  * \param [in] data Packet payload data.
  * \param [in] payload_len Length of packet payload.
  * \param [out] rec Flow record where to store created extension header.
- * \return 0 on success.
  */
-int HTTPPlugin::add_ext_http_response(const char *data, int payload_len, Flow &rec)
+void HTTPPlugin::add_ext_http_response(const char *data, int payload_len, Flow &rec)
 {
-   RecordExtHTTPResp *resp = new RecordExtHTTPResp();
-   if (!parse_http_response(data, payload_len, resp, true)) {
-      delete resp;
-   } else {
-      rec.addExtension(resp);
+   if (resp == NULL) {
+      resp = new RecordExtHTTPResp();
    }
 
-   return 0;
+   if (parse_http_response(data, payload_len, resp, true)) {
+      rec.addExtension(resp);
+      resp = NULL;
+   }
 }
 

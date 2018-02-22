@@ -63,10 +63,10 @@ struct RecordExtARP : RecordExt {
    uint8_t ha_len;      /**< Hardware address length. */
    uint8_t pa_len;      /**< Protocol address length. */
    uint16_t opcode;     /**< Operation code. */
-   uint8_t src_ha[256]; /**< Source hardware address. */
-   uint8_t src_pa[256]; /**< Source protocol address. */
-   uint8_t dst_ha[256]; /**< Destination hardware address. */
-   uint8_t dst_pa[256]; /**< Destination protocol address. */
+   uint8_t src_ha[254]; /**< Source hardware address. */
+   uint8_t src_pa[254]; /**< Source protocol address. */
+   uint8_t dst_ha[254]; /**< Destination hardware address. */
+   uint8_t dst_pa[254]; /**< Destination protocol address. */
 
    /**
     * \brief Constructor.
@@ -85,6 +85,37 @@ struct RecordExtARP : RecordExt {
       ur_set_var(tmplt, record, F_ARP_DST_HA, dst_ha, ha_len);
       ur_set_var(tmplt, record, F_ARP_DST_PA, dst_pa, pa_len);
    }
+
+   virtual int fillIPFIX(uint8_t *buffer, int size)
+   {
+      int total_length = 6;
+
+      if (total_length + 2 * ha_len + 2 * pa_len + 4 > size) {
+         return -1;
+      }
+
+      *(uint16_t *) (buffer) = ntohs(ha_type);
+      *(uint16_t *) (buffer + 2) = ntohs(pa_type);
+      *(uint16_t *) (buffer + 4) = ntohs(opcode);
+
+      buffer[total_length] = ha_len;
+      memcpy(buffer + total_length + 1, src_ha, ha_len);
+      total_length += ha_len + 1;
+
+      buffer[total_length] = pa_len;
+      memcpy(buffer + total_length + 1, src_pa, pa_len);
+      total_length += pa_len + 1;
+
+      buffer[total_length] = ha_len;
+      memcpy(buffer + total_length + 1, dst_ha, ha_len);
+      total_length += ha_len + 1;
+
+      buffer[total_length] = pa_len;
+      memcpy(buffer + total_length + 1, dst_pa, pa_len);
+      total_length += pa_len + 1;
+
+      return total_length;
+   }
 };
 
 /**
@@ -98,6 +129,7 @@ public:
    int pre_create(Packet &pkt);
    void finish();
    string get_unirec_field_string();
+   const char **get_ipfix_string();
    bool include_basic_flow_fields();
 
 private:
