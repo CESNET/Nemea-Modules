@@ -659,7 +659,7 @@ int main(int argc, char *argv[])
 
    Packet packet;
    int ret = 0;
-   uint32_t pkt_total = 0, pkt_parsed = 0;
+   uint64_t pkt_total = 0, pkt_parsed = 0;
 
    packet.packet = new char[MAXPCKTSIZE + 1];
 
