@@ -8,34 +8,31 @@
 #endif //AGGREGATOR_KEYWORD_H
 
 #define MAX_KEY_FIELDS 32                 // Static maximal key members count
-class Keyword;                            // Definition to allow use this class in Template
 
-class KeywordTemplate {
+class KeyTemplate {
 public:
-    static uint indexesToRecord [MAX_KEY_FIELDS];
-    static int indexesToKeyword [MAX_KEY_FIELDS];     // Global size value, will only work with static size fields
-    static int sizesOfFields [MAX_KEY_FIELDS];        // Global size value, will only work with static size fields
-    static uint usedFields;
+    static int indexes_to_record [MAX_KEY_FIELDS];
+    //static int indexes_to_key [MAX_KEY_FIELDS];     // Global size value, will only work with static size fields
+    static int sizes_of_fields [MAX_KEY_FIELDS];        // Global size value, will only work with static size fields
+    static uint used_fields;
+    static uint key_size;
 
-    static void addField(const char* fieldName);
+    static void add_field(int record_id, int size);
 private:
 
 };
 
 
-class Keyword {
+class Key {
 private:
-    char* keyString;                      // Only values from record
-    int keyStringSize = 0;                // Size of allocated memory for keyString, not length of written bytes
-    int keyStringLength = 0;              // The length of written bytes
+    char* data;                      // Only values from record
+    int data_length = 0;              // The length of written bytes
 public:
-    Keyword();
-    ~Keyword();
-    void fillKeyword(ur_template_t * inTmplt, const void* recvRecord);
-    void flushKeyword(ur_template_t * outTmplt, void *outRecord);
-    //compare();
-    //hashCode();=
+    Key();
+    ~Key();
+    void add_field(const void *src, int size);            // Append new field into record
+    friend bool operator< (const Key &a, const Key &b);  // Key needs to be comparable for the map
+    //hash_code();=
 private:
-    bool reallocateArray();               // always keyStringSize * 2 ??
-    void addField();
+
 };
