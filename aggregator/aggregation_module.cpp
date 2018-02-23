@@ -56,12 +56,12 @@
 
 trap_module_info_t *module_info = NULL;
 /**
- * Only for compiling with example parts, no predefined UR_FIELD later
+ * COUNT, TIME_FIRST, TIME_LAST always used by module
  */
 UR_FIELDS (
-        uint32 BAR,
-        uint32 FOO,
-        uint32 BAZ
+        uint32 COUNT,
+        time TIME_FIRST,
+        time TIME_LAST
 )
 
 /**
@@ -234,12 +234,12 @@ int main(int argc, char **argv)
       // PROCESS THE DATA
 
       // Read FOO and BAR from input record and compute their sum
-      uint32_t baz = ur_get(in_tmplt, in_rec, F_FOO) +
-                     ur_get(in_tmplt, in_rec, F_BAR);
+      uint32_t baz = ur_get(in_tmplt, in_rec, F_COUNT) +
+                     ur_get(in_tmplt, in_rec, F_COUNT);
 
       // Fill output record
       ur_copy_fields(out_tmplt, out_rec, in_tmplt, in_rec);
-      ur_set(out_tmplt, out_rec, F_BAZ, mult * baz);
+      ur_set(out_tmplt, out_rec, F_COUNT, mult * baz);
 
       // Send record to interface 0.
       // Block if ifc is not ready (unless a timeout is set using trap_ifcctl)
