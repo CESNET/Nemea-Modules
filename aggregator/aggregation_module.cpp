@@ -52,7 +52,7 @@
 #include <unirec/unirec.h>
 #include "fields.h"
 
-#include "Keyword.h"
+#include "key.h"
 
 trap_module_info_t *module_info = NULL;
 /**
