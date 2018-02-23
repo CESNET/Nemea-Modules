@@ -2,7 +2,7 @@
 // Created by slabimic on 2/10/18.
 //
 
-#include "Keyword.h"
+#include "key.h"
 
 #define DEFAULT_KEY_SIZE 1024
 /*

@@ -1,5 +1,5 @@
 /**
- * \file aggregation_module.c
+ * \file aggregation_module.cpp
  * \brief Aggregation NEMEA module based on UniRec.
  * \author Michal Slabihoudek <slabimic@fit.cvut.cz>
  * \date 2018
