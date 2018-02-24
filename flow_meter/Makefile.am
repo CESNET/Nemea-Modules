@@ -48,6 +48,16 @@ flow_meter_LDADD=-ltrap -lunirec -lpcap
 flow_meter_CXXFLAGS=-std=c++98 -Wno-write-strings
 pkgdocdir=${docdir}/flow_meter
 pkgdoc_DATA=README.md
-EXTRA_DIST=README.md traffic-samples/arp-sample.pcap traffic-samples/dns-sample.pcap traffic-samples/http-sample.pcap traffic-samples/ntp-sample.pcap traffic-samples/sip-sample.pcap
+EXTRA_DIST=README.md \
+	traffic-samples/README.md \
+	traffic-samples/arp-sample.pcap \
+	traffic-samples/mixed-sample.pcap \
+	traffic-samples/dns-sample.pcap \
+	traffic-samples/http-sample.pcap \
+	traffic-samples/https-sample.pcap \
+	traffic-samples/ntp-sample.pcap \
+	traffic-samples/sip-sample.pcap \
+	traffic-samples/smtp-sample.pcap
+
 bashcompl_DATA=flow_meter.bash
 include ../aminclude.am
