@@ -66,17 +66,18 @@
 // -------- B+ TREE comparators -------------
 
 #define COMPARATOR(type) \
-int compare_ ## type(void *a, void *b) { \
-   if (*(type*)a == *(type*)b) { \
-      return EQUAL; \
-   } \
-   else if (*(type*)a < *(type*)b) { \
-      return LESS; \
-   } \
-   else { \
-      return MORE; \
-   } \
-}
+   int compare_ ## type(void *a, void *b) \
+   { \
+      if (*(type *) a == *(type *) b) { \
+         return EQUAL; \
+      } \
+      else if (*(type *) a < *(type *) b) { \
+         return LESS; \
+      } \
+      else { \
+         return MORE; \
+      } \
+   }
 
 COMPARATOR(int8_t)
 COMPARATOR(uint8_t)
@@ -91,48 +92,46 @@ COMPARATOR(double)
 COMPARATOR(ur_time_t)
 
 // or pass directly "(int(*)(void*,void*)) &ip_cmp" ??? it return strcmp instead of -1/0/1
-int compare_ip_addr_t(void * a, void * b) {
-   int cmp = ip_cmp((ip_addr_t*) a, (ip_addr_t*) b);
+int compare_ip_addr_t(void *a, void *b)
+{
+   int cmp = ip_cmp((ip_addr_t *) a, (ip_addr_t *) b);
    if (cmp == 0) {
       return EQUAL;
-   }
-   else if (cmp < 0) {
+   } else if (cmp < 0) {
       return LESS;
-   }
-   else {
+   } else {
       return MORE;
    }
 }
 
-int compare_mac_addr_t(void * a, void * b) {
-   int cmp = mac_cmp((mac_addr_t*) a, (mac_addr_t*) b);
+int compare_mac_addr_t(void *a, void *b)
+{
+   int cmp = mac_cmp((mac_addr_t *) a, (mac_addr_t *) b);
    if (cmp == 0) {
       return EQUAL;
-   }
-   else if (cmp < 0) {
+   } else if (cmp < 0) {
       return LESS;
-   }
-   else {
+   } else {
       return MORE;
    }
 }
 
-int compare_md5(void * a, void * b) {
-   int cmp = memcmp((ip_addr_t*) a, (ip_addr_t*) b, 16);
+int compare_md5(void *a, void *b)
+{
+   int cmp = memcmp((ip_addr_t *) a, (ip_addr_t *) b, 16);
    if (cmp == 0) {
       return EQUAL;
-   }
-   else if (cmp < 0) {
+   } else if (cmp < 0) {
       return LESS;
-   }
-   else {
+   } else {
       return MORE;
    }
 }
 
 // -------- Helper functions -------------
 
-char *get_md5_hash(const void * value, int value_size) {
+char *get_md5_hash(const void * value, int value_size)
+{
    MD5_CTX ctx;
    char *digest = (char *) calloc(16, sizeof(char));
 
@@ -147,114 +146,116 @@ char *get_md5_hash(const void * value, int value_size) {
       value += 512;
    }
 
-   MD5_Final((unsigned char *)digest, &ctx);
+   MD5_Final((unsigned char *) digest, &ctx);
 
    return digest;
 }
 
 // -------- TimeDB main code -------------
 
-timedb_t * timedb_create(int step, int delay, int inactive_timeout, int count_uniq)
+timedb_t *timedb_create(int step, int delay, int inactive_timeout, int count_uniq)
 {
-   timedb_t * timedb = (timedb_t *) calloc(1, sizeof(timedb_t));
-   
+   timedb_t *timedb = (timedb_t *) calloc(1, sizeof(timedb_t));
+
    timedb->step = step;
-   timedb->size = delay/step + 2;
+   timedb->size = delay / step + 2;
    timedb->inactive_timeout = inactive_timeout;
    timedb->data_begin = 0;
    timedb->initialized = 0;
    timedb->count_uniq = count_uniq > 0 ? 1 : 0;
 
    timedb->data = (time_series_t **) calloc(timedb->size, sizeof(time_series_t *));
-   for (int i=0; i<timedb->size; i++) {
+   for (int i = 0; i < timedb->size; i++) {
       timedb->data[i] = (time_series_t *) calloc(1, sizeof(time_series_t));
    }
-   
+
    return timedb;
 }
 
 // initialize timestamps by first inserted record
-void timedb_init(timedb_t *timedb, time_t time) {
+void timedb_init(timedb_t *timedb, time_t time)
+{
    // round first begin to multiply of step
    time -= time % timedb->step;
    timedb->begin = time;
-   
-   for (int i=0; i<timedb->size; i++) {
+
+   for (int i = 0; i < timedb->size; i++) {
       timedb->data[i]->begin = time;
       time += timedb->step;
       timedb->data[i]->end = time;
-      
+
       timedb->data[i]->sum = 0;
       timedb->data[i]->count = 0;
    }
-   
+
    timedb->end = time;
 }
 
 // initialize timestamps by first inserted record
-void timedb_init_tree(timedb_t *timedb, ur_field_type_t value_type) {
+void timedb_init_tree(timedb_t *timedb, ur_field_type_t value_type)
+{
    if (timedb->count_uniq == 1 && !timedb->initialized) { // count will be counted as unique values
       timedb->value_type = value_type;
-      for (int i=0; i<timedb->size; i++) {
+      for (int i = 0; i < timedb->size; i++) {
          switch (timedb->value_type) {
-         case UR_TYPE_CHAR:
-         case UR_TYPE_UINT8:
-            timedb->b_tree_compare = &compare_uint8_t;
-            timedb->b_tree_key_size = 1;
-            break;
-         case UR_TYPE_INT8:
-            timedb->b_tree_compare = &compare_int8_t;
-            timedb->b_tree_key_size = 1;
-            break;
-         case UR_TYPE_UINT16:
-            timedb->b_tree_compare = &compare_uint16_t;
-            timedb->b_tree_key_size = 2;
-            break;
-         case UR_TYPE_INT16:
-            timedb->b_tree_compare = &compare_int16_t;
-            timedb->b_tree_key_size = 2;
-            break;
-         case UR_TYPE_UINT32:
-            timedb->b_tree_compare = &compare_uint32_t;
-            timedb->b_tree_key_size = 4;
-            break;
-         case UR_TYPE_INT32:
-            timedb->b_tree_compare = &compare_int32_t;
-            timedb->b_tree_key_size = 4;
-            break;
-         case UR_TYPE_FLOAT:
-            timedb->b_tree_compare = &compare_float;
-            timedb->b_tree_key_size = 4;
-            break;
-         case UR_TYPE_UINT64:
-            timedb->b_tree_compare = &compare_uint64_t;
-            timedb->b_tree_key_size = 8;
-            break;
-         case UR_TYPE_INT64:
-            timedb->b_tree_compare = &compare_int64_t;
-            timedb->b_tree_key_size = 8;
-            break;
-         case UR_TYPE_DOUBLE:
-            timedb->b_tree_compare = &compare_double;
-            timedb->b_tree_key_size = 8;
-            break;
-         case UR_TYPE_TIME:
-            timedb->b_tree_compare = &compare_ur_time_t;
-            timedb->b_tree_key_size = 8;
-            break;
-         case UR_TYPE_IP:
-            timedb->b_tree_compare = &compare_ip_addr_t;
-            timedb->b_tree_key_size = 16;
-            break;
-         case UR_TYPE_MAC:
-            timedb->b_tree_compare = &compare_mac_addr_t;
-            timedb->b_tree_key_size = 6;
-            break;
-         case UR_TYPE_STRING:
-         case UR_TYPE_BYTES:
-            timedb->b_tree_compare = &compare_md5;
-            timedb->b_tree_key_size = 16;
-            break;
+            case UR_TYPE_CHAR:
+            case UR_TYPE_UINT8:
+               timedb->b_tree_compare = &compare_uint8_t;
+               timedb->b_tree_key_size = 1;
+               break;
+            case UR_TYPE_INT8:
+               timedb->b_tree_compare = &compare_int8_t;
+               timedb->b_tree_key_size = 1;
+               break;
+            case UR_TYPE_UINT16:
+               timedb->b_tree_compare = &compare_uint16_t;
+               timedb->b_tree_key_size = 2;
+               break;
+            case UR_TYPE_INT16:
+               timedb->b_tree_compare = &compare_int16_t;
+               timedb->b_tree_key_size = 2;
+               break;
+            case UR_TYPE_UINT32:
+               timedb->b_tree_compare = &compare_uint32_t;
+               timedb->b_tree_key_size = 4;
+               break;
+            case UR_TYPE_INT32:
+               timedb->b_tree_compare = &compare_int32_t;
+               timedb->b_tree_key_size = 4;
+               break;
+            case UR_TYPE_FLOAT:
+               timedb->b_tree_compare = &compare_float;
+               timedb->b_tree_key_size = 4;
+               break;
+            case UR_TYPE_UINT64:
+               timedb->b_tree_compare = &compare_uint64_t;
+               timedb->b_tree_key_size = 8;
+               break;
+            case UR_TYPE_INT64:
+               timedb->b_tree_compare = &compare_int64_t;
+               timedb->b_tree_key_size = 8;
+               break;
+            case UR_TYPE_DOUBLE:
+               timedb->b_tree_compare = &compare_double;
+               timedb->b_tree_key_size = 8;
+               break;
+            case UR_TYPE_TIME:
+               timedb->b_tree_compare = &compare_ur_time_t;
+               timedb->b_tree_key_size = 8;
+               break;
+            case UR_TYPE_IP:
+               timedb->b_tree_compare = &compare_ip_addr_t;
+               timedb->b_tree_key_size = 16;
+               break;
+            case UR_TYPE_MAC:
+               timedb->b_tree_compare = &compare_mac_addr_t;
+               timedb->b_tree_key_size = 6;
+               break;
+            case UR_TYPE_STRING:
+            case UR_TYPE_BYTES:
+               timedb->b_tree_compare = &compare_md5;
+               timedb->b_tree_key_size = 16;
+               break;
          }
          timedb->data[i]->b_plus_tree = bpt_init(TIMEDB__B_PLUS_TREE__LEAF_ITEM_NUMBER, timedb->b_tree_compare, 0, timedb->b_tree_key_size);
       }
@@ -262,7 +263,7 @@ void timedb_init_tree(timedb_t *timedb, ur_field_type_t value_type) {
    }
 }
 
-int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_field_type_t value_type, void * value_ptr, int var_value_size)
+int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_field_type_t value_type, void *value_ptr, int var_value_size)
 {
    // get first and last time seen
    time_t first_sec = ur_time_get_sec(urfirst);
@@ -270,7 +271,7 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
 
    time_t last_sec = ur_time_get_sec(urlast);
    int last_msec = ur_time_get_msec(urlast);
-   
+
    // check initialized timedb
    if (!timedb->begin) {
       timedb_init(timedb, first_sec);
@@ -283,70 +284,70 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
    if (first_sec-timedb->begin > timedb->inactive_timeout) {
       timedb_init(timedb, first_sec);
    }
-   
+
    // get value and convert it into double
    double value;
    switch (value_type) {
-   case UR_TYPE_INT8:
-      value = *((int8_t *)value_ptr);
-      break;
-   case UR_TYPE_INT16:
-      value = *((int16_t *)value_ptr);
-      break;
-   case UR_TYPE_INT32:
-      value = *((int32_t *)value_ptr);
-      break;
-   case UR_TYPE_INT64:
-      value = *((int64_t *)value_ptr);
-      break;
-   case UR_TYPE_UINT8:
-      value = *((uint8_t *)value_ptr);
-      break;
-   case UR_TYPE_UINT16:
-      value = *((uint16_t *)value_ptr);
-      break;
-   case UR_TYPE_UINT32:
-      value = *((uint32_t *)value_ptr);
-      break;
-   case UR_TYPE_UINT64:
-      value = *((uint64_t *)value_ptr);
-      break;
-   case UR_TYPE_FLOAT:
-      value = *((float *)value_ptr);
-      break;
-   case UR_TYPE_DOUBLE:
-      value = *((double *)value_ptr);
-      break;
-   default:
-      if (timedb->count_uniq) {
-         value = 0;
-         if (value_type == UR_TYPE_STRING || value_type == UR_TYPE_BYTES) {
-            // @TODO Shall we allow saving zero length UR_STRING and UR_BYTES ??? Or it should be ignored as empty = nothing ?
-            //if (var_value_size <= 0) {
-            //   fprintf(stderr, "Warning: Saving zero-length string into TimeDB.\n");
-            //}
-            value_ptr = get_md5_hash(value_ptr, var_value_size);
+      case UR_TYPE_INT8:
+         value = *((int8_t *) value_ptr);
+         break;
+      case UR_TYPE_INT16:
+         value = *((int16_t *) value_ptr);
+         break;
+      case UR_TYPE_INT32:
+         value = *((int32_t *) value_ptr);
+         break;
+      case UR_TYPE_INT64:
+         value = *((int64_t *) value_ptr);
+         break;
+      case UR_TYPE_UINT8:
+         value = *((uint8_t *) value_ptr);
+         break;
+      case UR_TYPE_UINT16:
+         value = *((uint16_t *) value_ptr);
+         break;
+      case UR_TYPE_UINT32:
+         value = *((uint32_t *) value_ptr);
+         break;
+      case UR_TYPE_UINT64:
+         value = *((uint64_t *) value_ptr);
+         break;
+      case UR_TYPE_FLOAT:
+         value = *((float *) value_ptr);
+         break;
+      case UR_TYPE_DOUBLE:
+         value = *((double *) value_ptr);
+         break;
+      default:
+         if (timedb->count_uniq) {
+            value = 0;
+            if (value_type == UR_TYPE_STRING || value_type == UR_TYPE_BYTES) {
+               // @TODO Shall we allow saving zero length UR_STRING and UR_BYTES ??? Or it should be ignored as empty = nothing ?
+               //if (var_value_size <= 0) {
+               //   fprintf(stderr, "Warning: Saving zero-length string into TimeDB.\n");
+               //}
+               value_ptr = get_md5_hash(value_ptr, var_value_size);
+            }
+         } else {
+            fprintf(stderr, "Error: Trying to save unsupported value into TimeDB.\n");
+            return TIMEDB_SAVE_ERROR;
          }
-      } else {
-         fprintf(stderr, "Error: Trying to save unsupported value into TimeDB.\n");
-         return TIMEDB_SAVE_ERROR;
-      }
-      break;
+         break;
    }
-   
-   double value_per_sec = 1.0 * value / (1.0*(last_sec-first_sec) + 1.0*(last_msec-first_msec)/1000 );
+
+   double value_per_sec = 1.0 * value / (1.0 * (last_sec - first_sec) + 1.0 * (last_msec - first_msec) / 1000 );
 
    // check if records ends too late, we need to rollout
    if (timedb->end < last_sec) {
       return TIMEDB_SAVE_NEED_ROLLOUT;
    }
-   
+
    // add portion of value (bytes/packets) to every time window
-   for (int i=0; i<timedb->size; i++) {
+   for (int i = 0; i < timedb->size; i++) {
       if(rolling_data(timedb, i)->begin <= last_sec && rolling_data(timedb, i)->end >= first_sec) {
          // get time in this time window
          // @TODO consider direct comparition using ur_time_t instead of time_t
-         double time = min((double)(rolling_data(timedb, i)->end), 1.0*last_sec+1.0*last_msec/1000) - max((double)(rolling_data(timedb, i)->begin), 1.0*first_sec+1.0*first_msec/1000) ;
+         double time = min((double) (rolling_data(timedb, i)->end), 1.0 * last_sec + 1.0 * last_msec / 1000) - max((double) (rolling_data(timedb, i)->begin), 1.0 * first_sec + 1.0 * first_msec / 1000) ;
 
          // save portion of value in this time window
          if (value_per_sec == INFINITY) { // watchout zero length interval
@@ -354,7 +355,7 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
          } else {
             rolling_data(timedb, i)->sum += value_per_sec * time;
          }
-         
+
          if (timedb->count_uniq) { // we want to count only unique values
             void *item = bpt_search_or_insert(rolling_data(timedb, i)->b_plus_tree, value_ptr);
             if (item == NULL) {
@@ -371,7 +372,7 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
    if (var_value_size > 0 && value_ptr) {
       free(value_ptr);
    }
-   
+
    // check if record starts before database
    if (timedb->begin > first_sec) {
       //fprintf(stderr, "[timedb_save_data] Flow record truncated, because it starts earlier than database can handle now.\n");
@@ -382,7 +383,7 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
 }
 
 // get last value, roll database, fill variables *sum and *count
-void timedb_roll_db(timedb_t * timedb, time_t *time, double *sum, uint32_t *count)
+void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count)
 {
    // get data
    *time = rolling_data(timedb, 0)->begin;
@@ -392,7 +393,7 @@ void timedb_roll_db(timedb_t * timedb, time_t *time, double *sum, uint32_t *coun
    } else {
       *count = rolling_data(timedb, 0)->count;
    }
-   
+
    // free time_serie before rolling
    rolling_data(timedb, 0)->begin = timedb->end;
    rolling_data(timedb, 0)->end = timedb->end + timedb->step;
@@ -409,11 +410,11 @@ void timedb_roll_db(timedb_t * timedb, time_t *time, double *sum, uint32_t *coun
    timedb->data_begin = (timedb->data_begin + 1) % timedb->size;
 }
 
-void timedb_free(timedb_t * timedb)
+void timedb_free(timedb_t *timedb)
 {
    if (timedb) {
       if (timedb->data) {
-         for (int i=0; i<timedb->size; i++) {
+         for (int i = 0; i < timedb->size; i++) {
             if (timedb->data[i]->b_plus_tree) {
                bpt_clean(timedb->data[i]->b_plus_tree);
             }

@@ -1,6 +1,6 @@
 /**
  * \file aggregator.c
- * \brief 
+ * \brief
  * \author Miroslav Kalina <kalinmi2@fit.cvut.cz>
  * \date 2016
  */
@@ -52,7 +52,11 @@
 
 // types of aggregation function
 typedef enum {
-   AGG_SUM, AGG_AVG, AGG_COUNT, AGG_RATE, AGG_COUNT_UNIQ
+   AGG_SUM,
+   AGG_AVG,
+   AGG_COUNT,
+   AGG_RATE,
+   AGG_COUNT_UNIQ
 } agg_function;
 
 // aggregation rule structure

@@ -71,16 +71,16 @@
 
 /* error handling macros */
 #define HANDLE_PERROR(msg) \
-    do { perror(msg); exit(EXIT_FAILURE); } while(0)
+   do { perror(msg); exit(EXIT_FAILURE); } while(0)
 #define HANDLE_ERROR(msg) \
-    do { fprintf(stderr, "%s\n", msg); exit(EXIT_FAILURE); } while (0)
+   do { fprintf(stderr, "%s\n", msg); exit(EXIT_FAILURE); } while (0)
 
 UR_FIELDS(
    time TIME_FIRST,
-   time TIME_LAST,
+   time TIME_LAST
 )
-        
-// Struct with information about module
+
+   // Struct with information about module
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
@@ -107,8 +107,9 @@ static int outputs_count = 0;
 /* ***** HELPER FUNCTIONS ************************************************** */
 
 void print_syntax_error_position(int position) {
-   for (int j = 0; j <= position-1; j++)
+   for (int j = 0; j <= position - 1; j++) {
       fprintf(stderr, " ");
+   }
    fprintf(stderr, "^");
 }
 
@@ -116,24 +117,24 @@ char *strncpy_no_whitespaces(char *dst, const char *src, int count) {
    int offset = 0;
    int writer = 0;
 
-   for (int j = 0; j+offset < count; j++) {
+   for (int j = 0; j + offset < count; j++) {
       // skip whitespaces
-      while (isspace(*(src+j+offset))) {
+      while (isspace(*(src + j + offset))) {
          offset++;
       }
-      
+
       // detect src+count overflow
-      if(j+offset >= count) {
+      if (j + offset >= count) {
          break;
       }
 
       // skip backslash in escaped colon
-      if (*(src+j+offset) == '\\' && j+offset+1 < count && *(src+j+offset+1) == ':') {
+      if (*(src + j + offset) == '\\' && j + offset + 1 < count && *(src + j + offset + 1) == ':') {
          offset++;
       }
-      
+
       // save dst
-      *(dst+(writer++)) = *(src+j+offset);
+      *(dst + (writer++)) = *(src + j + offset);
    }
 
    return dst;
@@ -143,10 +144,10 @@ char *strncpy_no_whitespaces(char *dst, const char *src, int count) {
 
 output_t *create_output(int interface)
 {
-   output_t *object = calloc(1, sizeof (output_t));
+   output_t *object = calloc(1, sizeof(output_t));
 
    object->interface = interface;
-   object->rules = (rule_t **) calloc(MAX_RULES_COUNT, sizeof (rule_t *));
+   object->rules = (rule_t **) calloc(MAX_RULES_COUNT, sizeof(rule_t *));
    if (!object->rules) {
       free(object);
       return NULL;
@@ -172,75 +173,75 @@ void destroy_output(output_t *object)
 }
 
 int output_initialize_template(output_t *object, int ifc) {
-      // count tpl_string length
-      int tpl_string_len = strlen("time TIME,");
-      for (int j=0; j<object->rules_count; j++) {
-         switch(object->rules[j]->agg) {
+   // count tpl_string length
+   int tpl_string_len = strlen("time TIME,");
+   for (int j = 0; j < object->rules_count; j++) {
+      switch(object->rules[j]->agg) {
          // counters, uint64
          case AGG_COUNT:
          case AGG_COUNT_UNIQ:
             tpl_string_len += strlen("uint64 ");
             break;
-         // averages, double
+            // averages, double
          case AGG_SUM:
          case AGG_AVG:
          case AGG_RATE:
             tpl_string_len += strlen("double ");
             break;
-         }
-         
-         tpl_string_len += strlen(object->rules[j]->name)+1;
       }
-      
-      // allocate string
-      char *tpl_string = (char *) calloc(tpl_string_len, sizeof(char));
-      
-      // assemble string
-      strcpy(tpl_string, "time TIME");
-      int tpl_string_i = strlen("time TIME");
-      for (int j=0; j<object->rules_count; j++) {
-         switch(object->rules[j]->agg) {
+
+      tpl_string_len += strlen(object->rules[j]->name) + 1;
+   }
+
+   // allocate string
+   char *tpl_string = (char *) calloc(tpl_string_len, sizeof(char));
+
+   // assemble string
+   strcpy(tpl_string, "time TIME");
+   int tpl_string_i = strlen("time TIME");
+   for (int j = 0; j < object->rules_count; j++) {
+      switch(object->rules[j]->agg) {
          // counters, uint64
          case AGG_COUNT:
          case AGG_COUNT_UNIQ:
-            strcpy(tpl_string+tpl_string_i, ",uint64 ");
+            strcpy(tpl_string + tpl_string_i, ",uint64 ");
             tpl_string_i += strlen(",uint64 ");
             break;
-         // averages, double
+            // averages, double
          case AGG_SUM:
          case AGG_AVG:
          case AGG_RATE:
-            strcpy(tpl_string+tpl_string_i, ",double ");
+            strcpy(tpl_string + tpl_string_i, ",double ");
             tpl_string_i += strlen(",double ");
             break;
-         }
-         
-         strcpy(tpl_string+tpl_string_i, object->rules[j]->name);
-         tpl_string_i += strlen(object->rules[j]->name);
-      }
-      
-      // Define fields to output template
-      if (ur_define_set_of_fields(tpl_string) != UR_OK) {
-         fprintf(stderr, "Error: Defining template fields failed\n");
-         fprintf(stderr, " tpl_string: %s\n", tpl_string);
-         return 0;
-      }
-      char *f_names = ur_ifc_data_fmt_to_field_names(tpl_string);
-
-      // Create output template
-      object->tpl = ur_create_output_template(ifc, f_names, NULL);
-      
-      // Allocate memory for output record
-      object->out_rec = ur_create_record(object->tpl, 0);
-      if (object->out_rec == NULL){
-         fprintf(stderr, "Error: Memory allocation problem (output record).\n");
-         return 0;
       }
 
-      free(f_names);
-      free(tpl_string);
-      
-      return 1;
+      strcpy(tpl_string + tpl_string_i, object->rules[j]->name);
+      tpl_string_i += strlen(object->rules[j]->name);
+   }
+
+   // Define fields to output template
+   if (ur_define_set_of_fields(tpl_string) != UR_OK) {
+      fprintf(stderr, "Error: Defining template fields failed\n");
+      fprintf(stderr, " tpl_string: %s\n", tpl_string);
+      return 0;
+   }
+   char *f_names = ur_ifc_data_fmt_to_field_names(tpl_string);
+
+   // Create output template
+   object->tpl = ur_create_output_template(ifc, f_names, NULL);
+
+   // Allocate memory for output record
+   object->out_rec = ur_create_record(object->tpl, 0);
+   if (object->out_rec == NULL){
+      fprintf(stderr, "Error: Memory allocation problem (output record).\n");
+      return 0;
+   }
+
+   free(f_names);
+   free(tpl_string);
+
+   return 1;
 }
 
 /* ************************************************************************* */
@@ -250,7 +251,7 @@ int flush_aggregation_counters()
    static unsigned int header_printed_before = INTMAX_MAX & 0xffffffff;
    int ret;
 
-   if (trap_get_verbose_level()>=0) {
+   if (trap_get_verbose_level() >= 0) {
       // print headers
       if (header_printed_before > 20) {
          header_printed_before = 0;
@@ -278,82 +279,82 @@ int flush_aggregation_counters()
       for (int j = 0; j < outputs[i]->rules_count; j++) {
          // get stats and roll old data
          timedb_roll_db(outputs[i]->rules[j]->timedb, &time, &sum, &count);
-         
+
          // time header
-         if (j==0) {
+         if (j == 0) {
             // UniRec
             field_id = ur_get_id_by_name("TIME");
-            (* (ur_time_t *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = ur_time_from_sec_msec(time, 0);
+            (*(ur_time_t *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = ur_time_from_sec_msec(time, 0);
             // Verbose
-            if (trap_get_verbose_level()>=0) {
+            if (trap_get_verbose_level() >= 0) {
                strftime(buff, 20, "%Y-%m-%d %H:%M:%S", gmtime(&time));
                printf("[OUT-%02d] %s", i, buff);
             }
          }
-         
-         if (trap_get_verbose_level()>=0) {
+
+         if (trap_get_verbose_level() >= 0) {
             printf(",");
          }
 
          double avgtmp;
          switch (outputs[i]->rules[j]->agg) {
-         case AGG_SUM:
-            // UniRec
-            field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
-            (* (double *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = sum;
-            // Verbose
-            if (trap_get_verbose_level()>=0) {
-               printf("%.2f", sum);
-            }
-            break;
-         case AGG_COUNT:
-            // UniRec
-            field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
-            (* (uint64_t *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = count;
-            // Verbose
-            if (trap_get_verbose_level()>=0) {
-               printf("%" PRIu32, count);
-            }
-            break;
-         case AGG_AVG:
-            avgtmp = count>0 ? 1.0*sum/count : 0;
-            // UniRec
-            field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
-            (* (double *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = avgtmp;
-            // Verbose
-            if (trap_get_verbose_level()>=0) {
-               printf("%.2f", avgtmp);
-            }
-            break;
-         case AGG_RATE:
-            avgtmp = count>0 ? 1.0*sum/outputs[i]->rules[j]->timedb->step : 0;
-            // UniRec
-            field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
-            (* (double *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = avgtmp;
-            // Verbose
-            if (trap_get_verbose_level()>=0) {
-               printf("%.2f", avgtmp);
-            }
-            break;
-         case AGG_COUNT_UNIQ:
-            // UniRec
-            field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
-            (* (uint64_t *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = count;
-            // Verbose
-            if (trap_get_verbose_level()>=0) {
-               printf("%" PRIu32, count);
-            }
-            break;
-         default:
-            printf("?");
-            break;
+            case AGG_SUM:
+               // UniRec
+               field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
+               (*(double *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = sum;
+               // Verbose
+               if (trap_get_verbose_level() >= 0) {
+                  printf("%.2f", sum);
+               }
+               break;
+            case AGG_COUNT:
+               // UniRec
+               field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
+               (*(uint64_t *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = count;
+               // Verbose
+               if (trap_get_verbose_level() >= 0) {
+                  printf("%" PRIu32, count);
+               }
+               break;
+            case AGG_AVG:
+               avgtmp = count > 0 ? 1.0 * sum / count : 0;
+               // UniRec
+               field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
+               (*(double *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = avgtmp;
+               // Verbose
+               if (trap_get_verbose_level() >= 0) {
+                  printf("%.2f", avgtmp);
+               }
+               break;
+            case AGG_RATE:
+               avgtmp = count > 0 ? 1.0 * sum / outputs[i]->rules[j]->timedb->step : 0;
+               // UniRec
+               field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
+               (*(double *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = avgtmp;
+               // Verbose
+               if (trap_get_verbose_level() >= 0) {
+                  printf("%.2f", avgtmp);
+               }
+               break;
+            case AGG_COUNT_UNIQ:
+               // UniRec
+               field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
+               (*(uint64_t *) ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id)) = count;
+               // Verbose
+               if (trap_get_verbose_level() >= 0) {
+                  printf("%" PRIu32, count);
+               }
+               break;
+            default:
+               printf("?");
+               break;
          }
       }
-      
-      if (trap_get_verbose_level()>=0) {
+
+      if (trap_get_verbose_level() >= 0) {
          printf("\n");
       }
-      
+
       // Send UniRec record
       ret = trap_send(i, outputs[i]->out_rec, ur_rec_fixlen_size(outputs[i]->tpl));
       // Handle possible errors
@@ -369,43 +370,45 @@ int rule_parse_agg_function(const char *specifier, agg_function *function, char 
    char *agg_str = NULL;
 
    int token_start = 0;
-   for (int i=0; i<strlen(specifier); i++) {
+   for (int i = 0; i < strlen(specifier); i++) {
       if (specifier[i] == '(') {
          if (function_str) {
             fprintf(stderr, "Syntax error: Unexpected opening parenthesis in aggregation function.\n");
             fprintf(stderr, " Aggregation function: %s\n", specifier);
-            print_syntax_error_position(i + (int)strlen(" Aggregation function: "));
+            print_syntax_error_position(i + (int) strlen(" Aggregation function: "));
             free(function_str);
             return 0;
          } else {
-            function_str = (char *) calloc(i-token_start+1, sizeof(char));
-            strncpy(function_str, specifier+token_start, i-token_start);
-            token_start = i+1;
+            function_str = (char *) calloc(i - token_start + 1, sizeof(char));
+            strncpy(function_str, specifier + token_start, i - token_start);
+            token_start = i + 1;
          }
       } else if (specifier[i] == ')') {
          if (agg_str) {
             fprintf(stderr, "Syntax error: Unexpected closing parenthesis in aggregation function.\n");
             fprintf(stderr, " Aggregation function: %s\n", specifier);
-            print_syntax_error_position(i + (int)strlen(" Aggregation function: "));
+            print_syntax_error_position(i + (int) strlen(" Aggregation function: "));
             free(function_str);
             free(agg_str);
             return 0;
          } else {
-            agg_str = (char *) calloc(i-token_start+1, sizeof(char));
-            strncpy(agg_str, specifier+token_start, i-token_start);
-            token_start = i+1;
+            agg_str = (char *) calloc(i - token_start + 1, sizeof(char));
+            strncpy(agg_str, specifier + token_start, i - token_start);
+            token_start = i + 1;
          }
       }
    }
-   
+
    // sanity check - empty function string
    if (!function_str || *function_str == 0) {
       fprintf(stderr, "Syntax error: Unable to parse aggregation function. Perhaps missing parenthesis?\n");
       fprintf(stderr, " Aggregation function: %s\n", specifier);
-      if (function_str)
+      if (function_str) {
          free(function_str);
-      if (agg_str)
+      }
+      if (agg_str) {
          free(agg_str);
+      }
       return 0;
    }
 
@@ -427,10 +430,10 @@ int rule_parse_agg_function(const char *specifier, agg_function *function, char 
       return 0;
    }
    free(function_str);
-   
+
    *arg = agg_str;
    // free(agg_str);
-   
+
    return 1;
 }
 
@@ -444,7 +447,7 @@ rule_t *rule_create(const char *specifier, int step, int size, int inactive_time
    int token_start = 0;
    for (int i = 0; i <= strlen(specifier); i++) {
       // Separator or NULL byte ... token should be processed
-      if ((specifier[i] == ':' && (i==0 || specifier[i-1] != '\\')) || specifier[i] == 0) {
+      if ((specifier[i] == ':' && (i == 0 || specifier[i - 1] != '\\')) || specifier[i] == 0) {
          // parsing error (null string)
          if (i == token_start && (name != NULL && agg != NULL && filter == NULL)) {
             fprintf(stderr, "Syntax error at char %d: Aggregation rule contains NULL token.\n", i + 1);
@@ -454,20 +457,23 @@ rule_t *rule_create(const char *specifier, int step, int size, int inactive_time
 
          // we just collected name
          if (name == NULL) {
-            name = (char *) calloc(i - token_start + 1, sizeof (char));
+            name = (char *) calloc(i - token_start + 1, sizeof(char));
             strncpy_no_whitespaces(name, specifier + token_start, i - token_start);
          } else if (agg == NULL) { // or we collected agg type
-            agg = (char *) calloc(i - token_start + 1, sizeof (char));
+            agg = (char *) calloc(i - token_start + 1, sizeof(char));
             strncpy_no_whitespaces(agg, specifier + token_start, i - token_start);
-            for (char *s = agg; *s; ++s) *s = toupper(*s);
+            for (char *s = agg; *s; ++s) {
+               *s = toupper(*s);
+            }
          } else if (filter == NULL) { // or filter
-            filter = (char *) calloc(i - token_start + 1, sizeof (char));
+            filter = (char *) calloc(i - token_start + 1, sizeof(char));
             strncpy_no_whitespaces(filter, specifier + token_start, i - token_start);
          } else { // otherwise parsing error (extra colon found)
             fprintf(stderr, "Syntax error at char %d: Aggregation rule contains unexpected colon\n", i + 1);
             fprintf(stderr, "Rule: :%s\n", specifier);
-            for (int j = 0; j <= i + 5; j++)
+            for (int j = 0; j <= i + 5; j++) {
                fprintf(stderr, " ");
+            }
             fprintf(stderr, "^");
             return NULL;
          }
@@ -475,18 +481,18 @@ rule_t *rule_create(const char *specifier, int step, int size, int inactive_time
          token_start = i + 1;
       }
    }
-   
+
    // sanity check
    if (*name == 0) {
       fprintf(stderr, "Error: Rule name cannot be empty.");
       fprintf(stderr, "Rule: %s\n", specifier);
       return NULL;
    }
-   
+
    // rulename must match regex [A-Za-z][A-Za-z0-9_]*
    for (int i=0; i<strlen(name); i++) {
-      if ( (i==0 && !(BETWEEN_EQ(name[i], 'A', 'Z') || BETWEEN_EQ(name[i], 'a', 'z'))) || \
-           (i>=1 && !(BETWEEN_EQ(name[i], 'A', 'Z') || BETWEEN_EQ(name[i], 'a', 'z') || BETWEEN_EQ(name[i], '0', '9') || name[i] == '_'))) {
+      if ((i == 0 && !(BETWEEN_EQ(name[i], 'A', 'Z') || BETWEEN_EQ(name[i], 'a', 'z'))) ||
+            (i >= 1 && !(BETWEEN_EQ(name[i], 'A', 'Z') || BETWEEN_EQ(name[i], 'a', 'z') || BETWEEN_EQ(name[i], '0', '9') || name[i] == '_'))) {
          fprintf(stderr, "Error: Rule name contains unexpected characters.\n");
          fprintf(stderr, " Rule name: %s\n", name);
          return NULL;
@@ -541,77 +547,77 @@ int rule_save_data(rule_t *rule, ur_template_t *tpl, const void *record)
       fprintf(stderr, " Aggregation argument: %s\n", rule->agg_arg);
       return 0;
    }
-   
+
    ur_field_type_t field_type = ur_get_type(field_id);
    switch(field_type) {
-   case UR_TYPE_CHAR:
-   case UR_TYPE_INT8:
-   case UR_TYPE_INT16:
-   case UR_TYPE_INT32:
-   case UR_TYPE_INT64:
-   case UR_TYPE_UINT8:
-   case UR_TYPE_UINT16:
-   case UR_TYPE_UINT32:
-   case UR_TYPE_UINT64:
-   case UR_TYPE_FLOAT:
-   case UR_TYPE_DOUBLE:
-      break;
-   case UR_TYPE_IP:
-   case UR_TYPE_MAC:
-   case UR_TYPE_TIME:
-   case UR_TYPE_STRING:
-   case UR_TYPE_BYTES:
-      switch(rule->agg) {
+      case UR_TYPE_CHAR:
+      case UR_TYPE_INT8:
+      case UR_TYPE_INT16:
+      case UR_TYPE_INT32:
+      case UR_TYPE_INT64:
+      case UR_TYPE_UINT8:
+      case UR_TYPE_UINT16:
+      case UR_TYPE_UINT32:
+      case UR_TYPE_UINT64:
+      case UR_TYPE_FLOAT:
+      case UR_TYPE_DOUBLE:
+         break;
+      case UR_TYPE_IP:
+      case UR_TYPE_MAC:
+      case UR_TYPE_TIME:
+      case UR_TYPE_STRING:
+      case UR_TYPE_BYTES:
+         switch(rule->agg) {
+            case AGG_SUM:
+            case AGG_COUNT:
+            case AGG_AVG:
+            case AGG_RATE:
+               fprintf(stderr, "Error: Only COUNT_UNIQ make sense with IP, MAC, TIME, STRING or BYTES.\n");
+               fprintf(stderr, " Aggregation rule name: %s\n", rule->name);
+               return 0;
+               break;
+            default:
+               break;
+         }
+         break;
+      default:
+         fprintf(stderr, "Error: Unsupported type of aggregation argument.\n");
+         fprintf(stderr, " Aggregation rule name: %s\n", rule->name);
+         fprintf(stderr, " Aggregation argument name: %s\n", rule->agg_arg);
+         return 0;
+   }
+
+   // get record pointer
+   void *value = ur_get_ptr_by_id(tpl, record, field_id);
+   int var_value_size;
+
+   switch(field_type){
+      case UR_TYPE_STRING:
+      case UR_TYPE_BYTES:
+         var_value_size = ur_get_var_len(tpl, record, field_id);
+         break;
+      default:
+         var_value_size = 0;
+         break;
+   }
+
+   // add flow to time series
+   switch (rule->agg) {
+      // increse sum/count counters
       case AGG_SUM:
       case AGG_COUNT:
       case AGG_AVG:
       case AGG_RATE:
-         fprintf(stderr, "Error: Only COUNT_UNIQ make sense with IP, MAC, TIME, STRING or BYTES.\n");
-         fprintf(stderr, " Aggregation rule name: %s\n", rule->name);
-         return 0;
+      case AGG_COUNT_UNIQ:
+         while (timedb_save_data(rule->timedb, ur_get(tpl, record, F_TIME_FIRST), ur_get(tpl, record, F_TIME_LAST), field_type, value, var_value_size) == TIMEDB_SAVE_NEED_ROLLOUT) {
+            flush_aggregation_counters();
+         }
          break;
       default:
-         break;
-      }
-      break;
-   default:
-      fprintf(stderr, "Error: Unsupported type of aggregation argument.\n");
-      fprintf(stderr, " Aggregation rule name: %s\n", rule->name);
-      fprintf(stderr, " Aggregation argument name: %s\n", rule->agg_arg);
-      return 0;
+         fprintf(stderr, "Error: This couldn't happen EVER!!! Unknown aggregation type durning main loop.\n");
+         return 0;
    }
 
-   // get record pointer
-   void * value = ur_get_ptr_by_id(tpl, record, field_id);
-   int var_value_size;
-
-   switch(field_type){
-   case UR_TYPE_STRING:
-   case UR_TYPE_BYTES:
-      var_value_size = ur_get_var_len(tpl, record, field_id);
-      break;
-   default:
-      var_value_size = 0;
-      break;
-   }
-   
-   // add flow to time series
-   switch (rule->agg) {
-   // increse sum/count counters
-   case AGG_SUM:
-   case AGG_COUNT:
-   case AGG_AVG:
-   case AGG_RATE:
-   case AGG_COUNT_UNIQ:
-      while (timedb_save_data(rule->timedb, ur_get(tpl, record, F_TIME_FIRST), ur_get(tpl, record, F_TIME_LAST), field_type, value, var_value_size) == TIMEDB_SAVE_NEED_ROLLOUT) {
-         flush_aggregation_counters();
-      }
-      break;
-   default:
-      fprintf(stderr, "Error: This couldn't happen EVER!!! Unknown aggregation type durning main loop.\n");
-      return 0;
-   }
-   
    return 1;
 }
 
@@ -624,7 +630,7 @@ int main(int argc, char **argv)
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
 
    // prepare first output interface
-   outputs = (output_t **) calloc(MAX_OUTPUT_COUNT, sizeof (output_t *));
+   outputs = (output_t **) calloc(MAX_OUTPUT_COUNT, sizeof(output_t *));
    outputs[outputs_count] = create_output(outputs_count);
    outputs_count++;
 
@@ -632,45 +638,45 @@ int main(int argc, char **argv)
    int param_inactive_timeout = 900;
    int param_output_interval = 60;
    int param_delay_interval = 420;
-   
+
    // parse parameters
    char opt;
    rule_t *temp_rule = NULL;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
-      case 't':  // output_interval = TimeDB step value
-         param_output_interval = atoi(optarg);
-         break;
-      case 'd':  // TimeDB delay interval
-         param_delay_interval = atoi(optarg);
-         break;
-      case 'I':  // Inactive timeout
-         param_inactive_timeout = atoi(optarg);
-         break;
-      case 'r':  // rule syntax NAME:AGGREGATION[:FILTER]]
-         temp_rule = rule_create(optarg, param_output_interval, param_delay_interval, param_inactive_timeout);
-         if (!temp_rule) {
-            TRAP_DEFAULT_FINALIZATION();
-            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-            exit(6);
-         }
+         case 't':  // output_interval = TimeDB step value
+            param_output_interval = atoi(optarg);
+            break;
+         case 'd':  // TimeDB delay interval
+            param_delay_interval = atoi(optarg);
+            break;
+         case 'I':  // Inactive timeout
+            param_inactive_timeout = atoi(optarg);
+            break;
+         case 'r':  // rule syntax NAME:AGGREGATION[:FILTER]]
+            temp_rule = rule_create(optarg, param_output_interval, param_delay_interval, param_inactive_timeout);
+            if (!temp_rule) {
+               TRAP_DEFAULT_FINALIZATION();
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               exit(6);
+            }
 
-         outputs[outputs_count - 1]->rules[outputs[outputs_count - 1]->rules_count++] = temp_rule;
-         temp_rule = NULL;
-         break;
-      case 'R':  // switch to another output interface
-         // @TODO consider another way of multi interface definition
-         outputs[outputs_count] = create_output(outputs_count);
-         outputs_count++;
-         break;
-      default:
-         fprintf(stderr, "Invalid arguments.\n");
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-         TRAP_DEFAULT_FINALIZATION();
-         return 3;
+            outputs[outputs_count - 1]->rules[outputs[outputs_count - 1]->rules_count++] = temp_rule;
+            temp_rule = NULL;
+            break;
+         case 'R':  // switch to another output interface
+            // @TODO consider another way of multi interface definition
+            outputs[outputs_count] = create_output(outputs_count);
+            outputs_count++;
+            break;
+         default:
+            fprintf(stderr, "Invalid arguments.\n");
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+            TRAP_DEFAULT_FINALIZATION();
+            return 3;
       }
    }
-   
+
    // check output interface counts
    if(module_info->num_ifc_out != outputs_count) {
       fprintf(stderr, "Error: Number of TRAP interfaces doesn't match number defined by rules.\n");
@@ -680,7 +686,7 @@ int main(int argc, char **argv)
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return 6;
    }
-   
+
    // Register signal handler.
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER(); // Handles SIGTERM and SIGINT
 
@@ -692,9 +698,9 @@ int main(int argc, char **argv)
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return 4;
    }
-   
+
    // ***** Create output UniRec template *****
-   for (int i=0; i<outputs_count; i++) {
+   for (int i = 0; i < outputs_count; i++) {
       if(!output_initialize_template(outputs[i], i)) {
          TRAP_DEFAULT_FINALIZATION();
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
@@ -718,7 +724,7 @@ int main(int argc, char **argv)
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          return 4;
       }
-      
+
       // Check for end-of-stream message
       if (data_size <= 1) {
          break;
