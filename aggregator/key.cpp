@@ -43,6 +43,7 @@ void KeyTemplate::add_field(int record_id, int size)
 Key::Key()
 {
    data = new char [KeyTemplate::key_size+1];
+   data_length = 0;
 }
 /* ----------------------------------------------------------------- */
 Key::~Key()

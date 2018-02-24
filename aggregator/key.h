@@ -26,7 +26,7 @@ private:
 class Key {
 private:
     char* data;                      // Only values from record
-    int data_length = 0;              // The length of written bytes
+    int data_length;              // The length of written bytes
 public:
     Key();
     ~Key();
