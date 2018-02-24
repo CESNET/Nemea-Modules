@@ -203,7 +203,7 @@ void timedb_init_tree(timedb_t *timedb, ur_field_type_t value_type) {
             timedb->b_tree_key_size = 1;
             break;
          case UR_TYPE_INT8:
-            timedb->b_tree_compare = &compare_uint8_t;
+            timedb->b_tree_compare = &compare_int8_t;
             timedb->b_tree_key_size = 1;
             break;
          case UR_TYPE_UINT16:
