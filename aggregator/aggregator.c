@@ -557,6 +557,7 @@ int rule_save_data(rule_t *rule, ur_template_t *tpl, const void *record)
    case UR_TYPE_DOUBLE:
       break;
    case UR_TYPE_IP:
+   case UR_TYPE_MAC:
    case UR_TYPE_TIME:
    case UR_TYPE_STRING:
    case UR_TYPE_BYTES:
@@ -565,7 +566,7 @@ int rule_save_data(rule_t *rule, ur_template_t *tpl, const void *record)
       case AGG_COUNT:
       case AGG_AVG:
       case AGG_RATE:
-         fprintf(stderr, "Error: Only COUNT_UNIQ make sense with IP, TIME, STRING or BYTES.\n");
+         fprintf(stderr, "Error: Only COUNT_UNIQ make sense with IP, MAC, TIME, STRING or BYTES.\n");
          fprintf(stderr, " Aggregation rule name: %s\n", rule->name);
          return 0;
          break;

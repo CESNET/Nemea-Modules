@@ -104,6 +104,19 @@ int compare_ip_addr_t(void * a, void * b) {
    }
 }
 
+int compare_mac_addr_t(void * a, void * b) {
+   int cmp = mac_cmp((mac_addr_t*) a, (mac_addr_t*) b);
+   if (cmp == 0) {
+      return EQUAL;
+   }
+   else if (cmp < 0) {
+      return LESS;
+   }
+   else {
+      return MORE;
+   }
+}
+
 int compare_md5(void * a, void * b) {
    int cmp = memcmp((ip_addr_t*) a, (ip_addr_t*) b, 16);
    if (cmp == 0) {
@@ -232,6 +245,10 @@ void timedb_init_tree(timedb_t *timedb, ur_field_type_t value_type) {
          case UR_TYPE_IP:
             timedb->b_tree_compare = &compare_ip_addr_t;
             timedb->b_tree_key_size = 16;
+            break;
+         case UR_TYPE_MAC:
+            timedb->b_tree_compare = &compare_mac_addr_t;
+            timedb->b_tree_key_size = 6;
             break;
          case UR_TYPE_STRING:
          case UR_TYPE_BYTES:
