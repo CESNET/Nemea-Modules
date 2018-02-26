@@ -21,7 +21,6 @@
 #define TIMEOUT_PASSIVE 'P'
 #define TIMEOUT_GLOBAL  'G'
 
-#endif //AGGREGATOR_CONFIGURATION_H
 
 #include "key.h"
 
@@ -41,3 +40,5 @@ public:
    // Development methods
    void print();
 };
+
+#endif //AGGREGATOR_CONFIGURATION_H

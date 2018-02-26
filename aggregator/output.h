@@ -5,7 +5,6 @@
 #ifndef AGGREGATOR_OUTPUT_H
 #define AGGREGATOR_OUTPUT_H
 
-#endif //AGGREGATOR_OUTPUT_H
 
 #include "key.h"
 #include "agg_functions.h"
@@ -25,3 +24,5 @@ public:
 
    static void add_field(int record_id, int size, agg_func foo, bool avg_flag);
 };
+
+#endif //AGGREGATOR_OUTPUT_H
