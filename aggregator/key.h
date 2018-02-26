@@ -5,8 +5,6 @@
 #ifndef AGGREGATOR_KEYWORD_H
 #define AGGREGATOR_KEYWORD_H
 
-#endif //AGGREGATOR_KEYWORD_H
-
 #define MAX_KEY_FIELDS 32                 // Static maximal key members count
 
 class KeyTemplate {
@@ -36,3 +34,5 @@ public:
 private:
 
 };
+
+#endif //AGGREGATOR_KEYWORD_H
