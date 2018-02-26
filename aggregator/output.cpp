@@ -16,8 +16,8 @@
  */
 int OutputTemplate::indexes_to_record [MAX_KEY_FIELDS];
 int OutputTemplate::sizes_of_fields [MAX_KEY_FIELDS];
-void (OutputTemplate::process[MAX_KEY_FIELDS]);
-uint OutputTemplate::used_fields = 0;
+agg_func (OutputTemplate::process[MAX_KEY_FIELDS]);
+int OutputTemplate::used_fields = 0;
 bool OutputTemplate::prepare_to_send = false;
 bool OutputTemplate::avg_fields[MAX_KEY_FIELDS];
 
