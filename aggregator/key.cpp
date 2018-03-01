@@ -35,6 +35,12 @@ void KeyTemplate::add_field(int record_id, int size)
    */
    used_fields++;
 }
+/* ----------------------------------------------------------------- */
+void KeyTemplate::reset()
+{
+   used_fields = 0;
+   key_size = 0;
+}
 
 /* ================================================================= */
 /* ================= Keyword class definitions ===================== */

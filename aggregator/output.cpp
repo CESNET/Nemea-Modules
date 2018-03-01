@@ -36,3 +36,9 @@ void OutputTemplate::add_field(int record_id, agg_func foo, bool avg)
    used_fields++;
 }
 /* ----------------------------------------------------------------- */
+void OutputTemplate::reset()
+{
+   prepare_to_send = false;
+   used_fields = 0;
+}
+/* ----------------------------------------------------------------- */

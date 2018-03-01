@@ -23,6 +23,7 @@ public:
    static bool avg_fields[MAX_KEY_FIELDS];
 
    static void add_field(int record_id, agg_func foo, bool avg_flag);
+   static void reset();
 };
 
 #endif //AGGREGATOR_OUTPUT_H
