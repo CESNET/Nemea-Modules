@@ -11,7 +11,7 @@ class KeyTemplate {
 public:
     static int indexes_to_record [MAX_KEY_FIELDS];
     //static int indexes_to_key [MAX_KEY_FIELDS];     // Global size value, will only work with static size fields
-    static int sizes_of_fields [MAX_KEY_FIELDS];        // Global size value, will only work with static size fields
+    //static int sizes_of_fields [MAX_KEY_FIELDS];    // Global size value, will only work with static size fields
     static uint used_fields;
     static uint key_size;
 

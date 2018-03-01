@@ -16,7 +16,7 @@
  */
 int KeyTemplate::indexes_to_record [MAX_KEY_FIELDS];
 //int KeyTemplate::indexes_to_key [MAX_KEY_FIELDS];
-int KeyTemplate::sizes_of_fields [MAX_KEY_FIELDS];
+//int KeyTemplate::sizes_of_fields [MAX_KEY_FIELDS];
 uint KeyTemplate::used_fields = 0;
 uint KeyTemplate::key_size = 0;
 
@@ -24,7 +24,7 @@ uint KeyTemplate::key_size = 0;
 void KeyTemplate::add_field(int record_id, int size)
 {
    indexes_to_record[used_fields] = record_id;
-   sizes_of_fields[used_fields] = size;
+   //sizes_of_fields[used_fields] = size;
    key_size += size;
   /*
    int tmp_index = 0;
