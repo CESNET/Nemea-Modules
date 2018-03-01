@@ -31,3 +31,6 @@ void avg_uint16(const void *src, void *dst);
 void avg_uint8(const void *src, void *dst);
 void avg_float(const void *src, void *dst);
 void avg_double(const void *src, void *dst);
+
+
+void nope(const void *src, void *dst);
