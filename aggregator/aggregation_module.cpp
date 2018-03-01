@@ -226,6 +226,10 @@ int main(int argc, char **argv)
 
       // Change of UniRec input template -> sanity check and templates creation
       if (ret == TRAP_E_FORMAT_CHANGED ) {
+         // Internal structures cleaning because of possible redefinition
+         OutputTemplate::reset();
+         KeyTemplate::reset();
+         /* todo.. RESET STORED DATA -> FORCE SENDING WHOLE MAP */
 
          // Devel output begin
          print_all_defined_ur_fields();
