@@ -15,6 +15,155 @@ Config::~Config()
    }
 }
 
+int Config::get_used_fields()
+{
+   return used_fields;
+}
+
+const char * Config::get_name(int index)
+{
+   if ((index < 0) || (index > used_fields - 1)) {
+      return "";
+   }
+
+   return field_names[index];
+}
+
+bool Config::is_key(int index)
+{
+   if ((index < 0) || (index > used_fields - 1)) {
+      return false;
+   }
+
+   if (functions[index] == KEY) {
+      return true;
+   }
+   return false;
+}
+
+bool Config::is_func(int index, int func_id)
+{
+   if ((index < 0) || (index > used_fields - 1)) {
+      return false;
+   }
+
+   if (functions[index] == func_id) {
+      return true;
+   }
+   return false;
+}
+
+agg_func Config::get_function_ptr(int index, ur_field_type_t field_type)
+{
+   agg_func out = &nope;
+   if ((index < 0) || (index > used_fields - 1)) {
+      return out;
+   }
+
+   switch (functions[index]) {
+      case SUM:
+         switch (field_type) {
+            case UR_TYPE_INT8:
+               out = &sum_int8;
+               break;
+            case UR_TYPE_INT16:
+               out = &sum_int16;
+               break;
+            case UR_TYPE_INT32:
+               out = &sum_int32;
+               break;
+            case UR_TYPE_INT64:
+               out = &sum_int64;
+               break;
+            case UR_TYPE_UINT8:
+               out = &sum_uint8;
+               break;
+            case UR_TYPE_UINT16:
+               out = &sum_uint16;
+               break;
+            case UR_TYPE_UINT32:
+               out = &sum_uint32;
+               break;
+            case UR_TYPE_UINT64:
+               out = &sum_uint64;
+               break;
+            case UR_TYPE_FLOAT:
+               out = &sum_float;
+               break;
+            case UR_TYPE_DOUBLE:
+               out = &sum_double;
+               break;
+            default:
+               fprintf(stderr, "Only int, uint, float and double can use sum function, nope assigned instead.\n");
+               out = &nope;
+         }
+         break;
+      case AVG:
+         switch (field_type) {
+            case UR_TYPE_INT8:
+               out = &avg_int8;
+               break;
+            case UR_TYPE_INT16:
+               out = &avg_int16;
+               break;
+            case UR_TYPE_INT32:
+               out = &avg_int32;
+               break;
+            case UR_TYPE_INT64:
+               out = &avg_int64;
+               break;
+            case UR_TYPE_UINT8:
+               out = &avg_uint8;
+               break;
+            case UR_TYPE_UINT16:
+               out = &avg_uint16;
+               break;
+            case UR_TYPE_UINT32:
+               out = &avg_uint32;
+               break;
+            case UR_TYPE_UINT64:
+               out = &avg_uint64;
+               break;
+            case UR_TYPE_FLOAT:
+               out = &avg_float;
+               break;
+            case UR_TYPE_DOUBLE:
+               out = &avg_double;
+               break;
+            default:
+               fprintf(stderr, "Only int, uint, float and double can use avg function, nope assigned instead.\n");
+               out = &nope;
+         }
+         break;
+      case MIN:
+         // Function not implemented yet
+         out = &nope;
+         break;
+      case MAX:
+         // Function not implemented yet
+         out = &nope;
+         break;
+      case FIRST:
+         // Keep nope function because first value is set by copy from input record
+         out = &nope;
+         break;
+      case LAST:
+         // Function not implemented yet
+         out = &nope;
+         break;
+      case BIT_OR:
+         // Function not implemented yet
+         out = &nope;
+         break;
+      case BIT_AND:
+         // Function not implemented yet
+         out = &nope;
+         break;
+
+   }
+   return out;
+}
+
 /**
  * This function adds field into configuration class of module
  * @param func [in] Identification of function to use as defined MACRO
@@ -82,7 +231,7 @@ void Config::set_timeout(const char *input)
  */
 char* Config::return_template_def()
 {
-   const char *static_fields = "TIME_FIRST,TIME_LAST,COUNT";
+   const char *static_fields = STATIC_FIELDS;
    size_t len = strlen(static_fields) + 1;
    for (int i = 0; i < used_fields; i++) {
       // +1 for every name -> ',' after every field and \0 at the end

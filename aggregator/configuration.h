@@ -21,8 +21,10 @@
 #define TIMEOUT_PASSIVE 'P'
 #define TIMEOUT_GLOBAL  'G'
 
+#define STATIC_FIELDS "TIME_FIRST,TIME_LAST,COUNT"
 
 #include "key.h"
+#include "output.h"
 
 class Config {
 private:
@@ -34,6 +36,11 @@ private:
 public:
    Config();
    ~Config();
+   int get_used_fields();
+   const char * get_name(int index);
+   bool is_key(int index);
+   bool is_func(int index, int func_id);
+   agg_func get_function_ptr(int index, ur_field_type_t field_type);
    void add_member(int func, const char *field_name);
    void set_timeout(const char *input);
    char * return_template_def();
