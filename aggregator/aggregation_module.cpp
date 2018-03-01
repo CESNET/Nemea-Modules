@@ -107,6 +107,35 @@ static int stop = 0;
  */
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
+/* ================================================================= */
+/* ================== Develop/helper functions ===================== */
+/* ================================================================= */
+
+void print_all_defined_ur_fields()
+{
+   int16_t size = ur_field_specs.ur_last_id;
+   for (int i = 0; i < size; i++) {
+      const char* name = ur_get_name(i);
+      printf("%d. name = %s\n", i, name);
+   }
+   printf("All data from global unirec structure printed.\n\n");
+}
+/* ----------------------------------------------------------------- */
+void print_template_fields(ur_template_t* tmplt)
+{
+   int16_t size = tmplt->count;
+   for (int i = 0; i < size; i++) {
+      const char* name = ur_get_name(tmplt->ids[i]);
+      printf("%d. name = %s\n", i, name);
+   }
+   printf("All data from given template printed.\n\n");
+}
+/* ----------------------------------------------------------------- */
+
+/* ----------------------------------------------------------------- */
+/* ================================================================= */
+/* ========================= M A I N =============================== */
+/* ================================================================= */
 int main(int argc, char **argv)
 {
    int ret;
@@ -150,7 +179,7 @@ int main(int argc, char **argv)
          config.add_member(SUM, optarg);
          break;
       case 'a':
-         fprintf(stderr, "Develop: Option \'a\' currently being implemented.\n");
+         config.add_member(AVG, optarg);
          break;
       case 'm':
          fprintf(stderr, "Develop: Option \'m\' currently being implemented.\n");
@@ -165,51 +194,21 @@ int main(int argc, char **argv)
          fprintf(stderr, "Develop: Option \'l\' currently being implemented.\n");
          break;
       default:
-         fprintf(stderr, "Invalid arguments.\n");
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-         TRAP_DEFAULT_FINALIZATION();
-         return -1;
+         fprintf(stderr, "Invalid argument, skipped...\n");
       }
    }
 
-   /**
-    * Develop purposes end
-    */
+   // DEVEL: print configuration
    config.print();
-   char *tmplt_def = config.return_template_def();
-   printf("Template example:\n\t%s\n", tmplt_def);
-   delete [] tmplt_def;
 
-   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-   TRAP_DEFAULT_FINALIZATION();
-   return 0;
-   /**
-    * Develop purposes end
-    */
+
 
    /* **** Create UniRec templates **** */
-   ur_template_t *in_tmplt = ur_create_input_template(0, "FOO,BAR", NULL);
+   ur_template_t *in_tmplt = ur_create_input_template(0, "TIME_FIRST,TIME_LAST", NULL);
    if (in_tmplt == NULL){
       fprintf(stderr, "Error: Input template could not be created.\n");
       return -1;
    }
-
-   ur_template_t *out_tmplt = ur_create_output_template(0, "FOO,BAR,BAZ", NULL);
-   if (out_tmplt == NULL){
-      ur_free_template(in_tmplt);
-      fprintf(stderr, "Error: Output template could not be created.\n");
-      return -1;
-   }
-
-   // Allocate memory for output record
-   void *out_rec = ur_create_record(out_tmplt, 0);
-   if (out_rec == NULL){
-      ur_free_template(in_tmplt);
-      ur_free_template(out_tmplt);
-      fprintf(stderr, "Error: Memory allocation problem (output record).\n");
-      return -1;
-   }
-
 
    /* **** Main processing loop **** */
 
@@ -224,6 +223,76 @@ int main(int argc, char **argv)
 
       // Handle possible errors
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
+
+      // Change of UniRec input template -> sanity check and templates creation
+      if (ret == TRAP_E_FORMAT_CHANGED ) {
+
+         // Devel output begin
+         print_all_defined_ur_fields();
+         print_template_fields(in_tmplt);
+         // Devel output end
+
+         int id;
+         for (int i = 0; i < config.get_used_fields(); i++) {
+            id = ur_get_id_by_name(config.get_name(i));
+
+            if (id == UR_E_INVALID_NAME) {
+               fprintf(stderr, "Requested field %s not in input records, cannot continue.\n", config.get_name(i));
+               TRAP_DEFAULT_FINALIZATION();
+               ur_free_template(in_tmplt);
+               ur_finalize();
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               return 1;
+            }
+
+            if (config.is_key(i)) {
+               KeyTemplate::add_field(id, ur_get_size(id));
+            }
+            else {
+               OutputTemplate::add_field(id, config.get_function_ptr(i, ur_get_type(id)), config.is_func(i, AVG));
+            }
+         }
+         char *tmplt_def = config.return_template_def();
+         OutputTemplate::out_tmplt = ur_create_output_template(0, tmplt_def, NULL);
+         delete [] tmplt_def;
+
+         if (OutputTemplate::out_tmplt == NULL){
+            fprintf(stderr, "Error: Output template could not be created.\n");
+            TRAP_DEFAULT_FINALIZATION();
+            ur_free_template(in_tmplt);
+            ur_finalize();
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+            return -1;
+         }
+
+         // Devel output begin
+         print_template_fields(OutputTemplate::out_tmplt);
+         // Devel output end
+      }
+
+   /**
+    * Develop purposes end
+   */
+      TRAP_DEFAULT_FINALIZATION();
+      ur_free_template(in_tmplt);
+      if (OutputTemplate::out_tmplt)
+         ur_free_template(OutputTemplate::out_tmplt);
+      ur_finalize();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      return 0;
+   /**
+    * Develop purposes end
+   */
+
+      ur_template_t *out_tmplt = NULL; // DO NOT USE, just there because of exampleModule source bellow
+      // Allocate memory for output record
+      void *out_rec = ur_create_record(out_tmplt, 0);
+      if (out_rec == NULL){
+         ur_free_template(in_tmplt);
+         ur_free_template(out_tmplt);
+         fprintf(stderr, "Error: Memory allocation problem (output record).\n");
+         return -1;
+      }
 
       // Check size of received data
       if (in_rec_size < ur_rec_fixlen_size(in_tmplt)) {
@@ -264,9 +333,9 @@ int main(int argc, char **argv)
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    // Free unirec templates and output record
-   ur_free_record(out_rec);
+   //ur_free_record(out_rec);
    ur_free_template(in_tmplt);
-   ur_free_template(out_tmplt);
+   //ur_free_template(out_tmplt);
    ur_finalize();
 
    return 0;
