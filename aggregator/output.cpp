@@ -40,5 +40,6 @@ void OutputTemplate::reset()
 {
    prepare_to_send = false;
    used_fields = 0;
+   ur_free_template(out_tmplt);
 }
 /* ----------------------------------------------------------------- */
