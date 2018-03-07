@@ -45,13 +45,15 @@
 #include <config.h>
 #endif
 
-#include <stdio.h>
-#include <signal.h>
+#include <cstdio>
+#include <csignal>
 #include <getopt.h>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 #include "fields.h"
 
+#include <map>
+#include <utility>
 
 #include "output.h"
 #include "configuration.h"
@@ -140,7 +142,6 @@ int main(int argc, char **argv)
 {
    int ret;
    signed char opt;
-   int mult = 1;
 
    /* **** TRAP initialization **** */
 
@@ -162,6 +163,7 @@ int main(int argc, char **argv)
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
    Config config;
+   std::map<Key, void*> storage;
 
    /*
     * Parse program arguments defined by MODULE_PARAMS macro with getopt() function (getopt_long() if available)
@@ -224,17 +226,25 @@ int main(int argc, char **argv)
       // Handle possible errors
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
 
+
+      // Check for end-of-stream message
+      if (in_rec_size <= 1) {
+         continue;
+         //break;
+      }
+
       // Change of UniRec input template -> sanity check and templates creation
       if (ret == TRAP_E_FORMAT_CHANGED ) {
+         fprintf(stderr, "Format change, setting new module configuration\n");
          // Internal structures cleaning because of possible redefinition
          OutputTemplate::reset();
          KeyTemplate::reset();
          /* todo.. RESET STORED DATA -> FORCE SENDING WHOLE MAP */
+         // Only reset map, for testing purposes
+         storage.clear();
 
-         // Devel output begin
-         print_all_defined_ur_fields();
-         print_template_fields(in_tmplt);
-         // Devel output end
+         //print_all_defined_ur_fields();
+         //print_template_fields(in_tmplt);
 
          int id;
          for (int i = 0; i < config.get_used_fields(); i++) {
@@ -269,14 +279,38 @@ int main(int argc, char **argv)
             return -1;
          }
 
-         // Devel output begin
-         print_template_fields(OutputTemplate::out_tmplt);
-         // Devel output end
+         //print_template_fields(OutputTemplate::out_tmplt);
+
       }
 
+      /* Start message processing */
+      time_t record_first = ur_get(in_tmplt, in_rec, F_TIME_FIRST);
+      time_t record_last = ur_get(in_tmplt, in_rec, F_TIME_LAST);
+
+      // Generate key
+      Key rec_key;
+      for (uint i = 0; i < KeyTemplate::used_fields; i++) {
+         rec_key.add_field(ur_get_ptr_by_id(in_tmplt, in_rec, KeyTemplate::indexes_to_record[i]),
+                           ur_get_size(KeyTemplate::indexes_to_record[i]));
+      }
+
+      void *init_ptr = NULL;
+      std::pair<std::map<Key, void*>::iterator, bool> inserted;
+      inserted = storage.insert(std::make_pair(rec_key, init_ptr));
+
+      if (inserted.second == false) {
+         // Element already exists, process the agg function
+         printf("Element of given key already exist.\n");
+      }
+      else {
+         // Element inserted, init ur_record and copy fields
+         printf("Element of given key inserted.\n");
+      }
+
+      //delete rec_key;
    /**
     * Develop purposes end
-   */
+
       TRAP_DEFAULT_FINALIZATION();
       ur_free_template(in_tmplt);
       if (OutputTemplate::out_tmplt)
@@ -284,10 +318,10 @@ int main(int argc, char **argv)
       ur_finalize();
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return 0;
-   /**
+
     * Develop purposes end
    */
-
+   /*
       ur_template_t *out_tmplt = NULL; // DO NOT USE, just there because of exampleModule source bellow
       // Allocate memory for output record
       void *out_rec = ur_create_record(out_tmplt, 0);
@@ -325,6 +359,7 @@ int main(int argc, char **argv)
 
       // Handle possible errors
       TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, continue, break);
+   */
    }
 
 
@@ -339,8 +374,11 @@ int main(int argc, char **argv)
    // Free unirec templates and output record
    //ur_free_record(out_rec);
    ur_free_template(in_tmplt);
-   //ur_free_template(out_tmplt);
+   if (OutputTemplate::out_tmplt) {
+      ur_free_template(OutputTemplate::out_tmplt);
+   }
    ur_finalize();
+
 
    return 0;
 }
