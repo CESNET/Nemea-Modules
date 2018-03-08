@@ -10,6 +10,7 @@
 #include "agg_functions.h"
 
 typedef void (*agg_func)(const void *src, void *dst);    // Define pointer to agg function as a data type
+typedef void (*final_avg)(void *record, uint32_t count);     // Define pointer to make_avg function template
 
 class OutputTemplate {
 public:
@@ -20,9 +21,10 @@ public:
    //static void (*agg_func[MAX_KEY_FIELDS])(const void *src, void *dst);
    static agg_func process[MAX_KEY_FIELDS];
    static bool prepare_to_send;
-   static bool avg_fields[MAX_KEY_FIELDS];
+   //static bool avg_fields[MAX_KEY_FIELDS];
+   static final_avg avg_fields[MAX_KEY_FIELDS];
 
-   static void add_field(int record_id, agg_func foo, bool avg_flag);
+   static void add_field(int record_id, agg_func foo, bool avg_flag, final_avg foo2);
    static void reset();
 };
 
