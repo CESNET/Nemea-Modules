@@ -58,6 +58,8 @@
 #include "output.h"
 #include "configuration.h"
 
+
+#define MAX_TIMEOUT_RETRY 3
 trap_module_info_t *module_info = NULL;
 /**
  * COUNT, TIME_FIRST, TIME_LAST always used by module
@@ -102,12 +104,21 @@ UR_FIELDS (
 
 
 static int stop = 0;
-
+static std::map<Key, void*> storage;      // Need to be global because of trap_terminate
+void flush_storage();
 
 /**
  * Function to handle SIGTERM and SIGINT signals (used to stop the module)
  */
-TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
+TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1; flush_storage(); sleep(1))
+/*
+void my_signal_handler(int signal)
+{
+   if (signal == SIGTERM || signal == SIGINT) {
+      stop = 1;
+   }
+}
+*/
 
 /* ================================================================= */
 /* ================== Develop/helper functions ===================== */
@@ -133,8 +144,100 @@ void print_template_fields(ur_template_t* tmplt)
    printf("All data from given template printed.\n\n");
 }
 /* ----------------------------------------------------------------- */
+void clean_memory(ur_template_t *in_tmplt, ur_template_t *out_tmplt, std::map<Key, void*> storage){
+   std::map<Key, void*>::iterator it;
+   for ( it = storage.begin(); it != storage.end(); it++) {
+      ur_free_record(it->second);
+   }
+   storage.clear();
+
+   TRAP_DEFAULT_FINALIZATION();
+   ur_free_template(in_tmplt);
+   if (out_tmplt)
+      ur_free_template(out_tmplt);
+   ur_finalize();
+}
+/* ----------------------------------------------------------------- */
+void * create_record(ur_template_t *tmplt, int length)
+{
+   return ur_create_record(tmplt, length);
+}
+/* ----------------------------------------------------------------- */
+void process_agg_functions(ur_template_t *in_tmplt, const void *src_rec, ur_template_t *out_tmplt, void *dst_rec)
+{
+   // Always increase count when processing functions
+   ur_set(out_tmplt, dst_rec, F_COUNT, ur_get(out_tmplt, dst_rec, F_COUNT) + 1);
+   // Process all registered fields with their agg function
+   for (int i = 0; i < OutputTemplate::used_fields; i++) {
+      void *ptr_dst = ur_get_ptr_by_id(out_tmplt, dst_rec, OutputTemplate::indexes_to_record[i]);
+      void *ptr_src = ur_get_ptr_by_id(in_tmplt, src_rec, OutputTemplate::indexes_to_record[i]);
+      OutputTemplate::process[i](ptr_src, ptr_dst);
+   }
+}
 
 /* ----------------------------------------------------------------- */
+void init_record_data(ur_template_t * in_tmplt, const void *src_rec, ur_template_t *out_tmplt, void *dst_rec)
+{
+   // Copy all fields which are part of output template
+   ur_copy_fields(out_tmplt, dst_rec, in_tmplt, src_rec);
+   // Set initial value of module field(s)
+   ur_set(out_tmplt, dst_rec, F_COUNT, 1);
+}
+/* ----------------------------------------------------------------- */
+void prepare_to_send(void *stored_rec)
+{
+   // Proces activities needed to be done before sending the record
+
+   // Count Average function
+   for (int i = 0; i < OutputTemplate::used_fields; i++) {
+      if (OutputTemplate::avg_fields[i]) {
+         OutputTemplate::avg_fields[i](ur_get_ptr_by_id(OutputTemplate::out_tmplt, stored_rec, OutputTemplate::indexes_to_record[i]), ur_get(OutputTemplate::out_tmplt, stored_rec, F_COUNT));
+      }
+   }
+
+   /*
+    * Add every new post processing of agg function here
+    */
+
+}
+/* ----------------------------------------------------------------- */
+bool send_record_out(ur_template_t *out_tmplt, void *out_rec)
+{
+   printf("Count of message to send is: %d\n", ur_get(out_tmplt, out_rec, F_COUNT));
+
+   if(OutputTemplate::prepare_to_send) {
+      prepare_to_send(out_rec);
+   }
+
+   // Send record to interface 0.
+   int i = 0;
+   for (; i < MAX_TIMEOUT_RETRY; i++) {
+      int ret = trap_send(0, out_rec, ur_rec_fixlen_size(out_tmplt) + ur_rec_varlen_size(out_tmplt, out_rec));
+
+      // Handle possible errors
+      TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, continue, printf("SEND ERR\n");break);
+      printf("record sent\n");
+      return true;
+   }
+
+   fprintf(stderr, "Cannot send record due to error or time_out\n");
+   return false;
+}
+
+/* ----------------------------------------------------------------- */
+void flush_storage()
+{
+   // Send all stored data before exit
+   std::map<Key, void*>::iterator it;
+   for ( it = storage.begin(); it != storage.end(); it++) {
+      send_record_out(OutputTemplate::out_tmplt, it->second);
+      ur_free_record(it->second);
+   }
+   storage.clear();
+   trap_send(0, "", 1);
+}
+/* ----------------------------------------------------------------- */
+
 /* ================================================================= */
 /* ========================= M A I N =============================== */
 /* ================================================================= */
@@ -161,9 +264,11 @@ int main(int argc, char **argv)
     * Register signal handler.
     */
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
+   //signal(SIGTERM, my_signal_handler);
+   //signal(SIGINT, my_signal_handler);
 
    Config config;
-   std::map<Key, void*> storage;
+   //std::map<Key, void*> storage;
 
    /*
     * Parse program arguments defined by MODULE_PARAMS macro with getopt() function (getopt_long() if available)
@@ -209,6 +314,8 @@ int main(int argc, char **argv)
    ur_template_t *in_tmplt = ur_create_input_template(0, "TIME_FIRST,TIME_LAST", NULL);
    if (in_tmplt == NULL){
       fprintf(stderr, "Error: Input template could not be created.\n");
+      TRAP_DEFAULT_FINALIZATION();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return -1;
    }
 
@@ -227,21 +334,24 @@ int main(int argc, char **argv)
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
 
 
-      // Check for end-of-stream message
+      // Check for end-of-stream message, close only when signal caught
       if (in_rec_size <= 1) {
          continue;
-         //break;
       }
 
       // Change of UniRec input template -> sanity check and templates creation
       if (ret == TRAP_E_FORMAT_CHANGED ) {
          fprintf(stderr, "Format change, setting new module configuration\n");
          // Internal structures cleaning because of possible redefinition
+         std::map<Key, void*>::iterator it;
+         for ( it = storage.begin(); it != storage.end(); it++) {
+            send_record_out(OutputTemplate::out_tmplt, it->second);
+            ur_free_record(it->second);
+         }
+         storage.clear();
+
          OutputTemplate::reset();
          KeyTemplate::reset();
-         /* todo.. RESET STORED DATA -> FORCE SENDING WHOLE MAP */
-         // Only reset map, for testing purposes
-         storage.clear();
 
          //print_all_defined_ur_fields();
          //print_template_fields(in_tmplt);
@@ -252,9 +362,7 @@ int main(int argc, char **argv)
 
             if (id == UR_E_INVALID_NAME) {
                fprintf(stderr, "Requested field %s not in input records, cannot continue.\n", config.get_name(i));
-               TRAP_DEFAULT_FINALIZATION();
-               ur_free_template(in_tmplt);
-               ur_finalize();
+               clean_memory(in_tmplt, NULL, storage);
                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                return 1;
             }
@@ -263,7 +371,7 @@ int main(int argc, char **argv)
                KeyTemplate::add_field(id, ur_get_size(id));
             }
             else {
-               OutputTemplate::add_field(id, config.get_function_ptr(i, ur_get_type(id)), config.is_func(i, AVG));
+               OutputTemplate::add_field(id, config.get_function_ptr(i, ur_get_type(id)), config.is_func(i, AVG), config.get_avg_ptr(i, ur_get_type(id)));
             }
          }
          char *tmplt_def = config.return_template_def();
@@ -272,9 +380,7 @@ int main(int argc, char **argv)
 
          if (OutputTemplate::out_tmplt == NULL){
             fprintf(stderr, "Error: Output template could not be created.\n");
-            TRAP_DEFAULT_FINALIZATION();
-            ur_free_template(in_tmplt);
-            ur_finalize();
+            clean_memory(in_tmplt, NULL, storage);
             FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
             return -1;
          }
@@ -284,8 +390,8 @@ int main(int argc, char **argv)
       }
 
       /* Start message processing */
-      time_t record_first = ur_get(in_tmplt, in_rec, F_TIME_FIRST);
-      time_t record_last = ur_get(in_tmplt, in_rec, F_TIME_LAST);
+      time_t record_first = ur_time_get_sec(ur_get(in_tmplt, in_rec, F_TIME_FIRST));
+      time_t record_last = ur_time_get_sec(ur_get(in_tmplt, in_rec, F_TIME_LAST));
 
       // Generate key
       Key rec_key;
@@ -299,85 +405,52 @@ int main(int argc, char **argv)
       inserted = storage.insert(std::make_pair(rec_key, init_ptr));
 
       if (inserted.second == false) {
-         // Element already exists, process the agg function
-         printf("Element of given key already exist.\n");
-      }
-      else {
-         // Element inserted, init ur_record and copy fields
-         printf("Element of given key inserted.\n");
-      }
+         // Element already exists
 
-      //delete rec_key;
-   /**
-    * Develop purposes end
+         bool new_time_window = false;
+         void *stored_rec = inserted.first->second;
+         // Main thread checks time window only when active timeout set
+         if (config.get_timeout_type() == TIMEOUT_ACTIVE ) {
+            // Check time window
+            time_t stored_last = ur_time_get_sec(ur_get(OutputTemplate::out_tmplt, stored_rec, F_TIME_LAST));
+            // Record is not in current time window
+            if (stored_last + config.get_timeout() < record_first ) {
+               new_time_window = true;
+            }
+         }
+         if (new_time_window) {
+            if(!send_record_out(OutputTemplate::out_tmplt, stored_rec)) {
+               break;
+            }
 
-      TRAP_DEFAULT_FINALIZATION();
-      ur_free_template(in_tmplt);
-      if (OutputTemplate::out_tmplt)
-         ur_free_template(OutputTemplate::out_tmplt);
-      ur_finalize();
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-      return 0;
-
-    * Develop purposes end
-   */
-   /*
-      ur_template_t *out_tmplt = NULL; // DO NOT USE, just there because of exampleModule source bellow
-      // Allocate memory for output record
-      void *out_rec = ur_create_record(out_tmplt, 0);
-      if (out_rec == NULL){
-         ur_free_template(in_tmplt);
-         ur_free_template(out_tmplt);
-         fprintf(stderr, "Error: Memory allocation problem (output record).\n");
-         return -1;
-      }
-
-      // Check size of received data
-      if (in_rec_size < ur_rec_fixlen_size(in_tmplt)) {
-         if (in_rec_size <= 1) {
-            break; // End of data (used for testing purposes)
-         } else {
-            fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
-                    ur_rec_fixlen_size(in_tmplt), in_rec_size);
-            break;
+            init_record_data(in_tmplt, in_rec, OutputTemplate::out_tmplt, stored_rec);
+         }
+         else {
+            process_agg_functions(in_tmplt, in_rec, OutputTemplate::out_tmplt, stored_rec);
          }
       }
+      else {
+         // New element
 
-      // PROCESS THE DATA
-
-      // Read FOO and BAR from input record and compute their sum
-      uint32_t baz = ur_get(in_tmplt, in_rec, F_COUNT) +
-                     ur_get(in_tmplt, in_rec, F_COUNT);
-
-      // Fill output record
-      ur_copy_fields(out_tmplt, out_rec, in_tmplt, in_rec);
-      ur_set(out_tmplt, out_rec, F_COUNT, mult * baz);
-
-      // Send record to interface 0.
-      // Block if ifc is not ready (unless a timeout is set using trap_ifcctl)
-      ret = trap_send(0, out_rec, ur_rec_fixlen_size(out_tmplt));
-
-      // Handle possible errors
-      TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, continue, break);
-   */
+         int var_length = 0;     // means if there should place for variable lenth field in record
+         void * out_rec = create_record(OutputTemplate::out_tmplt, var_length);
+         if (!out_rec) {
+            clean_memory(in_tmplt, OutputTemplate::out_tmplt, storage);
+            fprintf(stderr, "Error: Memory allocation problem (output record).\n");
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+            return -1;
+         }
+         init_record_data(in_tmplt, in_rec, OutputTemplate::out_tmplt, out_rec);
+         inserted.first->second = out_rec;
+      }
    }
 
 
    /* **** Cleanup **** */
-
-   // Do all necessary cleanup in libtrap before exiting
-   TRAP_DEFAULT_FINALIZATION();
-
+   // Free unirec templates and stored records
+   clean_memory(in_tmplt, OutputTemplate::out_tmplt, storage);
    // Release allocated memory for module_info structure
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-
-   // Free unirec templates and output record
-   //ur_free_record(out_rec);
-   ur_free_template(in_tmplt);
-   if (OutputTemplate::out_tmplt) {
-      ur_free_template(OutputTemplate::out_tmplt);
-   }
-   ur_finalize();
 
 
    return 0;
