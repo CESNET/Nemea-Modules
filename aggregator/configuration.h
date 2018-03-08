@@ -41,7 +41,10 @@ public:
    bool is_key(int index);
    bool is_func(int index, int func_id);
    agg_func get_function_ptr(int index, ur_field_type_t field_type);
+   final_avg get_avg_ptr(int index, ur_field_type_t field_type);
    void add_member(int func, const char *field_name);
+   int get_timeout();
+   char get_timeout_type();
    void set_timeout(const char *input);
    char * return_template_def();
    // Development methods

@@ -164,6 +164,56 @@ agg_func Config::get_function_ptr(int index, ur_field_type_t field_type)
    return out;
 }
 
+final_avg Config::get_avg_ptr(int index, ur_field_type_t field_type)
+{
+   final_avg out = NULL;
+   if ((index < 0) || (index > used_fields - 1)) {
+      return out;
+   }
+
+   switch (functions[index]) {
+      case AVG:
+         switch (field_type) {
+            case UR_TYPE_INT8:
+               out = &make_avg<int8_t>;
+               break;
+            case UR_TYPE_INT16:
+               out = &make_avg<int16_t>;
+               break;
+            case UR_TYPE_INT32:
+               out = &make_avg<int32_t>;
+               break;
+            case UR_TYPE_INT64:
+               out = &make_avg<int64_t>;
+               break;
+            case UR_TYPE_UINT8:
+               out = &make_avg<uint8_t>;
+               break;
+            case UR_TYPE_UINT16:
+               out = &make_avg<uint16_t>;
+               break;
+            case UR_TYPE_UINT32:
+               out = &make_avg<uint32_t>;
+               break;
+            case UR_TYPE_UINT64:
+               out = &make_avg<uint64_t>;
+               break;
+            case UR_TYPE_FLOAT:
+               out = &make_avg<float>;
+               break;
+            case UR_TYPE_DOUBLE:
+               out = &make_avg<double>;
+               break;
+            default:
+               out = NULL;
+            }
+         break;
+      default:
+         out = NULL;
+   }
+   return out;
+}
+
 /**
  * This function adds field into configuration class of module
  * @param func [in] Identification of function to use as defined MACRO
@@ -176,6 +226,15 @@ void Config::add_member(int func, const char *field_name)
    strncpy(field_names[used_fields], field_name, name_length + 1);
    functions[used_fields] = func;
    used_fields++;
+}
+int Config::get_timeout()
+{
+   return timeout;
+}
+
+char Config::get_timeout_type()
+{
+   return timeout_type;
 }
 
 /**
