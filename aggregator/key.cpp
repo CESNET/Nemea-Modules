@@ -65,14 +65,14 @@ Key::Key(const Key &other)
    memcpy(data, other.data, data_length);
 }
 /* ----------------------------------------------------------------- */
-Key::Key(Key &&other)
+/*Key::Key(Key &&other)
 {
    data_length = other.data_length;
    data = other.data;
    other.data_length = 0;
    other.data = nullptr;
 }
-/* ----------------------------------------------------------------- */
+ -----------------------------------------------------------------
 Key& Key::operator= (Key &&other)
 {
    if (this!=&other)
@@ -89,6 +89,7 @@ Key& Key::operator= (Key &&other)
    }
    return *this;
 }
+ */
 /* ----------------------------------------------------------------- */
 void Key::add_field(const void *src, int size)
 {

@@ -30,8 +30,8 @@ public:
    Key();
    ~Key();
    Key(const Key &other);
-   Key(Key &&other);             // Move constructor, c++11 only
-   Key& operator= (Key &&other);  // Move assignment operator, c++11 only
+   //Key(Key &&other);             // Move constructor, c++11 only
+   //Key& operator= (Key &&other);  // Move assignment operator, c++11 only
    void add_field(const void *src, int size);            // Append new field into record
    friend bool operator< (const Key &a, const Key &b);  // Key needs to be comparable for the map
    //hash_code();
