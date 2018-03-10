@@ -410,11 +410,11 @@ int main(int argc, char **argv)
          bool new_time_window = false;
          void *stored_rec = inserted.first->second;
          // Main thread checks time window only when active timeout set
-         if (config.get_timeout_type() == TIMEOUT_ACTIVE ) {
-            // Check time window
-            time_t stored_last = ur_time_get_sec(ur_get(OutputTemplate::out_tmplt, stored_rec, F_TIME_LAST));
+         if ( (config.get_timeout_type() == TIMEOUT_ACTIVE) || (config.get_timeout_type() == TIMEOUT_ACTIVE_PASSIVE)) {
+            // Check time window for active timeout
+            time_t stored_first = ur_time_get_sec(ur_get(OutputTemplate::out_tmplt, stored_rec, F_TIME_FIRST));
             // Record is not in current time window
-            if (stored_last + config.get_timeout() < record_first ) {
+            if (stored_first + config.get_timeout(TIMEOUT_ACTIVE) < record_first ) {
                new_time_window = true;
             }
          }
