@@ -24,7 +24,7 @@ private:
 
 class Key {
 private:
-   char* data;                      // Only values from record
+   char* data;                   // Only values from record
    int data_length;              // The length of written bytes
 public:
    Key();
