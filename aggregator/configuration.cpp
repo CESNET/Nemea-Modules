@@ -274,24 +274,28 @@ void Config::set_timeout(const char *input)
             case 'm':
             case 'M':
                timeout_type = TIMEOUT_ACTIVE_PASSIVE;
+               break;
             default:
                fprintf(stderr, "Unknown timeout type \'%c\', keeping default.\n", first[0]);
          }
          if (timeout_type == TIMEOUT_ACTIVE_PASSIVE) {
             // There need to be 2 times splitted by char ','
+            printf("second: %s\n", second);
             char *active_timeout = strtok(second, ",");
             if (active_timeout) {
-               // Can be valid time definition
+               // There allways be something due to second existance
                char *passive_timeout = strtok(NULL, ",");
                if (passive_timeout) {
                   // Now valid time definition
                   timeout[TIMEOUT_ACTIVE] = atoi(active_timeout);
                   timeout[TIMEOUT_PASSIVE] = atoi(passive_timeout);
                }
-            }
-            else {
-               // Time definition missing
-               fprintf(stderr, "Missing timeout type definition Active,Passive\n");
+               else {
+                  // Time definition wrong
+                  fprintf(stderr, "Wrong timeout type definition \"-m:Active,Passive\"\n"
+                          "Keeping default timeout type.\n");
+                  timeout_type = TIMEOUT_ACTIVE;
+               }
             }
          }
          else
@@ -345,7 +349,16 @@ char* Config::return_template_def()
 
 void Config::print()
 {
-   printf("Timeout type: %d\nTimeout: %d sec\nUsed fields: %d\n", timeout_type, timeout[timeout_type], used_fields);
+   printf("Used fields: %d\n", used_fields);
+   printf("Timeout type: %d\n", timeout_type);
+   if (timeout_type == TIMEOUT_ACTIVE_PASSIVE) {
+      printf("Timeout Active: %d\n", timeout[TIMEOUT_ACTIVE]);
+      printf("Timeout Passive: %d\n", timeout[TIMEOUT_PASSIVE]);
+   }
+   else {
+      printf("Timeout: %d\n", timeout[timeout_type]);
+   }
+
    printf("Fields:\n");
    for (int i = 0; i < used_fields; i++) {
       printf("%d) %s:function(%d) \n",i, field_names[i], functions[i]);

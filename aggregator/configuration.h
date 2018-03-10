@@ -22,7 +22,7 @@
 #define TIMEOUT_GLOBAL           2
 #define TIMEOUT_ACTIVE_PASSIVE   3        // M = Mixed
 
-#define TIMEOUT_TYPES_COUNT      4        // Count of different timeout types
+#define TIMEOUT_TYPES_COUNT      3        // Count of different timeout types (active_passive dont use new type)
 
 #define STATIC_FIELDS "TIME_FIRST,TIME_LAST,COUNT"
 
