@@ -17,9 +17,12 @@
 #define BIT_OR    7
 #define BIT_AND   8
 
-#define TIMEOUT_ACTIVE  'A'
-#define TIMEOUT_PASSIVE 'P'
-#define TIMEOUT_GLOBAL  'G'
+#define TIMEOUT_ACTIVE           0
+#define TIMEOUT_PASSIVE          1
+#define TIMEOUT_GLOBAL           2
+#define TIMEOUT_ACTIVE_PASSIVE   3        // M = Mixed
+
+#define TIMEOUT_TYPES_COUNT      4        // Count of different timeout types
 
 #define STATIC_FIELDS "TIME_FIRST,TIME_LAST,COUNT"
 
@@ -31,8 +34,8 @@ private:
    int functions[MAX_KEY_FIELDS];
    char *field_names[MAX_KEY_FIELDS];
    int used_fields;
-   int timeout;
-   char timeout_type;
+   int timeout[TIMEOUT_TYPES_COUNT];
+   int timeout_type;
 public:
    Config();
    ~Config();
@@ -43,7 +46,7 @@ public:
    agg_func get_function_ptr(int index, ur_field_type_t field_type);
    final_avg get_avg_ptr(int index, ur_field_type_t field_type);
    void add_member(int func, const char *field_name);
-   int get_timeout();
+   int get_timeout(int type);
    char get_timeout_type();
    void set_timeout(const char *input);
    char * return_template_def();

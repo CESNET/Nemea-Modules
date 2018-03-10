@@ -4,8 +4,12 @@
 
 #include "configuration.h"
 
-Config::Config() : used_fields(0), timeout(DEFAULT_TIMEOUT), timeout_type(TIMEOUT_ACTIVE)
-{}
+Config::Config() : used_fields(0), timeout_type(TIMEOUT_ACTIVE)
+{
+   for (int i = 0; i < TIMEOUT_TYPES_COUNT; i++) {
+      timeout[i] = DEFAULT_TIMEOUT;
+   }
+}
 
 
 Config::~Config()
@@ -227,9 +231,9 @@ void Config::add_member(int func, const char *field_name)
    functions[used_fields] = func;
    used_fields++;
 }
-int Config::get_timeout()
+int Config::get_timeout(int type)
 {
-   return timeout;
+   return timeout[type];
 }
 
 char Config::get_timeout_type()
@@ -267,20 +271,51 @@ void Config::set_timeout(const char *input)
             case 'G':
                timeout_type = TIMEOUT_GLOBAL;
                break;
+            case 'm':
+            case 'M':
+               timeout_type = TIMEOUT_ACTIVE_PASSIVE;
             default:
                fprintf(stderr, "Unknown timeout type \'%c\', keeping default.\n", first[0]);
          }
-         timeout = atoi(second);
+         if (timeout_type == TIMEOUT_ACTIVE_PASSIVE) {
+            // There need to be 2 times splitted by char ','
+            char *active_timeout = strtok(second, ",");
+            if (active_timeout) {
+               // Can be valid time definition
+               char *passive_timeout = strtok(NULL, ",");
+               if (passive_timeout) {
+                  // Now valid time definition
+                  timeout[TIMEOUT_ACTIVE] = atoi(active_timeout);
+                  timeout[TIMEOUT_PASSIVE] = atoi(passive_timeout);
+               }
+            }
+            else {
+               // Time definition missing
+               fprintf(stderr, "Missing timeout type definition Active,Passive\n");
+            }
+         }
+         else
+            timeout[timeout_type] = atoi(second);
       }
       else {
-         timeout = atoi(first);
+         timeout[timeout_type] = atoi(first);
       }
    }
 
-   if(timeout <= 0) {
-      fprintf(stderr, "%d is not > 0, keeping default.\n", timeout);
-      timeout = DEFAULT_TIMEOUT;
+   if (timeout_type == TIMEOUT_ACTIVE_PASSIVE) {
+      if((timeout[TIMEOUT_ACTIVE] <= 0) || (timeout[TIMEOUT_PASSIVE] <= 0)) {
+         fprintf(stderr, "Timeout value is not > 0, keeping default value.\n");
+         timeout[TIMEOUT_ACTIVE] = DEFAULT_TIMEOUT;
+         timeout[TIMEOUT_PASSIVE] = DEFAULT_TIMEOUT;
+      }
    }
+   else {
+      if(timeout[timeout_type] <= 0) {
+         fprintf(stderr, "%d is not > 0, keeping default value.\n", timeout[timeout_type]);
+         timeout[timeout_type] = DEFAULT_TIMEOUT;
+      }
+   }
+
    delete [] definition;
 }
 
@@ -310,7 +345,7 @@ char* Config::return_template_def()
 
 void Config::print()
 {
-   printf("Timeout type: %c\nTimeout: %d sec\nUsed fields: %d\n", timeout_type, timeout, used_fields);
+   printf("Timeout type: %d\nTimeout: %d sec\nUsed fields: %d\n", timeout_type, timeout[timeout_type], used_fields);
    printf("Fields:\n");
    for (int i = 0; i < used_fields; i++) {
       printf("%d) %s:function(%d) \n",i, field_names[i], functions[i]);
