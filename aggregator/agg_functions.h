@@ -43,6 +43,22 @@ void make_avg(void *src, uint32_t count)
    *((T*)src) /= count;
 }
 
+template <typename T>
+void min(const void *src, void *dst )
+{
+   if (*((T*)src) < *((T*)dst))
+      *((T*)dst = *((T*)src));
+
+}
+
+template <typename T>
+void max(const void *src, void *dst )
+{
+   if (*((T*)src) > *((T*)dst))
+      *((T*)dst = *((T*)src));
+
+}
+
 void nope(const void *src, void *dst);
 
 
