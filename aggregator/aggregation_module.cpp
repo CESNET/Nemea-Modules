@@ -54,6 +54,7 @@
 
 #include <map>
 #include <utility>
+#include <pthread.h>
 
 #include "output.h"
 #include "configuration.h"
@@ -105,12 +106,15 @@ UR_FIELDS (
 
 static int stop = 0;
 static std::map<Key, void*> storage;      // Need to be global because of trap_terminate
+time_t time_last_from_record;             // Passive timeout time info set due to records time
+pthread_mutex_t storage_mutex = PTHREAD_MUTEX_INITIALIZER;                 // For storage modifying sections
+pthread_mutex_t time_last_from_record_mutex = PTHREAD_MUTEX_INITIALIZER;   // For modifying Passive timeout time info
 void flush_storage();
 
 /**
  * Function to handle SIGTERM and SIGINT signals (used to stop the module)
  */
-TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1; flush_storage(); sleep(1))
+TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1; flush_storage(); trap_send(0, "", 1); sleep(1))
 /*
 void my_signal_handler(int signal)
 {
@@ -167,10 +171,26 @@ void process_agg_functions(ur_template_t *in_tmplt, const void *src_rec, ur_temp
 {
    // Always increase count when processing functions
    ur_set(out_tmplt, dst_rec, F_COUNT, ur_get(out_tmplt, dst_rec, F_COUNT) + 1);
+
+   // Modify time attributes TIME_FIRST:min
+   uint64_t stored = ur_get(out_tmplt, dst_rec, F_TIME_FIRST);
+   uint64_t record = ur_get(in_tmplt, src_rec, F_TIME_FIRST);
+   if (record < stored)
+      ur_set(out_tmplt, dst_rec, F_TIME_FIRST, ur_get(in_tmplt, src_rec, F_TIME_FIRST));
+
+   // Modify time attributes TIME_LAST:max
+   stored = ur_get(out_tmplt, dst_rec, F_TIME_LAST);
+   record = ur_get(in_tmplt, src_rec, F_TIME_LAST);
+   if (record > stored)
+      ur_set(out_tmplt, dst_rec, F_TIME_LAST, ur_get(in_tmplt, src_rec, F_TIME_LAST));
+
+
+   void *ptr_dst;
+   void *ptr_src;
    // Process all registered fields with their agg function
    for (int i = 0; i < OutputTemplate::used_fields; i++) {
-      void *ptr_dst = ur_get_ptr_by_id(out_tmplt, dst_rec, OutputTemplate::indexes_to_record[i]);
-      void *ptr_src = ur_get_ptr_by_id(in_tmplt, src_rec, OutputTemplate::indexes_to_record[i]);
+      ptr_dst = ur_get_ptr_by_id(out_tmplt, dst_rec, OutputTemplate::indexes_to_record[i]);
+      ptr_src = ur_get_ptr_by_id(in_tmplt, src_rec, OutputTemplate::indexes_to_record[i]);
       OutputTemplate::process[i](ptr_src, ptr_dst);
    }
 }
@@ -227,14 +247,84 @@ bool send_record_out(ur_template_t *out_tmplt, void *out_rec)
 /* ----------------------------------------------------------------- */
 void flush_storage()
 {
-   // Send all stored data before exit
+   // Send all stored data
    std::map<Key, void*>::iterator it;
    for ( it = storage.begin(); it != storage.end(); it++) {
       send_record_out(OutputTemplate::out_tmplt, it->second);
       ur_free_record(it->second);
    }
    storage.clear();
-   trap_send(0, "", 1);
+}
+/* ----------------------------------------------------------------- */
+void *timeout_thread(void *input)
+{
+   Config *configuration = (Config*)input;
+   int timeout_type = configuration->get_timeout_type();
+
+   if (timeout_type == TIMEOUT_GLOBAL) {
+      int timeout = configuration->get_timeout(TIMEOUT_GLOBAL);
+      while (!stop) {
+         time_t start = time(NULL);
+
+         // Lock the storage -- CRITICAL SECTION START
+         pthread_mutex_lock(&storage_mutex);
+         flush_storage();
+         // Unlock the storage -- CRITICAL SECTION END
+         pthread_mutex_unlock(&storage_mutex);
+         time_t end = time(NULL);
+
+         int elapsed = difftime(end, start);
+         int sec_to_sleep = (timeout - elapsed);
+         if (sec_to_sleep > 0)
+            sleep(sec_to_sleep);
+      }
+
+      return NULL;
+   }
+
+   if ((timeout_type == TIMEOUT_PASSIVE) || (timeout_type == TIMEOUT_ACTIVE_PASSIVE)) {
+      int timeout = configuration->get_timeout(TIMEOUT_PASSIVE);
+
+      pthread_mutex_lock(&time_last_from_record_mutex);
+      time_last_from_record += timeout;
+      pthread_mutex_unlock(&time_last_from_record_mutex);
+
+      while (!stop) {
+         time_t start = time(NULL);
+
+         /* Can happen that record accesed for timeout check is being processed by main thread, need to use lock
+          * Only accessing and modifying different elements is thread safe in stl map container */
+         // Lock the storage -- CRITICAL SECTION START
+         pthread_mutex_lock(&storage_mutex);
+         for (std::map<Key, void*>::iterator it = storage.begin(); it != storage.end(); ) {
+            if (ur_time_get_sec(ur_get(OutputTemplate::out_tmplt, it->second, F_TIME_LAST)) + timeout < time_last_from_record) {
+               // Send record out
+               send_record_out(OutputTemplate::out_tmplt, it->second);
+               storage.erase(it++);
+            }
+            else {
+               ++it;
+            }
+         }
+         // Unlock the storage -- CRITICAL SECTION END
+         pthread_mutex_unlock(&storage_mutex);
+
+         /* Assume regularly timeout sleep */
+         sleep(timeout);
+
+         time_t end = time(NULL);
+         int elapsed = difftime(end, start);
+
+         pthread_mutex_lock(&time_last_from_record_mutex);
+         time_last_from_record += elapsed;
+         pthread_mutex_unlock(&time_last_from_record_mutex);
+      }
+
+      return NULL;
+   }
+
+   // Timeout is ACTIVE only, no thread checks needed, close the thread.
+   return NULL;
 }
 /* ----------------------------------------------------------------- */
 
@@ -344,6 +434,10 @@ int main(int argc, char **argv)
          fprintf(stderr, "Format change, setting new module configuration\n");
          // Internal structures cleaning because of possible redefinition
          std::map<Key, void*>::iterator it;
+
+         // Lock the storage -- CRITICAL SECTION START
+         pthread_mutex_lock( &storage_mutex );
+
          for ( it = storage.begin(); it != storage.end(); it++) {
             send_record_out(OutputTemplate::out_tmplt, it->second);
             ur_free_record(it->second);
@@ -384,14 +478,21 @@ int main(int argc, char **argv)
             FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
             return -1;
          }
+         // Unlock the storage -- CRITICAL SECTION END
+         pthread_mutex_unlock(&storage_mutex);
+
+         // Lock the time variable -- CRITICAL SECTION START
+         pthread_mutex_lock(&time_last_from_record_mutex);
+         // Set the global last time with first received record
+         time_last_from_record = ur_time_get_sec(ur_get(in_tmplt, in_rec, F_TIME_LAST));
+         // Unlock the time variable -- CRITICAL SECTION END
+         pthread_mutex_unlock(&time_last_from_record_mutex);
 
          //print_template_fields(OutputTemplate::out_tmplt);
-
       }
 
       /* Start message processing */
       time_t record_first = ur_time_get_sec(ur_get(in_tmplt, in_rec, F_TIME_FIRST));
-      time_t record_last = ur_time_get_sec(ur_get(in_tmplt, in_rec, F_TIME_LAST));
 
       // Generate key
       Key rec_key;
@@ -402,6 +503,8 @@ int main(int argc, char **argv)
 
       void *init_ptr = NULL;
       std::pair<std::map<Key, void*>::iterator, bool> inserted;
+      // Lock the storage -- CRITICAL SECTION START
+      pthread_mutex_lock( &storage_mutex );
       inserted = storage.insert(std::make_pair(rec_key, init_ptr));
 
       if (inserted.second == false) {
@@ -443,6 +546,8 @@ int main(int argc, char **argv)
          init_record_data(in_tmplt, in_rec, OutputTemplate::out_tmplt, out_rec);
          inserted.first->second = out_rec;
       }
+      // Unlock the storage -- CRITICAL SECTION END
+      pthread_mutex_unlock( &storage_mutex );
    }
 
 
