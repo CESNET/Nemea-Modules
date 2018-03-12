@@ -211,6 +211,7 @@ void process_agg_functions(ur_template_t *in_tmplt, const void *src_rec, ur_temp
 /* ----------------------------------------------------------------- */
 void init_record_data(ur_template_t * in_tmplt, const void *src_rec, ur_template_t *out_tmplt, void *dst_rec)
 {
+   ur_clear_varlen(in_tmplt, dst_rec);
    // Copy all fields which are part of output template
    ur_copy_fields(out_tmplt, dst_rec, in_tmplt, src_rec);
    // Set initial value of module field(s)
