@@ -4,7 +4,7 @@
 
 #include "configuration.h"
 
-Config::Config() : used_fields(0), timeout_type(TIMEOUT_ACTIVE)
+Config::Config() : used_fields(0), timeout_type(TIMEOUT_ACTIVE), variable_flag(false)
 {
    for (int i = 0; i < TIMEOUT_TYPES_COUNT; i++) {
       timeout[i] = DEFAULT_TIMEOUT;
@@ -31,6 +31,16 @@ const char * Config::get_name(int index)
    }
 
    return field_names[index];
+}
+
+bool Config::is_variable()
+{
+   return variable_flag;
+}
+
+void Config::set_variable(bool flag)
+{
+   variable_flag = flag;
 }
 
 bool Config::is_key(int index)
@@ -333,6 +343,11 @@ char Config::get_timeout_type()
 void Config::set_timeout(const char *input)
 {
    size_t str_len = strlen(input);
+   // Using constant 21 -> max int size 2,147,483,647 => 10 digits => max size is 'int:int'
+   if (str_len > 21 ) {
+      fprintf(stderr, "Definition string is too long, using default settings.\n");
+      return;
+   }
    char *definition = new char [str_len + 1];
    strncpy(definition, input, str_len + 1);
 

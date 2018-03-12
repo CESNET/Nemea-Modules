@@ -36,11 +36,14 @@ private:
    int used_fields;
    int timeout[TIMEOUT_TYPES_COUNT];
    int timeout_type;
+   bool variable_flag;
 public:
    Config();
    ~Config();
    int get_used_fields();
    const char * get_name(int index);
+   bool is_variable();
+   void set_variable(bool flag);
    bool is_key(int index);
    bool is_func(int index, int func_id);
    agg_func get_function_ptr(int index, ur_field_type_t field_type);
