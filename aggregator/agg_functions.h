@@ -47,7 +47,7 @@ template <typename T>
 void min(const void *src, void *dst )
 {
    if (*((T*)src) < *((T*)dst))
-      *((T*)dst = *((T*)src));
+      *((T*)dst) = *((T*)src);
 
 }
 void min_ip(const void *src, void *dst);
@@ -56,7 +56,7 @@ template <typename T>
 void max(const void *src, void *dst )
 {
    if (*((T*)src) > *((T*)dst))
-      *((T*)dst = *((T*)src));
+      *((T*)dst) = *((T*)src);
 
 }
 void max_ip(const void *src, void *dst);
