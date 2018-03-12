@@ -50,6 +50,7 @@ void min(const void *src, void *dst )
       *((T*)dst = *((T*)src));
 
 }
+void min_ip(const void *src, void *dst);
 
 template <typename T>
 void max(const void *src, void *dst )
@@ -58,6 +59,7 @@ void max(const void *src, void *dst )
       *((T*)dst = *((T*)src));
 
 }
+void max_ip(const void *src, void *dst);
 
 void nope(const void *src, void *dst);
 
