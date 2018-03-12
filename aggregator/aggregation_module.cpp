@@ -308,7 +308,7 @@ void *check_timeouts(void *input)
          // Lock the storage -- CRITICAL SECTION START
          pthread_mutex_lock(&storage_mutex);
          for (std::map<Key, void*>::iterator it = storage.begin(); it != storage.end(); ) {
-            if (ur_time_get_sec(ur_get(OutputTemplate::out_tmplt, it->second, F_TIME_LAST)) + timeout < time_last_from_record) {
+            if (ur_time_get_sec(ur_get(OutputTemplate::out_tmplt, it->second, F_TIME_LAST)) < time_last_from_record - timeout) {
                // Send record out
                send_record_out(OutputTemplate::out_tmplt, it->second);
                ur_free_record(it->second);
@@ -324,15 +324,17 @@ void *check_timeouts(void *input)
          time_t end = time(NULL);
          int elapsed = difftime(end, start);
          int sec_to_sleep = (timeout - elapsed);
-         // Assume regularly timeout period
-         if (sec_to_sleep > 0) {
-            sleep(sec_to_sleep);
-         }
 
          pthread_mutex_lock(&time_last_from_record_mutex);
          // Update the last record time with elapsed time interval
          time_last_from_record += (elapsed + sec_to_sleep);
          pthread_mutex_unlock(&time_last_from_record_mutex);
+         
+         // Assume regularly timeout period
+         if (sec_to_sleep > 0) {
+            sleep(sec_to_sleep);
+         }
+
       }
 
       return NULL;
