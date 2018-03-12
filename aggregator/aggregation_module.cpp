@@ -98,7 +98,9 @@ UR_FIELDS (
   PARAM('m', "min", "Keep minimal value of UniRec field identified by given name.", required_argument, "string") \
   PARAM('M', "max", "Keep maximal value of UniRec field identified by given name.", required_argument, "string") \
   PARAM('f', "first", "Keep first value of UniRec field identified by given name.", required_argument, "string") \
-  PARAM('l', "last", "Keep first value of UniRec field identified by given name.", required_argument, "string")
+  PARAM('l', "last", "Keep first value of UniRec field identified by given name.", required_argument, "string") \
+  PARAM('o', "or", "Make bitwise OR of UniRec field identified by given name.", required_argument, "string") \
+  PARAM('n', "and", "Make bitwise AND of UniRec field identified by given name.", required_argument, "string")
 
 /**
  * To define positional parameter ("param" instead of "-m param" or "--mult param"), use the following definition:
@@ -329,7 +331,7 @@ void *check_timeouts(void *input)
          // Update the last record time with elapsed time interval
          time_last_from_record += (elapsed + sec_to_sleep);
          pthread_mutex_unlock(&time_last_from_record_mutex);
-         
+
          // Assume regularly timeout period
          if (sec_to_sleep > 0) {
             sleep(sec_to_sleep);
@@ -407,13 +409,19 @@ int main(int argc, char **argv)
          config.add_member(MAX, optarg);
          break;
       case 'f':
-         fprintf(stderr, "Develop: Option \'f\' currently being implemented.\n");
+         fprintf(stderr, "Develop: Option \'%c\' currently being implemented.\n", opt);
          break;
       case 'l':
-         fprintf(stderr, "Develop: Option \'l\' currently being implemented.\n");
+         fprintf(stderr, "Develop: Option \'%c\' currently being implemented.\n", opt);
+         break;
+      case 'o':
+         fprintf(stderr, "Develop: Option \'%c\' currently being implemented.\n", opt);
+         break;
+      case 'n':
+         fprintf(stderr, "Develop: Option \'%c\' currently being implemented.\n", opt);
          break;
       default:
-         fprintf(stderr, "Invalid argument, skipped...\n");
+         fprintf(stderr, "Invalid argument %c, skipped...\n", opt);
       }
    }
 
@@ -486,6 +494,9 @@ int main(int argc, char **argv)
                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                return 1;
             }
+
+            if (ur_is_varlen(id) && !config.is_variable())
+               config.set_variable(true);
 
             if (config.is_key(i)) {
                KeyTemplate::add_field(id, ur_get_size(id));
@@ -560,8 +571,8 @@ int main(int argc, char **argv)
       }
       else {
          // New element
-
-         int var_length = 0;     // means if there should place for variable lenth field in record
+         // If there should be place for variable length field in record reserve it
+         int var_length = config.is_variable() == false ? 0 : 2048;
          void * out_rec = create_record(OutputTemplate::out_tmplt, var_length);
          if (!out_rec) {
             clean_memory(in_tmplt, OutputTemplate::out_tmplt, storage);
