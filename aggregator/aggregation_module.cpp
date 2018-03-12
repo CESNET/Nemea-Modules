@@ -61,6 +61,8 @@
 
 
 #define MAX_TIMEOUT_RETRY 3
+#define TRAP_RECV_TIMEOUT 4000000   // 4 seconds
+#define TRAP_SEND_TIMEOUT 1000000   // 1 second
 trap_module_info_t *module_info = NULL;
 /**
  * COUNT, TIME_FIRST, TIME_LAST always used by module
@@ -105,8 +107,8 @@ UR_FIELDS (
 
 
 static int stop = 0;
-static std::map<Key, void*> storage;      // Need to be global because of trap_terminate
-time_t time_last_from_record;             // Passive timeout time info set due to records time
+static std::map<Key, void*> storage;                   // Need to be global because of trap_terminate
+time_t time_last_from_record = time(NULL);             // Passive timeout time info set due to records time
 pthread_mutex_t storage_mutex = PTHREAD_MUTEX_INITIALIZER;                 // For storage modifying sections
 pthread_mutex_t time_last_from_record_mutex = PTHREAD_MUTEX_INITIALIZER;   // For modifying Passive timeout time info
 void flush_storage();
@@ -114,15 +116,22 @@ void flush_storage();
 /**
  * Function to handle SIGTERM and SIGINT signals (used to stop the module)
  */
-TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1; flush_storage(); trap_send(0, "", 1); sleep(1))
 /*
+TRAP_DEFAULT_SIGNAL_HANDLER(
+        stop = 1;
+        printf("Signal caught by handler!\n");
+        flush_storage();
+        trap_send(0, "", 1);
+        sleep(1))
+*/
 void my_signal_handler(int signal)
 {
    if (signal == SIGTERM || signal == SIGINT) {
+      printf("Signal caught by handler!\n");
       stop = 1;
    }
 }
-*/
+
 
 /* ================================================================= */
 /* ================== Develop/helper functions ===================== */
@@ -232,11 +241,11 @@ bool send_record_out(ur_template_t *out_tmplt, void *out_rec)
    // Send record to interface 0.
    int i = 0;
    for (; i < MAX_TIMEOUT_RETRY; i++) {
+      printf("Trying to send..\n");
       int ret = trap_send(0, out_rec, ur_rec_fixlen_size(out_tmplt) + ur_rec_varlen_size(out_tmplt, out_rec));
 
       // Handle possible errors
       TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, continue, printf("SEND ERR\n");break);
-      printf("record sent\n");
       return true;
    }
 
@@ -256,7 +265,7 @@ void flush_storage()
    storage.clear();
 }
 /* ----------------------------------------------------------------- */
-void *timeout_thread(void *input)
+void *check_timeouts(void *input)
 {
    Config *configuration = (Config*)input;
    int timeout_type = configuration->get_timeout_type();
@@ -300,6 +309,7 @@ void *timeout_thread(void *input)
             if (ur_time_get_sec(ur_get(OutputTemplate::out_tmplt, it->second, F_TIME_LAST)) + timeout < time_last_from_record) {
                // Send record out
                send_record_out(OutputTemplate::out_tmplt, it->second);
+               ur_free_record(it->second);
                storage.erase(it++);
             }
             else {
@@ -309,14 +319,17 @@ void *timeout_thread(void *input)
          // Unlock the storage -- CRITICAL SECTION END
          pthread_mutex_unlock(&storage_mutex);
 
-         /* Assume regularly timeout sleep */
-         sleep(timeout);
-
          time_t end = time(NULL);
          int elapsed = difftime(end, start);
+         int sec_to_sleep = (timeout - elapsed);
+         // Assume regularly timeout period
+         if (sec_to_sleep > 0) {
+            sleep(sec_to_sleep);
+         }
 
          pthread_mutex_lock(&time_last_from_record_mutex);
-         time_last_from_record += elapsed;
+         // Update the last record time with elapsed time interval
+         time_last_from_record += (elapsed + sec_to_sleep);
          pthread_mutex_unlock(&time_last_from_record_mutex);
       }
 
@@ -353,12 +366,17 @@ int main(int argc, char **argv)
    /*
     * Register signal handler.
     */
-   TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
-   //signal(SIGTERM, my_signal_handler);
-   //signal(SIGINT, my_signal_handler);
+   //TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
+   signal(SIGTERM, my_signal_handler);
+   signal(SIGINT, my_signal_handler);
+
+   // Set TRAP_RECEIVE() timeout to TRAP_RECV_TIMEOUT/1000000 seconds
+   trap_ifcctl(TRAPIFC_INPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_RECV_TIMEOUT);
+
+   // Set TRAP_RECEIVE() timeout to TRAP_RECV_TIMEOUT/1000000 seconds
+   trap_ifcctl(TRAPIFC_OUTPUT, 0, TRAPCTL_SETTIMEOUT, TRAP_SEND_TIMEOUT);
 
    Config config;
-   //std::map<Key, void*> storage;
 
    /*
     * Parse program arguments defined by MODULE_PARAMS macro with getopt() function (getopt_long() if available)
@@ -408,6 +426,10 @@ int main(int argc, char **argv)
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return -1;
    }
+
+   /* **** Create new thread for checking timeouts **** */
+   pthread_t timeout_thread;
+   pthread_create(&timeout_thread, NULL, &check_timeouts, (void*)&config);
 
    /* **** Main processing loop **** */
 
@@ -550,6 +572,15 @@ int main(int argc, char **argv)
       pthread_mutex_unlock( &storage_mutex );
    }
 
+   printf("Module canceled, waiting for running threads.\n");
+   pthread_join(timeout_thread, NULL);
+   printf("Other threads ended, cleaning storage and exiting.\n");
+   // All other threads not running now, no need to use mutexes there
+
+   flush_storage();
+   trap_send(0, "", 1);
+   sleep(1);
+   trap_terminate();
 
    /* **** Cleanup **** */
    // Free unirec templates and stored records
