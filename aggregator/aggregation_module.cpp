@@ -61,8 +61,10 @@
 
 
 #define MAX_TIMEOUT_RETRY 3
-#define TRAP_RECV_TIMEOUT 4000000   // 4 seconds
+#define TRAP_RECV_TIMEOUT 500000   // 0.5 second
+//#define TRAP_RECV_TIMEOUT 4000000   // 4 seconds
 #define TRAP_SEND_TIMEOUT 1000000   // 1 second
+
 trap_module_info_t *module_info = NULL;
 /**
  * COUNT, TIME_FIRST, TIME_LAST always used by module
@@ -397,10 +399,10 @@ int main(int argc, char **argv)
          config.add_member(AVG, optarg);
          break;
       case 'm':
-         fprintf(stderr, "Develop: Option \'m\' currently being implemented.\n");
+         config.add_member(MIN, optarg);
          break;
       case 'M':
-         fprintf(stderr, "Develop: Option \'M\' currently being implemented.\n");
+         config.add_member(MAX, optarg);
          break;
       case 'f':
          fprintf(stderr, "Develop: Option \'f\' currently being implemented.\n");
