@@ -140,12 +140,96 @@ agg_func Config::get_function_ptr(int index, ur_field_type_t field_type)
          }
          break;
       case MIN:
-         // Function not implemented yet
-         out = &nope;
+         switch (field_type) {
+            case UR_TYPE_INT8:
+               out = &min<int8_t>;
+               break;
+            case UR_TYPE_INT16:
+               out = &min<int16_t>;
+               break;
+            case UR_TYPE_INT32:
+               out = &min<int32_t>;
+               break;
+            case UR_TYPE_INT64:
+               out = &min<int64_t>;
+               break;
+            case UR_TYPE_UINT8:
+               out = &min<uint8_t>;
+               break;
+            case UR_TYPE_UINT16:
+               out = &min<uint16_t>;
+               break;
+            case UR_TYPE_UINT32:
+               out = &min<uint32_t>;
+               break;
+            case UR_TYPE_UINT64:
+               out = &min<uint64_t>;
+               break;
+            case UR_TYPE_FLOAT:
+               out = &min<float>;
+               break;
+            case UR_TYPE_DOUBLE:
+               out = &min<double>;
+               break;
+            case UR_TYPE_CHAR:
+               out = &min<char>;
+               break;
+            case UR_TYPE_TIME:
+               out = &min<uint64_t>;
+               break;
+            case UR_TYPE_IP:
+               out = &min_ip;
+               break;
+            default:
+               fprintf(stderr, "Only fixed length fields can use min function, nope assigned instead.\n");
+               out = &nope;
+         }
          break;
       case MAX:
-         // Function not implemented yet
-         out = &nope;
+         switch (field_type) {
+            case UR_TYPE_INT8:
+               out = &max<int8_t>;
+               break;
+            case UR_TYPE_INT16:
+               out = &max<int16_t>;
+               break;
+            case UR_TYPE_INT32:
+               out = &max<int32_t>;
+               break;
+            case UR_TYPE_INT64:
+               out = &max<int64_t>;
+               break;
+            case UR_TYPE_UINT8:
+               out = &max<uint8_t>;
+               break;
+            case UR_TYPE_UINT16:
+               out = &max<uint16_t>;
+               break;
+            case UR_TYPE_UINT32:
+               out = &max<uint32_t>;
+               break;
+            case UR_TYPE_UINT64:
+               out = &max<uint64_t>;
+               break;
+            case UR_TYPE_FLOAT:
+               out = &max<float>;
+               break;
+            case UR_TYPE_DOUBLE:
+               out = &max<double>;
+               break;
+            case UR_TYPE_CHAR:
+               out = &max<char>;
+               break;
+            case UR_TYPE_TIME:
+               out = &max<uint64_t>;
+               break;
+            case UR_TYPE_IP:
+               out = &max_ip;
+               break;
+            default:
+               fprintf(stderr, "Only fixed length fields can use max function, nope assigned instead.\n");
+               out = &nope;
+         }
          break;
       case FIRST:
          // Keep nope function because first value is set by copy from input record
@@ -292,7 +376,7 @@ void Config::set_timeout(const char *input)
                }
                else {
                   // Time definition wrong
-                  fprintf(stderr, "Wrong timeout type definition \"-m:Active,Passive\"\n"
+                  fprintf(stderr, "Wrong timeout type definition \"-t m:Active,Passive\"\n"
                           "Keeping default timeout type.\n");
                   timeout_type = TIMEOUT_ACTIVE;
                }
