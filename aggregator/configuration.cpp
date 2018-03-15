@@ -108,7 +108,7 @@ agg_func Config::get_function_ptr(int index, ur_field_type_t field_type)
                out = &sum_double;
                break;
             default:
-               fprintf(stderr, "Only int, uint, float and double can use sum function, nope assigned instead.\n");
+               fprintf(stderr, "Only int, uint, float and double can use sum function, first assigned instead.\n");
                out = &nope;
          }
          break;
@@ -145,7 +145,7 @@ agg_func Config::get_function_ptr(int index, ur_field_type_t field_type)
                out = &avg_double;
                break;
             default:
-               fprintf(stderr, "Only int, uint, float and double can use avg function, nope assigned instead.\n");
+               fprintf(stderr, "Only int, uint, float and double can use avg function, first assigned instead.\n");
                out = &nope;
          }
          break;
@@ -191,7 +191,7 @@ agg_func Config::get_function_ptr(int index, ur_field_type_t field_type)
                out = &min_ip;
                break;
             default:
-               fprintf(stderr, "Only fixed length fields can use min function, nope assigned instead.\n");
+               fprintf(stderr, "Only fixed length fields can use min function, first assigned instead.\n");
                out = &nope;
          }
          break;
@@ -237,7 +237,7 @@ agg_func Config::get_function_ptr(int index, ur_field_type_t field_type)
                out = &max_ip;
                break;
             default:
-               fprintf(stderr, "Only fixed length fields can use max function, nope assigned instead.\n");
+               fprintf(stderr, "Only fixed length fields can use max function, first assigned instead.\n");
                out = &nope;
          }
          break;
@@ -246,8 +246,56 @@ agg_func Config::get_function_ptr(int index, ur_field_type_t field_type)
          out = &nope;
          break;
       case LAST:
-         // Function not implemented yet
-         out = &nope;
+         switch (field_type) {
+            case UR_TYPE_INT8:
+               out = &last<int8_t>;
+               break;
+            case UR_TYPE_INT16:
+               out = &last<int16_t>;
+               break;
+            case UR_TYPE_INT32:
+               out = &last<int32_t>;
+               break;
+            case UR_TYPE_INT64:
+               out = &last<int64_t>;
+               break;
+            case UR_TYPE_UINT8:
+               out = &last<uint8_t>;
+               break;
+            case UR_TYPE_UINT16:
+               out = &last<uint16_t>;
+               break;
+            case UR_TYPE_UINT32:
+               out = &last<uint32_t>;
+               break;
+            case UR_TYPE_UINT64:
+               out = &last<uint64_t>;
+               break;
+            case UR_TYPE_FLOAT:
+               out = &last<float>;
+               break;
+            case UR_TYPE_DOUBLE:
+               out = &last<double>;
+               break;
+            case UR_TYPE_CHAR:
+               out = &last<char>;
+               break;
+            case UR_TYPE_TIME:
+               out = &last<uint64_t>;
+               break;
+            case UR_TYPE_IP:
+               out = &last<ip_addr_t>;
+               break;
+            case UR_TYPE_STRING:
+               out = &last_variable;
+               break;
+            case UR_TYPE_BYTES:
+               out = &last_variable;
+               break;
+            default:
+               fprintf(stderr, "Type is not supported by current version of module, using first instead.\n");
+               out = &nope;
+         }
          break;
       case BIT_OR:
          // Function not implemented yet
