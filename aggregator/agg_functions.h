@@ -44,7 +44,7 @@ void make_avg(void *src, uint32_t count)
 }
 
 template <typename T>
-void min(const void *src, void *dst )
+void min(const void *src, void *dst)
 {
    if (*((T*)src) < *((T*)dst))
       *((T*)dst) = *((T*)src);
@@ -53,7 +53,7 @@ void min(const void *src, void *dst )
 void min_ip(const void *src, void *dst);
 
 template <typename T>
-void max(const void *src, void *dst )
+void max(const void *src, void *dst)
 {
    if (*((T*)src) > *((T*)dst))
       *((T*)dst) = *((T*)src);
@@ -61,7 +61,22 @@ void max(const void *src, void *dst )
 }
 void max_ip(const void *src, void *dst);
 
-void nope(const void *src, void *dst);
 
+void nope(const void *src, void *dst); // Also min, because first value set using ur_copy_fields
+
+template <typename T>
+void last(const void *src, void *dst)
+{
+   *((T*)dst) = *((T*)src);
+}
+
+
+typedef struct {
+   void *dst;
+    int field_id;
+    int var_len;
+} var_params;
+
+void last_variable(const void *src, void *dst);
 
 #endif //AGGREGATOR_AGG_FUNCTIONS_H
