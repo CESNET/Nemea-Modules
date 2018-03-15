@@ -298,14 +298,73 @@ agg_func Config::get_function_ptr(int index, ur_field_type_t field_type)
          }
          break;
       case BIT_OR:
-         // Function not implemented yet
-         out = &nope;
+         switch (field_type) {
+            case UR_TYPE_INT8:
+               out = &bitwise_or<int8_t>;
+               break;
+            case UR_TYPE_INT16:
+               out = &bitwise_or<int16_t>;
+               break;
+            case UR_TYPE_INT32:
+               out = &bitwise_or<int32_t>;
+               break;
+            case UR_TYPE_INT64:
+               out = &bitwise_or<int64_t>;
+               break;
+            case UR_TYPE_UINT8:
+               out = &bitwise_or<uint8_t>;
+               break;
+            case UR_TYPE_UINT16:
+               out = &bitwise_or<uint16_t>;
+               break;
+            case UR_TYPE_UINT32:
+               out = &bitwise_or<uint32_t>;
+               break;
+            case UR_TYPE_UINT64:
+               out = &bitwise_or<uint64_t>;
+               break;
+            case UR_TYPE_CHAR:
+               out = &bitwise_or<char>;
+               break;
+            default:
+               fprintf(stderr, "Only int, uint and char can use bitwise functions, first assigned instead.\n");
+               out = &nope;
+         }
          break;
       case BIT_AND:
-         // Function not implemented yet
-         out = &nope;
+         switch (field_type) {
+            case UR_TYPE_INT8:
+               out = &bitwise_and<int8_t>;
+               break;
+            case UR_TYPE_INT16:
+               out = &bitwise_and<int16_t>;
+               break;
+            case UR_TYPE_INT32:
+               out = &bitwise_and<int32_t>;
+               break;
+            case UR_TYPE_INT64:
+               out = &bitwise_and<int64_t>;
+               break;
+            case UR_TYPE_UINT8:
+               out = &bitwise_and<uint8_t>;
+               break;
+            case UR_TYPE_UINT16:
+               out = &bitwise_and<uint16_t>;
+               break;
+            case UR_TYPE_UINT32:
+               out = &bitwise_and<uint32_t>;
+               break;
+            case UR_TYPE_UINT64:
+               out = &bitwise_and<uint64_t>;
+               break;
+            case UR_TYPE_CHAR:
+               out = &bitwise_and<char>;
+               break;
+            default:
+               fprintf(stderr, "Only int, uint and char can use bitwise functions, first assigned instead.\n");
+               out = &nope;
+         }
          break;
-
    }
    return out;
 }
