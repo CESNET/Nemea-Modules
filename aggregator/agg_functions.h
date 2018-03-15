@@ -29,13 +29,11 @@ void avg_uint16(const void *src, void *dst);
 void avg_uint8(const void *src, void *dst);
 void avg_float(const void *src, void *dst);
 void avg_double(const void *src, void *dst);
-/*
-template <typename T>
-void make_avg(void *src, uint32_t count);
-*/
+
 /*
  * Implementation in header file because of errors
  * aggregation_module-configuration.o: undefined reference to `void make_avg<unsigned char>(void*, unsigned int)'
+ * ...
 */
 template <typename T>
 void make_avg(void *src, uint32_t count)
@@ -78,5 +76,17 @@ typedef struct {
 } var_params;
 
 void last_variable(const void *src, void *dst);
+
+template <typename T>
+void bitwise_or(const void *src, void *dst)
+{
+   *((T*)dst) |= *((T*)src);
+}
+
+template <typename T>
+void bitwise_and(const void *src, void *dst)
+{
+   *((T*)dst) &= *((T*)src);
+}
 
 #endif //AGGREGATOR_AGG_FUNCTIONS_H
