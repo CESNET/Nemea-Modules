@@ -425,10 +425,10 @@ int main(int argc, char **argv)
          config.add_member(LAST, optarg);
          break;
       case 'o':
-         fprintf(stderr, "Develop: Option \'%c\' currently being implemented.\n", opt);
+         config.add_member(BIT_OR, optarg);
          break;
       case 'n':
-         fprintf(stderr, "Develop: Option \'%c\' currently being implemented.\n", opt);
+         config.add_member(BIT_AND, optarg);
          break;
       default:
          fprintf(stderr, "Invalid argument %c, skipped...\n", opt);
