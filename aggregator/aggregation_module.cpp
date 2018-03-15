@@ -58,6 +58,7 @@
 
 #include "output.h"
 #include "configuration.h"
+#include "agg_functions.h"
 
 
 #define MAX_TIMEOUT_RETRY 3
@@ -115,6 +116,7 @@ static std::map<Key, void*> storage;                   // Need to be global beca
 time_t time_last_from_record = time(NULL);             // Passive timeout time info set due to records time
 pthread_mutex_t storage_mutex = PTHREAD_MUTEX_INITIALIZER;                 // For storage modifying sections
 pthread_mutex_t time_last_from_record_mutex = PTHREAD_MUTEX_INITIALIZER;   // For modifying Passive timeout time info
+int var_field_len;                                     // Length of variable field used by last_variable()
 void flush_storage();
 
 /**
@@ -202,9 +204,16 @@ void process_agg_functions(ur_template_t *in_tmplt, const void *src_rec, ur_temp
    void *ptr_src;
    // Process all registered fields with their agg function
    for (int i = 0; i < OutputTemplate::used_fields; i++) {
-      ptr_dst = ur_get_ptr_by_id(out_tmplt, dst_rec, OutputTemplate::indexes_to_record[i]);
-      ptr_src = ur_get_ptr_by_id(in_tmplt, src_rec, OutputTemplate::indexes_to_record[i]);
-      OutputTemplate::process[i](ptr_src, ptr_dst);
+      if (ur_is_fixlen(i)) {
+         ptr_dst = ur_get_ptr_by_id(out_tmplt, dst_rec, OutputTemplate::indexes_to_record[i]);
+         ptr_src = ur_get_ptr_by_id(in_tmplt, src_rec, OutputTemplate::indexes_to_record[i]);
+         OutputTemplate::process[i](ptr_src, ptr_dst);
+      }
+      else {
+         var_params params = {dst_rec, i, ur_get_var_len(in_tmplt, src_rec, OutputTemplate::indexes_to_record[i])};
+         ptr_src = ur_get_ptr_by_id(in_tmplt, src_rec, OutputTemplate::indexes_to_record[i]);
+         OutputTemplate::process[i](ptr_src, (void*)&params);
+      }
    }
 }
 
@@ -410,10 +419,10 @@ int main(int argc, char **argv)
          config.add_member(MAX, optarg);
          break;
       case 'f':
-         fprintf(stderr, "Develop: Option \'%c\' currently being implemented.\n", opt);
+         config.add_member(FIRST, optarg);
          break;
       case 'l':
-         fprintf(stderr, "Develop: Option \'%c\' currently being implemented.\n", opt);
+         config.add_member(LAST, optarg);
          break;
       case 'o':
          fprintf(stderr, "Develop: Option \'%c\' currently being implemented.\n", opt);
