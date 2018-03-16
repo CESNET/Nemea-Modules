@@ -78,34 +78,34 @@ agg_func Config::get_function_ptr(int index, ur_field_type_t field_type)
       case SUM:
          switch (field_type) {
             case UR_TYPE_INT8:
-               out = &sum_int8;
+               out = &sum<int8_t>;
                break;
             case UR_TYPE_INT16:
-               out = &sum_int16;
+               out = &sum<int16_t>;
                break;
             case UR_TYPE_INT32:
-               out = &sum_int32;
+               out = &sum<int32_t>;
                break;
             case UR_TYPE_INT64:
-               out = &sum_int64;
+               out = &sum<int64_t>;
                break;
             case UR_TYPE_UINT8:
-               out = &sum_uint8;
+               out = &sum<uint8_t>;
                break;
             case UR_TYPE_UINT16:
-               out = &sum_uint16;
+               out = &sum<uint16_t>;
                break;
             case UR_TYPE_UINT32:
-               out = &sum_uint32;
+               out = &sum<uint32_t>;
                break;
             case UR_TYPE_UINT64:
-               out = &sum_uint64;
+               out = &sum<uint64_t>;
                break;
             case UR_TYPE_FLOAT:
-               out = &sum_float;
+               out = &sum<float>;
                break;
             case UR_TYPE_DOUBLE:
-               out = &sum_double;
+               out = &sum<double>;
                break;
             default:
                fprintf(stderr, "Only int, uint, float and double can use sum function, first assigned instead.\n");
@@ -115,34 +115,34 @@ agg_func Config::get_function_ptr(int index, ur_field_type_t field_type)
       case AVG:
          switch (field_type) {
             case UR_TYPE_INT8:
-               out = &avg_int8;
+               out = &avg<int8_t>;
                break;
             case UR_TYPE_INT16:
-               out = &avg_int16;
+               out = &avg<int16_t>;
                break;
             case UR_TYPE_INT32:
-               out = &avg_int32;
+               out = &avg<int32_t>;
                break;
             case UR_TYPE_INT64:
-               out = &avg_int64;
+               out = &avg<int64_t>;
                break;
             case UR_TYPE_UINT8:
-               out = &avg_uint8;
+               out = &avg<uint8_t>;
                break;
             case UR_TYPE_UINT16:
-               out = &avg_uint16;
+               out = &avg<uint16_t>;
                break;
             case UR_TYPE_UINT32:
-               out = &avg_uint32;
+               out = &avg<uint32_t>;
                break;
             case UR_TYPE_UINT64:
-               out = &avg_uint64;
+               out = &avg<uint64_t>;
                break;
             case UR_TYPE_FLOAT:
-               out = &avg_float;
+               out = &avg<float>;
                break;
             case UR_TYPE_DOUBLE:
-               out = &avg_double;
+               out = &avg<double>;
                break;
             default:
                fprintf(stderr, "Only int, uint, float and double can use avg function, first assigned instead.\n");
@@ -437,6 +437,7 @@ int Config::get_timeout(int type)
    return timeout[type];
 }
 
+
 char Config::get_timeout_type()
 {
    return timeout_type;
@@ -486,7 +487,6 @@ void Config::set_timeout(const char *input)
          }
          if (timeout_type == TIMEOUT_ACTIVE_PASSIVE) {
             // There need to be 2 times splitted by char ','
-            printf("second: %s\n", second);
             char *active_timeout = strtok(second, ",");
             if (active_timeout) {
                // There allways be something due to second existance
