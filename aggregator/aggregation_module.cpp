@@ -61,6 +61,14 @@
 #include "agg_functions.h"
 
 
+//#define DEBUG
+#ifdef DEBUG
+#define DBG(x) fprintf x;
+#else
+#define DBG(x)
+#endif
+
+
 #define MAX_TIMEOUT_RETRY 3
 #define TRAP_RECV_TIMEOUT 500000   // 0.5 second
 //#define TRAP_RECV_TIMEOUT 4000000   // 4 seconds
@@ -116,24 +124,15 @@ static std::map<Key, void*> storage;                   // Need to be global beca
 time_t time_last_from_record = time(NULL);             // Passive timeout time info set due to records time
 pthread_mutex_t storage_mutex = PTHREAD_MUTEX_INITIALIZER;                 // For storage modifying sections
 pthread_mutex_t time_last_from_record_mutex = PTHREAD_MUTEX_INITIALIZER;   // For modifying Passive timeout time info
-int var_field_len;                                     // Length of variable field used by last_variable()
 void flush_storage();
 
 /**
  * Function to handle SIGTERM and SIGINT signals (used to stop the module)
  */
-/*
-TRAP_DEFAULT_SIGNAL_HANDLER(
-        stop = 1;
-        printf("Signal caught by handler!\n");
-        flush_storage();
-        trap_send(0, "", 1);
-        sleep(1))
-*/
 void my_signal_handler(int signal)
 {
    if (signal == SIGTERM || signal == SIGINT) {
-      printf("Signal caught by handler!\n");
+      fprintf(stderr, "Signal caught, exiting module\n");
       stop = 1;
    }
 }
@@ -246,7 +245,8 @@ void prepare_to_send(void *stored_rec)
 /* ----------------------------------------------------------------- */
 bool send_record_out(ur_template_t *out_tmplt, void *out_rec)
 {
-   printf("Count of message to send is: %d\n", ur_get(out_tmplt, out_rec, F_COUNT));
+
+   DBG((stderr, "Count of message to send is: %d\n", ur_get(out_tmplt, out_rec, F_COUNT)));
 
    if(OutputTemplate::prepare_to_send) {
       prepare_to_send(out_rec);
@@ -255,11 +255,11 @@ bool send_record_out(ur_template_t *out_tmplt, void *out_rec)
    // Send record to interface 0.
    int i = 0;
    for (; i < MAX_TIMEOUT_RETRY; i++) {
-      printf("Trying to send..\n");
+      DBG((stderr, "Trying to send..\n"));
       int ret = trap_send(0, out_rec, ur_rec_fixlen_size(out_tmplt) + ur_rec_varlen_size(out_tmplt, out_rec));
 
       // Handle possible errors
-      TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, continue, printf("SEND ERR\n");break);
+      TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, continue, break);
       return true;
    }
 
@@ -382,7 +382,6 @@ int main(int argc, char **argv)
    /*
     * Register signal handler.
     */
-   //TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
    signal(SIGTERM, my_signal_handler);
    signal(SIGINT, my_signal_handler);
 
@@ -435,9 +434,10 @@ int main(int argc, char **argv)
       }
    }
 
-   // DEVEL: print configuration
+#ifdef DEBUG
+   // DEBUG: print configuration
    config.print();
-
+#endif
 
 
    /* **** Create UniRec templates **** */
@@ -475,7 +475,7 @@ int main(int argc, char **argv)
 
       // Change of UniRec input template -> sanity check and templates creation
       if (ret == TRAP_E_FORMAT_CHANGED ) {
-         fprintf(stderr, "Format change, setting new module configuration\n");
+         DBG((stderr, "Format change, setting new module configuration\n"));
          // Internal structures cleaning because of possible redefinition
          std::map<Key, void*>::iterator it;
 
@@ -597,9 +597,9 @@ int main(int argc, char **argv)
       pthread_mutex_unlock( &storage_mutex );
    }
 
-   printf("Module canceled, waiting for running threads.\n");
+   DBG((stderr, "Module canceled, waiting for running threads.\n"));
    pthread_join(timeout_thread, NULL);
-   printf("Other threads ended, cleaning storage and exiting.\n");
+   DBG((stderr, "Other threads ended, cleaning storage and exiting.\n"));
    // All other threads not running now, no need to use mutexes there
 
    flush_storage();
