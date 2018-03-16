@@ -17,7 +17,8 @@ report2idea \
 topn \
 traffic_repeater \
 unirec2json \
-endiverter
+endiverter \
+aggregator
 
 EXTRA_DIST = AUTHORS COPYING ChangeLog INSTALL NEWS README.md nfreader
 
@@ -28,9 +29,6 @@ endif
 
 if HAVE_BISON
 SUBDIRS += unirecfilter
-if HAVE_OPENSSL
-SUBDIRS += aggregator
-endif
 endif
 
 if HAVE_LIBPCAP

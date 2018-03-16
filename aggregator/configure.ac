@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.63])
 AC_INIT([aggregation_module], [1.0.0], [slabimic@fit.cvut.cz])
-AC_CONFIG_SRCDIR([aggregation_module.cpp])
+AC_CONFIG_SRCDIR([aggregator.cpp])
 AC_CONFIG_HEADERS([config.h])
 
 AM_INIT_AUTOMAKE([foreign silent-rules subdir-objects])
