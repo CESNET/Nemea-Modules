@@ -1,3 +1,6 @@
+/*! \file key.h
+ */
+
 #include <zconf.h>
 
 #include <unirec/unirec.h>
@@ -5,36 +8,67 @@
 #ifndef AGGREGATOR_KEYWORD_H
 #define AGGREGATOR_KEYWORD_H
 
+/**My Preprocessor Macro.*/
 #define MAX_KEY_FIELDS 32                 // Static maximal key members count
 
+/**
+ * Class description
+ */
 class KeyTemplate {
 public:
-   static int indexes_to_record [MAX_KEY_FIELDS];
-   //static int indexes_to_key [MAX_KEY_FIELDS];     // Global size value, will only work with static size fields
-   //static int sizes_of_fields [MAX_KEY_FIELDS];    // Global size value, will only work with static size fields
-   static uint used_fields;
-   static uint key_size;
-
+   static int indexes_to_record [MAX_KEY_FIELDS];   /*!< Variable brief description. */
+   static uint used_fields;                         /*!< Variable brief description. */
+   static uint key_size;                            /*!< Variable brief description. */
+   /**
+    *
+    * @param record_id
+    * @param size
+    */
    static void add_field(int record_id, int size);
+   /**
+    *
+    */
    static void reset();
-private:
-
 };
 
-
+/**
+ * Class description
+ */
 class Key {
 private:
-   char* data;                   // Only values from record
-   int data_length;              // The length of written bytes
+   char* data;                   /*!< Variable brief description. */ // Only values from record
+   int data_length;              /*!< Variable brief description. */ // The length of written bytes
 public:
+   /**
+    *
+    */
    Key();
+   /**
+    *
+    */
    ~Key();
+   /**
+    *
+    * @param other
+    */
    Key(const Key &other);
-   //Key(Key &&other);             // Move constructor, c++11 only
-   //Key& operator= (Key &&other);  // Move assignment operator, c++11 only
+   /**
+    *
+    * @param src
+    * @param size
+    */
    void add_field(const void *src, int size);            // Append new field into record
+   /**
+    *
+    * @param a
+    * @param b
+    * @return
+    */
    friend bool operator< (const Key &a, const Key &b);  // Key needs to be comparable for the map
    //hash_code();
+   /**
+    *
+    */
    void print() const;
 };
 

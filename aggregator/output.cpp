@@ -1,3 +1,5 @@
+/*! \file output.cpp
+ */
 //
 // Created by slabimic on 24/02/18.
 //

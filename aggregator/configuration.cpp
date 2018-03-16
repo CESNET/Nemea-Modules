@@ -1,3 +1,6 @@
+/*! \file configuration.cpp
+ */
+
 //
 // Created by slabimic on 26/02/18.
 //

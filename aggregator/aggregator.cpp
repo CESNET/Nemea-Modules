@@ -68,15 +68,17 @@
 #define DBG(x)
 #endif
 
-
+/**My Preprocessor Macro.*/
 #define MAX_TIMEOUT_RETRY 3
+/**My Preprocessor Macro.*/
 #define TRAP_RECV_TIMEOUT 500000   // 0.5 second
 //#define TRAP_RECV_TIMEOUT 4000000   // 4 seconds
+/**My Preprocessor Macro.*/
 #define TRAP_SEND_TIMEOUT 1000000   // 1 second
 
 trap_module_info_t *module_info = NULL;
 /**
- * COUNT, TIME_FIRST, TIME_LAST always used by module
+ * Statically defined fields COUNT, TIME_FIRST, TIME_LAST always used by module
  */
 UR_FIELDS (
         uint32 COUNT,
