@@ -88,10 +88,20 @@ UR_FIELDS (
  * Definition of basic module information - module name, module description, number of input and output interfaces
  */
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Aggregation module", \
+  BASIC("Aggregation module (aggregator)", \
         "This module serves for UniRec records aggregation processing. " \
         "User has to specify parameters for processing including key fields and applied aggregation function. " \
-        "It receives UniRec and sends UniRec containing the fields which take part in aggregation process. ", 1, 1)
+        "Module can work with 3 different timeout types (Active, Passive, Global) or their combination " \
+        "(Mixed = Active,Passive)." \
+        "Module receives UniRec and sends UniRec containing the fields which take part in aggregation process. " \
+        "Module use in place aggregation, so only one aggregation function per field is possible." \
+        "Only fields specified by user are part of output record, others are discarded." \
+        "Please notice the field COUNT (count of aggregated records) is always inside output record.\n" \
+        "Example:\n Records from source file data.trapcap aggregated by SRC_IP and DST_IP, " \
+        "making sum of BYTES and PACKETS and using first received value of SRC_PORT and DST_PORT in output. " \
+        "Module need to be run like this \n" \
+        "\'./aggregator -i f:data.trapcap,u:aggregated -k SRC_IP -k DST_IP -s BYTES -s PACKETS -f SRC_PORT " \
+        "-f DST_PORT\'", 1, 1)
 
 /**
  * Definition of module parameters - every parameter has short_opt, long_opt, description,
@@ -100,8 +110,12 @@ UR_FIELDS (
  * Module parameter argument types: int8, int16, int32, int64, uint8, uint16, uint32, uint64, float, string
  */
 #define MODULE_PARAMS(PARAM) \
-  PARAM('k', "key", "Defines received UniRec field name as part of aggregation key.", required_argument, "string") \
-  PARAM('t', "time_window", "[G,A,P]:#seconds. Represents type of timeout and #seconds before sending output.", required_argument, "string") \
+  PARAM('k', "key", "Defines received UniRec field name as part of aggregation key." \
+        "Use individually on each field as -k FIELD_NAME. Module has undefined behaviour when no key specified." \
+        , required_argument, "string") \
+  PARAM('t', "time_window", "Represents type of timeout and #seconds for given type before sending " \
+        "record to output. Use as [G,A,P]:#seconds or M:#Active,#Passive (eg. -t \"m:10,25\")." \
+         "When not specified the default value (A:10) is used.", required_argument, "string") \
   PARAM('s', "sum", "Makes sum of UniRec field values identified by given name.", required_argument, "string") \
   PARAM('a', "avg", "Makes average of UniRec field values identified by given name.", required_argument, "string") \
   PARAM('m', "min", "Keep minimal value of UniRec field identified by given name.", required_argument, "string") \
@@ -127,7 +141,8 @@ pthread_mutex_t time_last_from_record_mutex = PTHREAD_MUTEX_INITIALIZER;   // Fo
 void flush_storage();
 
 /**
- * Function to handle SIGTERM and SIGINT signals (used to stop the module)
+ * Function to handle SIGTERM and SIGINT signals used to stop the module.
+ * @param [in] signal caught signal value.
  */
 void my_signal_handler(int signal)
 {
@@ -141,7 +156,9 @@ void my_signal_handler(int signal)
 /* ================================================================= */
 /* ================== Develop/helper functions ===================== */
 /* ================================================================= */
-
+/**
+ * Print names globally defined fields to std output.
+ */
 void print_all_defined_ur_fields()
 {
    int16_t size = ur_field_specs.ur_last_id;
@@ -152,6 +169,10 @@ void print_all_defined_ur_fields()
    printf("All data from global unirec structure printed.\n\n");
 }
 /* ----------------------------------------------------------------- */
+/**
+ * Print names of fields in given UniRec template.
+ * @param [in] tmplt template to print values from.
+ */
 void print_template_fields(ur_template_t* tmplt)
 {
    int16_t size = tmplt->count;
@@ -162,6 +183,12 @@ void print_template_fields(ur_template_t* tmplt)
    printf("All data from given template printed.\n\n");
 }
 /* ----------------------------------------------------------------- */
+/**
+ * Function to free memory allocated by module.
+ * @param [in] in_tmplt input UniRec template to free.
+ * @param [in] out_tmplt output UniRec template to free.
+ * @param [in] storage Container with stored data to be freed.
+ */
 void clean_memory(ur_template_t *in_tmplt, ur_template_t *out_tmplt, std::map<Key, void*> storage){
    std::map<Key, void*>::iterator it;
    for ( it = storage.begin(); it != storage.end(); it++) {
@@ -176,11 +203,26 @@ void clean_memory(ur_template_t *in_tmplt, ur_template_t *out_tmplt, std::map<Ke
    ur_finalize();
 }
 /* ----------------------------------------------------------------- */
+/**
+ * Wrapper function for creating UniRec record of given template and size.
+ * @param [in] tmplt UniRec template to generate record from.
+ * @param [in] length Size of variable part of message.
+ * @return Pointer to allocated block of memory which represents created record.
+ */
 void * create_record(ur_template_t *tmplt, int length)
 {
    return ur_create_record(tmplt, length);
 }
 /* ----------------------------------------------------------------- */
+/**
+ * Function to update the record values with specified rules from user input.
+ * Always increase count (aggregated records counter). Use minimal value of TIME_FIRST field
+ * and maximal value of TIME_LAST.
+ * @param [in] in_tmplt UniRec template of received record.
+ * @param [in] src_rec pointer to received record.
+ * @param [in] out_tmplt UniRec template of stored/updated record.
+ * @param [in, out] dst_rec pointer to stored/updated record.
+ */
 void process_agg_functions(ur_template_t *in_tmplt, const void *src_rec, ur_template_t *out_tmplt, void *dst_rec)
 {
    // Always increase count when processing functions
@@ -217,6 +259,14 @@ void process_agg_functions(ur_template_t *in_tmplt, const void *src_rec, ur_temp
 }
 
 /* ----------------------------------------------------------------- */
+/**
+ * Set default (initial) values to from received to stored/output record.
+ * Default values are considered to be copies of data from received record.
+ * @param [in] in_tmplt UniRec template of received record.
+ * @param [in] src_rec pointer to received record.
+ * @param [in] out_tmplt UniRec template of initialized (output) record.
+ * @param [in,out] dst_rec pointer to initialized (output) record.
+ */
 void init_record_data(ur_template_t * in_tmplt, const void *src_rec, ur_template_t *out_tmplt, void *dst_rec)
 {
    ur_clear_varlen(in_tmplt, dst_rec);
@@ -226,6 +276,11 @@ void init_record_data(ur_template_t * in_tmplt, const void *src_rec, ur_template
    ur_set(out_tmplt, dst_rec, F_COUNT, 1);
 }
 /* ----------------------------------------------------------------- */
+/**
+ * Function to make all necessary post processing of output record before it is send.
+ * There should be added all data modifications uncompleted during record live cycle.
+ * @param [in,out] stored_rec pointer to stored record, which has to be processed.
+ */
 void prepare_to_send(void *stored_rec)
 {
    // Proces activities needed to be done before sending the record
@@ -243,6 +298,12 @@ void prepare_to_send(void *stored_rec)
 
 }
 /* ----------------------------------------------------------------- */
+/**
+ * Makes all necessary steps before record can be send to output interface.
+ * @param [in] out_tmplt UniRec template of stored/output record.
+ * @param [in] out_rec pointer to record which is going to be send
+ * @return True if record successfully sent, false if record was not send.
+ */
 bool send_record_out(ur_template_t *out_tmplt, void *out_rec)
 {
 
@@ -268,6 +329,9 @@ bool send_record_out(ur_template_t *out_tmplt, void *out_rec)
 }
 
 /* ----------------------------------------------------------------- */
+/**
+ * Tries to send out all stored records, free their memory and clear the storage.
+ */
 void flush_storage()
 {
    // Send all stored data
@@ -279,6 +343,12 @@ void flush_storage()
    storage.clear();
 }
 /* ----------------------------------------------------------------- */
+/**
+ * Passive and global timeout control function.
+ * Specially designed to run with another thread.
+ * @param [in] input pointer to structure which pass all needed parameters to run by another thread.
+ * @return nothing valuable, always NULL.
+ */
 void *check_timeouts(void *input)
 {
    Config *configuration = (Config*)input;
@@ -461,7 +531,7 @@ int main(int argc, char **argv)
       uint16_t in_rec_size;
 
       // Receive data from input interface 0.
-      // Block if data are not available immediately (unless a timeout is set using trap_ifcctl)
+      // Block if data are not available immediately (unless a timeout occurs)
       ret = TRAP_RECEIVE(0, in_rec, in_rec_size, in_tmplt);
 
       // Handle possible errors
