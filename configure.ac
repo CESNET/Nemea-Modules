@@ -101,7 +101,6 @@ if test x$have_openssl = xyes; then
   RPM_BUILDREQ+=" openssl-devel"
 else
   AC_DEFINE([HAVE_OPENSSL], [0], [Define to 1 if the openssl is available])
-  AC_MSG_WARN([openssl not found. The aggregator module will not be compiled.])
 fi
 
 AC_ARG_WITH([flowcachesize],
