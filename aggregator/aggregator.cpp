@@ -68,12 +68,12 @@
 #define DBG(x)
 #endif
 
-/**My Preprocessor Macro.*/
+/** Max send retry count when timeout during trap_send() occurs.*/
 #define MAX_TIMEOUT_RETRY 3
-/**My Preprocessor Macro.*/
+/** Timeout length value for trap_recv() blocking function.*/
 #define TRAP_RECV_TIMEOUT 500000   // 0.5 second
 //#define TRAP_RECV_TIMEOUT 4000000   // 4 seconds
-/**My Preprocessor Macro.*/
+/** Timeout length value for trap_send() blocking function.*/
 #define TRAP_SEND_TIMEOUT 1000000   // 1 second
 
 trap_module_info_t *module_info = NULL;
