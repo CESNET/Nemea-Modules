@@ -441,7 +441,7 @@ int Config::get_timeout(int type)
 }
 
 
-char Config::get_timeout_type()
+int Config::get_timeout_type()
 {
    return timeout_type;
 }
