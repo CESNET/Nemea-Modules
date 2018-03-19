@@ -1,6 +1,7 @@
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS=anonymizer \
+SUBDIRS=aggregator \
+anonymizer \
 debug_sender \
 device_classifier \
 email_reporter \
@@ -17,8 +18,7 @@ report2idea \
 topn \
 traffic_repeater \
 unirec2json \
-endiverter \
-aggregator
+endiverter
 
 EXTRA_DIST = AUTHORS COPYING ChangeLog INSTALL NEWS README.md nfreader
 
@@ -29,6 +29,9 @@ endif
 
 if HAVE_BISON
 SUBDIRS += unirecfilter
+if HAVE_OPENSSL
+SUBDIRS += scalar-aggregator
+endif
 endif
 
 if HAVE_LIBPCAP

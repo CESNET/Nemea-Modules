@@ -238,6 +238,7 @@ AC_CONFIG_FILES([Makefile
                  report2idea/venom/Makefile
                  report2idea/voipfraud/Makefile
                  report2idea/vportscan/Makefile
+                 scalar-aggregator/Makefile
                  topn/Makefile
                  traffic_repeater/Makefile
                  unirec2json/Makefile
