@@ -90,20 +90,24 @@ UR_FIELDS (
  * Definition of basic module information - module name, module description, number of input and output interfaces
  */
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Aggregation module (aggregator)", \
-        "This module serves for UniRec records aggregation processing. " \
+  BASIC("agg", \
+        "The module can aggregate UniRec records based on user-specified keys, aggregation functions and time interval. " \
+        "The input of this module is a (infinit) sequence of UniRec records. The output of this module is a " \
+        "sequence of aggregated UniRec records according to user settings.\n\n" \
         "User has to specify parameters for processing including key fields and applied aggregation function. " \
+        "User can specify aggregation functions by options listed below, all options may be used repeatedly. " \
+        "URFIELD stands for name of the UniRec field.\n\n" \
         "Module can work with 3 different timeout types (Active, Passive, Global) or their combination " \
         "(Mixed = Active,Passive)." \
-        "Module receives UniRec and sends UniRec containing the fields which take part in aggregation process. " \
-        "Module use in place aggregation, so only one aggregation function per field is possible." \
-        "Only fields specified by user are part of output record, others are discarded." \
-        "Please notice the field COUNT (count of aggregated records) is always inside output record.\n" \
+        "Module receives UniRec and sends UniRec containing the fields which take part in aggregation process.\n\n" \
+        "Module use in place aggregation, so only one aggregation function per field is possible. " \
+        "Only fields specified by user are part of output record, others are discarded. " \
+        "Please notice the field COUNT (count of aggregated records) is always inside output record.\n\n" \
         "Example:\n Records from source file data.trapcap aggregated by SRC_IP and DST_IP, " \
-        "making sum of BYTES and PACKETS and using first received value of SRC_PORT and DST_PORT in output. " \
-        "Module need to be run like this \n" \
-        "\'./aggregator -i f:data.trapcap,u:aggregated -k SRC_IP -k DST_IP -s BYTES -s PACKETS -f SRC_PORT " \
-        "-f DST_PORT\'", 1, 1)
+        "making sum of BYTES and PACKETS and using first received value of SRC_PORT in output. " \
+        "Module can be run like this:\n" \
+        "  " BINDIR "/agg -i u:input,u:aggr -k SRC_IP -k DST_IP -s BYTES -s PACKETS -f SRC_PORT\n", \
+         1, 1)
 
 /**
  * Definition of module parameters - every parameter has short_opt, long_opt, description,
@@ -116,16 +120,16 @@ UR_FIELDS (
         "Use individually on each field as -k FIELD_NAME. Module has undefined behaviour when no key specified." \
         , required_argument, "string") \
   PARAM('t', "time_window", "Represents type of timeout and #seconds for given type before sending " \
-        "record to output. Use as [G,A,P]:#seconds or M:#Active,#Passive (eg. -t \"m:10,25\")." \
+        "record to output. Use as [G,A,P]:#seconds or M:#Active,#Passive (eg. -t \"m:10,25\"). " \
          "When not specified the default value (A:10) is used.", required_argument, "string") \
-  PARAM('s', "sum", "Makes sum of UniRec field values identified by given name.", required_argument, "string") \
-  PARAM('a', "avg", "Makes average of UniRec field values identified by given name.", required_argument, "string") \
-  PARAM('m', "min", "Keep minimal value of UniRec field identified by given name.", required_argument, "string") \
-  PARAM('M', "max", "Keep maximal value of UniRec field identified by given name.", required_argument, "string") \
-  PARAM('f', "first", "Keep first value of UniRec field identified by given name.", required_argument, "string") \
-  PARAM('l', "last", "Keep first value of UniRec field identified by given name.", required_argument, "string") \
-  PARAM('o', "or", "Make bitwise OR of UniRec field identified by given name.", required_argument, "string") \
-  PARAM('n', "and", "Make bitwise AND of UniRec field identified by given name.", required_argument, "string")
+  PARAM('s', "sum", "Makes sum of UniRec field values identified by given name.", required_argument, "URFIELD") \
+  PARAM('a', "avg", "Makes average of UniRec field values identified by given name.", required_argument, "URFIELD") \
+  PARAM('m', "min", "Keep minimal value of UniRec field identified by given name.", required_argument, "URFIELD") \
+  PARAM('M', "max", "Keep maximal value of UniRec field identified by given name.", required_argument, "URFIELD") \
+  PARAM('f', "first", "Keep first value of UniRec field identified by given name.", required_argument, "URFIELD") \
+  PARAM('l', "last", "Keep first value of UniRec field identified by given name.", required_argument, "URFIELD") \
+  PARAM('o', "or", "Make bitwise OR of UniRec field identified by given name.", required_argument, "URFIELD") \
+  PARAM('n', "and", "Make bitwise AND of UniRec field identified by given name.", required_argument, "URFIELD")
 
 /**
  * To define positional parameter ("param" instead of "-m param" or "--mult param"), use the following definition:
