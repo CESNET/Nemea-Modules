@@ -44,7 +44,7 @@ test -x %{_bindir}/nemea/flow_meter && setcap "CAP_NET_RAW+eip" %{_bindir}/nemea
 ldconfig
 
 %files
-%{_bindir}/nemea/aggregator
+%{_bindir}/nemea/agg
 %{_bindir}/nemea/amplification2idea.py
 %{_bindir}/nemea/anonymizer
 %{_bindir}/nemea/bruteforce2idea.py
@@ -75,6 +75,7 @@ ldconfig
 %{_bindir}/nemea/nfdump_reader_test
 %{_bindir}/nemea/nfwriter
 %{_bindir}/nemea/proto_traffic
+%{_bindir}/nemea/scalar_agg
 %{_bindir}/nemea/sipbf2idea.py
 %{_bindir}/nemea/svm-tools
 %{_bindir}/nemea/topn

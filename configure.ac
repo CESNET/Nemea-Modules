@@ -101,7 +101,6 @@ if test x$have_openssl = xyes; then
   RPM_BUILDREQ+=" openssl-devel"
 else
   AC_DEFINE([HAVE_OPENSSL], [0], [Define to 1 if the openssl is available])
-  AC_MSG_WARN([openssl not found. The aggregator module will not be compiled.])
 fi
 
 AC_ARG_WITH([flowcachesize],
@@ -241,6 +240,7 @@ AC_CONFIG_FILES([Makefile
                  report2idea/venom/Makefile
                  report2idea/voipfraud/Makefile
                  report2idea/vportscan/Makefile
+                 scalar-aggregator/Makefile
                  topn/Makefile
                  traffic_repeater/Makefile
                  unirec2json/Makefile

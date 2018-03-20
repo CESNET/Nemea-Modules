@@ -1,9 +1,6 @@
-bin_PROGRAMS=aggregator
-aggregator_SOURCES=aggregator.c aggregator.h timedb.c timedb.h fields.c fields.h
-aggregator_LDADD=-ltrap -lunirec -lurfilter -lnemea-common -lcrypto
-aggregator_CPPFLAGS=-I${top_srcdir}/unirecfilter/lib
-aggregator_LDFLAGS=-L${top_builddir}/unirecfilter/lib
-pkgdocdir=${docdir}/aggregator
-pkgdoc_DATA=README.md
-EXTRA_DIST=README.md
+ACLOCAL_AMFLAGS = -I m4
+bin_PROGRAMS=agg
+agg_SOURCES=aggregator.cpp key.cpp key.h output.cpp output.h agg_functions.h agg_functions.cpp configuration.h configuration.cpp fields.c fields.h
+agg_LDADD=-lunirec -ltrap -lpthread
+agg_CXXFLAGS=-std=c++98 -g
 include ../aminclude.am

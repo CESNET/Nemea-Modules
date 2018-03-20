@@ -1,6 +1,7 @@
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS=anonymizer \
+SUBDIRS=aggregator \
+anonymizer \
 debug_sender \
 device_classifier \
 email_reporter \
@@ -31,7 +32,7 @@ endif
 if HAVE_BISON
 SUBDIRS += unirecfilter
 if HAVE_OPENSSL
-SUBDIRS += aggregator
+SUBDIRS += scalar-aggregator
 endif
 endif
 
