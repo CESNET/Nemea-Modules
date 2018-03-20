@@ -1,0 +1,5 @@
+/usr/include/liburfilter.h
+/usr/lib/*/liburfilter.a
+/usr/lib/*/liburfilter.la
+/usr/lib/*/liburfilter.so
+/usr/lib/*/pkgconfig/liburfilter.pc

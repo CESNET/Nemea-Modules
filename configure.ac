@@ -64,6 +64,7 @@ AC_CHECK_PROG(PYTHON, python, python, [""])
 AC_SUBST(PYTHON)
 # Check for rpmbuild
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild, [""])
+AC_CHECK_PROG(DEBUILD, debuild, debuild, [""])
 AX_PTHREAD([LIBS="$PTHREAD_LIBS $LIBS"
     CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
     CXXFLAGS="$CXXFLAGS $PTHREAD_CFLAGS"
@@ -192,6 +193,8 @@ fi
 RPM_RELEASE=1
 AC_SUBST(RPM_RELEASE)
 AM_CONDITIONAL(MAKE_RPMS, test x$RPMBUILD != x)
+
+AM_CONDITIONAL(MAKE_DEB, test x$DEBUILD != x)
 
 #DX_INIT_DOXYGEN([nemea-cpd], [Doxyfile], [doc])
 
