@@ -1,3 +1,17 @@
+2018-03-20 Nemea-modules-2.6.2
+	* added new modules: 
+		Natpair, Mux, Demux, Aggregator (old renamed to
+		scalar-aggregator)
+	* flow_meter:
+		added export of DNS PTR
+		added SMTP plugin
+		modified some test scripts
+	* logger:
+		added script for converting CSV to human readable format
+	* logreplay:
+		implemented delays according to time column, can be disabled
+		bugfix with Ctrl+C not terminating module
+
 2017-11-28 Nemea-modules-2.6.1
 	* vportscan2idea: adapt to the new output of aggregator
 
