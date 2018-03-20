@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-modules], [2.6.1], [nemea@cesnet.cz])
+AC_INIT([nemea-modules], [2.6.2], [nemea@cesnet.cz])
 AC_CONFIG_SRCDIR([flowcounter/flowcounter.c])
 AC_CONFIG_HEADERS([config.h])
 RELEASE=1
@@ -223,6 +223,7 @@ AC_CONFIG_FILES([Makefile
                  merger/Makefile
                  mux/Makefile
                  demux/Makefile
+                 natpair/Makefile
                  nemea-modules.spec
                  nfreader/Makefile
                  proto_traffic/Makefile

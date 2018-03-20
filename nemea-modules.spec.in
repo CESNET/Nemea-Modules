@@ -72,6 +72,7 @@ ldconfig
 %{_bindir}/nemea/demux
 %{_bindir}/nemea/merger
 %{_bindir}/nemea/minerdetector2idea.py
+%{_bindir}/nemea/natpair
 %{_bindir}/nemea/nfdump_reader
 %{_bindir}/nemea/nfdump_reader_test
 %{_bindir}/nemea/nfwriter
