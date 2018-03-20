@@ -109,6 +109,9 @@ inline uint16_t parse_eth_hdr(const u_char *data_ptr, Packet *pkt)
    DEBUG_MSG("\tSrc mac:\t%s\n",          ether_ntoa((struct ether_addr *) eth->h_source));
    DEBUG_MSG("\tEthertype:\t%#06x\n",     ethertype);
 
+   memcpy(pkt->dst_mac, eth->h_dest, 6);
+   memcpy(pkt->src_mac, eth->h_source, 6);
+
    if (ethertype == ETH_P_8021AD) {
       DEBUG_CODE(uint16_t vlan = ntohs(*(uint16_t *) (data_ptr + hdr_len)));
       DEBUG_MSG("\t802.1ad field:\n");

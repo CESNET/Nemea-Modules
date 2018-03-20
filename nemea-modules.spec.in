@@ -67,6 +67,8 @@ ldconfig
 %{_bindir}/nemea/link_traff2json.py
 %{_bindir}/nemea/logger
 %{_bindir}/nemea/logreplay
+%{_bindir}/nemea/mux
+%{_bindir}/nemea/demux
 %{_bindir}/nemea/merger
 %{_bindir}/nemea/minerdetector2idea.py
 %{_bindir}/nemea/nfdump_reader

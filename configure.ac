@@ -222,6 +222,8 @@ AC_CONFIG_FILES([Makefile
                  logger/Makefile
                  logreplay/Makefile
                  merger/Makefile
+                 mux/Makefile
+                 demux/Makefile
                  nemea-modules.spec
                  nfreader/Makefile
                  proto_traffic/Makefile

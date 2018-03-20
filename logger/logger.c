@@ -281,6 +281,14 @@ void *capture_thread(void *arg)
                      fprintf(file, "%s", str);
                   }
                   break;
+               case UR_TYPE_MAC:
+                  {
+                     // MAC address - convert to human-readable format and print
+                     char str[MAC_STR_LEN];
+                     mac_to_str((mac_addr_t*)ptr, str);
+                     fprintf(file, "%s", str);
+                  }
+                  break;
                case UR_TYPE_TIME:
                   {
                      // Timestamp - convert to human-readable format and print
@@ -512,7 +520,7 @@ int main(int argc, char **argv)
 It should be: \"type1 name1,type2 name2,...\".\n \
 Name of field may be any string matching the reqular expression [A-Za-z][A-Za-z0-9_]*\n\
 Available types are: int8, int16, int32, int64, uint8, uint16, uint32, uint64, char,\
- float, double, ipaddr, time, string, bytes\n");
+ float, double, ipaddr, macaddr, time, string, bytes\n");
          ret = 2;
          goto exit;
       }
