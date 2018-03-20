@@ -15,6 +15,7 @@ logreplay \
 merger \
 mux \
 demux \
+natpair \
 proto_traffic \
 report2idea \
 topn \

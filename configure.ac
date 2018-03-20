@@ -223,6 +223,7 @@ AC_CONFIG_FILES([Makefile
                  merger/Makefile
                  mux/Makefile
                  demux/Makefile
+                 natpair/Makefile
                  nemea-modules.spec
                  nfreader/Makefile
                  proto_traffic/Makefile
