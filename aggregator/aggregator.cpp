@@ -47,6 +47,7 @@
 
 #include <cstdio>
 #include <csignal>
+#include <unistd.h>
 #include <getopt.h>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
@@ -103,7 +104,7 @@ UR_FIELDS (
         "Module use in place aggregation, so only one aggregation function per field is possible. " \
         "Only fields specified by user are part of output record, others are discarded. " \
         "Please notice the field COUNT (count of aggregated records) is always inside output record.\n\n" \
-        "Example:\n Records from source file data.trapcap aggregated by SRC_IP and DST_IP, " \
+        "Example:\n Records aggregated by SRC_IP and DST_IP, " \
         "making sum of BYTES and PACKETS and using first received value of SRC_PORT in output. " \
         "Module can be run like this:\n" \
         "  " BINDIR "/agg -i u:input,u:aggr -k SRC_IP -k DST_IP -s BYTES -s PACKETS -f SRC_PORT\n", \
@@ -117,7 +118,8 @@ UR_FIELDS (
  */
 #define MODULE_PARAMS(PARAM) \
   PARAM('k', "key", "Defines received UniRec field name as part of aggregation key." \
-        "Use individually on each field as -k FIELD_NAME. Module has undefined behaviour when no key specified." \
+        "Use individually on each field as -k FIELD_NAME. When no key specified every record is considered to " \
+        "match the empty key (every record is processed as with the equal key)." \
         , required_argument, "string") \
   PARAM('t', "time_window", "Represents type of timeout and #seconds for given type before sending " \
         "record to output. Use as [G,A,P]:#seconds or M:#Active,#Passive (eg. -t \"m:10,25\"). " \
