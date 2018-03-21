@@ -55,10 +55,25 @@ Key::Key(const Key &other)
    memcpy(data, other.data, data_length);
 }
 /* ----------------------------------------------------------------- */
+const char *Key::get_data() const
+{
+   return data;
+}
+/* ----------------------------------------------------------------- */
+int Key::get_size() const
+{
+   return data_length;
+}
+/* ----------------------------------------------------------------- */
 void Key::add_field(const void *src, int size)
 {
    memcpy(data+data_length, src, size);
    data_length += size;
+}
+/* ----------------------------------------------------------------- */
+uint32_t Key::hash() const
+{
+   return SuperFastHash(data, data_length);
 }
 /* ----------------------------------------------------------------- */
 void Key::print() const
@@ -80,4 +95,9 @@ bool operator< (const Key &a, const Key &b)
     * therefore both parameters have the same number of bytes written
     */
    return memcmp(a.data, b.data, a.data_length) < 0 ? true : false;
+}
+/* ----------------------------------------------------------------- */
+bool operator== (const Key &a, const Key &b)
+{
+   return memcmp(a.data, b.data, a.data_length) == 0 ? true : false;
 }

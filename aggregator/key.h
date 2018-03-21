@@ -1,6 +1,6 @@
 /*! \file key.h
  */
-
+#include <nemea-common/super_fast_hash.h>
 #include <unirec/unirec.h>
 
 #ifndef AGGREGATOR_KEYWORD_H
@@ -50,12 +50,15 @@ public:
     * @param [in] other source of data to be copied.
     */
    Key(const Key &other);
+   const char *get_data() const;
+   int get_size() const;
    /**
     * Add values from source pointer to class data variable.
     * @param [in] src pointer to source data to be appended to key bytes array.
     * @param [in] size length of data in src pointer in bytes.
     */
-   void add_field(const void *src, int size);            // Append new field into record
+    void add_field(const void *src, int size);            // Append new field into record
+    uint32_t  hash() const;
    /**
     * Overloaded operator less for easy class comparison in map.
     * @param [in] a first key element.
@@ -63,11 +66,31 @@ public:
     * @return True if parameter 'a' is less than parameter 'b'
     */
    friend bool operator< (const Key &a, const Key &b);  // Key needs to be comparable for the map
-   //hash_code();
+   /**
+    * Overloaded operator equal for class comparison if less is not enough
+    * @param [in] a first key element
+    * @param [in] b second key element
+    * @return True if if 'a' and 'b' are equal, false otherwise
+    */
+   friend bool operator== (const Key &a, const Key &b);  // Key needs to be comparable for the unordered_map
    /**
     * Development key print value. No universal usage, implementation need to be modified for desired data type.
     */
    void print() const;
 };
+
+/*
+namespace std {
+
+    template<>
+    struct hash<Key>
+    {
+        std::size_t operator()(const Key &k) const
+        {
+           return SuperFastHash(k.get_data(), k.get_size());
+        }
+    };
+}
+*/
 
 #endif //AGGREGATOR_KEYWORD_H
