@@ -1,8 +1,6 @@
 /*! \file key.h
  */
 
-#include <zconf.h>
-
 #include <unirec/unirec.h>
 
 #ifndef AGGREGATOR_KEYWORD_H
