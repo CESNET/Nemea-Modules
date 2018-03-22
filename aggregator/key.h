@@ -79,18 +79,5 @@ public:
    void print() const;
 };
 
-/*
-namespace std {
-
-    template<>
-    struct hash<Key>
-    {
-        std::size_t operator()(const Key &k) const
-        {
-           return SuperFastHash(k.get_data(), k.get_size());
-        }
-    };
-}
-*/
 
 #endif //AGGREGATOR_KEYWORD_H
