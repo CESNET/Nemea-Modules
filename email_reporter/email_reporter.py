@@ -256,9 +256,8 @@ msg_template = msg_template.replace("%", "%%")
 # to shortest (to solve a problem when there are fields ABC and ABCD and we 
 # should substitute $ABCD)
 fields = [i.split(" ")[1] for i in unirecfmt.split(",")]
-fields.sort()
-#fields.sort(lambda a,b: cmp(len(a),len(b)), reverse=True)
 fields.append('_DATETIME_')
+fields.sort(key=len, reverse=True)
 # Substitute all occurences of '$FIELD_NAME' by '%(FIELD_NAME)s'
 for f in fields:
    msg_template = msg_template.replace("$"+f, "%("+f+")s")
