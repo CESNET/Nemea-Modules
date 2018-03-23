@@ -57,6 +57,7 @@ private:
    int timeout[TIMEOUT_TYPES_COUNT];     /*!< Lengths of various timeouts. */
    int timeout_type;                     /*!< Currently active timeout type to use. */
    bool variable_flag;                   /*!< Flag if variable length field presented to proccess. */
+   bool verify_field(const char* field_name);
 public:
     /**
      * Constructor with defaults values initialization.
