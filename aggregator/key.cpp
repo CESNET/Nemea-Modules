@@ -5,7 +5,6 @@
 //
 
 #include "key.h"
-#include <inttypes.h>
 
 /* ================================================================= */
 /* ============= KeywordTemplate class definitions ================= */
@@ -69,23 +68,6 @@ void Key::add_field(const void *src, int size)
 {
    memcpy(data+data_length, src, size);
    data_length += size;
-}
-/* ----------------------------------------------------------------- */
-uint32_t Key::hash() const
-{
-   return SuperFastHash(data, data_length);
-}
-/* ----------------------------------------------------------------- */
-void Key::print() const
-{
-   /*
-   printf("Key:\n \tData:");
-   for (int i = 0; i < data_length; i++) {
-      printf("%c ", data[i]);
-   }
-   printf("\n \tSize: %d\n", data_length);
-   */
-   printf(":(%d,%" PRIu32 ",%d)\n", *(int*)data, *(uint32_t*)(data+8), data_length);
 }
 /* ----------------------------------------------------------------- */
 bool operator< (const Key &a, const Key &b)

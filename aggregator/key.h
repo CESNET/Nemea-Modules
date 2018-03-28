@@ -50,7 +50,15 @@ public:
     * @param [in] other source of data to be copied.
     */
    Key(const Key &other);
+   /**
+    * Access to private variable data representing key value as array of bytes.
+    * @return const pointer to data array.
+    */
    const char *get_data() const;
+   /**
+    * Get count of currently used bytes in key bytes array.
+    * @return Length of written bytes.
+    */
    int get_size() const;
    /**
     * Add values from source pointer to class data variable.
@@ -58,7 +66,6 @@ public:
     * @param [in] size length of data in src pointer in bytes.
     */
     void add_field(const void *src, int size);            // Append new field into record
-    uint32_t  hash() const;
    /**
     * Overloaded operator less for easy class comparison in map.
     * @param [in] a first key element.
@@ -73,10 +80,6 @@ public:
     * @return True if if 'a' and 'b' are equal, false otherwise
     */
    friend bool operator== (const Key &a, const Key &b);  // Key needs to be comparable for the unordered_map
-   /**
-    * Development key print value. No universal usage, implementation need to be modified for desired data type.
-    */
-   void print() const;
 };
 
 
