@@ -54,7 +54,6 @@
 #include "fields.h"
 
 #include <unordered_map>
-#include <utility>
 #include <pthread.h>
 
 #include "output.h"
@@ -137,9 +136,14 @@ UR_FIELDS (
  * There can by any argument type mentioned few lines before.
  * This parameter will be listed in Additional parameters in module help output
  */
-/* ----------------------------------------------------------------- */
-namespace std {
 
+/* ----------------------------------------------------------------- */
+#ifdef  AGGREGATOR_KEYWORD_H
+namespace std {
+   /**
+    * std::hash() specialization to use with class Key.
+    * Specialization needed by use class Key as key in std::unordered_map
+    */
     template<>
     struct hash<Key>
     {
@@ -149,6 +153,7 @@ namespace std {
         }
     };
 }
+#endif
 /* ----------------------------------------------------------------- */
 
 static int stop = 0;
@@ -413,7 +418,7 @@ void *check_timeouts(void *input)
                // Send record out
                send_record_out(OutputTemplate::out_tmplt, it->second);
                ur_free_record(it->second);
-               storage.erase(it++);
+               it = storage.erase(it);
             }
             else {
                ++it;
