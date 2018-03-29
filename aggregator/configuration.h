@@ -57,6 +57,11 @@ private:
    int timeout[TIMEOUT_TYPES_COUNT];     /*!< Lengths of various timeouts. */
    int timeout_type;                     /*!< Currently active timeout type to use. */
    bool variable_flag;                   /*!< Flag if variable length field presented to proccess. */
+   /**
+    * Compare new field with fields already set in cofiguration.
+    * @param [in] field_name to compare with others
+    * @return true if field is not already used by module, false if field is already configured.
+    */
    bool verify_field(const char* field_name);
 public:
     /**
