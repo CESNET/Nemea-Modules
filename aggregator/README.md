@@ -22,7 +22,7 @@ Module receives UniRec and sends UniRec containing the fields which take part in
 ## Parameters
 ### Module specific parameters
 - `-k  --key <URFIELD>`           Defines received UniRec field name as part of aggregation key.Use individually on each field as -k FIELD_NAME. When no key specified every record is considered to match the empty key (every record is processed as with the equal key).
-- `-t  --time_window <URFIELD>`   Represents type of timeout and #seconds for given type before sending record to output. Use as [G,A,P]:#seconds or M:#Active,#Passive (eg. -t "m:10,25").When not specified the default value (A:10) is used.
+- `-t  --time_window <string>`   Represents type of timeout and #seconds for given type before sending record to output. Use as [G,A,P]:#seconds or M:#Active,#Passive (eg. -t "m:10,25").When not specified the default value (A:10) is used.
 - `-s  --sum <URFIELD>`           Makes sum of UniRec field values identified by given name.
 - `-a  --avg <URFIELD>`           Makes average of UniRec field values identified by given name.
 - `-m  --min <URFIELD>`           Keep minimal value of UniRec field identified by given name.
