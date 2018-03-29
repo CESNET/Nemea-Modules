@@ -1,6 +1,6 @@
 /*! \file key.h
  */
-
+#include <nemea-common/super_fast_hash.h>
 #include <unirec/unirec.h>
 
 #ifndef AGGREGATOR_KEYWORD_H
@@ -51,11 +51,21 @@ public:
     */
    Key(const Key &other);
    /**
+    * Access to private variable data representing key value as array of bytes.
+    * @return const pointer to data array.
+    */
+   const char *get_data() const;
+   /**
+    * Get count of currently used bytes in key bytes array.
+    * @return Length of written bytes.
+    */
+   int get_size() const;
+   /**
     * Add values from source pointer to class data variable.
     * @param [in] src pointer to source data to be appended to key bytes array.
     * @param [in] size length of data in src pointer in bytes.
     */
-   void add_field(const void *src, int size);            // Append new field into record
+    void add_field(const void *src, int size);            // Append new field into record
    /**
     * Overloaded operator less for easy class comparison in map.
     * @param [in] a first key element.
@@ -63,11 +73,14 @@ public:
     * @return True if parameter 'a' is less than parameter 'b'
     */
    friend bool operator< (const Key &a, const Key &b);  // Key needs to be comparable for the map
-   //hash_code();
    /**
-    * Development key print value. No universal usage, implementation need to be modified for desired data type.
+    * Overloaded operator equal for class comparison if less is not enough
+    * @param [in] a first key element
+    * @param [in] b second key element
+    * @return True if if 'a' and 'b' are equal, false otherwise
     */
-   void print() const;
+   friend bool operator== (const Key &a, const Key &b);  // Key needs to be comparable for the unordered_map
 };
+
 
 #endif //AGGREGATOR_KEYWORD_H

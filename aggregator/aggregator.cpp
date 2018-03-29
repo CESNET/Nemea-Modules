@@ -53,14 +53,11 @@
 #include <unirec/unirec.h>
 #include "fields.h"
 
-#include <map>
-#include <utility>
+#include <unordered_map>
 #include <pthread.h>
 
 #include "output.h"
 #include "configuration.h"
-#include "agg_functions.h"
-
 
 //#define DEBUG
 #ifdef DEBUG
@@ -140,9 +137,27 @@ UR_FIELDS (
  * This parameter will be listed in Additional parameters in module help output
  */
 
+/* ----------------------------------------------------------------- */
+#ifdef  AGGREGATOR_KEYWORD_H
+namespace std {
+   /**
+    * std::hash() specialization to use with class Key.
+    * Specialization needed by use class Key as key in std::unordered_map
+    */
+    template<>
+    struct hash<Key>
+    {
+        size_t operator()(const Key &k) const
+        {
+           return SuperFastHash(k.get_data(), k.get_size());
+        }
+    };
+}
+#endif
+/* ----------------------------------------------------------------- */
 
 static int stop = 0;
-static std::map<Key, void*> storage;                   // Need to be global because of trap_terminate
+static std::unordered_map<Key , void*> storage;                   // Need to be global because of trap_terminate
 time_t time_last_from_record = time(NULL);             // Passive timeout time info set due to records time
 pthread_mutex_t storage_mutex = PTHREAD_MUTEX_INITIALIZER;                 // For storage modifying sections
 pthread_mutex_t time_last_from_record_mutex = PTHREAD_MUTEX_INITIALIZER;   // For modifying Passive timeout time info
@@ -197,8 +212,8 @@ void print_template_fields(ur_template_t* tmplt)
  * @param [in] out_tmplt output UniRec template to free.
  * @param [in] storage Container with stored data to be freed.
  */
-void clean_memory(ur_template_t *in_tmplt, ur_template_t *out_tmplt, std::map<Key, void*> storage){
-   std::map<Key, void*>::iterator it;
+void clean_memory(ur_template_t *in_tmplt, ur_template_t *out_tmplt, std::unordered_map<Key, void*> storage){
+   std::unordered_map<Key, void*>::iterator it;
    for ( it = storage.begin(); it != storage.end(); it++) {
       ur_free_record(it->second);
    }
@@ -343,7 +358,8 @@ bool send_record_out(ur_template_t *out_tmplt, void *out_rec)
 void flush_storage()
 {
    // Send all stored data
-   std::map<Key, void*>::iterator it;
+
+   std::unordered_map<Key, void*>::iterator it;
    for ( it = storage.begin(); it != storage.end(); it++) {
       send_record_out(OutputTemplate::out_tmplt, it->second);
       ur_free_record(it->second);
@@ -397,12 +413,12 @@ void *check_timeouts(void *input)
           * Only accessing and modifying different elements is thread safe in stl map container */
          // Lock the storage -- CRITICAL SECTION START
          pthread_mutex_lock(&storage_mutex);
-         for (std::map<Key, void*>::iterator it = storage.begin(); it != storage.end(); ) {
+         for (std::unordered_map<Key, void*>::iterator it = storage.begin(); it != storage.end(); ) {
             if (ur_time_get_sec(ur_get(OutputTemplate::out_tmplt, it->second, F_TIME_LAST)) < time_last_from_record - timeout) {
                // Send record out
                send_record_out(OutputTemplate::out_tmplt, it->second);
                ur_free_record(it->second);
-               storage.erase(it++);
+               it = storage.erase(it);
             }
             else {
                ++it;
@@ -442,7 +458,7 @@ int main(int argc, char **argv)
 {
    int ret;
    signed char opt;
-
+   storage.reserve(2097152);        // Reserve enough space for records without need of rehash()
    /* **** TRAP initialization **** */
 
    /*
@@ -555,7 +571,7 @@ int main(int argc, char **argv)
       if (ret == TRAP_E_FORMAT_CHANGED ) {
          DBG((stderr, "Format change, setting new module configuration\n"));
          // Internal structures cleaning because of possible redefinition
-         std::map<Key, void*>::iterator it;
+         std::unordered_map<Key, void*>::iterator it;
 
          // Lock the storage -- CRITICAL SECTION START
          pthread_mutex_lock( &storage_mutex );
@@ -627,14 +643,13 @@ int main(int argc, char **argv)
       }
 
       void *init_ptr = NULL;
-      std::pair<std::map<Key, void*>::iterator, bool> inserted;
+      std::pair<std::unordered_map<Key, void*>::iterator, bool> inserted;
       // Lock the storage -- CRITICAL SECTION START
       pthread_mutex_lock( &storage_mutex );
       inserted = storage.insert(std::make_pair(rec_key, init_ptr));
 
       if (inserted.second == false) {
          // Element already exists
-
          bool new_time_window = false;
          void *stored_rec = inserted.first->second;
          // Main thread checks time window only when active timeout set

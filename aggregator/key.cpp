@@ -5,7 +5,6 @@
 //
 
 #include "key.h"
-#include <inttypes.h>
 
 /* ================================================================= */
 /* ============= KeywordTemplate class definitions ================= */
@@ -55,22 +54,20 @@ Key::Key(const Key &other)
    memcpy(data, other.data, data_length);
 }
 /* ----------------------------------------------------------------- */
+const char *Key::get_data() const
+{
+   return data;
+}
+/* ----------------------------------------------------------------- */
+int Key::get_size() const
+{
+   return data_length;
+}
+/* ----------------------------------------------------------------- */
 void Key::add_field(const void *src, int size)
 {
    memcpy(data+data_length, src, size);
    data_length += size;
-}
-/* ----------------------------------------------------------------- */
-void Key::print() const
-{
-   /*
-   printf("Key:\n \tData:");
-   for (int i = 0; i < data_length; i++) {
-      printf("%c ", data[i]);
-   }
-   printf("\n \tSize: %d\n", data_length);
-   */
-   printf(":(%d,%" PRIu32 ",%d)\n", *(int*)data, *(uint32_t*)(data+8), data_length);
 }
 /* ----------------------------------------------------------------- */
 bool operator< (const Key &a, const Key &b)
@@ -80,4 +77,9 @@ bool operator< (const Key &a, const Key &b)
     * therefore both parameters have the same number of bytes written
     */
    return memcmp(a.data, b.data, a.data_length) < 0 ? true : false;
+}
+/* ----------------------------------------------------------------- */
+bool operator== (const Key &a, const Key &b)
+{
+   return memcmp(a.data, b.data, a.data_length) == 0 ? true : false;
 }
