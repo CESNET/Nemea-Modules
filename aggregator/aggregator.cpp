@@ -116,7 +116,6 @@ UR_FIELDS (
  */
 #define MODULE_PARAMS(PARAM) \
   PARAM('k', "key", "Defines received UniRec field name as part of aggregation key." \
-
         "Use individually on each field as -k FIELD_NAME. When no key specified every record is considered to " \
         "match the empty key (every record is processed as with the equal key)." \
         , required_argument, "string") \
