@@ -1,6 +1,7 @@
 /*! \file key.h
  */
 #include <nemea-common/super_fast_hash.h>
+
 #include <unirec/unirec.h>
 
 #ifndef AGGREGATOR_KEYWORD_H
@@ -65,7 +66,7 @@ public:
     * @param [in] src pointer to source data to be appended to key bytes array.
     * @param [in] size length of data in src pointer in bytes.
     */
-    void add_field(const void *src, int size);            // Append new field into record
+   void add_field(const void *src, int size);            // Append new field into record
    /**
     * Overloaded operator less for easy class comparison in map.
     * @param [in] a first key element.
@@ -81,6 +82,5 @@ public:
     */
    friend bool operator== (const Key &a, const Key &b);  // Key needs to be comparable for the unordered_map
 };
-
 
 #endif //AGGREGATOR_KEYWORD_H

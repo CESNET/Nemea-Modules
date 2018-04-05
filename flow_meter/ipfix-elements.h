@@ -71,8 +71,8 @@
 #define OBSERVATION_MSEC(F)           F(0,      323,    8,   NULL)
 #define INPUT_INTERFACE(F)            F(0,       10,    2,   &this->dir_bit_field)
 #define OUTPUT_INTERFACE(F)           F(0,       14,    2,   NULL)
-#define L2_SRC_MAC(F)                 F(0,       56,    6,   NULL)
-#define L2_DST_MAC(F)                 F(0,       80,    6,   NULL)
+#define L2_SRC_MAC(F)                 F(0,       56,    6,   flow.src_mac)
+#define L2_DST_MAC(F)                 F(0,       80,    6,   flow.dst_mac)
 #define ETHERTYPE(F)                  F(0,      256,    2,   NULL)
 #define L3_PROTO(F)                   F(0,       60,    1,   &flow.ip_version)
 #define L3_IPV4_ADDR_SRC(F)           F(0,        8,    4,   &flow.src_ip.v4)
@@ -109,6 +109,7 @@
 #define HTTP_REQUEST_REFERER(F)       F(16982,  505,   -1,   NULL)
 #define HTTP_RESPONSE_STATUS_CODE(F)  F(16982,  506,    4,   NULL)
 #define HTTP_RESPONSE_CONTENT_TYPE(F) F(16982,  507,   -1,   NULL)
+#define HTTPS_SNI(F)                  F(8057,   808,   -1,   NULL)
 #define DNS_ANSWERS(F)                F(8057,     0,    2,   NULL)
 #define DNS_RCODE(F)                  F(8057,     1,    1,   NULL)
 #define DNS_NAME(F)                   F(8057,     2,   -1,   NULL)
@@ -120,6 +121,9 @@
 #define DNS_PSIZE(F)                  F(8057,     8,    2,   NULL)
 #define DNS_DO(F)                     F(8057,     9,    1,   NULL)
 #define DNS_ID(F)                     F(8057,    10,    2,   NULL)
+#define DNS_ATYPE(F)                  F(8057,    11,    2,   NULL)
+#define DNS_A(F)                      F(8057,    12,    4,   NULL)
+#define DNS_AAAA(F)                   F(8057,    13,    16,  NULL)
 #define SIP_MSG_TYPE(F)               F(8057,   100,    2,   NULL)
 #define SIP_STATUS_CODE(F)            F(8057,   101,    2,   NULL)
 #define SIP_CALL_ID(F)                F(8057,   102,   -1,   NULL)
@@ -149,6 +153,17 @@
 #define ARP_SRC_PA(F)                 F(8057,    35,   -1,   NULL)
 #define ARP_DST_HA(F)                 F(8057,    36,   -1,   NULL)
 #define ARP_DST_PA(F)                 F(8057,    37,   -1,   NULL)
+#define SMTP_COMMANDS(F)              F(8057,    810,   4,   NULL)
+#define SMTP_MAIL_COUNT(F)            F(8057,    811,   4,   NULL)
+#define SMTP_RCPT_COUNT(F)            F(8057,    812,   4,   NULL)
+#define SMTP_SENDER(F)                F(8057,    813,  -1,   NULL)
+#define SMTP_RECIPIENT(F)             F(8057,    814,  -1,   NULL)
+#define SMTP_STATUS_CODES(F)          F(8057,    815,   4,   NULL)
+#define SMTP_CODE_2XX_COUNT(F)        F(8057,    816,   4,   NULL)
+#define SMTP_CODE_3XX_COUNT(F)        F(8057,    817,   4,   NULL)
+#define SMTP_CODE_4XX_COUNT(F)        F(8057,    818,   4,   NULL)
+#define SMTP_CODE_5XX_COUNT(F)        F(8057,    819,   4,   NULL)
+#define SMTP_DOMAIN(F)                F(8057,    820,  -1,   NULL)
 
 /**
  * IPFIX Templates - list of elements
@@ -180,7 +195,9 @@
    F(L3_IPV4_TTL) \
    F(INPUT_INTERFACE) \
    F(L3_IPV4_ADDR_SRC) \
-   F(L3_IPV4_ADDR_DST)
+   F(L3_IPV4_ADDR_DST) \
+   F(L2_SRC_MAC) \
+   F(L2_DST_MAC)
 
 #define BASIC_TMPLT_V6(F) \
    F(BYTES) \
@@ -195,7 +212,9 @@
    F(L3_IPV6_TTL) \
    F(INPUT_INTERFACE) \
    F(L3_IPV6_ADDR_SRC) \
-   F(L3_IPV6_ADDR_DST)
+   F(L3_IPV6_ADDR_DST) \
+   F(L2_SRC_MAC) \
+   F(L2_DST_MAC)
 
 #define IPFIX_HTTP_TEMPLATE(F) \
    F(HTTP_USERAGENT) \
@@ -205,6 +224,9 @@
    F(HTTP_URL) \
    F(HTTP_CONTENT_TYPE) \
    F(HTTP_STATUS)
+
+#define IPFIX_HTTPS_TEMPLATE(F) \
+   F(HTTPS_SNI)
 
 #define IPFIX_NTP_TEMPLATE(F) \
    F(NTP_LEAP) \
@@ -243,6 +265,26 @@
    F(DNS_NAME) \
    F(DNS_RDATA)
 
+#define IPFIX_PASSIVEDNS_TEMPLATE(F) \
+   F(DNS_ID) \
+   F(DNS_RR_TTL) \
+   F(DNS_ATYPE) \
+   F(DNS_RDATA) \
+   F(DNS_NAME)
+
+#define IPFIX_SMTP_TEMPLATE(F) \
+   F(SMTP_COMMANDS) \
+   F(SMTP_MAIL_COUNT) \
+   F(SMTP_RCPT_COUNT) \
+   F(SMTP_STATUS_CODES) \
+   F(SMTP_CODE_2XX_COUNT) \
+   F(SMTP_CODE_3XX_COUNT) \
+   F(SMTP_CODE_4XX_COUNT) \
+   F(SMTP_CODE_5XX_COUNT) \
+   F(SMTP_DOMAIN) \
+   F(SMTP_SENDER) \
+   F(SMTP_RECIPIENT)
+
 #define IPFIX_SIP_TEMPLATE(F) \
    F(SIP_MSG_TYPE) \
    F(SIP_STATUS_CODE) \
@@ -265,10 +307,13 @@
    BASIC_TMPLT_V4(F) \
    BASIC_TMPLT_V6(F) \
    IPFIX_HTTP_TEMPLATE(F) \
+   IPFIX_HTTPS_TEMPLATE(F) \
    IPFIX_NTP_TEMPLATE(F) \
    IPFIX_ARP_TEMPLATE(F) \
    IPFIX_SIP_TEMPLATE(F) \
-   IPFIX_DNS_TEMPLATE(F)
+   IPFIX_DNS_TEMPLATE(F) \
+   IPFIX_PASSIVEDNS_TEMPLATE(F) \
+   IPFIX_SMTP_TEMPLATE(F)
 
 
 /**

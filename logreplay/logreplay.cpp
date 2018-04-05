@@ -5,9 +5,12 @@
  * \author Sabik Erik <xsabik02@stud.fit.vutbr.cz>
  * \date 2014
  * \date 2015
+ * \date 2016
+ * \date 2017
+ * \date 2018
  */
 /*
- * Copyright (C) 2014,2015 CESNET
+ * Copyright (C) 2014-2018 CESNET
  *
  * LICENSE TERMS
  *
@@ -59,6 +62,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <getopt.h>
+#include <unistd.h>
 #include <libtrap/trap.h>
 #include <map>
 #include "fields.h"
@@ -77,13 +81,19 @@ trap_module_info_t *module_info = NULL;
 #define MODULE_PARAMS(PARAM) \
   PARAM('f', "file", "Specify path to a file to be read.", required_argument, "string") \
   PARAM('c', "cut", "Quit after N records are received.", required_argument, "uint32") \
+  PARAM('d', "disable_timing", "Disable time delays during sending data according to the `time` column.", no_argument, "none") \
   PARAM('n', "no_eof", "Don't send 'EOF message' at the end.", no_argument, "none")
 
 static int stop = 0;
 
 int verbose;
 
-TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
+void trap_default_signal_handler(int signal)
+{
+   if (signal == SIGTERM || signal == SIGINT) {
+      stop = 1;
+   }
+}
 
 using namespace std;
 
@@ -146,12 +156,21 @@ string replace_string(string subject, const string &search, const string &replac
    return subject;
 }
 
+
+time_t convert_timestamp(string &t)
+{
+   struct tm tm;
+   strptime(t.c_str(), "%FT%T", &tm);
+   return mktime(&tm);
+}
+
 int main(int argc, char **argv)
 {
    int ret = 0;
    int tmp;
    int send_eof = 1;
    int time_flag = 0;
+   int disable_timing = 0;
    char *in_filename = NULL;
    char record_delim = '\n';
    char field_delim = ',';
@@ -163,6 +182,7 @@ int main(int argc, char **argv)
    unsigned int num_records = 0; // Number of records received (total of all inputs)
    unsigned int max_num_records = 0; // Exit after this number of records is received
    char is_limited = 0;
+   time_t last_timestamp = 0, cur_timestamp = 0;
 
    // initialize TRAP interface
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
@@ -194,6 +214,9 @@ int main(int argc, char **argv)
             break;
          case 'n':
             send_eof = 0;
+            break;
+         case 'd':
+            disable_timing = 1;
             break;
          //case 's':
          //   field_delim = (optarg[0] != '\\' ? optarg[0] : (optarg[1] == 't'?'\t':'\n'));
@@ -282,7 +305,7 @@ int main(int argc, char **argv)
 
 
       /* main loop */
-      while (f_in.good()) {
+      while (f_in.good() && stop == 0) {
          if ((num_records++ >= max_num_records) && (is_limited == 1)) {
             break;
          }
@@ -298,6 +321,7 @@ int main(int argc, char **argv)
             column = get_next_field(sl);
             // Skip timestamp added by logger
             if (!skipped_time && time_flag) {
+               cur_timestamp = convert_timestamp(column);
                column = get_next_field(sl);
                skipped_time = 1;
             }
@@ -326,6 +350,15 @@ int main(int argc, char **argv)
                };
             }
          }
+
+         /* time delay according to the `time` column */
+         if (!disable_timing && time_flag) {
+            if ((cur_timestamp > last_timestamp) && (last_timestamp != 0)) {
+               sleep(cur_timestamp - last_timestamp);
+            }
+            last_timestamp = cur_timestamp;
+         }
+
          if (valid) {
             trap_send(0, data, ur_rec_size(utmpl, data));
          }

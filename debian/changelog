@@ -1,0 +1,6 @@
+nemea-modules (2.6.2-1) stable; urgency=medium
+
+  * initial deb package release
+  * added new aggregator module (agg) for testing
+
+ -- Tomas Cejka <cejkat@cesnet.cz>  Tue, 20 Mar 2018 12:57:36 +0000

@@ -13,6 +13,9 @@ link_traffic \
 logger \
 logreplay \
 merger \
+mux \
+demux \
+natpair \
 proto_traffic \
 report2idea \
 topn \
@@ -20,7 +23,18 @@ traffic_repeater \
 unirec2json \
 endiverter
 
-EXTRA_DIST = AUTHORS COPYING ChangeLog INSTALL NEWS README.md nfreader
+EXTRA_DIST = AUTHORS COPYING ChangeLog INSTALL NEWS README.md nfreader \
+	debian/README.Debian \
+	debian/changelog \
+	debian/compat \
+	debian/control \
+	debian/copyright \
+	debian/nemea-modules-dev.install \
+	debian/nemea-modules.install \
+	debian/patches \
+	debian/rules \
+	debian/source \
+	debian/watch
 
 if HAVE_LIBNF
 SUBDIRS += nfreader
@@ -59,3 +73,16 @@ endif
 
 rpm-clean:
 	rm -rf $(RPMDIR)
+
+if MAKE_DEB
+.PHONY: deb
+deb:
+	make distdir && cd nemea-modules-@VERSION@ && debuild -i -us -uc -b
+else
+endif
+
+deb-clean:
+	rm -rf nemea-modules_*.build* nemea-modules_*.changes nemea-modules*.deb nemea-modules_*.orig.tar.gz nemea-modules-*.tar.gz nemea-modules-@VERSION@
+
+clean-local: rpm-clean deb-clean
+

@@ -110,7 +110,7 @@ typedef struct timedb_s {
  * \param[in] count_uniq positive number specifies that only unique values shall be counted (using B+ trees)
  * \return pointer to created stucture
  */
-timedb_t * timedb_create(int step, int delay, int inactive_timeout, int count_uniq);
+timedb_t *timedb_create(int step, int delay, int inactive_timeout, int count_uniq);
 
 /*!
  * \brief Initializes TimeDB
@@ -138,9 +138,9 @@ void timedb_init_tree(timedb_t *timedb, ur_field_type_t value_type);
  * \param[in] value_type Type of value to be saved
  * \param[in] value pointer to value to save
  * \param[in] var_value_size size of variable-length value (if suitable)
- * \return Return value. Possible values are constants TIMEDB_SAVE_* 
+ * \return Return value. Possible values are constants TIMEDB_SAVE_*
  */
-int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_field_type_t value_type, void * value, int var_value_size);
+int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_field_type_t value_type, void *value, int var_value_size);
 
 /*!
  * \brief Gets values from TimeDB

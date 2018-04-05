@@ -78,15 +78,17 @@ using namespace std;
  */
 struct RecordExt${PLUGIN_UPPER} : RecordExt {
 
-   /**
-    * \\brief Constructor.
-    */
    RecordExt${PLUGIN_UPPER}() : RecordExt(${PLUGIN})
    {
    }
 
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
+   }
+
+   virtual int fillIPFIX(uint8_t *buffer, int size)
+   {
+      return 0;
    }
 };
 
@@ -104,6 +106,7 @@ public:
    int post_update(Flow &rec, const Packet &pkt);
    void pre_export(Flow &rec);
    void finish();
+   const char **get_ipfix_string();
    string get_unirec_field_string();
    bool include_basic_flow_fields();
 
@@ -123,6 +126,7 @@ print_cpp_code() {
 #include \"flowcacheplugin.h\"
 #include \"packet.h\"
 #include \"flow_meter.h\"
+#include \"ipfix-elements.h\"
 
 using namespace std;
 
@@ -173,6 +177,16 @@ void ${PLUGIN_UPPER}Plugin::finish()
    }
 }
 
+const char *ipfix_${PLUGIN_LOWER}_template[] = {
+   IPFIX_${PLUGIN_UPPER}_TEMPLATE(IPFIX_FIELD_NAMES)
+   NULL
+};
+
+const char **${PLUGIN_UPPER}Plugin::get_ipfix_string()
+{
+   return ipfix_${PLUGIN_LOWER}_template;
+}
+
 string ${PLUGIN_UPPER}Plugin::get_unirec_field_string()
 {
    return ${PLUGIN_UPPER}_UNIREC_TEMPLATE;
@@ -186,13 +200,18 @@ bool ${PLUGIN_UPPER}Plugin::include_basic_flow_fields()
 }
 
 print_todo() {
+   echo "Generated ${PLUGIN_LOWER}plugin.cpp and ${PLUGIN_LOWER}plugin.h files"
+   echo
    echo "TODO:"
    echo "1) Add '${PLUGIN}plugin.h' and '${PLUGIN}plugin.cpp' files to flow_meter_SOURCES variable in Makefile.am"
    echo "2) Add '${PLUGIN}' entry to the extTypeEnum in flowifc.h"
    echo "3) Add '#include <${PLUGIN}plugin.h>' line to flow_meter.cpp"
    echo "4) Add ${PLUGIN} to list of supported plugins for -p param in flow_meter.cpp (also update README.md)"
    echo "5) Add plugin support in parse_plugin_settings function in flow_meter.cpp"
-   echo "6) Add unirec fields to the UR_FIELDS and ${PLUGIN_UPPER}_UNIREC_TEMPLATE macro in ${PLUGIN}plugin.cpp"
+   echo "6.1) Add unirec fields to the UR_FIELDS and ${PLUGIN_UPPER}_UNIREC_TEMPLATE macro in ${PLUGIN}plugin.cpp"
+   echo "6.2) Add IPFIX template macro 'IPFIX_${PLUGIN_UPPER}_TEMPLATE' to ipfix-elements.h"
+   echo "6.3) Define IPFIX fields"
+   echo "6.4) Write function 'fillIPFIX' in ${PLUGIN_LOWER}plugin.h to fill fields to IPFIX message"
    echo "7) Do the final work in ${PLUGIN}plugin.cpp and ${PLUGIN}plugin.h files - implement pre_create, post_create, pre_update, post_update, pre_export, include_basic_flow_fields and fill_unirec functions (also read and understand when these functions are called, info in flowcacheplugin.h file)"
    echo "8) Be happy with your new awesome ${PLUGIN} plugin!"
    echo

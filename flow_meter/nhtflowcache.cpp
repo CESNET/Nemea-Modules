@@ -74,6 +74,9 @@ void FlowRecord::create(const Packet &pkt, uint64_t pkt_hash)
    flow.time_first = pkt.timestamp;
    flow.time_last = pkt.timestamp;
 
+   memcpy(flow.src_mac, pkt.src_mac, 6);
+   memcpy(flow.dst_mac, pkt.dst_mac, 6);
+
    if (pkt.ip_version == 4) {
       flow.ip_version = pkt.ip_version;
       flow.ip_proto = pkt.ip_proto;

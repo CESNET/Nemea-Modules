@@ -64,6 +64,7 @@ int Key::get_size() const
    return data_length;
 }
 /* ----------------------------------------------------------------- */
+
 void Key::add_field(const void *src, int size)
 {
    memcpy(data+data_length, src, size);

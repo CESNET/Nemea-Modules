@@ -48,6 +48,7 @@
 #include <cstdio>
 #include <csignal>
 #include <unistd.h>
+
 #include <getopt.h>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
@@ -115,6 +116,7 @@ UR_FIELDS (
  */
 #define MODULE_PARAMS(PARAM) \
   PARAM('k', "key", "Defines received UniRec field name as part of aggregation key." \
+
         "Use individually on each field as -k FIELD_NAME. When no key specified every record is considered to " \
         "match the empty key (every record is processed as with the equal key)." \
         , required_argument, "string") \
@@ -358,7 +360,7 @@ bool send_record_out(ur_template_t *out_tmplt, void *out_rec)
 void flush_storage()
 {
    // Send all stored data
-
+  
    std::unordered_map<Key, void*>::iterator it;
    for ( it = storage.begin(); it != storage.end(); it++) {
       send_record_out(OutputTemplate::out_tmplt, it->second);
@@ -413,6 +415,7 @@ void *check_timeouts(void *input)
           * Only accessing and modifying different elements is thread safe in stl map container */
          // Lock the storage -- CRITICAL SECTION START
          pthread_mutex_lock(&storage_mutex);
+
          for (std::unordered_map<Key, void*>::iterator it = storage.begin(); it != storage.end(); ) {
             if (ur_time_get_sec(ur_get(OutputTemplate::out_tmplt, it->second, F_TIME_LAST)) < time_last_from_record - timeout) {
                // Send record out
@@ -459,6 +462,7 @@ int main(int argc, char **argv)
    int ret;
    signed char opt;
    storage.reserve(2097152);        // Reserve enough space for records without need of rehash()
+
    /* **** TRAP initialization **** */
 
    /*
