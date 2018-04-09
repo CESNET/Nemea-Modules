@@ -118,7 +118,7 @@ UR_FIELDS (
   PARAM('k', "key", "Defines received UniRec field name as part of aggregation key." \
         "Use individually on each field as -k FIELD_NAME. When no key specified every record is considered to " \
         "match the empty key (every record is processed as with the equal key)." \
-        , required_argument, "string") \
+        , required_argument, "URFIELD") \
   PARAM('t', "time_window", "Represents type of timeout and #seconds for given type before sending " \
         "record to output. Use as [G,A,P]:#seconds or M:#Active,#Passive (eg. -t \"m:10,25\"). " \
          "When not specified the default value (A:10) is used.", required_argument, "string") \
