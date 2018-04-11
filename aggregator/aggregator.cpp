@@ -74,7 +74,8 @@
 //#define TRAP_RECV_TIMEOUT 4000000   // 4 seconds
 /** Timeout length value for trap_send() blocking function.*/
 #define TRAP_SEND_TIMEOUT 1000000   // 1 second
-
+/** Value (2^21) for default hash map space reservation before rehash needed.*/
+#define MAP_RESERVE 2097152
 trap_module_info_t *module_info = NULL;
 /**
  * Statically defined fields COUNT, TIME_FIRST, TIME_LAST always used by module
@@ -460,7 +461,7 @@ int main(int argc, char **argv)
 {
    int ret;
    signed char opt;
-   storage.reserve(2097152);        // Reserve enough space for records without need of rehash()
+   storage.reserve(MAP_RESERVE);        // Reserve enough space for records without need of rehash()
 
    /* **** TRAP initialization **** */
 
