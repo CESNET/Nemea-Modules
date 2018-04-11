@@ -685,7 +685,7 @@ int main(int argc, char **argv)
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return 6;
    }
-  
+
    // Register signal handler.
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER(); // Handles SIGTERM and SIGINT
 
