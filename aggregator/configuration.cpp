@@ -22,6 +22,15 @@ Config::~Config()
    }
 }
 
+bool Config::verify_field(const char *field_name)
+{
+   for (int i = 0; i < used_fields; i++) {
+      if (strcmp(field_name, field_names[i]) == 0)
+         return false;
+   }
+   return true;
+}
+
 int Config::get_used_fields()
 {
    return used_fields;
@@ -429,6 +438,11 @@ final_avg Config::get_avg_ptr(int index, ur_field_type_t field_type)
  */
 void Config::add_member(int func, const char *field_name)
 {
+   if (!verify_field(field_name)) {
+      fprintf(stderr, "Field \"%s\" already used, cannot assign new function.\n", field_name);
+      return;
+   }
+
    int name_length = strlen(field_name);
    field_names[used_fields] = new char [name_length + 1];
    strncpy(field_names[used_fields], field_name, name_length + 1);

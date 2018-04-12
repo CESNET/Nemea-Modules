@@ -481,7 +481,6 @@ rule_t *rule_create(const char *specifier, int step, int size, int inactive_time
          token_start = i + 1;
       }
    }
-
    // sanity check
    if (*name == 0) {
       fprintf(stderr, "Error: Rule name cannot be empty.");
