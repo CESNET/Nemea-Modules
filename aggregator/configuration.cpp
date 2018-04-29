@@ -24,6 +24,12 @@ Config::~Config()
 
 bool Config::verify_field(const char *field_name)
 {
+   // Time fields cannot be assigned
+   if ((strcmp(field_name, "TIME_LAST") == 0) || (strcmp(field_name, "TIME_FIRST") == 0)) {
+      return false;
+   }
+
+   // Check if already assigned
    for (int i = 0; i < used_fields; i++) {
       if (strcmp(field_name, field_names[i]) == 0)
          return false;
@@ -438,8 +444,14 @@ final_avg Config::get_avg_ptr(int index, ur_field_type_t field_type)
  */
 void Config::add_member(int func, const char *field_name)
 {
+   if (!(used_fields < MAX_KEY_FIELDS)) {
+      fprintf(stderr, "Cannot register the field \"%s\", maximum number of assigned fields reached. "
+              "Please contact developer to increase the number with use case this happen with.\n", field_name);
+      return;
+   }
+
    if (!verify_field(field_name)) {
-      fprintf(stderr, "Field \"%s\" already used, cannot assign new function.\n", field_name);
+      fprintf(stderr, "Field \"%s\" already used or cannot be assigned.\n", field_name);
       return;
    }
 
