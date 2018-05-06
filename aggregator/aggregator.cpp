@@ -1,11 +1,11 @@
 /**
- * \file aggregation_module.cpp
+ * \file aggregator.cpp
  * \brief Aggregation NEMEA module based on UniRec.
  * \author Michal Slabihoudek <slabimic@fit.cvut.cz>
  * \date 2018
  */
 /*
- * Copyright (C) 2013,2014,2015,2016 CESNET
+ * Copyright (C) 2018 CESNET
  *
  * LICENSE TERMS
  *
