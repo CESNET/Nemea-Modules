@@ -559,8 +559,6 @@ int main(int argc, char *argv[])
    int ret = 0;
    uint64_t pkt_total = 0, pkt_parsed = 0;
 
-   packet.packet = new char[MAXPCKTSIZE + 1];
-
    /* Main packet capture loop. */
    while (!stop && (ret = packetloader.get_pkt(packet)) > 0) {
       if (ret == 3) { /* Process timeout. */
@@ -598,7 +596,11 @@ int main(int argc, char *argv[])
    flowwriter.close();
    packetloader.close();
 
-   delete [] packet.packet;
+   for (Packet *ptr = packet.next; ptr != NULL;) {
+      Packet *tmp = ptr->next;
+      delete ptr;
+      ptr = tmp;
+   }
    TRAP_DEFAULT_FINALIZATION();
 
    return EXIT_SUCCESS;

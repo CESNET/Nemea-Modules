@@ -164,6 +164,7 @@
 #define SMTP_CODE_4XX_COUNT(F)        F(8057,    818,   4,   NULL)
 #define SMTP_CODE_5XX_COUNT(F)        F(8057,    819,   4,   NULL)
 #define SMTP_DOMAIN(F)                F(8057,    820,  -1,   NULL)
+#define DEPTH(F)                      F(8057,    900,   2,   &flow.depth)
 
 /**
  * IPFIX Templates - list of elements
@@ -197,7 +198,8 @@
    F(L3_IPV4_ADDR_SRC) \
    F(L3_IPV4_ADDR_DST) \
    F(L2_SRC_MAC) \
-   F(L2_DST_MAC)
+   F(L2_DST_MAC) \
+   F(DEPTH)
 
 #define BASIC_TMPLT_V6(F) \
    F(BYTES) \
@@ -214,7 +216,8 @@
    F(L3_IPV6_ADDR_SRC) \
    F(L3_IPV6_ADDR_DST) \
    F(L2_SRC_MAC) \
-   F(L2_DST_MAC)
+   F(L2_DST_MAC) \
+   F(DEPTH)
 
 #define IPFIX_HTTP_TEMPLATE(F) \
    F(HTTP_USERAGENT) \

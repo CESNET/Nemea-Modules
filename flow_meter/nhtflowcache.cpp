@@ -106,6 +106,7 @@ void FlowRecord::create(const Packet &pkt, uint64_t pkt_hash)
       flow.src_port = pkt.src_port;
       flow.dst_port = pkt.dst_port;
    }
+   flow.depth = pkt.depth;
 }
 
 void FlowRecord::update(const Packet &pkt)
@@ -280,6 +281,10 @@ int NHTFlowCache::put_pkt(Packet &pkt)
    if (current_ts.tv_sec - last_ts.tv_sec > 5) {
       export_expired(current_ts.tv_sec);
       last_ts = current_ts;
+   }
+
+   if (pkt.next != NULL && pkt.next->valid) {
+      put_pkt(*pkt.next);
    }
 
    return 0;

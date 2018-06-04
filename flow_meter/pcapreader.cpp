@@ -58,6 +58,7 @@
 #include <pcap/pcap.h>
 
 #include "pcapreader.h"
+#include "parser.h"
 
 using namespace std;
 
@@ -84,356 +85,10 @@ static uint32_t s_total_pkts = 0;
 #endif /* DEBUG_PARSER */
 
 /**
- * \brief Distinguish between valid (parsed) and non-valid packet.
- */
-bool packet_valid = false;
-
-/**
  * \brief Parse every packet.
  */
 bool parse_all = false;
 
-/**
- * \brief Parse specific fields from ETHERNET frame header.
- * \param [in] data_ptr Pointer to begin of header.
- * \param [out] pkt Pointer to Packet structure where parsed fields will be stored.
- * \return Size of header in bytes.
- */
-inline uint16_t parse_eth_hdr(const u_char *data_ptr, Packet *pkt)
-{
-   struct ethhdr *eth = (struct ethhdr *) data_ptr;
-   uint16_t hdr_len = 14, ethertype = ntohs(eth->h_proto);
-
-   DEBUG_MSG("Ethernet header:\n");
-   DEBUG_MSG("\tDest mac:\t%s\n",         ether_ntoa((struct ether_addr *) eth->h_dest));
-   DEBUG_MSG("\tSrc mac:\t%s\n",          ether_ntoa((struct ether_addr *) eth->h_source));
-   DEBUG_MSG("\tEthertype:\t%#06x\n",     ethertype);
-
-   memcpy(pkt->dst_mac, eth->h_dest, 6);
-   memcpy(pkt->src_mac, eth->h_source, 6);
-
-   if (ethertype == ETH_P_8021AD) {
-      DEBUG_CODE(uint16_t vlan = ntohs(*(uint16_t *) (data_ptr + hdr_len)));
-      DEBUG_MSG("\t802.1ad field:\n");
-      DEBUG_MSG("\t\tPriority:\t%u\n",    ((vlan & 0xE000) >> 12));
-      DEBUG_MSG("\t\tCFI:\t\t%u\n",       ((vlan & 0x1000) >> 11));
-      DEBUG_MSG("\t\tVLAN:\t\t%u\n",      (vlan & 0x0FFF));
-
-      hdr_len += 4;
-      ethertype = ntohs(*(uint16_t *) (data_ptr + hdr_len - 2));
-      DEBUG_MSG("\t\tEthertype:\t%#06x\n", ethertype);
-   }
-   while (ethertype == ETH_P_8021Q) {
-      DEBUG_CODE(uint16_t vlan = ntohs(*(uint16_t *) (data_ptr + hdr_len)));
-      DEBUG_MSG("\t802.1q field:\n");
-      DEBUG_MSG("\t\tPriority:\t%u\n",    ((vlan & 0xE000) >> 12));
-      DEBUG_MSG("\t\tCFI:\t\t%u\n",       ((vlan & 0x1000) >> 11));
-      DEBUG_MSG("\t\tVLAN:\t\t%u\n",      (vlan & 0x0FFF));
-
-      hdr_len += 4;
-      ethertype = ntohs(*(uint16_t *) (data_ptr + hdr_len - 2));
-      DEBUG_MSG("\t\tEthertype:\t%#06x\n", ethertype);
-   }
-
-   pkt->ethertype = ethertype;
-
-   return hdr_len;
-}
-
-/**
- * \brief Parse specific fields from IPv4 header.
- * \param [in] data_ptr Pointer to begin of header.
- * \param [out] pkt Pointer to Packet structure where parsed fields will be stored.
- * \return Size of header in bytes.
- */
-inline uint16_t parse_ipv4_hdr(const u_char *data_ptr, Packet *pkt)
-{
-   struct iphdr *ip = (struct iphdr *) data_ptr;
-
-   pkt->ip_version = 4;
-   pkt->ip_proto = ip->protocol;
-   pkt->ip_tos = ip->tos;
-   pkt->ip_length = ntohs(ip->tot_len);
-   pkt->ip_ttl = ip->ttl;
-   pkt->src_ip.v4 = ip->saddr;
-   pkt->dst_ip.v4 = ip->daddr;
-
-   DEBUG_MSG("IPv4 header:\n");
-   DEBUG_MSG("\tHDR version:\t%u\n",   ip->version);
-   DEBUG_MSG("\tHDR length:\t%u\n",    ip->ihl);
-   DEBUG_MSG("\tTOS:\t\t%u\n",         ip->tos);
-   DEBUG_MSG("\tTotal length:\t%u\n",  ntohs(ip->tot_len));
-   DEBUG_MSG("\tID:\t\t%#x\n",         ntohs(ip->id));
-   DEBUG_MSG("\tFlags:\t\t%#x\n",      ((ntohs(ip->frag_off) & 0xE000) >> 13));
-   DEBUG_MSG("\tFrag off:\t%#x\n",     (ntohs(ip->frag_off) & 0x1FFF));
-   DEBUG_MSG("\tTTL:\t\t%u\n",         ip->ttl);
-   DEBUG_MSG("\tProtocol:\t%u\n",      ip->protocol);
-   DEBUG_MSG("\tChecksum:\t%#06x\n",   ntohs(ip->check));
-   DEBUG_MSG("\tSrc addr:\t%s\n",      inet_ntoa(*(struct in_addr *) (&ip->saddr)));
-   DEBUG_MSG("\tDest addr:\t%s\n",     inet_ntoa(*(struct in_addr *) (&ip->daddr)));
-
-   return (ip->ihl << 2);
-}
-
-/**
- * \brief Skip IPv6 extension headers.
- * \param [in] data_ptr Pointer to begin of header.
- * \param [out] pkt Pointer to Packet structure where parsed fields will be stored.
- * \return Length of headers in bytes.
- */
-uint16_t skip_ipv6_ext_hdrs(const u_char *data_ptr, Packet *pkt)
-{
-   struct ip6_ext *ext = (struct ip6_ext *) data_ptr;
-   uint8_t next_hdr = pkt->ip_proto;
-   uint16_t hdrs_len = 0;
-
-   /* Skip extension headers... */
-   while (1) {
-      if (next_hdr == IPPROTO_HOPOPTS ||
-          next_hdr == IPPROTO_DSTOPTS) {
-         hdrs_len += (ext->ip6e_len << 3) + 8;
-      } else if (next_hdr == IPPROTO_ROUTING) {
-         struct ip6_rthdr *rt = (struct ip6_rthdr *) (data_ptr + hdrs_len);
-         hdrs_len += (rt->ip6r_len << 3) + 8;
-      } else if (next_hdr == IPPROTO_AH) {
-         hdrs_len += (ext->ip6e_len << 2) - 2;
-      } else if (next_hdr == IPPROTO_FRAGMENT) {
-         hdrs_len += 8;
-      } else {
-         break;
-      }
-      DEBUG_MSG("\tIPv6 extension header:\t%u\n", next_hdr);
-      DEBUG_MSG("\t\tLength:\t%u\n", ext->ip6e_len);
-
-      next_hdr = ext->ip6e_nxt;
-      ext = (struct ip6_ext *) (data_ptr + hdrs_len);
-      pkt->ip_proto = next_hdr;
-   }
-
-   return hdrs_len;
-}
-
-/**
- * \brief Parse specific fields from IPv6 header.
- * \param [in] data_ptr Pointer to begin of header.
- * \param [out] pkt Pointer to Packet structure where parsed fields will be stored.
- * \return Size of header in bytes.
- */
-inline uint16_t parse_ipv6_hdr(const u_char *data_ptr, Packet *pkt)
-{
-   struct ip6_hdr *ip6 = (struct ip6_hdr *) data_ptr;
-   uint16_t hdr_len = 40;
-
-   pkt->ip_version = 6;
-   pkt->ip_tos = (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0x0ff00000) >> 20;
-   pkt->ip_proto = ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt;
-   pkt->ip_ttl = ip6->ip6_ctlun.ip6_un1.ip6_un1_hlim;
-   pkt->ip_length = ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);
-   memcpy(pkt->src_ip.v6, (const char *) &ip6->ip6_src, 16);
-   memcpy(pkt->dst_ip.v6, (const char *) &ip6->ip6_dst, 16);
-
-   DEBUG_CODE(char buffer[INET6_ADDRSTRLEN]);
-   DEBUG_MSG("IPv6 header:\n");
-   DEBUG_MSG("\tVersion:\t%u\n",       (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0xf0000000) >> 28);
-   DEBUG_MSG("\tClass:\t\t%u\n",       (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0x0ff00000) >> 20);
-   DEBUG_MSG("\tFlow:\t\t%#x\n",       (ntohl(ip6->ip6_ctlun.ip6_un1.ip6_un1_flow) & 0x000fffff));
-   DEBUG_MSG("\tLength:\t\t%u\n",      ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen));
-   DEBUG_MSG("\tProtocol:\t%u\n",      ip6->ip6_ctlun.ip6_un1.ip6_un1_nxt);
-   DEBUG_MSG("\tHop limit:\t%u\n",     ip6->ip6_ctlun.ip6_un1.ip6_un1_hlim);
-
-   DEBUG_CODE(inet_ntop(AF_INET6, (const void *) &ip6->ip6_src, buffer, INET6_ADDRSTRLEN));
-   DEBUG_MSG("\tSrc addr:\t%s\n",      buffer);
-   DEBUG_CODE(inet_ntop(AF_INET6, (const void *) &ip6->ip6_dst, buffer, INET6_ADDRSTRLEN));
-   DEBUG_MSG("\tDest addr:\t%s\n",     buffer);
-
-   if (pkt->ip_proto != IPPROTO_TCP && pkt->ip_proto != IPPROTO_UDP) {
-      hdr_len += skip_ipv6_ext_hdrs(data_ptr + hdr_len, pkt);
-   }
-
-   return hdr_len;
-}
-
-/**
- * \brief Parse specific fields from TCP header.
- * \param [in] data_ptr Pointer to begin of header.
- * \param [out] pkt Pointer to Packet structure where parsed fields will be stored.
- * \return Size of header in bytes.
- */
-inline uint16_t parse_tcp_hdr(const u_char *data_ptr, Packet *pkt)
-{
-   struct tcphdr *tcp = (struct tcphdr *) data_ptr;
-
-   pkt->field_indicator |= (PCKT_TCP | PCKT_PAYLOAD);
-   pkt->src_port = ntohs(tcp->source);
-   pkt->dst_port = ntohs(tcp->dest);
-   pkt->tcp_control_bits = (uint8_t) *(data_ptr + 13) & 0x3F;
-
-   DEBUG_MSG("TCP header:\n");
-   DEBUG_MSG("\tSrc port:\t%u\n",   ntohs(tcp->source));
-   DEBUG_MSG("\tDest port:\t%u\n",  ntohs(tcp->dest));
-   DEBUG_MSG("\tSEQ:\t\t%#x\n",     ntohl(tcp->seq));
-   DEBUG_MSG("\tACK SEQ:\t%#x\n",   ntohl(tcp->ack_seq));
-   DEBUG_MSG("\tData offset:\t%u\n",tcp->doff);
-   DEBUG_MSG("\tFlags:\t\t%s%s%s%s%s%s\n", (tcp->fin ? "FIN " : ""), (tcp->syn ? "SYN " : ""),
-                                           (tcp->rst ? "RST " : ""), (tcp->psh ? "PSH " : ""),
-                                           (tcp->ack ? "ACK " : ""), (tcp->urg ? "URG"  : ""));
-   DEBUG_MSG("\tWindow:\t\t%u\n",   ntohs(tcp->window));
-   DEBUG_MSG("\tChecksum:\t%#06x\n",ntohs(tcp->check));
-   DEBUG_MSG("\tUrg ptr:\t%#x\n",   ntohs(tcp->urg_ptr));
-   DEBUG_MSG("\tReserved1:\t%#x\n", tcp->res1);
-   DEBUG_MSG("\tReserved2:\t%#x\n", tcp->res2);
-
-   return (tcp->doff << 2);
-}
-
-/**
- * \brief Parse specific fields from UDP header.
- * \param [in] data_ptr Pointer to begin of header.
- * \param [out] pkt Pointer to Packet structure where parsed fields will be stored.
- * \return Size of header in bytes.
- */
-inline uint16_t parse_udp_hdr(const u_char *data_ptr, Packet *pkt)
-{
-   struct udphdr *udp = (struct udphdr *) data_ptr;
-
-   pkt->field_indicator |= (PCKT_UDP | PCKT_PAYLOAD);
-   pkt->src_port = ntohs(udp->source);
-   pkt->dst_port = ntohs(udp->dest);
-
-   DEBUG_MSG("UDP header:\n");
-   DEBUG_MSG("\tSrc port:\t%u\n",   ntohs(udp->source));
-   DEBUG_MSG("\tDest port:\t%u\n",  ntohs(udp->dest));
-   DEBUG_MSG("\tLength:\t\t%u\n",   ntohs(udp->len));
-   DEBUG_MSG("\tChecksum:\t%#06x\n",ntohs(udp->check));
-
-   return 8;
-}
-
-/**
- * \brief Parse specific fields from ICMP header.
- * \param [in] data_ptr Pointer to begin of header.
- * \param [out] pkt Pointer to Packet structure where parsed fields will be stored.
- * \return Size of header in bytes.
- */
-inline uint16_t parse_icmp_hdr(const u_char *data_ptr, Packet *pkt)
-{
-   struct icmphdr *icmp = (struct icmphdr *) data_ptr;
-   pkt->dst_port = icmp->type * 256 + icmp->code;
-   pkt->field_indicator |= PCKT_ICMP;
-
-   DEBUG_MSG("ICMP header:\n");
-   DEBUG_MSG("\tType:\t\t%u\n",     icmp->type);
-   DEBUG_MSG("\tCode:\t\t%u\n",     icmp->code);
-   DEBUG_MSG("\tChecksum:\t%#06x\n",ntohs(icmp->checksum));
-   DEBUG_MSG("\tRest:\t\t%#06x\n",  ntohl(*(uint32_t *) &icmp->un));
-
-   return 0;
-}
-
-/**
- * \brief Parse specific fields from ICMPv6 header.
- * \param [in] data_ptr Pointer to begin of header.
- * \param [out] pkt Pointer to Packet structure where parsed fields will be stored.
- * \return Size of header in bytes.
- */
-inline uint16_t parse_icmpv6_hdr(const u_char *data_ptr, Packet *pkt)
-{
-   struct icmp6_hdr *icmp6 = (struct icmp6_hdr *) data_ptr;
-   pkt->dst_port = icmp6->icmp6_type * 256 + icmp6->icmp6_code;
-   pkt->field_indicator |= PCKT_ICMP;
-
-   DEBUG_MSG("ICMPv6 header:\n");
-   DEBUG_MSG("\tType:\t\t%u\n",     icmp6->icmp6_type);
-   DEBUG_MSG("\tCode:\t\t%u\n",     icmp6->icmp6_code);
-   DEBUG_MSG("\tChecksum:\t%#x\n",  ntohs(icmp6->icmp6_cksum));
-   DEBUG_MSG("\tBody:\t\t%#x\n",    ntohs(*(uint32_t *) &icmp6->icmp6_dataun));
-
-   return 0;
-}
-
-uint16_t process_mpls_stack(const u_char *data_ptr)
-{
-   uint32_t *mpls;
-   uint16_t length = 0;
-
-   do {
-      mpls = (uint32_t *) (data_ptr + length);
-      length += sizeof(uint32_t);
-
-      DEBUG_MSG("MPLS:\n");
-      DEBUG_MSG("\tLabel:\t%u\n",   ntohl(*mpls) >> 12);
-      DEBUG_MSG("\tTC:\t%u\n",      (ntohl(*mpls) & 0xE00) >> 9);
-      DEBUG_MSG("\tBOS:\t%u\n",     (ntohl(*mpls) & 0x100) >> 8);
-      DEBUG_MSG("\tTTL:\t%u\n",     ntohl(*mpls) & 0xFF);
-
-    } while (!(ntohl(*mpls) & 0x100));
-
-   return length;
-}
-
-uint16_t process_mpls(const u_char *data_ptr, Packet *pkt)
-{
-   Packet tmp;
-   uint16_t length = process_mpls_stack(data_ptr);
-   uint8_t next_hdr = (*(data_ptr + length) & 0xF0) >> 4;
-
-   if (next_hdr == 4) {
-      length += parse_ipv4_hdr(data_ptr + length, pkt);
-   } else if (next_hdr == 6) {
-      length += parse_ipv6_hdr(data_ptr + length, pkt);
-   } else if (next_hdr == 0) {
-      /* Process EoMPLS */
-      length += 4; /* Skip Pseudo Wire Ethernet control word. */
-      length = parse_eth_hdr(data_ptr + length, &tmp);
-      if (tmp.ethertype == ETH_P_IP) {
-         length += parse_ipv4_hdr(data_ptr + length, pkt);
-      } else if (tmp.ethertype == ETH_P_IPV6) {
-         length += parse_ipv6_hdr(data_ptr + length, pkt);
-      }
-   }
-
-   return length;
-}
-
-struct __attribute__((packed)) pppoe_hdr {
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-   uint8_t type:4;
-   uint8_t version:4;
-#elif __BYTE_ORDER == __BIG_ENDIAN
-   uint8_t version:4;
-   uint8_t type:4;
-#endif
-   uint8_t code;
-   uint16_t sid;
-   uint16_t length;
-};
-
-inline uint16_t process_pppoe(const u_char *data_ptr, Packet *pkt)
-{
-   struct pppoe_hdr *pppoe = (struct pppoe_hdr *) data_ptr;
-   uint16_t next_hdr = ntohs(*(uint16_t *) (data_ptr + sizeof(struct pppoe_hdr)));
-   uint16_t length = sizeof(struct pppoe_hdr) + 2;
-
-   DEBUG_MSG("PPPoE header:\n");
-   DEBUG_MSG("\tVer:\t%u\n",     pppoe->version);
-   DEBUG_MSG("\tType:\t%u\n",    pppoe->type);
-   DEBUG_MSG("\tCode:\t%u\n",    pppoe->code);
-   DEBUG_MSG("\tSID:\t%u\n",     ntohs(pppoe->sid));
-   DEBUG_MSG("\tLength:\t%u\n",  ntohs(pppoe->length));
-   DEBUG_MSG("PPP header:\n");
-   DEBUG_MSG("\tProtocol:\t%#04x\n", next_hdr);
-   if (pppoe->code != 0) {
-      return length;
-   }
-
-   if (next_hdr == 0x0021) {
-      length += parse_ipv4_hdr(data_ptr + length, pkt);
-   } else if (next_hdr == 0x0057) {
-      length += parse_ipv6_hdr(data_ptr + length, pkt);
-   }
-
-   return length;
-}
 
 /**
  * \brief Parsing callback function for pcap_dispatch() call. Parse packets up to transport layer.
@@ -444,17 +99,15 @@ inline uint16_t process_pppoe(const u_char *data_ptr, Packet *pkt)
 void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data)
 {
    Packet *pkt = (Packet *) arg;
-   uint16_t data_offset = 0;
+   uint32_t pkt_len = h->caplen;
+   uint32_t pkt_offset = 0;
 
-   DEBUG_MSG("---------- packet parser  #%u -------------\n", ++s_total_pkts);
-   DEBUG_CODE(
-      char timestamp[32];
-      time_t time = h->ts.tv_sec;
-      strftime(timestamp, sizeof(timestamp), "%FT%T", localtime(&time));
-   );
-   DEBUG_MSG("Time:\t\t\t%s.%06lu\n",     timestamp, h->ts.tv_usec);
-   DEBUG_MSG("Packet length:\t\tcaplen=%uB len=%uB\n\n", h->caplen, h->len);
+   packet_hdr_t *headers = NULL;
+   packet_hdr_t *tmp = NULL;
 
+   bool parsed = false;
+
+   pkt->valid = false;
    pkt->timestamp = h->ts;
    pkt->field_indicator = 0;
    pkt->src_port = 0;
@@ -463,45 +116,187 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
    pkt->ip_version = 0;
    pkt->tcp_control_bits = 0;
 
-   data_offset = parse_eth_hdr(data, pkt);
-   if (pkt->ethertype == ETH_P_IP) {
-      data_offset += parse_ipv4_hdr(data + data_offset, pkt);
-   } else if (pkt->ethertype == ETH_P_IPV6) {
-      data_offset += parse_ipv6_hdr(data + data_offset, pkt);
-   } else if (pkt->ethertype == ETH_P_MPLS_UC || pkt->ethertype == ETH_P_MPLS_MC) {
-      data_offset += process_mpls(data + data_offset, pkt);
-   } else if (pkt->ethertype == ETH_P_PPP_SES) {
-      data_offset += process_pppoe(data + data_offset, pkt);
-   } else if (!parse_all) {
-      DEBUG_MSG("Unknown ethertype %x\n", pkt->ethertype);
-      return;
-   }
-
-   if (pkt->ip_proto == IPPROTO_TCP) {
-      data_offset += parse_tcp_hdr(data + data_offset, pkt);
-   } else if (pkt->ip_proto == IPPROTO_UDP) {
-      data_offset += parse_udp_hdr(data + data_offset, pkt);
-   } else if (pkt->ip_proto == IPPROTO_ICMP) {
-      data_offset += parse_icmp_hdr(data + data_offset, pkt);
-   } else if (pkt->ip_proto == IPPROTO_ICMPV6) {
-      data_offset += parse_icmpv6_hdr(data + data_offset, pkt);
-   }
-
-   uint32_t len = h->caplen;
+   uint32_t len = pkt_len;
    if (len > MAXPCKTSIZE) {
       len = MAXPCKTSIZE;
-      DEBUG_MSG("Packet size too long, truncating to %u\n", len);
    }
-   memcpy(pkt->packet, data, len);
+   memcpy(pkt->packet, data + (h->caplen - pkt_len), len);
    pkt->packet[len] = 0;
    pkt->total_length = len;
 
-   pkt->payload_length = len - data_offset;
-   pkt->payload = pkt->packet + data_offset;
+   /* Parse packet using parser generated from P4-16. */
+   int ret = fpp_parse_packet(data, pkt_len, &headers);
 
-   DEBUG_MSG("Payload length:\t%u\n", pkt->payload_length);
-   DEBUG_MSG("Packet parser exits: packet parsed\n");
-   packet_valid = true;
+   switch (ret) {
+      case OutOfMemory:
+         return;
+      case NoError:
+      case ParserDefaultReject:
+      case NoMatch:
+      case StackOutOfBounds:
+      case HeaderTooShort:
+      case ParserTimeout:
+      default:
+         break;
+   }
+
+   /* Iterate through parsed packet headers linked list. */
+   while (headers != NULL) {
+      /* Process parsed headers. */
+      if (headers->type == fpp_ethernet_h) {
+         /* Ethernet */
+         struct ethernet_h *eth = (struct ethernet_h *) headers->hdr;
+
+         memcpy(pkt->dst_mac, eth->dst_addr, 6);
+         memcpy(pkt->src_mac, eth->src_addr, 6);
+         pkt->ethertype = eth->ethertype;
+         if (parse_all) {
+            pkt->valid = true;
+         }
+      } else if (headers->type == fpp_ipv4_h) {
+         /* IPv4 */
+         struct ipv4_h *ip = (struct ipv4_h *) headers->hdr;
+         if (parsed) {
+            if (pkt->next == NULL) {
+               pkt->next = new Packet();
+               pkt->next->depth = pkt->depth + 1;
+            }
+            pkt = pkt->next;
+            pkt->valid = true;
+            pkt->timestamp = h->ts;
+            pkt->field_indicator = 0;
+            pkt->src_port = 0;
+            pkt->dst_port = 0;
+            pkt->tcp_control_bits = 0;
+            if (pkt->next != NULL) {
+               pkt->next->valid = false;
+            }
+
+            pkt_len -= ip->header_offset - pkt_offset;
+            pkt_offset = ip->header_offset;
+
+            uint32_t len = pkt_len;
+            if (len > MAXPCKTSIZE) {
+               len = MAXPCKTSIZE;
+            }
+            memcpy(pkt->packet, data + (h->caplen - pkt_len), len);
+            pkt->packet[len] = 0;
+            pkt->total_length = len;
+         }
+
+         pkt->ip_version = 4;
+         pkt->ip_proto = ip->protocol;
+         pkt->ip_tos = ip->diffserv;
+         pkt->ip_length = ip->total_len;
+         pkt->ip_ttl = ip->ttl;
+         pkt->src_ip.v4 = ntohl(ip->src_addr);
+         pkt->dst_ip.v4 = ntohl(ip->dst_addr);
+         pkt->valid = true;
+         parsed = true;
+      } else if (headers->type == fpp_ipv6_h) {
+         /* IPv6 */
+         struct ipv6_h *ip = (struct ipv6_h *) headers->hdr;
+         if (parsed) {
+            if (pkt->next == NULL) {
+               pkt->next = new Packet();
+               pkt->next->depth = pkt->depth + 1;
+            }
+            pkt = pkt->next;
+            pkt->valid = true;
+            pkt->timestamp = h->ts;
+            pkt->field_indicator = 0;
+            pkt->src_port = 0;
+            pkt->dst_port = 0;
+            pkt->tcp_control_bits = 0;
+            if (pkt->next != NULL) {
+               pkt->next->valid = false;
+            }
+
+            pkt_len -= ip->header_offset - pkt_offset;
+            pkt_offset = ip->header_offset;
+
+            uint32_t len = pkt_len;
+            if (len > MAXPCKTSIZE) {
+               len = MAXPCKTSIZE;
+            }
+            memcpy(pkt->packet, data + (h->caplen - pkt_len), len);
+            pkt->packet[len] = 0;
+            pkt->total_length = len;
+         }
+
+         pkt->ip_version = 6;
+         pkt->ip_tos = ip->traffic_class;
+         pkt->ip_proto = ip->next_hdr;
+         pkt->ip_ttl = ip->hop_limit;
+         pkt->ip_length = ip->payload_len;
+         memcpy(pkt->src_ip.v6, (const char *) ip->src_addr, 16);
+         memcpy(pkt->dst_ip.v6, (const char *) ip->dst_addr, 16);
+         pkt->valid = true;
+         parsed = true;
+      } else if (headers->type == fpp_tcp_h) {
+         /* TCP */
+         struct tcp_h *tcp = (struct tcp_h *) headers->hdr;
+
+         pkt->field_indicator |= (PCKT_TCP | PCKT_PAYLOAD);
+         pkt->src_port = tcp->src_port;
+         pkt->dst_port = tcp->dst_port;
+         pkt->tcp_control_bits = tcp->flags;
+      } else if (headers->type == fpp_udp_h) {
+         /* UDP */
+         struct udp_h *udp = (struct udp_h *) headers->hdr;
+
+         pkt->field_indicator |= (PCKT_UDP | PCKT_PAYLOAD);
+         pkt->src_port = udp->src_port;
+         pkt->dst_port = udp->dst_port;
+         pkt->tcp_control_bits = 0;
+      } else if (headers->type == fpp_icmp_h) {
+         struct icmp_h *icmp = (struct icmp_h *) headers->hdr;
+
+         pkt->src_port = 0;
+         pkt->dst_port = icmp->type_ * 256 + icmp->code;
+         pkt->tcp_control_bits = 0;
+         pkt->field_indicator |= PCKT_ICMP;
+      } else if (headers->type == fpp_icmpv6_h) {
+         struct icmp_h *icmp = (struct icmp_h *) headers->hdr;
+
+         pkt->src_port = 0;
+         pkt->dst_port = icmp->type_ * 256 + icmp->code;
+         pkt->tcp_control_bits = 0;
+         pkt->field_indicator |= PCKT_ICMP;
+      } else if (headers->type == fpp_payload_h) {
+         /* Payload */
+         if (pkt->field_indicator & PCKT_PAYLOAD || parse_all) {
+            struct payload_h *payload = (struct payload_h *) headers->hdr;
+
+            uint32_t tmp = payload->header_offset - pkt_offset;
+            pkt->payload_length = pkt->total_length - tmp;
+            pkt->payload = pkt->packet + tmp;
+         }
+      } else if (headers->type == fpp_ipv6_hop_opt_h) {
+         struct ipv6_hop_opt_h *ext = (struct ipv6_hop_opt_h *) headers->hdr;
+         pkt->ip_proto = ext->next_hdr;
+      } else if (headers->type == fpp_ipv6_dst_opt_h) {
+         struct ipv6_dst_opt_h *ext = (struct ipv6_dst_opt_h *) headers->hdr;
+         pkt->ip_proto = ext->next_hdr;
+      } else if (headers->type == fpp_ipv6_routing_h) {
+         struct ipv6_routing_h *ext = (struct ipv6_routing_h *) headers->hdr;
+         pkt->ip_proto = ext->next_hdr;
+      } else if (headers->type == fpp_ipv6_fragment_h) {
+         struct ipv6_fragment_h *ext = (struct ipv6_fragment_h *) headers->hdr;
+         pkt->ip_proto = ext->next_hdr;
+      } else if (headers->type == fpp_ipv6_ah_h) {
+         struct ipv6_ah_h *ext = (struct ipv6_ah_h *) headers->hdr;
+         pkt->ip_proto = ext->next_hdr;
+      }
+
+      tmp = headers;
+      headers = headers->next;
+
+      free(tmp->hdr);
+      free(tmp);
+   }
+
+   return;
 }
 
 /**
@@ -678,7 +473,6 @@ int PcapReader::get_pkt(Packet &packet)
    }
 
    int ret;
-   packet_valid = false;
 
    if (print_pcap_stats) {
       print_stats();
@@ -691,7 +485,7 @@ int PcapReader::get_pkt(Packet &packet)
       return (live_capture ? 3 : 0);
    }
 
-   if (ret == 1 && packet_valid) {
+   if (ret == 1 && packet.valid) {
       // Packet is valid and ready to process by flow_cache.
       return 2;
    }

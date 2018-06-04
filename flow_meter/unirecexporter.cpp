@@ -58,7 +58,7 @@
 
 using namespace std;
 
-#define BASIC_FLOW_TEMPLATE "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,DIR_BIT_FIELD,TOS,TTL,SRC_MAC,DST_MAC" /* LINK_BIT_FIELD or ODID will be added at init. */
+#define BASIC_FLOW_TEMPLATE "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,DIR_BIT_FIELD,TOS,TTL,SRC_MAC,DST_MAC,DEPTH" /* LINK_BIT_FIELD or ODID will be added at init. */
 
 #define PACKET_TEMPLATE "SRC_MAC,DST_MAC,ETHERTYPE,TIME"
 
@@ -78,6 +78,7 @@ UR_FIELDS (
    uint8 TCP_FLAGS,
    uint8 TOS,
    uint8 TTL,
+   uint16 DEPTH,
 
    macaddr SRC_MAC,
    macaddr DST_MAC,
@@ -337,6 +338,7 @@ void UnirecExporter::fill_basic_flow(Flow &flow, ur_template_t *tmplt_ptr, void 
    ur_set(tmplt_ptr, record_ptr, F_TCP_FLAGS, flow.tcp_control_bits);
    ur_set(tmplt_ptr, record_ptr, F_TOS, flow.ip_tos);
    ur_set(tmplt_ptr, record_ptr, F_TTL, flow.ip_ttl);
+   ur_set(tmplt_ptr, record_ptr, F_DEPTH, flow.depth);
 
    ur_set(tmplt_ptr, record_ptr, F_DST_MAC, mac_from_bytes(flow.dst_mac));
    ur_set(tmplt_ptr, record_ptr, F_SRC_MAC, mac_from_bytes(flow.src_mac));

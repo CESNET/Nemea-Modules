@@ -64,6 +64,7 @@
  * \brief Structure for storing parsed packets up to transport layer.
  */
 struct Packet : public Record {
+   bool valid;
    struct timeval timestamp;
    uint16_t   field_indicator;
 
@@ -88,11 +89,19 @@ struct Packet : public Record {
    uint16_t    payload_length;
    char        *payload; /**< Pointer to packet payload section. */
 
+   uint32_t depth;
+   Packet *next;
+
    /**
     * \brief Constructor.
     */
-   Packet() : total_length(0), packet(NULL), payload_length(0), payload(NULL)
+   Packet() : total_length(0), packet(NULL), payload_length(0), payload(NULL), depth(0), next(NULL)
    {
+      packet = new char[MAXPCKTSIZE + 1];
+   }
+   ~Packet()
+   {
+      delete [] packet;
    }
 };
 
