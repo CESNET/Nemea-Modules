@@ -1,9 +1,45 @@
-/*! \file configuration.cpp
+/**
+ * \file configuration.cpp
+ * \brief Module running properties configuration.
+ * \author Michal Slabihoudek <slabimic@fit.cvut.cz>
+ * \date 2018
  */
-
-//
-// Created by slabimic on 26/02/18.
-//
+/*
+ * Copyright (C) 2018 CESNET
+ *
+ * LICENSE TERMS
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is'', and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
 
 #include "configuration.h"
 
@@ -24,6 +60,12 @@ Config::~Config()
 
 bool Config::verify_field(const char *field_name)
 {
+   // Time fields cannot be assigned
+   if ((strcmp(field_name, "TIME_LAST") == 0) || (strcmp(field_name, "TIME_FIRST") == 0)) {
+      return false;
+   }
+
+   // Check if already assigned
    for (int i = 0; i < used_fields; i++) {
       if (strcmp(field_name, field_names[i]) == 0)
          return false;
@@ -438,8 +480,14 @@ final_avg Config::get_avg_ptr(int index, ur_field_type_t field_type)
  */
 void Config::add_member(int func, const char *field_name)
 {
+   if (!(used_fields < MAX_KEY_FIELDS)) {
+      fprintf(stderr, "Cannot register the field \"%s\", maximum number of assigned fields reached. "
+              "Please contact developer to increase the number with use case this happen with.\n", field_name);
+      return;
+   }
+
    if (!verify_field(field_name)) {
-      fprintf(stderr, "Field \"%s\" already used, cannot assign new function.\n", field_name);
+      fprintf(stderr, "Field \"%s\" already used or cannot be assigned.\n", field_name);
       return;
    }
 

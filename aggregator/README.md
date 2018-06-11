@@ -1,6 +1,3 @@
-## THIS MODULE IS CURRENTLY UNDER DEVELOPMENT
----
-
 ---
 # Aggregator module - README
 
