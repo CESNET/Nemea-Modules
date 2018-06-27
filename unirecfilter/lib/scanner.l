@@ -8,7 +8,7 @@
 
     char *copyString(char *str, int len) {
         char *ret = calloc(len + 1, sizeof(char));
-        strcpy(ret, str);
+        strncpy(ret, str, (size_t) len);
         return ret;
     }
     char *cutString(char *str, int len) {
