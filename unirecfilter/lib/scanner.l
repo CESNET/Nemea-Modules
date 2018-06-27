@@ -6,14 +6,14 @@
 
     #define YY_NO_INPUT
 
-    char *copyString(char* str, int len) {
-        char *ret = calloc(len+1, sizeof(char));
+    char *copyString(char *str, int len) {
+        char *ret = calloc(len + 1, sizeof(char));
         strcpy(ret, str);
         return ret;
     }
-    char *cutString(char* str, int len) {
+    char *cutString(char *str, int len) {
         char *ret = calloc(len-1, sizeof(char));
-        strncpy(ret, str+1, (size_t)len-2);
+        strncpy(ret, str + 1, (size_t) len - 2);
         return ret;
     }
 %}
