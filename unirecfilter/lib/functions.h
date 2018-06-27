@@ -60,7 +60,7 @@ memset(ur_get_ptr_by_id(tmpl, data, field_id), 0, ur_get_size(field_id));
 
 /* Used for types of expression nodes in abstract syntax tree */
 typedef enum { NODE_T_AST, NODE_T_EXPRESSION, NODE_T_EXPRESSION_FP,
-               NODE_T_PROTOCOL, NODE_T_IP, NODE_T_STRING,
+               NODE_T_EXPRESSION_DATETIME, NODE_T_PROTOCOL, NODE_T_IP, NODE_T_STRING,
                NODE_T_BRACKET, NODE_T_NEGATION } node_type;
 
 /* Used for describing comparison operators */
@@ -92,6 +92,14 @@ struct expression_fp {
    cmp_op cmp;
    char *column;
    double number;
+   ur_field_id_t id;
+};
+
+struct expression_datetime {
+   node_type type;
+   cmp_op cmp;
+   char *column;
+   ur_time_t date;
    ur_field_id_t id;
 };
 
