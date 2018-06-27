@@ -119,7 +119,7 @@ struct ast *newExpression(char *column, char *cmp, int64_t number, int is_signed
    struct expression *newast = (struct expression *) malloc(sizeof(struct expression));
 
    newast->type = NODE_T_EXPRESSION;
-   newast->column = strdup(column);
+   newast->column = column;
    newast->number = number;
    int id = ur_get_id_by_name(column);
    newast->is_signed = is_signed;
@@ -154,7 +154,7 @@ struct ast *newExpressionFP(char *column, char *cmp, double number)
    struct expression_fp *newast = (struct expression_fp *) malloc(sizeof(struct expression_fp));
 
    newast->type = NODE_T_EXPRESSION_FP;
-   newast->column = strdup(column);
+   newast->column = column;
    newast->number = number;
    int id = ur_get_id_by_name(column);
    newast->cmp = get_op_type(cmp);
@@ -178,7 +178,7 @@ struct ast *newExpressionDateTime(char *column, char *cmp, char *datetime)
    struct expression_datetime *newast = (struct expression_datetime *) malloc(sizeof(struct expression_datetime));
 
    newast->type = NODE_T_EXPRESSION_DATETIME;
-   newast->column = strdup(column);
+   newast->column = column;
 
    int id = ur_get_id_by_name(column);
    newast->cmp = get_op_type(cmp);
@@ -198,6 +198,7 @@ struct ast *newExpressionDateTime(char *column, char *cmp, char *datetime)
       printf("Error: %s could not be loaded. Expected format: YYYY-mm-ddTHH:MM:SS.sss, where .sss is optional. Eg. 2018-06-27T19:44:41.123.\n", datetime);
       newast->id = UR_INVALID_FIELD;
    }
+   free(datetime);
    return (struct ast *) newast;
 }
 
@@ -504,9 +505,7 @@ void freeAST(struct ast *ast)
    switch (ast->type) {
    case NODE_T_AST:
       freeAST(ast->l);
-      if (ast->r) {
-         freeAST(ast->r);
-      }
+      freeAST(ast->r);
       break;
    case NODE_T_EXPRESSION:
       free(((struct expression *) ast)->column);
