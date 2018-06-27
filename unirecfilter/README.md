@@ -45,11 +45,11 @@ Available logical operators are:
 
 Almost all data types from unirec are supported:
 
-- `int8` 8bit singed integer
-- `int16` 16bit singed integer
-- `int32` 32bit singed integer
-- `int32` 32bit singed integer
-- `int64` 64bit singed integer
+- `int8` 8bit signed integer
+- `int16` 16bit signed integer
+- `int32` 32bit signed integer
+- `int32` 32bit signed integer
+- `int64` 64bit signed integer
 - `uint8` 8bit unsigned integer
 - `uint16` 16bit unsigned integer
 - `uint32` 32bit unsigned integer
