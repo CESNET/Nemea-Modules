@@ -89,7 +89,7 @@ op_pair cmp_op_table[] = {
    { "~=", OP_RE }
 };
 
-cmp_op get_op_type( char* cmp ) {
+cmp_op get_op_type(char *cmp) {
    size_t table_size = sizeof(cmp_op_table) / sizeof(cmp_op_table[0]);
 
    for (op_pair *ptr = cmp_op_table; ptr < cmp_op_table + table_size; ptr++)
@@ -670,13 +670,13 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
       cmp_op cmp = ((struct ip*) ast)->cmp;
 
       if (cmp_res == 0) {
-      // Same addresses
+         // Same addresses
          return cmp == OP_EQ || cmp == OP_LE || cmp == OP_GE;
       } else if (cmp_res < 0) {
-       // Address in record is lower than the given one
+         // Address in record is lower than the given one
          return cmp == OP_NE || cmp == OP_LT || cmp == OP_LE;
       } else {
-      // Address in record is higher than the given one
+         // Address in record is higher than the given one
          return cmp == OP_NE || cmp == OP_GT || cmp == OP_GE;
       }
    case NODE_T_STRING:
