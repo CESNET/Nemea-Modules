@@ -24,6 +24,7 @@ IPv4          {dec-octet}\.{dec-octet}\.{dec-octet}\.{dec-octet}
 h16     [0-9A-Fa-f]{1,4}
 ls32    {h16}:{h16}|{IPv4}
 IPv6    ({h16}:){6}{ls32}|::({h16}:){5}{ls32}|({h16})?::({h16}:){4}{ls32}|(({h16}:){0,1}{h16})?::({h16}:){3}{ls32}|(({h16}:){0,2}{h16})?::({h16}:){2}{ls32}|(({h16}:){0,3}{h16})?::{h16}:{ls32}|(({h16}:){0,4}{h16})?::{ls32}|(({h16}:){0,5}{h16})?::{h16}|(({h16}:){0,6}{h16})?::
+DATETIME [0-9]{4}-[0-9]{1,2}-[0-9]{1,2}T[0-9]{2}:[0-9]{2}:[0-9]{2}|[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}
 
 %%
 
@@ -33,6 +34,8 @@ IPv6    ({h16}:){6}{ls32}|::({h16}:){5}{ls32}|({h16})?::({h16}:){4}{ls32}|(({h16
 "!"|"NOT"                                                { return NOT; }
 "||"|"OR"                                                { return OR; }
 "&&"|"AND"                                               { return AND; }
+{DATETIME}                                               { yylval.string = copyString(yytext, yyleng); return DATETIME; }
+\"({DATETIME})\"                                         { yylval.string = cutString(yytext, yyleng); return DATETIME; }
 -?[0-9]+\.[0-9]+                                         { sscanf(yytext, "%lf", &yylval.floating); return FLOAT; }
 -[0-9]+                                                  { sscanf(yytext, "%" SCNi64, &yylval.number); return SIGNED; }
 [0-9]+                                                   { sscanf(yytext, "%" SCNi64, &yylval.number); return UNSIGNED; }

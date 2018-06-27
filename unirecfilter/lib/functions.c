@@ -49,6 +49,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
+
 #include "functions.h"
 
 // get numbers of protocols and services
@@ -135,7 +137,11 @@ struct ast *newExpression(char *column, char *cmp, int64_t number, int is_signed
             ur_get_type(id) != UR_TYPE_UINT32 &&
             ur_get_type(id) != UR_TYPE_INT64 &&
             ur_get_type(id) != UR_TYPE_UINT64) {
-      printf("Warning: Type of %s is not integer. Corresponding rule will always evaluate false.\n", column);
+      if (ur_get_type(id) == UR_TYPE_TIME) {
+         printf("Error: %s is ur_time_t, date&time is expected in comparison (Format: YYYY-mm-ddTHH:MM:SS.sss, where .sss is optional). Corresponding rule will always evaluate false.\n", column);
+      } else {
+         printf("Error: Type of %s is not integer. Corresponding rule will always evaluate false.\n", column);
+      }
       newast->id = UR_INVALID_FIELD;
    } else {
       newast->id = id;
@@ -163,6 +169,34 @@ struct ast *newExpressionFP(char *column, char *cmp, double number)
      newast->id = UR_INVALID_FIELD;
    } else {
       newast->id = id;
+   }
+   return (struct ast *) newast;
+}
+
+struct ast *newExpressionDateTime(char *column, char *cmp, char *datetime)
+{
+   struct expression_datetime *newast = (struct expression_datetime *) malloc(sizeof(struct expression_datetime));
+
+   newast->type = NODE_T_EXPRESSION_DATETIME;
+   newast->column = strdup(column);
+
+   int id = ur_get_id_by_name(column);
+   newast->cmp = get_op_type(cmp);
+   free(cmp);
+
+   if (id == UR_E_INVALID_NAME) {
+      printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
+      newast->id = UR_INVALID_FIELD;
+   } else if (ur_get_type(id) != UR_TYPE_TIME) {
+     printf("Warning: Type of %s is not UR_TIME. Corresponding rule will always evaluate false.\n", column);
+     newast->id = UR_INVALID_FIELD;
+   } else {
+      newast->id = id;
+   }
+
+   if (ur_time_from_string(&newast->date, datetime) != 0) {
+      printf("Error: %s could not be loaded. Expected format: YYYY-mm-ddTHH:MM:SS.sss, where .sss is optional. Eg. 2018-06-27T19:44:41.123.\n", datetime);
+      newast->id = UR_INVALID_FIELD;
    }
    return (struct ast *) newast;
 }
@@ -331,6 +365,7 @@ void printAST(struct ast *ast)
       break;
 
    case NODE_T_EXPRESSION_FP:
+   case NODE_T_EXPRESSION_DATETIME:
       if (((struct expression_fp*) ast)->id == UR_INVALID_FIELD) { // There was error with this expr., print it in red color
          printf("%s", TTY_RED);
       }
@@ -361,7 +396,16 @@ void printAST(struct ast *ast)
       default:
          printf(" <invalid operator> ");
       }
-      printf("%lf", ((struct expression_fp*) ast)->number);
+      if (ast->type == NODE_T_EXPRESSION_FP) {
+         printf("%lf", ((struct expression_fp*) ast)->number);
+      } else if (ast->type == NODE_T_EXPRESSION_DATETIME) {
+         ur_time_t t = ((struct expression_datetime *) ast)->date;
+         time_t sec = ur_time_get_sec(t);
+         int msec = ur_time_get_msec(t);
+         char str[32];
+         strftime(str, 31, "%FT%T", gmtime(&sec));
+         printf("%s.%03i", str, msec);
+      }
       if (((struct expression_fp*) ast)->id == UR_INVALID_FIELD) {
          printf("%s", TTY_RESET);
       }
@@ -465,10 +509,13 @@ void freeAST(struct ast *ast)
       }
       break;
    case NODE_T_EXPRESSION:
-      free(((struct expression*) ast)->column);
+      free(((struct expression *) ast)->column);
       break;
    case NODE_T_EXPRESSION_FP:
-      free(((struct expression_fp*) ast)->column);
+      free(((struct expression_fp *) ast)->column);
+      break;
+   case NODE_T_EXPRESSION_DATETIME:
+      free(((struct expression_datetime *) ast)->column);
       break;
    case NODE_T_PROTOCOL:
       free(((struct protocol*) ast)->cmp);
@@ -609,6 +656,12 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
          return 0;
       }
       return compareFloating(*(double *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_fp*) ast)->id)), ((struct expression_fp*) ast)->number, ((struct expression_fp*) ast)->cmp);
+   case NODE_T_EXPRESSION_DATETIME:
+      if (((struct expression*) ast)->id == UR_INVALID_FIELD) {
+         return 0;
+      }
+      return compareUnsigned(*(ur_time_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_datetime *) ast)->id)),
+                             ((struct expression_datetime *) ast)->date, ((struct expression_datetime *) ast)->cmp);
    case NODE_T_IP:
       if (((struct ip*) ast)->id == UR_INVALID_FIELD) {
          return 0;
@@ -687,6 +740,7 @@ void changeProtocol(struct ast **ast)
       return;
    case NODE_T_EXPRESSION:
    case NODE_T_EXPRESSION_FP:
+   case NODE_T_EXPRESSION_DATETIME:
       return;
    case NODE_T_PROTOCOL:
       proto = getprotobyname(((struct protocol *) (*ast))->data);

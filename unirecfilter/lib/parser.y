@@ -9,6 +9,7 @@
     struct ast *newAST(struct ast *l, struct ast *r, log_op operator);
     struct ast *newExpression(char *column, char *cmp, int64_t number, int is_signed);
     struct ast *newExpressionFP(char *column, char *cmp, double number);
+    struct ast *newExpressionDateTime(char *column, char *cmp, char *datetime);
     struct ast *newIP(char *column, char *cmp, char *ip);
     struct ast *newString(char *column, char *cmp, char *s);
     struct ast *newProtocol(char *cmp, char *data);
@@ -36,6 +37,7 @@
 %token <string> REGEX
 %token <string> PROTO_NAME
 %token <string> IP
+%token <string> DATETIME
 %token <string> STRING
 %token AND OR
 %token LEFT RIGHT PROTOCOL
@@ -63,6 +65,8 @@ exp:
     COLUMN CMP SIGNED { $$ = newExpression($1, $2, $3, 1); }
     | COLUMN CMP UNSIGNED { $$ = newExpression($1, $2, $3, 0); }
     | COLUMN CMP FLOAT { $$ = newExpressionFP($1, $2, $3); }
+    | COLUMN CMP DATETIME { $$ = newExpressionDateTime($1, $2, $3); }
+    | COLUMN EQ DATETIME { $$ = newExpressionDateTime($1, $2, $3); }
     | PROTOCOL CMP UNSIGNED { $$ = newExpression("PROTOCOL", $2, $3, 0); }
     | PROTOCOL EQ UNSIGNED { $$ = newExpression("PROTOCOL", $2, $3, 0); }
     | PROTOCOL EQ PROTO_NAME { $$ = (struct ast *) newProtocol($2, $3); }

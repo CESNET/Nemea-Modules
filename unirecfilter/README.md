@@ -60,6 +60,7 @@ Almost all data types from unirec are supported:
 - `ipaddr` special type for IPv4/IPv6 addresses, see unirec README (note -  IPv6 address in a filter loaded from a file has to be surrounded by double quotes because of syntax issues)
 - `string` variable-length array of (mostly) printable characters, surrounded by double quotes
 - `bytes` variable-length array of bytes (not expected to be printable characters), surrounded by double quotes
+- `time` UniRec timestamp, such as `TIME_FIRST`, `TIME_LAST`. The time column can be compared with date&time specified in format: `YYYY-mm-ddTHH:MM:SS.sss`, where `.sss` represents miliseconds and is an optional part (Ex. `2018-01-10T21:17:00`). Note that the timestamp should be in UTC timezone.
 
 ### Format
 #### Command line
