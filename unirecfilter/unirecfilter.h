@@ -4,9 +4,6 @@
  * \author Zdenek Kasner <kasnezde@fit.cvut.cz>
  * \author Tomas Cejka <cejkat@cesnet.cz>
  * \author Miroslav Kalina <kalinmi2@fit.cvut.cz>
- * \date 2013
- * \date 2014
- * \date 2015
  * \date 2016
  */
 /*
@@ -56,6 +53,11 @@
 
 #define SET_NULL(field_id, tmpl, data) \
 memset(ur_get_ptr_by_id(tmpl, data, field_id), 0, ur_get_size(field_id));
+
+/* macro used for printing memory allocation errors. */
+#define MEMORY_ERROR(problem_specification) { \
+   fprintf(stderr, "Error: Insufficient memory available: %s.\n", problem_specification); \
+}
 
 extern char * str_buffer;
 
