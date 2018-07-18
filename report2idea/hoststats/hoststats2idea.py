@@ -83,7 +83,7 @@ def convert_to_idea(rec, opts=None):
         
         if rec.DST_IP:
             idea['Target'] = [{
-                'Proto': ['udp', 'dns'],
+                'Proto': ['udp', 'domain'],
             }]
             setAddr(idea['Target'][0], rec.DST_IP)
             idea['Description'] = str(rec.DST_IP)+' received abnormally high number of large DNS replies - probably a victim of DNS amplification DoS attack'
@@ -91,7 +91,7 @@ def convert_to_idea(rec, opts=None):
             idea['Source'] = [{
                 'Type': ['Backscatter'],
                 'Port': [53],
-                'Proto': ['udp', 'dns'],
+                'Proto': ['udp', 'domain'],
             }]
             setAddr(idea['Source'][0], rec.SRC_IP)
             idea['Description'] = str(rec.SRC_IP)+' sent abnormally high number of large DNS replies - it was probably misused for DNS amplification DoS attack'
