@@ -66,8 +66,8 @@ def convert_to_idea(rec, opts=None):
     setAddr(idea['Target'][0], rec.DST_IP)
     if rec.SRC_PORT == 53:
         idea['Description'] = 'DNS amplification'
-        idea['Source'][0]['Proto'] = ['udp', 'dns']
-        idea['Target'][0]['Proto'] = ['udp', 'dns']
+        idea['Source'][0]['Proto'] = ['udp', 'domain']
+        idea['Target'][0]['Proto'] = ['udp', 'domain']
     elif rec.SRC_PORT == 123:
         idea['Description'] = 'NTP amplification'
         idea['Source'][0]['Proto'] = ['udp', 'ntp']
