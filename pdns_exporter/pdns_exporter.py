@@ -47,8 +47,14 @@ This module reads flow data from TRAP interface and export flow data to JSON and
 store JSON to files on disk. Data in JSON are in format to process in Passive DNS.
 """
 
+def store_json(json_data):
+    file_name = "pdns_data_" + datetime.now().strftime("%Y%m%d.%H%M%S") + ".json.gz"
+    with gzip.open(file_name, "wb") as output_file:
+        output_file.write(json.dumps(json_data, indent=4, sort_keys=False).encode('utf-8'))
+
 parser = argparse.ArgumentParser(description='Module for exporting flow data to format for Passive DNS')
-parser.add_argument('-i',  "--ifcspec", help="select TRAP IFC specifier")
+parser.add_argument('-i', "--ifcspec", help="select TRAP IFC specifier")
+parser.add_argument('-t', "--threshold", default=5000, type=int, help="set number of JSON records per file")
 args = parser.parse_args()
 
 context = pytrap.TrapCtx()
@@ -62,7 +68,11 @@ unirec = pytrap.UnirecTemplate("ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,uint64 
                                "uint8 PROTOCOL,uint8 TCP_FLAGS,uint8 TOS,uint8 TTL,string DNS_NAME,bytes DNS_RDATA")
 
 records = list()
-CONTENT_THRESHOLD = 5000
+try:
+    CONTENT_THRESHOLD = int(args.threshold)
+except ValueError:
+    sys.stderr.write("Argument to --threshold must be positive integer\n")
+    exit(1)
 
 # ===== main lopp =====
 while True:
@@ -72,13 +82,18 @@ while True:
         sys.stderr.write("Error: input data format mismatch.\n")
         break
     except pytrap.FormatChanged as e:
+        fmttype, fmtspec = context.getDataFmt(0)
+        unirec = pytrap.UnirecTemplate(fmtspec)
         data = e.data
         del(e)
         pass
     except pytrap.Terminated:
-        pass
+        break
 
     if len(data) <= 1:
+        # flush to file remaining records
+        if len(records) > 0:
+            store_json(records)
         break
 
     packets_n = unirec.get(data, "PACKETS")
@@ -113,7 +128,5 @@ while True:
 
             records.append(pdns_record)
             if len(records) >= CONTENT_THRESHOLD:
-                file_name = "pdns_data_" + datetime.now().strftime("%Y%m%d.%H%M%S") + ".json.gz"
-                with gzip.open(file_name, "wb") as output_file:
-                    output_file.write(json.dumps(records, indent=4, sort_keys=False).encode('utf-8'))
+                store_json(records)
                 records.clear()
