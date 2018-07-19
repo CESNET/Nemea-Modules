@@ -58,7 +58,7 @@ while not stop:
         data = e.data
         del(e)
         pass
-    except pytrap.Terminated:
+    except (pytrap.Terminated, KeyboardInterrupt):
         break
 
     # Check for "end-of-stream" record
@@ -69,11 +69,11 @@ while not stop:
         # Decode data (and check it's valid JSON)
         rec = json.loads(data.decode("utf-8"))
         if options.verbose:
-            print("Message: {}".format(rec))
+            print("Message: {0}".format(rec))
         # Print it to file or stdout
         file.write(json.dumps(rec, indent=options.indent) + '\n')
         if not options.noflush:
             file.flush()
-    except ValueException:
-        pass
+    except ValueError as e:
+        sys.stderr.write(str(e) + '\n')
 
