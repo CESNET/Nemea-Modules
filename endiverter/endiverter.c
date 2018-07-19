@@ -61,7 +61,7 @@ trap_module_info_t *module_info = NULL;
 
 static int stop = 0;
 
-TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
+TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 /**
  * \brief Swap `size` bytes in memory pointed by `ptr`.
@@ -83,8 +83,8 @@ int main(int argc, char *argv[])
    ur_template_t *tmplt = NULL; /* Template storage for input / output ifc. */
 
    /* TRAP initialization. */
-   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-   TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+   TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info)
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
    /* Unset data format on input and output interface. */
@@ -99,8 +99,8 @@ int main(int argc, char *argv[])
          break;
       default:
          fprintf(stderr, "endiverter: Error: invalid arguments\n");
-         TRAP_DEFAULT_FINALIZATION();
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+         TRAP_DEFAULT_FINALIZATION()
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return 1;
       }
    }
@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
             trap_set_data_fmt(0, TRAP_FMT_UNIREC, spec);
          }
       } else if (ret != TRAP_E_OK) {
-         TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, module_status = 1; break);
+         TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, module_status = 1; break)
       }
 
       /* Check for null record. */
@@ -143,7 +143,6 @@ int main(int argc, char *argv[])
          }
          break;
       }
-
 
       /* Iterate fields in received unirec message. */
       ur_field_id_t id = UR_ITER_BEGIN;
@@ -206,8 +205,8 @@ int main(int argc, char *argv[])
    }
    ur_finalize();
 
-   TRAP_DEFAULT_FINALIZATION();
-   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+   TRAP_DEFAULT_FINALIZATION()
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    return module_status;
 }
