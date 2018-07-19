@@ -9,7 +9,7 @@ import optparse
 from optparse import OptionParser
 parser = OptionParser(add_help_option=True)
 parser.add_option("-i", "--ifcspec", dest="ifcspec",
-      help="TRAP IFC specifier", metavar="IFCSPEC")
+      help="See https://nemea.liberouter.org/trap-ifcspec/", metavar="IFCSPEC")
 parser.add_option("-f", "--format", dest="format", default="",
     help="Set format identifier string (this must match the format ID required by receiving module)", metavar="FMT_ID")
 parser.add_option("-n", "--no-eos", action="store_true",
