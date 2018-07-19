@@ -45,7 +45,7 @@ def convert_to_idea(rec, opts=None):
         "Category": [ 'Anomaly.Connection' ],
         "FlowCount": rec.TUNNEL_CNT_PACKET,
         "Source": [{
-            "Proto": ["udp", "dns"]
+            "Proto": ["udp", "domain"]
         }],
         'Node': [{
             'Name': 'undefined',
