@@ -18,6 +18,9 @@ parser.add_option("-I", "--indent", metavar="N", type=int,
     help="Pretty-print JSON with indentation set to N spaces. Note that such format can't be read by json_replay module.")
 parser.add_option("-v", "--verbose", action="store_true",
     help="Set verbose mode - print messages.")
+parser.add_option("--noflush", action="store_true",
+    help="Disable automatic flush of output buffer after writing a record (may improve performance).")
+
 
 # Parse remaining command-line arguments
 (options, args) = parser.parse_args()
@@ -69,6 +72,8 @@ while not stop:
             print("Message: {}".format(rec))
         # Print it to file or stdout
         file.write(json.dumps(rec, indent=options.indent) + '\n')
+        if not options.noflush:
+            file.flush()
     except ValueException:
         pass
 
