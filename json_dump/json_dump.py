@@ -7,7 +7,7 @@ import json
 import optparse
 
 from optparse import OptionParser
-parser = OptionParser(add_help_option=False)
+parser = OptionParser(add_help_option=True)
 parser.add_option("-i", "--ifcspec", dest="ifcspec",
       help="TRAP IFC specifier", metavar="IFCSPEC")
 parser.add_option("-w", dest="filename",
