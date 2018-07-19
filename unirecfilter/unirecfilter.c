@@ -286,6 +286,7 @@ char *load_file(char *filename)
    f_size = ftell(f);
    if (f_size < 0) {
       fprintf(stderr, "Error: ftell used on file %s return negative number\n.", filename);
+      fclose(f);
       return NULL;  
    }
 
@@ -307,10 +308,15 @@ char *load_file(char *filename)
 }
 
 // Load filter from file, handle errors
-int get_filter_from_file(char * filename, struct unirec_output_t **output_specifiers, int n_outputs)
+int get_filter_from_file(char *filename, struct unirec_output_t **output_specifiers, int n_outputs)
 {
    int ret;
    char *file_buffer = NULL;
+
+   // Added NULL check to handle possible NULL when reloading
+   if (!filename) {
+      return 7;
+   }
 
    // Copy file content into buffer
    if ((file_buffer = load_file(filename)) == NULL) {
