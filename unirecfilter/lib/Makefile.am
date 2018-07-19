@@ -5,6 +5,7 @@ EXTRA_DIST=parser.y scanner.l
 
 lib_LTLIBRARIES = liburfilter.la
 include_HEADERS = liburfilter.h
+liburfilter_la_LDFLAGS = -version-info 1:0:1
 liburfilter_la_SOURCES = liburfilter.c \
                      parser.tab.c \
                      parser.tab.h \

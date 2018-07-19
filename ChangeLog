@@ -1,3 +1,12 @@
+2018-07-19 nemea-modules-2.6.4
+	* unirecfilter:
+		added feature of comparison timestamps
+		bugfixes
+	* natpair:
+		bugfixes, discovered by coverity
+	* report2idea:
+		changed "dns" to "domain"
+
 2018-04-13 Nemea-modules-2.6.3
 	* email_reporter:
 		field names are sorted from longest to shortest
