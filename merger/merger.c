@@ -90,7 +90,7 @@ trap_module_info_t *module_info = NULL;
 static int stop = 0;
 static int verbose;
 
-TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
+TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 static int timestamp_selector = TS_LAST; // Tells to sort timestamps based on TIME_FIRST or TIME_LAST field
 static ur_time_t actual_min_timestamp = 0; // Actual minimal timestamp
@@ -439,7 +439,7 @@ void capture_thread(int index)
             }
          } // end critical section
       } else {
-         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break);
+         TRAP_DEFAULT_GET_DATA_ERROR_HANDLING(ret, continue, break)
       }
    } // end while(!stop && !private_stop)
 
@@ -613,7 +613,7 @@ Available types are: int8, int16, int32, int64, uint8, uint16, uint32, uint64, c
 exit:
    // Do all necessary cleanup before exiting
    ur_finalize();
-   TRAP_DEFAULT_FINALIZATION();
+   TRAP_DEFAULT_FINALIZATION()
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    return ret;
