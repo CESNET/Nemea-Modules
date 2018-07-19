@@ -99,7 +99,7 @@ trap_module_info_t *module_info = NULL;
 
 static int stop = 0;
 // Function to handle SIGTERM and SIGINT signals (used to stop the module)
-TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
+TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 static output_t **outputs = NULL;
 static int outputs_count = 0;
@@ -144,7 +144,10 @@ char *strncpy_no_whitespaces(char *dst, const char *src, int count) {
 
 output_t *create_output(int interface)
 {
-   output_t *object = calloc(1, sizeof(output_t));
+   output_t *object = (output_t *) calloc(1, sizeof(output_t));
+   if (!object) {
+      return NULL;
+   }
 
    object->interface = interface;
    object->rules = (rule_t **) calloc(MAX_RULES_COUNT, sizeof(rule_t *));
@@ -152,27 +155,38 @@ output_t *create_output(int interface)
       free(object);
       return NULL;
    }
-   object->rules_count = 0;
 
+   object->rules_count = 0;
    return object;
 }
 
 void destroy_output(output_t *object)
 {
+   if (!object) {
+      return;
+   }
+
    for (int i = 0; i < object->rules_count; i++) {
       rule_destroy(object->rules[i]);
    }
+
    if (object->out_rec) {
       ur_free_record(object->out_rec);
    }
+
    if (object->tpl) {
       ur_free_template(object->tpl);
    }
+
    free(object->rules);
    free(object);
 }
 
 int output_initialize_template(output_t *object, int ifc) {
+   int ret_val = EXIT_FAILURE;
+   int tpl_string_i;
+   char *tpl_string = NULL;
+   char *f_names = NULL;
    // count tpl_string length
    int tpl_string_len = strlen("time TIME,");
    for (int j = 0; j < object->rules_count; j++) {
@@ -194,11 +208,15 @@ int output_initialize_template(output_t *object, int ifc) {
    }
 
    // allocate string
-   char *tpl_string = (char *) calloc(tpl_string_len, sizeof(char));
+   tpl_string = (char *) calloc(tpl_string_len, sizeof(char));
+   if (!tpl_string) {
+      fprintf(stderr, "Error: Calloc failed during creation of template string.\n");
+      goto cleanup;
+   }
 
    // assemble string
    strcpy(tpl_string, "time TIME");
-   int tpl_string_i = strlen("time TIME");
+   tpl_string_i = strlen("time TIME");
    for (int j = 0; j < object->rules_count; j++) {
       switch(object->rules[j]->agg) {
          // counters, uint64
@@ -222,26 +240,40 @@ int output_initialize_template(output_t *object, int ifc) {
 
    // Define fields to output template
    if (ur_define_set_of_fields(tpl_string) != UR_OK) {
-      fprintf(stderr, "Error: Defining template fields failed\n");
-      fprintf(stderr, " tpl_string: %s\n", tpl_string);
-      return 0;
+      fprintf(stderr, "Error: Defining template fields failed.\n");
+      fprintf(stderr, "tpl_string: %s\n", tpl_string);
+      goto cleanup;
    }
-   char *f_names = ur_ifc_data_fmt_to_field_names(tpl_string);
+
+   f_names = ur_ifc_data_fmt_to_field_names(tpl_string);
+   if (!f_names) {
+      fprintf(stderr, "Error: ur_ifc_data_fmt_to_field_names returned NULL.\n");
+      goto cleanup;
+   }
 
    // Create output template
    object->tpl = ur_create_output_template(ifc, f_names, NULL);
+   if (!object->tpl) {
+      fprintf(stderr, "Error: ur_create_output_template returned NULL.\n");
+      goto cleanup;
+   }
 
    // Allocate memory for output record
    object->out_rec = ur_create_record(object->tpl, 0);
-   if (object->out_rec == NULL){
+   if (!object->out_rec){
       fprintf(stderr, "Error: Memory allocation problem (output record).\n");
-      return 0;
+      ur_free_template(object->tpl);
+      object->tpl = NULL;
+      goto cleanup;
    }
 
+   ret_val = EXIT_SUCCESS;
+
+cleanup:
    free(f_names);
    free(tpl_string);
 
-   return 1;
+   return ret_val;
 }
 
 /* ************************************************************************* */
@@ -358,7 +390,7 @@ int flush_aggregation_counters()
       // Send UniRec record
       ret = trap_send(i, outputs[i]->out_rec, ur_rec_fixlen_size(outputs[i]->tpl));
       // Handle possible errors
-      TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, continue, break);
+      TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, continue, break)
    }
 
    return 0;
@@ -369,6 +401,11 @@ int rule_parse_agg_function(const char *specifier, agg_function *function, char 
    char *function_str = NULL;
    char *agg_str = NULL;
 
+   if (!specifier) {
+      fprintf(stderr, "Error: Passed NULL pointer to rule_parse_agg_function. Possibly no aggregation function specified.\n");
+      return 0;
+   }
+
    int token_start = 0;
    for (int i = 0; i < strlen(specifier); i++) {
       if (specifier[i] == '(') {
@@ -377,9 +414,16 @@ int rule_parse_agg_function(const char *specifier, agg_function *function, char 
             fprintf(stderr, " Aggregation function: %s\n", specifier);
             print_syntax_error_position(i + (int) strlen(" Aggregation function: "));
             free(function_str);
+            free(agg_str);
             return 0;
          } else {
             function_str = (char *) calloc(i - token_start + 1, sizeof(char));
+            if (!function_str) {
+               fprintf(stderr, "Error: Calloc failed during parsing aggregation functions.\n");
+               free(agg_str);
+               return 0;
+            }
+
             strncpy(function_str, specifier + token_start, i - token_start);
             token_start = i + 1;
          }
@@ -393,6 +437,12 @@ int rule_parse_agg_function(const char *specifier, agg_function *function, char 
             return 0;
          } else {
             agg_str = (char *) calloc(i - token_start + 1, sizeof(char));
+            if (!agg_str) {
+               fprintf(stderr, "Error: Calloc failed during parsing aggregation functions.\n");
+               free(function_str);
+               return 0;
+            }
+
             strncpy(agg_str, specifier + token_start, i - token_start);
             token_start = i + 1;
          }
@@ -403,12 +453,8 @@ int rule_parse_agg_function(const char *specifier, agg_function *function, char 
    if (!function_str || *function_str == 0) {
       fprintf(stderr, "Syntax error: Unable to parse aggregation function. Perhaps missing parenthesis?\n");
       fprintf(stderr, " Aggregation function: %s\n", specifier);
-      if (function_str) {
-         free(function_str);
-      }
-      if (agg_str) {
-         free(agg_str);
-      }
+      free(function_str);
+      free(agg_str);
       return 0;
    }
 
@@ -429,11 +475,9 @@ int rule_parse_agg_function(const char *specifier, agg_function *function, char 
       free(agg_str);
       return 0;
    }
+
    free(function_str);
-
    *arg = agg_str;
-   // free(agg_str);
-
    return 1;
 }
 
@@ -443,6 +487,7 @@ rule_t *rule_create(const char *specifier, int step, int size, int inactive_time
    char *name = NULL;
    char *agg = NULL;
    char *filter = NULL;
+   rule_t *object = NULL;
 
    int token_start = 0;
    for (int i = 0; i <= strlen(specifier); i++) {
@@ -452,21 +497,36 @@ rule_t *rule_create(const char *specifier, int step, int size, int inactive_time
          if (i == token_start && (name != NULL && agg != NULL && filter == NULL)) {
             fprintf(stderr, "Syntax error at char %d: Aggregation rule contains NULL token.\n", i + 1);
             print_syntax_error_position(i + 8);
-            return NULL;
+            goto error_cleanup;
          }
 
          // we just collected name
          if (name == NULL) {
             name = (char *) calloc(i - token_start + 1, sizeof(char));
+            if (!name) {
+               fprintf(stderr, "Error: Calloc failed during the creation of aggregation rule.\n");
+               goto error_cleanup;
+            }
+
             strncpy_no_whitespaces(name, specifier + token_start, i - token_start);
          } else if (agg == NULL) { // or we collected agg type
             agg = (char *) calloc(i - token_start + 1, sizeof(char));
+            if (!agg) {
+               fprintf(stderr, "Error: Calloc failed during the creation of aggregation rule.\n");
+               goto error_cleanup;
+            }
+
             strncpy_no_whitespaces(agg, specifier + token_start, i - token_start);
             for (char *s = agg; *s; ++s) {
                *s = toupper(*s);
             }
          } else if (filter == NULL) { // or filter
             filter = (char *) calloc(i - token_start + 1, sizeof(char));
+            if (filter) {
+               fprintf(stderr, "Error: Calloc failed during the creation of aggregation rule.\n");
+               goto error_cleanup;
+            }
+
             strncpy_no_whitespaces(filter, specifier + token_start, i - token_start);
          } else { // otherwise parsing error (extra colon found)
             fprintf(stderr, "Syntax error at char %d: Aggregation rule contains unexpected colon\n", i + 1);
@@ -474,48 +534,58 @@ rule_t *rule_create(const char *specifier, int step, int size, int inactive_time
             for (int j = 0; j <= i + 5; j++) {
                fprintf(stderr, " ");
             }
+
             fprintf(stderr, "^");
-            return NULL;
+            goto error_cleanup;
          }
 
          token_start = i + 1;
       }
    }
    // sanity check
-   if (*name == 0) {
+   if (!name || *name == 0) {
       fprintf(stderr, "Error: Rule name cannot be empty.");
       fprintf(stderr, "Rule: %s\n", specifier);
-      return NULL;
+      goto error_cleanup;
    }
 
    // rulename must match regex [A-Za-z][A-Za-z0-9_]*
-   for (int i=0; i<strlen(name); i++) {
+   for (int i = 0; i < strlen(name); i++) {
       if ((i == 0 && !(BETWEEN_EQ(name[i], 'A', 'Z') || BETWEEN_EQ(name[i], 'a', 'z'))) ||
             (i >= 1 && !(BETWEEN_EQ(name[i], 'A', 'Z') || BETWEEN_EQ(name[i], 'a', 'z') || BETWEEN_EQ(name[i], '0', '9') || name[i] == '_'))) {
          fprintf(stderr, "Error: Rule name contains unexpected characters.\n");
          fprintf(stderr, " Rule name: %s\n", name);
-         return NULL;
+         goto error_cleanup;
       }
    }
 
    // construct aggregation rule object
-   rule_t *object = (rule_t *) calloc(1, sizeof (rule_t));
+   object = (rule_t *) calloc(1, sizeof (rule_t));
+   if (!object) {
+      fprintf(stderr, "Error: Calloc failed during the creation of aggregation rule.\n");
+      goto error_cleanup;
+   }
+
    object->name = name;
 
    // parse aggregation function
    if (!rule_parse_agg_function(agg, &object->agg, &object->agg_arg)) {
-      // error msg already printed
-      return NULL;
+      goto error_cleanup;
    }
-   free(agg);
 
    object->timedb = timedb_create(step, size, inactive_timeout, object->agg == AGG_COUNT_UNIQ ? 1 : 0);
    object->filter = urfilter_create(filter, "0");
-   if (filter) {
-      free(filter);
-   }
 
+   free(filter);
+   free(agg);
    return object;
+
+error_cleanup:
+   free(name);
+   free(agg);
+   free(filter);
+   free(object);
+   return NULL;
 }
 
 void rule_compile(rule_t *object)
@@ -622,42 +692,72 @@ int rule_save_data(rule_t *rule, ur_template_t *tpl, const void *record)
 
 int main(int argc, char **argv)
 {
-   int ret;
-
-   // ***** TRAP initialization *****
-   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-   TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
-
-   // prepare first output interface
-   outputs = (output_t **) calloc(MAX_OUTPUT_COUNT, sizeof(output_t *));
-   outputs[outputs_count] = create_output(outputs_count);
-   outputs_count++;
+   int ret = TRAP_E_OK;
+   int ret_val = EXIT_FAILURE;
 
    // parameters default values
    int param_inactive_timeout = 900;
    int param_output_interval = 60;
    int param_delay_interval = 420;
 
-   // parse parameters
    char opt;
    rule_t *temp_rule = NULL;
+   ur_template_t *tpl = NULL;
+
+   const void *data;
+   uint16_t data_size;
+   uint8_t timedb_initialized = 0;
+
+   // ***** TRAP initialization *****
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+   TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info)
+
+   // prepare first output interface
+   outputs = (output_t **) calloc(MAX_OUTPUT_COUNT, sizeof(output_t *));
+   if (!outputs) {
+      fprintf(stderr, "Error: Calloc failed during interface initialization.\n");
+      goto cleanup;
+   }
+
+   outputs[outputs_count] = create_output(outputs_count);
+   if (!outputs[outputs_count]) {
+      fprintf(stderr, "Error: Calloc failed during interface initialization.\n");
+      goto cleanup;
+   }
+
+   outputs_count++;
+
+   // parse parameters
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
          case 't':  // output_interval = TimeDB step value
             param_output_interval = atoi(optarg);
+            if (param_output_interval < 1) {
+               fprintf(stderr, "Error: Passed illogical value to parameter -t: %d.\n", param_output_interval);
+               goto cleanup;
+            }
+
             break;
          case 'd':  // TimeDB delay interval
             param_delay_interval = atoi(optarg);
+            if (param_delay_interval < 1) {
+               fprintf(stderr, "Error: Passed illogical value to parameter -d: %d.\n", param_delay_interval);
+               goto cleanup;
+            }
+
             break;
          case 'I':  // Inactive timeout
             param_inactive_timeout = atoi(optarg);
+            if (param_inactive_timeout < 1) {
+               fprintf(stderr, "Error: Passed illogical value to parameter -I: %d.\n", param_inactive_timeout);
+               goto cleanup;
+            }
+
             break;
          case 'r':  // rule syntax NAME:AGGREGATION[:FILTER]]
             temp_rule = rule_create(optarg, param_output_interval, param_delay_interval, param_inactive_timeout);
             if (!temp_rule) {
-               TRAP_DEFAULT_FINALIZATION();
-               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-               exit(6);
+               goto cleanup;
             }
 
             outputs[outputs_count - 1]->rules[outputs[outputs_count - 1]->rules_count++] = temp_rule;
@@ -666,13 +766,16 @@ int main(int argc, char **argv)
          case 'R':  // switch to another output interface
             // @TODO consider another way of multi interface definition
             outputs[outputs_count] = create_output(outputs_count);
+            if (!outputs[outputs_count]) {
+               fprintf(stderr, "Error: Calloc failed during interface initialization.\n");
+               goto cleanup;
+            }
+
             outputs_count++;
             break;
          default:
-            fprintf(stderr, "Invalid arguments.\n");
-            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-            TRAP_DEFAULT_FINALIZATION();
-            return 3;
+            fprintf(stderr, "Error: Invalid arguments.\n");
+            goto cleanup;
       }
    }
 
@@ -681,48 +784,31 @@ int main(int argc, char **argv)
       fprintf(stderr, "Error: Number of TRAP interfaces doesn't match number defined by rules.\n");
       fprintf(stderr, " TRAP output interfaces: %d\n", module_info->num_ifc_out);
       fprintf(stderr, " Configured outputs by rules: %d\n", outputs_count);
-      TRAP_DEFAULT_FINALIZATION();
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-      return 6;
+      goto cleanup;
    }
 
    // Register signal handler.
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER(); // Handles SIGTERM and SIGINT
 
    // ***** Create input UniRec template *****
-   ur_template_t *tpl = ur_create_input_template(0, "TIME_FIRST,TIME_LAST", NULL);
-   if (tpl == NULL) {
+   tpl = ur_create_input_template(0, "TIME_FIRST,TIME_LAST", NULL);
+   if (!tpl) {
       fprintf(stderr, "Error: Invalid UniRec specifier.\n");
-      TRAP_DEFAULT_FINALIZATION();
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-      return 4;
+      goto cleanup;
    }
 
    // ***** Create output UniRec template *****
    for (int i = 0; i < outputs_count; i++) {
-      if(!output_initialize_template(outputs[i], i)) {
-         TRAP_DEFAULT_FINALIZATION();
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-         return 5;
+      if(output_initialize_template(outputs[i], i) == EXIT_FAILURE) {
+         goto cleanup;
       }
    }
-
-   const void *data;
-   uint16_t data_size;
-   uint8_t timedb_initialized = 0;
 
    // ***** Main processing loop *****
    while (!stop) {
       // Receive data from input interface (block until data are available)
       ret = TRAP_RECEIVE(0, data, data_size, tpl);
-      TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
-
-      if (!tpl) {
-         fprintf(stderr, "Error: Unable to get TRAP template. Perhaps name colision Rules vs Input template?\n");
-         TRAP_DEFAULT_FINALIZATION();
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-         return 4;
-      }
+      TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break)
 
       // Check for end-of-stream message
       if (data_size <= 1) {
@@ -748,29 +834,31 @@ int main(int argc, char **argv)
             if (urfilter_match(outputs[o]->rules[i]->filter, tpl, data)) {
                // save record data
                if (!rule_save_data(outputs[o]->rules[i], tpl, data)) {
-                  fprintf(stderr, "Error when saving aggregation data.\n");
-                  TRAP_DEFAULT_FINALIZATION();
-                  FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-                  return 6;
+                  fprintf(stderr, "Error: Saving aggregation data failed.\n");
+                  goto cleanup;
                }
             }
          }
       }
    }
 
+   if (ret == TRAP_E_TERMINATED || ret == TRAP_E_OK) {
+      ret_val = EXIT_SUCCESS;
+   }
+
+cleanup:
    // ***** Cleanup *****
 
+   TRAP_DEFAULT_FINALIZATION()
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    // clear outputs structure
    for (int i = 0; i < outputs_count; i++) {
       destroy_output(outputs[i]);
    }
-   free(outputs);
 
-   // Do all necessary cleanup before exiting
-   TRAP_DEFAULT_FINALIZATION();
+   free(outputs);
 
    ur_finalize();
    ur_free_template(tpl);
-   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-   return EXIT_SUCCESS;
+   return ret_val;
 }
