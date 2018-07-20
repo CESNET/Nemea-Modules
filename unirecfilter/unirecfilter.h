@@ -48,18 +48,79 @@
 #include <unirec/unirec.h>
 #include <sys/types.h>
 #include <regex.h>
+#include <liburfilter.h>
 
 #define DYN_FIELD_MAX_SIZE 1024 // Maximal size of dynamic field, longer fields will be cutted to this size
 
 #define SET_NULL(field_id, tmpl, data) \
 memset(ur_get_ptr_by_id(tmpl, data, field_id), 0, ur_get_size(field_id));
 
-/* macro used for printing memory allocation errors. */
-#define MEMORY_ERROR(problem_specification) { \
-   fprintf(stderr, "Error: Insufficient memory available: %s.\n", problem_specification); \
-}
-
 extern char * str_buffer;
 
+/* Structure with information for each output interface */
+struct unirec_output_t {
+   char *output_specifier_str; /**< unirecfilter parameters syntax output specifier string */
+   char *unirec_output_specifier; /**< unirec output specifier string */
+   char *filter_str; /**< loaded filter string */
+   urfilter_t *filter; /**< filter structure */
+   ur_template_t *out_tmplt; /**< unirec output template */
+   void *out_rec; /**< message to be sent */
+};
+
+/** \brief search for character delimiter in string
+ * Searches given string for the first occurance of given one char delimiter and returns it's position.
+ * \param[in] ptr input string
+ * \param[in] delim delimiter of which first occurence we try to find.
+ * \return  pointer to position of first appearance of the delimiter in the string, NULL if there is none
+ */
+char *skip_str_chr(char *ptr, char delim);
+
+/** \brief set default value to output specifier
+ * Sets default value in output specifier if given in input parameter, otherwise sets it to NULL value.
+ * \param[in] output_specifier value to be set as default
+ * \return 0 for success, 1 if error occured
+ */
+int set_default_values(struct unirec_output_t *output_specifier);
+
+/** \brief clears values from output specifier fields
+ * Takes the given output_specifier and clears values assigned to all fields while preserving the name of value.
+ * \param[in] output_specifier unirec output specifier
+ * \return  0 on success, 1 if error occured
+ */
+int parse_output_specifier_from_str(struct unirec_output_t *output_specifier);
+
+/** \brief loads output specifiers from file and fills them into unirec_output_t
+ * searches given string for the first occurance of given one char delimiter and returns it's position.
+ * \param[in] str input string - whole file loaded to char *
+ * \param[in] output_specifiers unirec output specifiers structure
+ * \param[in] n_outputs number of output interfaces
+ * \return  number of successfully loaded interfaces
+ */
+int parse_file(char *str, struct unirec_output_t **output_specifiers, int n_outputs);
+
+/** \brief loads file to a buffer
+ * Open and load the whole file to a buffer returning pointer to it.
+ * \param[in] filename path of file with configuration
+ * \return pointer to the buffer, NULL if loading failed
+ */
+char *load_file(char *filename);
+
+/** \brief loads filters from file and fills them into unirec_output_t
+ * loads filters from file on given path, checks if it matches expected number and fills unirec_output_t
+ * \param[in] filename path of file with configuration
+ * \param[in] output_specifiers unirec output specifiers structure
+ * \param[in] n_outputs number of filters that are expected in file
+ * \return  number of successfully loaded filters
+ */
+int get_filter_from_file(char *filename, struct unirec_output_t **output_specifiers, int n_outputs);
+
+/** \brief Create templates based on data from filter
+ * Creates templates for all output interfaces based on data from filter.
+ * \param[in] n_outputs number of output interfaces
+ * \param[in] port_numbers array with port numbers
+ * \param[in] output_specifiers array of output specifiers
+ * \return 0 on success, non-zero on fail
+ */
+int create_templates(int n_outputs, char **port_numbers, struct unirec_output_t **output_specifiers);
 #endif
 
