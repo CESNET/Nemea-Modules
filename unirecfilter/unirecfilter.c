@@ -60,7 +60,6 @@
 
 #include "unirecfilter.h"
 #include "fields.h"
-#include <liburfilter.h>
 
 UR_FIELDS ()
 // Struct with information about module
@@ -100,16 +99,6 @@ TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 void reload_filter_signal_handler(int signum) {
    reload_filter = 1;
 }
-
-// Structure with information for each output interface
-struct unirec_output_t {
-   char *output_specifier_str;
-   char *unirec_output_specifier;
-   char *filter_str;
-   urfilter_t *filter;
-   ur_template_t *out_tmplt;
-   void *out_rec;
-};
 
 // Search for delimiter (skip literals within string)
 char *skip_str_chr(char *ptr, char delim)
@@ -152,7 +141,7 @@ int set_default_values(struct unirec_output_t *output_specifier) {
             ptr++;
             *(skip_str_chr(ptr + 1, '"')) = '\0';
          }
-         if(ur_set_from_string(output_specifier->out_tmplt, output_specifier->out_rec, ur_get_id_by_name(token), ptr + 1) != 0) {
+         if (ur_set_from_string(output_specifier->out_tmplt, output_specifier->out_rec, ur_get_id_by_name(token), ptr + 1) != 0) {
             fprintf(stderr, "set_defualt_values: Failed to get string from field.\n");
             return 1;
          }
@@ -166,7 +155,7 @@ int set_default_values(struct unirec_output_t *output_specifier) {
                return 1;
             }
          } else {
-            SET_NULL(id, output_specifier->out_tmplt, output_specifier->out_rec);
+            SET_NULL(id, output_specifier->out_tmplt, output_specifier->out_rec)
          }
       }
       token = strtok(NULL, ",");
@@ -182,8 +171,8 @@ int parse_output_specifier_from_str(struct unirec_output_t *output_specifier) {
 
    // Output specifier string to be created
    output_specifier->unirec_output_specifier = (char *) malloc(strlen(output_specifier->output_specifier_str) + 1);
-   if (output_specifier->unirec_output_specifier == NULL) {
-      MEMORY_ERROR("unirec output specifier")
+   if (!output_specifier->unirec_output_specifier) {
+      fprintf(stderr, "Error: Insufficient memory available: unirec_output_specifier.\n");
       return 1;
    }
    out_spec_ptr = output_specifier->unirec_output_specifier;
@@ -226,15 +215,13 @@ int parse_file(char *str, struct unirec_output_t **output_specifiers, int n_outp
       // Beginning of filter
       case ':':
          beg_ptr = end_ptr + 1;
-         if ((end_ptr = skip_str_chr(end_ptr, ';')) == NULL) {
+                 if ((end_ptr = skip_str_chr(end_ptr, ';')) == NULL) {
             fprintf(stderr, "Syntax error while parsing file: delimiter ';' not found.\n");
             return -1;
-         }
-         else if (end_ptr == beg_ptr) {
+         } else if (end_ptr == beg_ptr) {
             // Empty filter
             output_specifiers[iface_index]->filter_str = NULL;
-         }
-         else {
+         } else {
             // Allocate and fill field for filter for this interface
             if ((output_specifiers[iface_index]->filter_str = (char *) calloc(end_ptr - beg_ptr + 1, 1)) == NULL) {
                fprintf(stderr, "Filter is too large, not enough memory.\n");
@@ -290,17 +277,32 @@ char *load_file(char *filename)
       return NULL;
    }
    // Determine the file size for memory allocation
-   fseek(f, 0, SEEK_END);
+   if (fseek(f, 0, SEEK_END) != 0) {
+      fprintf(stderr, "Error: fseek on %s failed.\n.", filename);
+      fclose(f);
+      return NULL;
+   }
+
    f_size = ftell(f);
    if (f_size < 0) {
       fprintf(stderr, "Error: ftell used on file %s return negative number\n.", filename);
+      fclose(f);
       return NULL;  
    }
 
-   fseek(f, 0, SEEK_SET);
+   if (fseek(f, 0, SEEK_SET) != 0) {
+      fprintf(stderr, "Error: fseek on %s failed.\n.", filename);
+      fclose(f);
+      return NULL;
+   }
 
    // Allocate file buffer
    file_buffer = (char*) malloc (f_size + 1);
+   if (!file_buffer) {
+      fprintf(stderr, "Error: Insufficient memory available for file buffer.\n");
+      fclose(f);
+      return NULL;
+   }
 
    if (fread(file_buffer, sizeof(char), f_size, f) != f_size) {
       fprintf(stderr, "Error: File %s could not be read.\n", filename);
@@ -315,7 +317,7 @@ char *load_file(char *filename)
 }
 
 // Load filter from file, handle errors
-int get_filter_from_file(char * filename, struct unirec_output_t **output_specifiers, int n_outputs)
+int get_filter_from_file(char *filename, struct unirec_output_t **output_specifiers, int n_outputs)
 {
    int ret;
    char *file_buffer = NULL;
@@ -362,14 +364,14 @@ float, double, ipaddr, string, bytes\n");
             return -2;
          }
          char *f_names = ur_ifc_data_fmt_to_field_names(output_specifiers[i]->unirec_output_specifier);
-         if (f_names == NULL) {
-            MEMORY_ERROR("create_templates: file names");
+         if (!f_names) {
+            fprintf(stderr, "Error: Insufficient memory available: create_templates: file names.\n");
             return 1;
          }
          output_specifiers[i]->out_tmplt = ur_create_output_template(i, f_names, NULL);
          free(f_names);
-         if (output_specifiers[i]->out_tmplt == NULL) {
-            MEMORY_ERROR("create_templates: output specifiers")
+         if (!output_specifiers[i]->out_tmplt) {
+            fprintf(stderr, "Error: Insufficient memory available: create_templates: output specifiers.\n");
             return -1;
          }
       } else {
@@ -379,8 +381,8 @@ float, double, ipaddr, string, bytes\n");
 
       // Get Abstract syntax tree from filter
       output_specifiers[i]->filter = urfilter_create(output_specifiers[i]->filter_str, port_numbers[i]);
-      if (output_specifiers[i]->filter == NULL) {
-         MEMORY_ERROR("create_templates: tree from filter");
+      if (!output_specifiers[i]->filter) {
+         fprintf(stderr, "Error: Insufficient memory available: create_templates: create filter.\n");
          return 1;
       }
 
@@ -418,7 +420,7 @@ int main(int argc, char **argv)
    int n_outputs;
    trap_ifc_spec_t ifc_spec;
 
-   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
 
    // Register signal handler for reloading file with filter
    signal(SIGUSR1, reload_filter_signal_handler);
@@ -428,11 +430,11 @@ int main(int argc, char **argv)
    if (ret != TRAP_E_OK) {
       if (ret == TRAP_E_HELP) { // "-h" was found
          trap_print_help(module_info);
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          return 0;
       }
       fprintf(stderr, "ERROR in parsing of parameters for TRAP: %s\n", trap_last_error_msg);
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return 1;
    }
 
@@ -440,21 +442,20 @@ int main(int argc, char **argv)
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
       case 'O':
-         // Using strdup is necessary for freeing correctly
-         output_specifier_str = strdup(optarg);
-         if (output_specifier_str == NULL) {
-            MEMORY_ERROR("output ifc specifier");
+         output_specifier_str = strdup(optarg); /* Using strdup is necessary for freeing correctly */
+         if (!output_specifier_str) {
+            fprintf(stderr, "Error: Insufficient memory available: output ifc specifier.\n");
             TRAP_DEFAULT_FINALIZATION();
-            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
             return 1;
          }
          break;
       case 'F': // Filter
          filter = strdup(optarg);
-         if (filter == NULL) {
-            MEMORY_ERROR("filter");
+         if (!filter) {
+            fprintf(stderr, "Error: Insufficient memory available: filter.\n");
             TRAP_DEFAULT_FINALIZATION();
-            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
             return 1;
          }
          break;
@@ -469,20 +470,18 @@ int main(int argc, char **argv)
          int nb = atoi(optarg);
          if (nb <= 0) {
             fprintf(stderr, "Error: Parameter of -c option must be > 0.\n");
-            // Do all necessary cleanup before exiting
             TRAP_DEFAULT_FINALIZATION();
-            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-            return 3;
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+            return 1;
          }
          max_num_records = nb;
          break;
       }
       default:
          fprintf(stderr, "Error: Invalid arguments.\n");
-         // Do all necessary cleanup before exiting
          TRAP_DEFAULT_FINALIZATION();
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-         return 4;
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+         return 1;
       }
    }
 
@@ -500,43 +499,43 @@ int main(int argc, char **argv)
    if (n_outputs < 1) {
       fprintf(stderr, "Error: You must specify at least one output interface.\n");
       TRAP_DEFAULT_FINALIZATION();
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return 1;
    }
    // More than one output interface specified from command line
    if (from == 0 && n_outputs > 1) {
       fprintf(stderr, "Error: For more than one output interface use parameter -f FILE.\n");
       TRAP_DEFAULT_FINALIZATION();
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return 1;
    }
    // Number of output interfaces exceeds TRAP limit
    if (n_outputs > 32) {
       fprintf(stderr, "Error: More than 32 interfaces is not allowed by TRAP library.\n");
       TRAP_DEFAULT_FINALIZATION();
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return 1;
    } else if ((filter != NULL) && (filename != NULL)) { // Filter and file are both set (-F and -f)
       fprintf(stderr, "Error: Invalid arguments - two filters.\n");
       TRAP_DEFAULT_FINALIZATION();
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return 6;
    }
 
    // Save output interfaces numbers
    port_numbers = (char**) malloc(n_outputs * sizeof(char*));
-   if (port_numbers == NULL) {
-      MEMORY_ERROR("interface numbers")
+   if (!port_numbers) {
+      fprintf(stderr, "Error: Insufficient memory available: interface numbers.\n");
       TRAP_DEFAULT_FINALIZATION();
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return 1;
    }
    for (i = 1; i <= n_outputs; i++) {
       port_numbers[i-1] = strdup(ifc_spec.params[i]);
-      if (port_numbers[i-1] == NULL) {
-         MEMORY_ERROR("interface numbers")
+      if (!port_numbers[i-1]) {
+         fprintf(stderr, "Error: Insufficient memory available: interface numbers.\n");
          TRAP_DEFAULT_FINALIZATION();
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          return 1;
       }
    }
@@ -551,7 +550,7 @@ int main(int argc, char **argv)
       }
       free(port_numbers);
       TRAP_DEFAULT_FINALIZATION();
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return 1;
    }
 
@@ -559,7 +558,7 @@ int main(int argc, char **argv)
    if (trap_set_required_fmt(0, TRAP_FMT_UNIREC, "") != TRAP_E_OK) {
       fprintf(stderr, "ERROR in setting TRAP format: %s\n", trap_last_error_msg);
       TRAP_DEFAULT_FINALIZATION();
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return 1;
    }
    ret = trap_recv(0, &in_rec, &in_rec_size); // receive first record and template specification
@@ -569,28 +568,28 @@ int main(int argc, char **argv)
       if (trap_get_data_fmt(TRAPIFC_INPUT, 0, &data_fmt, &spec) != TRAP_E_OK) {
          fprintf(stderr, "Data format was not loaded.");
          TRAP_DEFAULT_FINALIZATION();
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          return 5;
       }
       in_tmplt = ur_define_fields_and_update_template(spec, NULL);
-      if (in_tmplt == NULL) {
+      if (!in_tmplt) {
          fprintf(stderr, "Template could not be edited");
          TRAP_DEFAULT_FINALIZATION();
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          return 5;
       }
       req_format = ur_cpy_string(spec);
-      if (req_format == NULL) {
+      if (!req_format) {
          fprintf(stderr, "Template could not be edited");
          TRAP_DEFAULT_FINALIZATION();
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          return 5;
       }
       trap_set_required_fmt(0, TRAP_FMT_UNIREC, req_format);
    } else {
       fprintf(stderr, "Data format was not received on input interface");
       TRAP_DEFAULT_FINALIZATION();
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return 5;
    }
 
@@ -600,10 +599,10 @@ int main(int argc, char **argv)
    // Allocate new structures with output interfaces specifications
    for (i = 0; i < n_outputs; i++) {
       output_specifiers[i] = (struct unirec_output_t*) calloc(sizeof(struct unirec_output_t), 1);
-      if (output_specifiers[i] == NULL) {
-         MEMORY_ERROR("output specifiers")
+      if (!output_specifiers[i]) {
+         fprintf(stderr, "Error: Insufficient memory available: output_specifiers.\n");
          TRAP_DEFAULT_FINALIZATION();
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          return 1;
       }
    }
@@ -626,18 +625,18 @@ int main(int argc, char **argv)
          free(port_numbers);
          trap_free_ifc_spec(ifc_spec);
          TRAP_DEFAULT_FINALIZATION();
-         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          return ret;
       }
    }
    //if the output data format is null, use input data format
    for (i = 0; i < n_outputs; i++) {
-      if (output_specifiers[i]->output_specifier_str == NULL) {
+      if (!output_specifiers[i]->output_specifier_str) {
          output_specifiers[i]->output_specifier_str = ur_cpy_string(req_format);
-         if (output_specifiers[i]->output_specifier_str == NULL) {
-            MEMORY_ERROR("output specifier string")
+         if (!output_specifiers[i]->output_specifier_str) {
+            fprintf(stderr, "Error: Insufficient memory available: output specifier string.\n");
             TRAP_DEFAULT_FINALIZATION();
-            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
             return 1;
          }
       }
@@ -650,19 +649,22 @@ int main(int argc, char **argv)
       free(port_numbers);
       trap_free_ifc_spec(ifc_spec);
       TRAP_DEFAULT_FINALIZATION();
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       return ret;
    }
 
    // Allocate auxiliary buffer for evalAST()
    str_buffer = (char *) malloc(65536 * sizeof(char)); // No string in unirec can be longer than 64kB
-   if (str_buffer == NULL) {
+   if (!str_buffer) {
       fprintf(stderr, "Error: Not enough memory for string buffer.\n");
       stop = 1;
    }
 
    // Free ifc_spec structure
-   trap_free_ifc_spec(ifc_spec); //TODO CHECK ERROR CODE
+   if (trap_free_ifc_spec(ifc_spec) != 0) {
+      fprintf(stderr, "ERROR while freeing ifc_spec: %s.\n", trap_last_error_msg);
+      stop = 1;
+   }
 
    if (verbose >= 0) {
          printf("VERBOSE: Main loop started\n");
@@ -803,6 +805,6 @@ cleanup:
    free(port_numbers);
    free(output_specifiers);
    ur_finalize();
-   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
    return 0;
 }
