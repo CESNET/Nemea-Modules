@@ -53,6 +53,10 @@ if HAVE_LIBPCAP
 SUBDIRS += flow_meter
 endif
 
+# FIXME HAVE_LIBBLOOM configure.ac or perhaps statically linked
+# if HAVE_LIBBLOOM
+SUBDIRS += bloom
+# endif
 
 RPMDIR = RPMBUILD
 
