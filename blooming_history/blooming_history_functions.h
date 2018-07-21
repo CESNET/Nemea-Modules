@@ -1,5 +1,5 @@
 /**
- * \file bloom_functions.h
+ * \file blooming_history_functions.h
  * \brief History of communicating entities using bloom filters.
  * \author Filip Krestan <krestfi1@fit.cvut.cz>
  * \date 2018
@@ -13,14 +13,14 @@
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
+ *   notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
+ *   notice, this list of conditions and the following disclaimer in
+ *   the documentation and/or other materials provided with the
+ *   distribution.
  * 3. Neither the name of the Company nor the names of its contributors
- *    may be used to endorse or promote products derived from this
- *    software without specific prior written permission.
+ *   may be used to endorse or promote products derived from this
+ *   software without specific prior written permission.
  *
  * ALTERNATIVELY, provided that this notice is retained in full, this
  * product may be distributed under the terms of the GNU General Public
@@ -41,8 +41,8 @@
  *
  */
 
-#ifndef __BLOOM_FUNCTIONS_H_
-#define __BLOOM_FUNCTIONS_H_
+#ifndef __BLOOMING_HISTORY_FUNCTIONS_H_
+#define __BLOOMING_HISTORY_FUNCTIONS_H_
 
 #include <unirec/unirec.h>
 
@@ -54,4 +54,4 @@
 int is_from_prefix(ip_addr_t * ip, ip_addr_t * protected_prefix, int32_t protected_prefix_length);
 
 
-#endif // __BLOOM_FUNCTIONS_H_
+#endif // __BLOOMING_HISTORY_FUNCTIONS_H_

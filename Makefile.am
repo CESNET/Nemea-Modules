@@ -55,7 +55,7 @@ endif
 
 # FIXME HAVE_LIBBLOOM configure.ac or perhaps statically linked
 # if HAVE_LIBBLOOM
-SUBDIRS += bloom
+SUBDIRS += blooming_history
 # endif
 
 RPMDIR = RPMBUILD

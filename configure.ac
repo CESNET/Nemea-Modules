@@ -202,7 +202,7 @@ AM_CONDITIONAL(MAKE_DEB, test x$DEBUILD != x)
 AC_CONFIG_FILES([Makefile
                  aggregator/Makefile
                  anonymizer/Makefile
-                 bloom/Makefile
+                 blooming_history/Makefile
                  debug_sender/Makefile
                  device_classifier/Makefile
                  device_classifier/libsvm/tools/train.sh
