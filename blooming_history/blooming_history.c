@@ -50,9 +50,11 @@
 #include <getopt.h>
 #include <stdint.h>
 #include <string.h>
+#include <assert.h>
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
+#include <bloom.h>
 
 #include "blooming_history_functions.h"
 #include "fields.h"
@@ -86,9 +88,13 @@ static int stop = 0;
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 
+struct bloom BLOOM;
+
+// FIXME COUNT -> ENTRIES
+
 int32_t COUNT = 1000000;
 double FP_ERROR_RATE = 0.01;
-ip_addr_t PROTECTED_prefix;
+ip_addr_t PROTECTED_PREFIX;
 int32_t PROTECTED_PREFIX_LENGTH = 0;
 int32_t UPLOAD_INTERVAL = 300;
 char* AGGREGATOR_SERVICE = NULL;
@@ -99,13 +105,6 @@ int main(int argc, char **argv)
    signed char opt;
    int error = 0;
    
-   /* int32_t COUNT = 1000000; */
-   /* double FP_ERROR_RATE = 0.01; */
-   /* ip_addr_t PROTECTED_prefix; */
-   /* int32_t PROTECTED_PREFIX_LENGTH = 0; */
-   /* int32_t UPLOAD_INTERVAL = 300; */
-   /* char* AGGREGATOR_SERVICE = NULL; */
-
    /* TRAP initialization */
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
@@ -129,7 +128,7 @@ int main(int argc, char **argv)
                }
 
                *prefix_slash = '\0';
-               if (!ip_from_str(optarg, &PROTECTED_prefix)) {
+               if (!ip_from_str(optarg, &PROTECTED_PREFIX)) {
                   error = 1; 
                }
 
@@ -164,10 +163,12 @@ int main(int argc, char **argv)
    
    // {
    //    char protected_ip_prefix_str[INET6_ADDRSTRLEN];
-   //    ip_to_str(&PROTECTED_prefix, protected_ip_prefix_str);
+   //    ip_to_str(&PROTECTED_PREFIX, protected_ip_prefix_str);
    //    printf("count:%d, fpr:%f, prefix:%s, prefix_length:%d, interval:%d, service:%s\n", 
    //         count, FP_ERROR_RATE, protected_ip_prefix_str, PROTECTED_PREFIX_LENGTH, UPLOAD_INTERVAL, AGGREGATOR_SERVICE);
    // }
+
+   bloom_init(&BLOOM, COUNT, FP_ERROR_RATE);
 
    /* Create UniRec templates */
    ur_template_t *in_tmplt = ur_create_input_template(0, "SRC_IP,DST_IP", NULL);
@@ -204,8 +205,8 @@ int main(int argc, char **argv)
          src_ip = ur_get(in_tmplt, in_rec, F_SRC_IP);
          dst_ip = ur_get(in_tmplt, in_rec, F_DST_IP);
 
-         is_from_prefix_src = is_from_prefix(&src_ip, &PROTECTED_prefix, PROTECTED_PREFIX_LENGTH);
-         is_from_prefix_dst = is_from_prefix(&dst_ip, &PROTECTED_prefix, PROTECTED_PREFIX_LENGTH);
+         is_from_prefix_src = is_from_prefix(&src_ip, &PROTECTED_PREFIX, PROTECTED_PREFIX_LENGTH);
+         is_from_prefix_dst = is_from_prefix(&dst_ip, &PROTECTED_PREFIX, PROTECTED_PREFIX_LENGTH);
 
          if (is_from_prefix_src && !is_from_prefix_dst) {
             ip = &dst_ip;
@@ -223,11 +224,19 @@ int main(int argc, char **argv)
          //    ip_to_str(&dst_ip, dst_ip_str);
          //    ip_to_str(ip, add_ip_str);
          //    printf("src_ip:%s, dst_ip:%s, added_ip:%s\n", src_ip_str, dst_ip_str, add_ip_str);
-         //  }
+         // }
+
+         if (ip_is4(ip)) {
+            bloom_add(&BLOOM, ip_get_v4_as_bytes(ip), 4);
+         } else {
+            bloom_add(&BLOOM, ip->ui8, 16); 
+         }
       }
    }
 
    /* Cleanup */
+   bloom_free(&BLOOM);
+
    TRAP_DEFAULT_FINALIZATION();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
