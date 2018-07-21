@@ -53,8 +53,9 @@
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
-#include "fields.h"
 
+#include "bloom_functions.h"
+#include "fields.h"
 
 UR_FIELDS (
     ipaddr SRC_IP,
@@ -188,18 +189,32 @@ int main(int argc, char **argv)
 
         /* TODO Process the data */
         {
+            int is_from_prefix_src, is_from_prefix_dst;
+            ip_addr_t* ip = NULL;
 
             src_ip = ur_get(in_tmplt, in_rec, F_SRC_IP);
             dst_ip = ur_get(in_tmplt, in_rec, F_DST_IP);
-            { // FIXME remove - debug output
-                char src_ip_str[INET6_ADDRSTRLEN];
-                char dst_ip_str[INET6_ADDRSTRLEN];
-                char add_ip_str[INET6_ADDRSTRLEN];
-                ip_to_str(&src_ip, src_ip_str);
-                ip_to_str(&dst_ip, dst_ip_str);
-                ip_to_str(ip, add_ip_str);
-                printf("src_ip:%s, dst_ip:%s, added_ip:%s\n", src_ip_str, dst_ip_str, add_ip_str);
+
+            is_from_prefix_src = is_from_prefix(&src_ip, &protected_prefix, protected_prefix_length);
+            is_from_prefix_dst = is_from_prefix(&dst_ip, &protected_prefix, protected_prefix_length);
+
+            if (is_from_prefix_src && !is_from_prefix_dst) {
+                ip = &dst_ip;
+            } else if (!is_from_prefix_src && is_from_prefix_dst) {
+                ip = &src_ip;
+            } else {
+                continue;
             }
+
+            // {
+            //     char src_ip_str[INET6_ADDRSTRLEN];
+            //     char dst_ip_str[INET6_ADDRSTRLEN];
+            //     char add_ip_str[INET6_ADDRSTRLEN];
+            //     ip_to_str(&src_ip, src_ip_str);
+            //     ip_to_str(&dst_ip, dst_ip_str);
+            //     ip_to_str(ip, add_ip_str);
+            //     printf("src_ip:%s, dst_ip:%s, added_ip:%s\n", src_ip_str, dst_ip_str, add_ip_str);
+            //  }
         }
     }
 
