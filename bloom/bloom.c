@@ -49,6 +49,7 @@
 #include <signal.h>
 #include <getopt.h>
 #include <stdint.h>
+#include <string.h>
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
@@ -67,31 +68,13 @@ trap_module_info_t *module_info = NULL;
     BASIC("History gathering module", \
           "This module gathers history of communicating entities and stores them in a bloom filter.", 1, 0)
 
-/* TODO params
-    - bloom filter parameters
-         - expected size
-         - false positive rate
-    - protected prefix (so we can decide which addr we want to insert)
-    - interval after which we want to create new filter and send the old one (short periond~5min in the original design)
-    - ip addr of hitory service
-*/
-/**
- * Definition of module parameters - every parameter has short_opt, long_opt, description,
- * flag whether an argument is required or it is optional and argument type which is NULL
- * in case the parameter does not need argument.
- * Module parameter argument types: int8, int16, int32, int64, uint8, uint16, uint32, uint64, float, string
- */
 #define MODULE_PARAMS(PARAM) \
-    PARAM('c', "count", "Expected number of distinct addresess for aggregated period.", required_argument, "int32") \
-    PARAM('e', "error", "False possitive error rate at \"count\" entries.", required_argument, "float")
+    PARAM('c', "count", "Expected number of distinct addresess for long aggregated period.", required_argument, "int32") \
+    PARAM('e', "error", "False possitive error rate at \"count\" entries.", required_argument, "float") \
+    PARAM('p', "prefix", "Protected IP prefix. Only communication with addresses from this prefix will be recorded", required_argument, "string") \
+    PARAM('t', "interval", "Interval in seconds for periodic filter upload to the aggregator service.", required_argument, "int32") \
+    PARAM('s', "service", "IP address of the aggregator service.", required_argument, "string")
     //PARAM(char, char *, char *, no_argument  or  required_argument, char *)
-/**
- * To define positional parameter ("param" instead of "-m param" or "--mult param"), use the following definition:
- * PARAM('-', "", "Parameter description", required_argument, "string")
- * There can by any argument type mentioned few lines before.
- * This parameter will be listed in Additional parameters in module help output
- */
-
 
 static int stop = 0;
 
@@ -103,12 +86,15 @@ TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 int main(int argc, char **argv)
 {
-    int ret;
     signed char opt;
-    int32_t count;
-    double fp_error_rate;
-    char src_ip_str[INET6_ADDRSTRLEN];
-    char dst_ip_str[INET6_ADDRSTRLEN];
+    int error = 0;
+    
+    int32_t count = 1000000;
+    double fp_error_rate = 0.01;
+    ip_addr_t protected_prefix;
+    int32_t protected_prefix_length = 0;
+    int32_t upload_interval = 300;
+    char* aggregator_service = NULL;
 
     /* TRAP initialization */
     INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
@@ -123,13 +109,55 @@ int main(int argc, char **argv)
             case 'e':
                 fp_error_rate = atof(optarg);
                 break;
+            case 'p':
+                {
+                    char* prefix_slash = strchr(optarg, '/');
+
+                    if (prefix_slash == NULL) {
+                        error = 1;
+                        break;
+                    }
+
+                    *prefix_slash = '\0';
+                    if (!ip_from_str(optarg, &protected_prefix)) {
+                        error = 1; 
+                    }
+
+                    protected_prefix_length = atoi(prefix_slash + 1);
+                }
+                break;
+            case 't':
+                upload_interval = atoi(optarg);
+                break;
+            case 's':
+                aggregator_service = optarg;
+                break;
             default:
-                fprintf(stderr, "Invalid arguments.\n");
-                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
-                TRAP_DEFAULT_FINALIZATION();
-                return -1;
-        }
+                error = 1;
+       }
     }
+
+    if (error) {
+        fprintf(stderr, "Invalid arguments.\n");
+        FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+        TRAP_DEFAULT_FINALIZATION();
+        return -1;
+    }
+
+
+    /* TODO Argument verification
+        prefix length <= ip type length
+        fr_error_rate in (0,1)
+        count >= 1024 TODO check - libbloom limitation
+        upload interval > 0
+    */
+    
+    // {
+    //     char protected_ip_prefix_str[INET6_ADDRSTRLEN];
+    //     ip_to_str(&protected_prefix, protected_ip_prefix_str);
+    //     printf("count:%d, fpr:%f, prefix:%s, prefix_length:%d, interval:%d, service:%s\n", 
+    //            count, fp_error_rate, protected_ip_prefix_str, protected_prefix_length, upload_interval, aggregator_service);
+    // }
 
     /* Create UniRec templates */
     ur_template_t *in_tmplt = ur_create_input_template(0, "SRC_IP,DST_IP", NULL);
@@ -140,12 +168,12 @@ int main(int argc, char **argv)
 
     /* Main processing loop */
     while (!stop) {
+        int ret;
         const void *in_rec;
         uint16_t in_rec_size;
         ip_addr_t src_ip, dst_ip;
 
         ret = TRAP_RECEIVE(0, in_rec, in_rec_size, in_tmplt);
-
         TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
 
         if (in_rec_size < ur_rec_fixlen_size(in_tmplt)) {
@@ -157,13 +185,22 @@ int main(int argc, char **argv)
                 break;
             }
         }
-        
+
         /* TODO Process the data */
-        src_ip = ur_get(in_tmplt, in_rec, F_SRC_IP);
-        dst_ip = ur_get(in_tmplt, in_rec, F_DST_IP);
-        ip_to_str(&src_ip, src_ip_str);
-        ip_to_str(&dst_ip, dst_ip_str);
-        printf("%s, %s, %d, %f\n", src_ip_str, dst_ip_str, count, fp_error_rate);
+        {
+
+            src_ip = ur_get(in_tmplt, in_rec, F_SRC_IP);
+            dst_ip = ur_get(in_tmplt, in_rec, F_DST_IP);
+            { // FIXME remove - debug output
+                char src_ip_str[INET6_ADDRSTRLEN];
+                char dst_ip_str[INET6_ADDRSTRLEN];
+                char add_ip_str[INET6_ADDRSTRLEN];
+                ip_to_str(&src_ip, src_ip_str);
+                ip_to_str(&dst_ip, dst_ip_str);
+                ip_to_str(ip, add_ip_str);
+                printf("src_ip:%s, dst_ip:%s, added_ip:%s\n", src_ip_str, dst_ip_str, add_ip_str);
+            }
+        }
     }
 
     /* Cleanup */
