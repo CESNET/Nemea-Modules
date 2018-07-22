@@ -88,7 +88,7 @@ int curl_init_handle(CURL ** curl, const char * aggregator_service);
  *     -2 - serialization failed
  *     -3 - curl handle not initialized
  *     -4 - libcurl error
- *     -5 - HTTP 4xx or 5xx
+ *     -5 - HTTP status code other than 200 OK
 */
 int curl_send_bloom(CURL * curl, const struct bloom * bloom_filter);
 

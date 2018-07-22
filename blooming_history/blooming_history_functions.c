@@ -98,6 +98,7 @@ int curl_init_handle(CURL ** curl, const char * aggregator_service) {
 
 int curl_send_bloom(CURL * curl, const struct bloom * bloom_filter) {
    int error = 0;
+   long code;
    CURLcode res;
 
    uint8_t* buffer = NULL;
@@ -131,9 +132,10 @@ int curl_send_bloom(CURL * curl, const struct bloom * bloom_filter) {
       error = -4;
    }
 
-   // TODO Check return code
-   /* long code; */
-   /* curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &code); */
+   curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &code);
+   if (code != 200L) {
+      error = -5;
+   }
 
    curl_slist_free_all(list);
    bloom_free_serialized_buffer(&buffer);
