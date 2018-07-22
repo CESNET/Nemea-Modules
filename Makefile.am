@@ -54,7 +54,7 @@ SUBDIRS += flow_meter
 endif
 
 # FIXME HAVE_LIBBLOOM configure.ac or perhaps statically linked
-# if HAVE_LIBBLOOM
+# if HAVE_LIBBLOOM HAVE_LIBCURL
 SUBDIRS += blooming_history
 # endif
 
