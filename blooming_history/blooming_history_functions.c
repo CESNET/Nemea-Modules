@@ -115,7 +115,7 @@ int curl_send_bloom(CURL * curl, const struct bloom * bloom_filter) {
    }
 
    list = curl_slist_append(list, "Content-Type: application/octet-stream");
-   // TODO saves about 100ms on small POSTs - would be great with gzip
+   // TODO Disable "Expect:" header - saves about 100ms on small POSTs - gzip?
    /* list = curl_slist_append(list, "Expect:"); */
    // TODO curl does not compress anything for us
    /* list = curl_slist_append(list, "Content-Encoding: gzip"); */
