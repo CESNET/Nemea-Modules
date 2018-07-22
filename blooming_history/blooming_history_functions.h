@@ -46,9 +46,13 @@
 
 #include <unirec/unirec.h>
 
+
 /**
  * Test that ip is from given network prefix.
  *
+ * \param[in] ip                   IP address that is checked for membership in the given prefix.
+ * \param[in] protected_prefix         IP prefix.
+ * \param[in] protected_prefix_length   Length of the IP prefix.
  * \returns 1 if the ip is from prefix, 0 otherwise.
 */
 int is_from_prefix(ip_addr_t * ip, ip_addr_t * protected_prefix, int32_t protected_prefix_length);
