@@ -39,7 +39,7 @@ import pytrap
 import argparse
 import json
 import gzip
-import socket
+import ipaddress
 from datetime import datetime
 
 """
@@ -110,11 +110,12 @@ while True:
             if rr_type not in (1, 5, 28):
                 continue
 
-            # For some flow the rcode contains value 1 but the response is type of CNAME
-            if rr_type == 1:
+            # For some flow the rcode contains value 1 or 28 but the response is type of CNAME
+            # or type of KEY
+            if rr_type in (1, 28):
                 try:
-                    socket.inet_aton(unirec.get(data, "DNS_RDATA").decode('utf-8'))
-                except socket.error as e:
+                    ipaddress.ip_address(unirec.get(data, "DNS_RDATA").decode('utf-8'))
+                except ValueError as e:
                     continue
 
             pdns_record = {
