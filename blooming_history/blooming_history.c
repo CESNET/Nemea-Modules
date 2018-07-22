@@ -73,7 +73,7 @@ trap_module_info_t *module_info = NULL;
         "This module gathers history of communicating entities and stores them in a bloom filter.", 1, 0)
 
 #define MODULE_PARAMS(PARAM) \
-   PARAM('c', "count", "Expected number of distinct addresess for long aggregated period.", required_argument, "int32") \
+   PARAM('n', "number", "Expected number of distinct entries (addresess) for long aggregated period.", required_argument, "int32") \
    PARAM('e', "error", "False possitive error rate at \"count\" entries.", required_argument, "float") \
    PARAM('p', "prefix", "Protected IP prefix. Only communication with addresses from this prefix will be recorded", required_argument, "string") \
    PARAM('t', "interval", "Interval in seconds for periodic filter upload to the aggregator service.", required_argument, "int32") \
@@ -90,9 +90,7 @@ TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 struct bloom BLOOM;
 
-// FIXME COUNT -> ENTRIES
-
-int32_t COUNT = 1000000;
+int32_t ENTRIES = 1000000;
 double FP_ERROR_RATE = 0.01;
 ip_addr_t PROTECTED_PREFIX;
 int32_t PROTECTED_PREFIX_LENGTH = 0;
@@ -112,8 +110,8 @@ int main(int argc, char **argv)
  
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
-         case 'c':
-            COUNT = atoi(optarg);
+         case 'n':
+            ENTRIES = atoi(optarg);
             break;
          case 'e':
             FP_ERROR_RATE = atof(optarg);
@@ -153,22 +151,21 @@ int main(int argc, char **argv)
       return -1;
    }
 
-
    /* TODO Argument verification
       prefix length <= ip type length
       fr_error_rate in (0,1)
-      COUNT >= 1024 TODO check - libbloom limitation
+      ENTRIES >= 1024 TODO check - libbloom limitation
       upload interval > 0
    */
    
    // {
    //    char protected_ip_prefix_str[INET6_ADDRSTRLEN];
    //    ip_to_str(&PROTECTED_PREFIX, protected_ip_prefix_str);
-   //    printf("count:%d, fpr:%f, prefix:%s, prefix_length:%d, interval:%d, service:%s\n", 
-   //         count, FP_ERROR_RATE, protected_ip_prefix_str, PROTECTED_PREFIX_LENGTH, UPLOAD_INTERVAL, AGGREGATOR_SERVICE);
+   //    printf("ENTRIES:%d, fpr:%f, prefix:%s, prefix_length:%d, interval:%d, service:%s\n", 
+   //         ENTRIES, FP_ERROR_RATE, protected_ip_prefix_str, PROTECTED_PREFIX_LENGTH, UPLOAD_INTERVAL, AGGREGATOR_SERVICE);
    // }
 
-   bloom_init(&BLOOM, COUNT, FP_ERROR_RATE);
+   bloom_init(&BLOOM, ENTRIES, FP_ERROR_RATE);
 
    /* Create UniRec templates */
    ur_template_t *in_tmplt = ur_create_input_template(0, "SRC_IP,DST_IP", NULL);
