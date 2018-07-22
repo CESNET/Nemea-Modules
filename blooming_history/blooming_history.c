@@ -52,6 +52,7 @@
 #include <string.h>
 #include <assert.h>
 
+#include <curl/curl.h>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 #include <bloom.h>
@@ -158,7 +159,6 @@ int main(int argc, char **argv)
       upload interval > 0
    */
 
-   bloom_init(&BLOOM, ENTRIES, FP_ERROR_RATE);
 #ifdef DEBUG
    {
       char protected_ip_prefix_str[INET6_ADDRSTRLEN];
@@ -168,12 +168,19 @@ int main(int argc, char **argv)
    }
 #endif // DEBUG
 
+   /* Initialize libcurl */
+   curl_global_init(CURL_GLOBAL_ALL);
+
+   /* TODO Start thread around here */
+
    /* Create UniRec templates */
    ur_template_t *in_tmplt = ur_create_input_template(0, "SRC_IP,DST_IP", NULL);
    if (in_tmplt == NULL){
       fprintf(stderr, "Error: Input template could not be created.\n");
       return -1;
    }
+
+   bloom_init(&BLOOM, ENTRIES, FP_ERROR_RATE);
 
    /* Main processing loop */
    while (!stop) {
@@ -234,6 +241,20 @@ int main(int argc, char **argv)
       }
    }
 
+   {
+      CURL* curl = NULL;
+
+      /* TODO do from separate thread */
+      curl_init_handle(&curl, AGGREGATOR_SERVICE);
+      error = curl_send_bloom(curl, &BLOOM);
+      if (error) {
+         fprintf(stderr, "Error(%d) sending filter to %s\n", error, AGGREGATOR_SERVICE);
+      }
+      curl_free_handle(&curl);
+   }
+
+   // TODO Wait for all threads here
+
    /* Cleanup */
    bloom_free(&BLOOM);
 
@@ -242,6 +263,8 @@ int main(int argc, char **argv)
 
    ur_free_template(in_tmplt);
    ur_finalize();
+
+   curl_global_cleanup();
 
    return 0;
 }

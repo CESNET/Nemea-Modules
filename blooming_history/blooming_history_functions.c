@@ -41,8 +41,6 @@
  *
  */
 
-#include <unirec/unirec.h>
-
 #include "blooming_history_functions.h"
 
 
@@ -71,5 +69,81 @@ int is_from_prefix(ip_addr_t * ip, ip_addr_t * protected_prefix, int32_t protect
    }
 
    return 0;
+}
+
+
+int curl_init_handle(CURL ** curl, const char * aggregator_service) {
+   *curl = curl_easy_init();
+
+   if(!(*curl)){
+      return -1;
+   }
+
+   // None of below calls should fail (apart from OOM)
+   curl_easy_setopt(*curl, CURLOPT_URL, aggregator_service);
+   // POST request method
+   curl_easy_setopt(*curl, CURLOPT_POST, 1L);
+   // follow redirections
+   curl_easy_setopt(*curl, CURLOPT_FOLLOWLOCATION, 1L);
+   curl_easy_setopt(*curl, CURLOPT_MAXREDIRS, 50L);
+   // enable verbose for easier tracing
+   curl_easy_setopt(*curl, CURLOPT_VERBOSE, 1L);
+   // 60 seconds timeout - cuases SIGALARM (this might not be a good idea)
+   // curl_easy_setopt(handle, CURLOPT_TIMEOUT, 60L);
+   curl_easy_setopt(*curl, CURLOPT_TCP_KEEPALIVE, 1L);
+
+   return 0;
+}
+
+
+int curl_send_bloom(CURL * curl, const struct bloom * bloom_filter) {
+   int error = 0;
+   CURLcode res;
+
+   uint8_t* buffer = NULL;
+   int32_t buffer_size;
+   struct curl_slist* list = NULL;
+
+   if(!curl) {
+      return -3;
+   }
+
+   error = bloom_serialize(bloom_filter, &buffer, &buffer_size);
+   if (error) {
+      return error;
+   }
+
+   list = curl_slist_append(list, "Content-Type: application/octet-stream");
+   // TODO saves about 100ms on small POSTs - would be great with gzip
+   /* list = curl_slist_append(list, "Expect:"); */
+   // TODO curl does not compress anything for us
+   /* list = curl_slist_append(list, "Content-Encoding: gzip"); */
+
+   /* specify POST data */
+   curl_easy_setopt(curl, CURLOPT_POSTFIELDS, buffer);
+   /* libcurl will strlen() by itself otherwise */
+   curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)buffer_size);
+   curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
+
+   res = curl_easy_perform(curl);
+   if(res != CURLE_OK) {
+      fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+      error = -4;
+   }
+
+   // TODO Check return code
+   /* long code; */
+   /* curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &code); */
+
+   curl_slist_free_all(list);
+   bloom_free_serialized_buffer(&buffer);
+
+   return error;
+}
+
+
+void curl_free_handle(CURL ** curl) {
+   curl_easy_cleanup(*curl);
+   *curl = NULL;
 }
 

@@ -44,7 +44,11 @@
 #ifndef __BLOOMING_HISTORY_FUNCTIONS_H_
 #define __BLOOMING_HISTORY_FUNCTIONS_H_
 
+#include <stdint.h>
+
+#include <curl/curl.h>
 #include <unirec/unirec.h>
+#include <bloom.h>
 
 
 /**
@@ -57,5 +61,43 @@
 */
 int is_from_prefix(ip_addr_t * ip, ip_addr_t * protected_prefix, int32_t protected_prefix_length);
 
+
+/**
+ * Initialize libcurl easy handle.
+ *
+ * libcurl does reuse connections on the same heasy handle so it is preferable
+ * to do the initialization only once.
+ *
+ * \param[in] curl              Libcurl easy handle.
+ * \param[out] aggregator_service   URI of the Aggregator service.
+ * \returns
+ *      0 - success
+ *     -1 - initialization failed
+*/
+int curl_init_handle(CURL ** curl, const char * aggregator_service);
+
+
+/**
+ * Serialize and send bloom filter struct to a aggregator service via HTTP POST.
+ *
+ * \param[in] curl         Libcurl easy handle.
+ * \param[in] bloom_filter   Bloom filter to be sent.
+ * \returns
+ *      0 - success
+ *     -1 - bloom filter not initialized
+ *     -2 - serialization failed
+ *     -3 - curl handle not initialized
+ *     -4 - libcurl error
+ *     -5 - HTTP 4xx or 5xx
+*/
+int curl_send_bloom(CURL * curl, const struct bloom * bloom_filter);
+
+
+/**
+ * Free libcurl easy handle.
+ *
+ * \param[in] curl   Libcurl easy handle.
+*/
+void curl_free_handle(CURL ** curl);
 
 #endif // __BLOOMING_HISTORY_FUNCTIONS_H_
