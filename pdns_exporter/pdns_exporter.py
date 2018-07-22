@@ -50,7 +50,7 @@ store JSON to files on disk. Data in JSON are in format to process in Passive DN
 def store_json(json_data):
     file_name = "pdns_data_" + datetime.now().strftime("%Y%m%d.%H%M%S") + ".json.gz"
     with gzip.open(file_name, "wb") as output_file:
-        output_file.write(json.dumps(json_data, indent=4, sort_keys=False).encode('utf-8'))
+        output_file.write(json.dumps(json_data, sort_keys=False).encode('utf-8'))
 
 parser = argparse.ArgumentParser(description='Module for exporting flow data to format for Passive DNS')
 parser.add_argument('-i', "--ifcspec", help="select TRAP IFC specifier")
@@ -118,12 +118,12 @@ while True:
                     continue
 
             pdns_record = {
-                'response': unirec.get(data, "DNS_RDATA").decode('utf-8'),
-                'query': unirec.get(data, "DNS_NAME"),
-                'ttl': unirec.get(data, "DNS_RR_TTL"),
-                'type': unirec.get(data, "DNS_QTYPE"),
-                'time_first': unirec.get(data, "TIME_FIRST").toDatetime().isoformat(),
-                'time_last': unirec.get(data, "TIME_LAST").toDatetime().isoformat()
+                "response": unirec.get(data, "DNS_RDATA").decode('utf-8'),
+                "query": unirec.get(data, "DNS_NAME"),
+                "ttl": unirec.get(data, "DNS_RR_TTL"),
+                "type": unirec.get(data, "DNS_QTYPE"),
+                "time_first": unirec.get(data, "TIME_FIRST").toDatetime().isoformat(),
+                "time_last": unirec.get(data, "TIME_LAST").toDatetime().isoformat()
             }
 
             records.append(pdns_record)
