@@ -52,13 +52,17 @@ store JSON to files on disk. Data in JSON are in format to process in Passive DN
 def store_json(json_data, tmp_dir, outputh_path):
     """Store JSON records in tmp directory and move tmp file to specified outputh"""
     file_name = "pdns_data_" + datetime.now().strftime("%Y%m%d.%H%M%S") + ".json.gz"
+
+    # write data into temporary file
     with gzip.open(os.path.join(tmp_dir, "tmp.json.gz"), "wb") as tmp_file:
         tmp_file.write(json.dumps(json_data, sort_keys=False).encode('utf-8'))
-        try:
-            os.rename(os.path.join(tmp_dir, tmp_file.name), os.path.join(output_path, file_name))
-        except PermissionError:
-            sys.stderr.write("Missing permissions for storing file in destination path.\n")
-            exit(1)
+
+    # finally, move file from temporary to target location after close
+    try:
+        os.rename(os.path.join(tmp_dir, tmp_file.name), os.path.join(output_path, file_name))
+    except PermissionError:
+        sys.stderr.write("Missing permissions for storing file in destination path.\n")
+        exit(1)
 
 parser = argparse.ArgumentParser(description='Module for exporting flow data to format for Passive DNS')
 parser.add_argument('-i', "--ifcspec",
