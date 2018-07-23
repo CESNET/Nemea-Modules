@@ -93,7 +93,7 @@ void capture_thread(int index)
    while (!stop) {
       ret = trap_ctx_recv(ctx, index, &data_nemea_input, &memory_received);
       //=== process received data ===
-      if (ret == TRAP_E_OK | ret == TRAP_E_FORMAT_CHANGED) {
+      if (ret == TRAP_E_OK || ret == TRAP_E_FORMAT_CHANGED) {
          if (ret == TRAP_E_FORMAT_CHANGED) {
             //get input interface format
             if (trap_ctx_get_data_fmt(ctx, TRAPIFC_INPUT, index, &data_fmt, &spec) != TRAP_E_OK) {
@@ -205,19 +205,18 @@ int main (int argc, char ** argv)
       exit_value = 3;
       goto cleanup;
    }
+    
+   if (trap_ctx_get_last_error(ctx) != TRAP_E_OK){
+      cerr << "ERROR in TRAP initialization: " << trap_ctx_get_last_error_msg(ctx) << endl;
+      exit_value = 3;
+      goto cleanup;
+   } 
 
 
    //check if number of interfaces is correct
    if (strlen(ifc_spec.types) <= 1) {
       cerr << "ERROR expected at least 1 input and 1 output interface. Got only 1." << endl;
       return 2;
-   }
-
-   //check if number of input interfaces is correct
-   if (strlen(ifc_spec.types)-1 != n_inputs) {
-      cerr << "ERROR number of input interfaces is incorrect" << endl;
-      exit_value = 2;
-      goto cleanup;
    }
 
    //output interface control settings
@@ -268,6 +267,7 @@ cleanup:
    //cleaning
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    trap_ctx_finalize(&ctx);
+   
    return exit_value;
 }
 
