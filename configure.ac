@@ -229,6 +229,7 @@ AC_CONFIG_FILES([Makefile
                  natpair/Makefile
                  nemea-modules.spec
                  nfreader/Makefile
+                 pdns_exporter/Makefile
                  proto_traffic/Makefile
                  proto_traffic/munin/Makefile
                  report2idea/Makefile

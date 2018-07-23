@@ -17,6 +17,7 @@ mux \
 demux \
 natpair \
 proto_traffic \
+pdns_exporter \
 report2idea \
 topn \
 traffic_repeater \
