@@ -69,7 +69,7 @@ parser.add_argument('-i', "--ifcspec",
                     help="select TRAP IFC specifier")
 parser.add_argument('-t', "--threshold", default=5000,
                     help="set number of JSON records per file")
-parser.add_argument('-d', "--destination", default='.',
+parser.add_argument('-d', "--destination", default='./',
                     help="target output directory.")
 parser.add_argument("--tmp-dir", default='./',
                     help="directory for storing temporary file before moving them to output destination.")
