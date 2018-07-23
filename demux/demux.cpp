@@ -143,10 +143,9 @@ int main (int argc, char ** argv)
       goto cleanup;
    }
 
-   //check if number of interfaces is correct
-   if (strlen(ifc_spec.types) <= 1) {
-      cerr << "ERROR expected at least 1 input and 1 output interface. Got only 1." << endl;
-      exit_value = 2;
+   if (trap_ctx_get_last_error(ctx) != TRAP_E_OK){
+      cerr << "ERROR in TRAP initialization: " << trap_ctx_get_last_error_msg(ctx) << endl;
+      exit_value = 3;
       goto cleanup;
    }
 
