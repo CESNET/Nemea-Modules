@@ -42,3 +42,16 @@ See `python pdns_exporter.py -h` for help.
 ### How it works
 
 Simple convertor from UniRec to JSON. Records formated in JSON are stored into files on disk.
+
+Example how JSON output could look like:
+
+```
+{
+    "response": "209.15.26.178",
+    "query": "api.surfeasy.com",
+    "ttl": 120,
+    "type": 1,
+    "time_first": "2018-07-18T08:13:58.042000",
+    "time_last": "2018-07-18T08:13:58.042000"
+}
+```
