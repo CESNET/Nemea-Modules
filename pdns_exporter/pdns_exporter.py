@@ -159,3 +159,4 @@ while True:
             if len(records) >= CONTENT_THRESHOLD:
                 store_json(records, tmp_dir, output_path)
                 records.clear()
+
