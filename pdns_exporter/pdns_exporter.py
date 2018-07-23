@@ -34,6 +34,7 @@
 # otherwise) arising in any way out of the use of this software, even
 # if advised of the possibility of such damage.
 
+import os
 import sys
 import pytrap
 import argparse
@@ -47,14 +48,27 @@ This module reads flow data from TRAP interface and export flow data to JSON and
 store JSON to files on disk. Data in JSON are in format to process in Passive DNS.
 """
 
-def store_json(json_data):
+
+def store_json(json_data, tmp_dir, outputh_path):
+    """Store JSON records in tmp directory and move tmp file to specified outputh"""
     file_name = "pdns_data_" + datetime.now().strftime("%Y%m%d.%H%M%S") + ".json.gz"
-    with gzip.open(file_name, "wb") as output_file:
-        output_file.write(json.dumps(json_data, sort_keys=False).encode('utf-8'))
+    with gzip.open(os.path.join(tmp_dir, "tmp.json.gz"), "wb") as tmp_file:
+        tmp_file.write(json.dumps(json_data, sort_keys=False).encode('utf-8'))
+        try:
+            os.rename(os.path.join(tmp_dir, tmp_file.name), os.path.join(output_path, file_name))
+        except PermissionError:
+            sys.stderr.write("Missing permissions for storing file in destination path.\n")
+            exit(1)
 
 parser = argparse.ArgumentParser(description='Module for exporting flow data to format for Passive DNS')
-parser.add_argument('-i', "--ifcspec", help="select TRAP IFC specifier")
-parser.add_argument('-t', "--threshold", default=5000, type=int, help="set number of JSON records per file")
+parser.add_argument('-i', "--ifcspec",
+                    help="select TRAP IFC specifier")
+parser.add_argument('-t', "--threshold", default=5000,
+                    help="set number of JSON records per file")
+parser.add_argument('-d', "--destination", default='.',
+                    help="target output directory.")
+parser.add_argument("--tmp-dir", default='./',
+                    help="directory for storing temporary file before moving them to output destination.")
 args = parser.parse_args()
 
 context = pytrap.TrapCtx()
@@ -66,6 +80,16 @@ unirec = pytrap.UnirecTemplate("ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,uint64 
                                "uint16 DNS_ID,uint16 DNS_PSIZE,uint16 DNS_QTYPE,uint16 DNS_RLENGTH,uint16 DST_PORT,"\
                                "uint16 SRC_PORT,uint8 DIR_BIT_FIELD,uint8 DNS_DO,uint8 DNS_RCODE,"\
                                "uint8 PROTOCOL,uint8 TCP_FLAGS,uint8 TOS,uint8 TTL,string DNS_NAME,bytes DNS_RDATA")
+
+tmp_dir = args.tmp_dir
+if not os.path.exists(tmp_dir):
+    sys.stderr.write("Path given by --tmp-dir not found.\n")
+    exit(1)
+
+output_path = args.destination
+if not os.path.exists(output_path):
+    sys.stderr.write("Path given by --destination not found.\n")
+    exit(1)
 
 records = list()
 try:
@@ -93,7 +117,7 @@ while True:
     if len(data) <= 1:
         # flush to file remaining records
         if len(records) > 0:
-            store_json(records)
+            store_json(records, tmp_dir, output_path)
         break
 
     packets_n = unirec.get(data, "PACKETS")
@@ -129,5 +153,5 @@ while True:
 
             records.append(pdns_record)
             if len(records) >= CONTENT_THRESHOLD:
-                store_json(records)
+                store_json(records, tmp_dir, output_path)
                 records.clear()
