@@ -692,8 +692,8 @@ int rule_save_data(rule_t *rule, ur_template_t *tpl, const void *record)
 
 int main(int argc, char **argv)
 {
-   int ret = TRAP_E_OK;
-   int ret_val = EXIT_FAILURE;
+   int ret = TRAP_E_OK;          // Variable for storing return values from libtrap
+   int ret_val = EXIT_FAILURE;   // Variable for storing return value of this module
 
    // parameters default values
    int param_inactive_timeout = 900;
