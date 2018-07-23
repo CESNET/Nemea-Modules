@@ -595,6 +595,13 @@ int main(int argc, char **argv)
 
    // Create array of structures with output interfaces specifications
    output_specifiers = (struct unirec_output_t**) calloc(sizeof(struct unirec_output_t*), n_outputs);
+   if (!output_specifiers) {
+      fprintf(stderr, "Error: Insufficient memory available: output_specifiers.\n");
+      TRAP_DEFAULT_FINALIZATION();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      return 1;
+   }
+
 
    // Allocate new structures with output interfaces specifications
    for (i = 0; i < n_outputs; i++) {
