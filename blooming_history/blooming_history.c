@@ -246,7 +246,7 @@ int main(int argc, char **argv)
    /* TODO Argument verification
       prefix length <= ip type length
       fr_error_rate in (0,1)
-      ENTRIES >= 1024 TODO check - libbloom limitation
+      ENTRIES >= 1024 check - libbloom limitation
       upload interval > 0
    */
 
@@ -279,6 +279,8 @@ int main(int argc, char **argv)
    ur_template_t *in_tmplt = ur_create_input_template(0, "SRC_IP,DST_IP", NULL);
    if (in_tmplt == NULL){
       fprintf(stderr, "Error: Input template could not be created.\n");
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      TRAP_DEFAULT_FINALIZATION();
       return -1;
    }
 
