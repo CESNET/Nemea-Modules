@@ -50,7 +50,7 @@
 #include <getopt.h>
 #include <stdint.h>
 #include <string.h>
-#include <assert.h>
+#include <pthread.h>
 
 #include <curl/curl.h>
 #include <libtrap/trap.h>
@@ -89,21 +89,112 @@ static int stop = 0;
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 
-struct bloom BLOOM;
-
+/**
+* Bloom filter maximal number of entries at false positive specified error
+*/
 int32_t ENTRIES = 1000000;
+
+/**
+* Bloom filter false positive error at ENTRIES distinct entries
+*/
 double FP_ERROR_RATE = 0.01;
+
+/**
+* Protected IP prefix
+*/
 ip_addr_t PROTECTED_PREFIX;
+
+/**
+* Protected IP prefix length
+*/
 int32_t PROTECTED_PREFIX_LENGTH = 0;
-int32_t UPLOAD_INTERVAL = 300;
+
+/**
+* URI of Aggregator service
+*/
 char* AGGREGATOR_SERVICE = NULL;
+
+/**
+* Interval between bloom filter upload to Aggregator service
+*/
+int32_t UPLOAD_INTERVAL = 300;
+
+/**
+*  Guards clean replacement of current bloom for a new one before upload
+*/
+pthread_mutex_t MUTEX_BLOOM_SWAP = PTHREAD_MUTEX_INITIALIZER;
+
+/**
+*  Guards proper upload thread termination
+*/
+pthread_mutex_t MUTEX_TIMER_STOP = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t    CV_TIMER_STOP = PTHREAD_COND_INITIALIZER;
+
+/**
+* Current bloom filter
+*/
+struct bloom * BLOOM;
+
+
+/**
+ * Entry point for timer thread.
+ *
+ * Periodically uploads and renews BLOOM bloom filter.
+ *
+ * \param[in]  attr   Not used.
+*/
+void * pthread_entry_upload(void * attr)
+{
+   struct timespec ts;
+   struct bloom* bloom_new;
+   struct bloom* bloom_send;
+   CURL* curl = NULL;
+   int error = 0;
+
+   curl_init_handle(&curl, AGGREGATOR_SERVICE);
+
+   while (!stop) {
+      // This is the actuall "sleeping" (gets woken up on module stop)
+      pthread_mutex_lock(&MUTEX_TIMER_STOP);
+      clock_gettime(CLOCK_REALTIME, &ts);
+      ts.tv_sec += UPLOAD_INTERVAL;
+      pthread_cond_timedwait(&CV_TIMER_STOP, &MUTEX_TIMER_STOP, &ts);
+
+      // Create empty bloom
+      bloom_new = calloc(1, sizeof(struct bloom));
+      bloom_init(bloom_new, ENTRIES, FP_ERROR_RATE);
+
+      // Read consistent state
+      pthread_mutex_lock(&MUTEX_BLOOM_SWAP);
+      bloom_send = BLOOM;
+      BLOOM = bloom_new;
+      pthread_mutex_unlock(&MUTEX_BLOOM_SWAP);
+
+      printf("TIMER: %lu\n", (unsigned long)time(NULL));
+      // Send to the service
+      error = curl_send_bloom(curl, bloom_send);
+      if (error) {
+         fprintf(stderr, "Error(%d) sending filter\n", error);
+      }
+
+      bloom_free(bloom_send);
+      free(bloom_send);
+
+      pthread_mutex_unlock(&MUTEX_TIMER_STOP);
+   }
+
+   curl_free_handle(&curl);
+
+   return NULL;
+}
 
 
 int main(int argc, char **argv)
 {
    signed char opt;
    int error = 0;
-   
+   pthread_t pthread_upload;
+
    /* TRAP initialization */
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
@@ -171,7 +262,18 @@ int main(int argc, char **argv)
    /* Initialize libcurl */
    curl_global_init(CURL_GLOBAL_ALL);
 
-   /* TODO Start thread around here */
+   /* Alloc and initialize new bloom */
+   BLOOM = calloc(1, sizeof(struct bloom));
+   bloom_init(BLOOM, ENTRIES, FP_ERROR_RATE);
+
+   /* Setup upload thread */
+   error = pthread_create(&pthread_upload, NULL, pthread_entry_upload, NULL);
+   if(error) {
+      fprintf(stderr, "Error: Failed to create timer thread.\n");
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      TRAP_DEFAULT_FINALIZATION();
+      return -1;
+   }
 
    /* Create UniRec templates */
    ur_template_t *in_tmplt = ur_create_input_template(0, "SRC_IP,DST_IP", NULL);
@@ -179,8 +281,6 @@ int main(int argc, char **argv)
       fprintf(stderr, "Error: Input template could not be created.\n");
       return -1;
    }
-
-   bloom_init(&BLOOM, ENTRIES, FP_ERROR_RATE);
 
    /* Main processing loop */
    while (!stop) {
@@ -202,7 +302,6 @@ int main(int argc, char **argv)
          }
       }
 
-      /* TODO Process the data */
       {
          int is_from_prefix_src, is_from_prefix_dst;
          ip_addr_t* ip = NULL;
@@ -234,37 +333,35 @@ int main(int argc, char **argv)
 #endif // DEBUG
 
          if (ip_is4(ip)) {
-            bloom_add(&BLOOM, ip_get_v4_as_bytes(ip), 4);
+            pthread_mutex_lock(&MUTEX_BLOOM_SWAP);
+            bloom_add(BLOOM, ip_get_v4_as_bytes(ip), 4);
+            pthread_mutex_unlock(&MUTEX_BLOOM_SWAP);
          } else {
-            bloom_add(&BLOOM, ip->ui8, 16); 
+            pthread_mutex_lock(&MUTEX_BLOOM_SWAP);
+            bloom_add(BLOOM, ip->ui8, 16); 
+            pthread_mutex_unlock(&MUTEX_BLOOM_SWAP);
          }
       }
    }
 
-   {
-      CURL* curl = NULL;
+   /* Wait for timer thread */
+   pthread_mutex_lock(&MUTEX_TIMER_STOP);
+   pthread_cond_signal(&CV_TIMER_STOP);
+   pthread_mutex_unlock(&MUTEX_TIMER_STOP);
 
-      /* TODO do from separate thread */
-      curl_init_handle(&curl, AGGREGATOR_SERVICE);
-      error = curl_send_bloom(curl, &BLOOM);
-      if (error) {
-         fprintf(stderr, "Error(%d) sending filter to %s\n", error, AGGREGATOR_SERVICE);
-      }
-      curl_free_handle(&curl);
-   }
-
-   // TODO Wait for all threads here
+   pthread_join(pthread_upload, NULL);
 
    /* Cleanup */
-   bloom_free(&BLOOM);
+   bloom_free(BLOOM);
+   free(BLOOM);
+
+   curl_global_cleanup();
 
    TRAP_DEFAULT_FINALIZATION();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
    ur_free_template(in_tmplt);
    ur_finalize();
-
-   curl_global_cleanup();
 
    return 0;
 }
