@@ -170,7 +170,6 @@ void * pthread_entry_upload(void * attr)
       BLOOM = bloom_new;
       pthread_mutex_unlock(&MUTEX_BLOOM_SWAP);
 
-      printf("TIMER: %lu\n", (unsigned long)time(NULL));
       // Send to the service
       error = curl_send_bloom(curl, bloom_send);
       if (error) {
