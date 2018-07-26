@@ -203,9 +203,17 @@ int main(int argc, char **argv)
       switch (opt) {
          case 'n':
             ENTRIES = atoi(optarg);
+            if (ENTRIES < 1000) {
+               fprintf(stderr, "Error: Number of entries must be > 1000\n");
+               error = 1;
+            }
             break;
          case 'e':
             FP_ERROR_RATE = atof(optarg);
+            if (FP_ERROR_RATE < 0 || FP_ERROR_RATE > 1) {
+               fprintf(stderr, "Error: False-positive rate must be from (0, 1) interval\n");
+               error = 1;
+            }
             break;
          case 'p':
             {
@@ -218,7 +226,9 @@ int main(int argc, char **argv)
 
                *prefix_slash = '\0';
                if (!ip_from_str(optarg, &PROTECTED_PREFIX)) {
+                  fprintf(stderr, "Error: Invalid protected prefix format\n");
                   error = 1; 
+                  break;
                }
 
                PROTECTED_PREFIX_LENGTH = atoi(prefix_slash + 1);
@@ -226,6 +236,10 @@ int main(int argc, char **argv)
             break;
          case 't':
             UPLOAD_INTERVAL = atoi(optarg);
+            if (UPLOAD_INTERVAL <= 0) {
+               fprintf(stderr, "Error: Uload interval must be > 0\n");
+               error = 1;
+            }
             break;
          case 's':
             AGGREGATOR_SERVICE = optarg;
@@ -236,18 +250,12 @@ int main(int argc, char **argv)
    }
 
    if (error) {
-      fprintf(stderr, "Invalid arguments.\n");
+      fprintf(stderr, "Error: Invalid arguments.\n");
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       TRAP_DEFAULT_FINALIZATION();
       return -1;
    }
 
-   /* TODO Argument verification
-      prefix length <= ip type length
-      fr_error_rate in (0,1)
-      ENTRIES >= 1024 check - libbloom limitation
-      upload interval > 0
-   */
 
 #ifdef DEBUG
    {
