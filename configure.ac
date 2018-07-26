@@ -104,6 +104,22 @@ else
   AC_DEFINE([HAVE_OPENSSL], [0], [Define to 1 if the openssl is available])
 fi
 
+AC_ARG_WITH([libcurl],
+        [AS_HELP_STRING([--without-libcurl], [Force to disable libcurl])],
+        [if test x$withval = xyes; then
+        PKG_CHECK_MODULES([libcurl], [libcurl], [have_libcurl="yes"], [have_libcurl="no"])
+        fi],
+        [PKG_CHECK_MODULES([libcurl], [libcurl], [have_libcurl="yes"], [have_libcurl="no"])])
+
+AM_CONDITIONAL([HAVE_LIBCURL], [test x$have_libcurl = xyes])
+if test x$have_libcurl = xyes; then
+  AC_DEFINE([HAVE_LIBCURL], [1], [Define to 1 if the libcurl is available])
+  RPM_REQUIRES+=" libcurl"
+  RPM_BUILDREQ+=" libcurl-devel"
+else
+  AC_DEFINE([HAVE_LIBCURL], [0], [Define to 1 if the libcurl is available])
+fi
+
 AC_ARG_WITH([flowcachesize],
 	AC_HELP_STRING([--with-flowcachesize=NUMBER],[Set default size of flow cache for flow_meter module in number of flow records.]),
 	[
