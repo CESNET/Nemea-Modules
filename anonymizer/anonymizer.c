@@ -6,14 +6,10 @@
  * \author Tomas Jansky <janskto1@fit.cvut.cz>
  * \author Martin Zadnik <zadnik@cesnet.cz>
  * \author Tomas Cejka <cejkat@cesnet.cz>
- * \date 2013
- * \date 2014
- * \date 2015
- * \date 2016
  * \date 2017
  */
 /*
- * Copyright (C) 2013-2015 CESNET
+ * Copyright (C) 2013-2018 CESNET
  *
  * LICENSE TERMS
  *
@@ -148,7 +144,11 @@ int init_from_file(char *secret_file, uint8_t *init_key)
    }
 
    // Reads secret key
-   fgets(secret_key, SECRET_KEY_MAX_SIZE, fp);
+   if (!fgets(secret_key, SECRET_KEY_MAX_SIZE, fp)) {
+      fprintf(stderr, "Error: Error occured while reading the key.\n");
+      fclose(fp);
+      return 0;
+   }
    fclose(fp);
 
    // Remove trailing whitespaces from secret key
@@ -212,7 +212,7 @@ void ip_anonymize(void *field_ptr, uint8_t mode)
 char *string_anonymize(void *field_ptr, uint32_t field_len, uint8_t mode, regex_t regex_IPV4, regex_t regex_IPV6)
 {
    int reti;
-   regmatch_t ip;
+   regmatch_t ip[2]; // expecting MAX 1 occurence, see man regexec for more info
    ip_addr_t tmp_ip;
    char *output = NULL;
    char *field = (char *) field_ptr;
@@ -222,9 +222,9 @@ char *string_anonymize(void *field_ptr, uint32_t field_len, uint8_t mode, regex_
    field[field_len] = '\0';
 
    /* Check whether in field exists IPv4 or IPv6 address in string form */
-   reti = regexec(&regex_IPV4, field, 2, &ip, 0);
+   reti = regexec(&regex_IPV4, field, 2, ip, 0);
    if (reti == REG_NOMATCH) {
-      reti = regexec(&regex_IPV6, field, 2, &ip, 0);
+      reti = regexec(&regex_IPV6, field, 2, ip, 0);
       if (reti == REG_NOMATCH) {
          field[field_len] = backup;
          return output;
@@ -232,12 +232,12 @@ char *string_anonymize(void *field_ptr, uint32_t field_len, uint8_t mode, regex_
    }
 
    /* Temporarily end IP address with \0 */
-   char backup2 = field[ip.rm_eo];
-   field[ip.rm_eo] = '\0';
+   char backup2 = field[ip[0].rm_eo];
+   field[ip[0].rm_eo] = '\0';
 
    /* Convert IP from string form to ip_addr_t */
-   if (ip_from_str(field + ip.rm_so, &tmp_ip) != 1) {
-      field[ip.rm_eo] = backup2;
+   if (ip_from_str(field + ip[0].rm_so, &tmp_ip) != 1) {
+      field[ip[0].rm_eo] = backup2;
       field[field_len] = backup;
       return output;
    }
@@ -270,20 +270,20 @@ char *string_anonymize(void *field_ptr, uint32_t field_len, uint8_t mode, regex_
    }
 
    /* Restore backup characters */
-   field[ip.rm_eo] = backup2;
+   field[ip[0].rm_eo] = backup2;
    field[field_len] = backup;
 
    /* Allocate space for anonymized string */
    size_t new_length = strlen(anon_ip_string);
-   output = (char *) calloc(ip.rm_so + new_length + (field_len - ip.rm_eo) + 1 , sizeof(char));
+   output = (char *) calloc(ip[0].rm_so + new_length + (field_len - ip[0].rm_eo) + 1 , sizeof(char));
    if (!output) {
       return output;
    }
 
    /* Copy string to allocated space */
-   strncpy(output, field, ip.rm_so);
-   strncpy(output + ip.rm_so, anon_ip_string, new_length);
-   strncpy(output + ip.rm_so + new_length, field + ip.rm_eo, field_len - ip.rm_eo);
+   strncpy(output, field, ip[0].rm_so);
+   strncpy(output + ip[0].rm_so, anon_ip_string, new_length);
+   strncpy(output + ip[0].rm_so + new_length, field + ip[0].rm_eo, field_len - ip[0].rm_eo);
 
    return output;
 }
@@ -364,7 +364,7 @@ int main(int argc, char **argv)
          fields_desc_len += strlen(anon_field_names[i]) + 2; // +2 for delimiter (", ")
       }
       fields_desc_len -= 2; // last delimiter
-      char* fields_desc = malloc(fields_desc_len + 1);
+      char *fields_desc = (char *) calloc(fields_desc_len + 1, sizeof(char));
       if (!fields_desc) {
           fprintf(stderr, "Error: Memory allocation problem (module description).\n");
           ret = 5;
