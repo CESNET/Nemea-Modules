@@ -201,51 +201,51 @@ int main(int argc, char **argv)
  
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
-         case 'n':
-            ENTRIES = atoi(optarg);
-            if (ENTRIES < 1000) {
-               fprintf(stderr, "Error: Number of entries must be > 1000\n");
-               error = 1;
-            }
-            break;
-         case 'e':
-            FP_ERROR_RATE = atof(optarg);
-            if (FP_ERROR_RATE < 0 || FP_ERROR_RATE > 1) {
-               fprintf(stderr, "Error: False-positive rate must be from (0, 1) interval\n");
-               error = 1;
-            }
-            break;
-         case 'p':
-            {
-               char* prefix_slash = strchr(optarg, '/');
-
-               if (prefix_slash == NULL) {
-                  error = 1;
-                  break;
-               }
-
-               *prefix_slash = '\0';
-               if (!ip_from_str(optarg, &PROTECTED_PREFIX)) {
-                  fprintf(stderr, "Error: Invalid protected prefix format\n");
-                  error = 1; 
-                  break;
-               }
-
-               PROTECTED_PREFIX_LENGTH = atoi(prefix_slash + 1);
-            }
-            break;
-         case 't':
-            UPLOAD_INTERVAL = atoi(optarg);
-            if (UPLOAD_INTERVAL <= 0) {
-               fprintf(stderr, "Error: Uload interval must be > 0\n");
-               error = 1;
-            }
-            break;
-         case 's':
-            AGGREGATOR_SERVICE = optarg;
-            break;
-         default:
+      case 'n':
+         ENTRIES = atoi(optarg);
+         if (ENTRIES < 1000) {
+            fprintf(stderr, "Error: Number of entries must be > 1000\n");
             error = 1;
+         }
+         break;
+      case 'e':
+         FP_ERROR_RATE = atof(optarg);
+         if (FP_ERROR_RATE < 0 || FP_ERROR_RATE > 1) {
+            fprintf(stderr, "Error: False-positive rate must be from (0, 1) interval\n");
+            error = 1;
+         }
+         break;
+      case 'p':
+         {
+            char* prefix_slash = strchr(optarg, '/');
+
+            if (prefix_slash == NULL) {
+               error = 1;
+               break;
+            }
+
+            *prefix_slash = '\0';
+            if (!ip_from_str(optarg, &PROTECTED_PREFIX)) {
+               fprintf(stderr, "Error: Invalid protected prefix format\n");
+               error = 1; 
+               break;
+            }
+
+            PROTECTED_PREFIX_LENGTH = atoi(prefix_slash + 1);
+         }
+         break;
+      case 't':
+         UPLOAD_INTERVAL = atoi(optarg);
+         if (UPLOAD_INTERVAL <= 0) {
+            fprintf(stderr, "Error: Uload interval must be > 0\n");
+            error = 1;
+         }
+         break;
+      case 's':
+         AGGREGATOR_SERVICE = optarg;
+         break;
+      default:
+         error = 1;
       }
    }
 
