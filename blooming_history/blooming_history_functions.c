@@ -13,14 +13,14 @@
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *   notice, this list of conditions and the following disclaimer.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
- *   notice, this list of conditions and the following disclaimer in
- *   the documentation and/or other materials provided with the
- *   distribution.
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
  * 3. Neither the name of the Company nor the names of its contributors
- *   may be used to endorse or promote products derived from this
- *   software without specific prior written permission.
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
  *
  * ALTERNATIVELY, provided that this notice is retained in full, this
  * product may be distributed under the terms of the GNU General Public
@@ -44,7 +44,8 @@
 #include "blooming_history_functions.h"
 
 
-int is_from_prefix(ip_addr_t * ip, ip_addr_t * protected_prefix, int32_t protected_prefix_length) {
+int is_from_prefix(ip_addr_t * ip, ip_addr_t * protected_prefix, int32_t protected_prefix_length)
+{
    // Both IPv4
    if(ip_is4(ip) && ip_is4(protected_prefix)) {
       uint32_t mask = 0xffffffff << (32 - protected_prefix_length);
@@ -72,7 +73,8 @@ int is_from_prefix(ip_addr_t * ip, ip_addr_t * protected_prefix, int32_t protect
 }
 
 
-int curl_init_handle(CURL ** curl, const char * aggregator_service) {
+int curl_init_handle(CURL ** curl, const char * aggregator_service)
+{
    *curl = curl_easy_init();
 
    if(!(*curl)){
@@ -96,7 +98,8 @@ int curl_init_handle(CURL ** curl, const char * aggregator_service) {
 }
 
 
-int curl_send_bloom(CURL * curl, const struct bloom * bloom_filter) {
+int curl_send_bloom(CURL * curl, const struct bloom * bloom_filter)
+{
    int error = 0;
    long code;
    CURLcode res;
@@ -144,7 +147,8 @@ int curl_send_bloom(CURL * curl, const struct bloom * bloom_filter) {
 }
 
 
-void curl_free_handle(CURL ** curl) {
+void curl_free_handle(CURL ** curl)
+{
    curl_easy_cleanup(*curl);
    *curl = NULL;
 }
