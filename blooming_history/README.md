@@ -83,7 +83,9 @@ For this module to be compiled you need:
 
 - `libpthread`
 - `libcurl`
-- `libbloom` (modified variant TODO)
+
+This module also uses `libbloom` and includes its slightly modified sources in
+`libbloom/` directory. The upstream project can be found on [GitHub][3].
 
 
 Future development
@@ -95,4 +97,5 @@ Future development
 
 [1]: https://en.wikipedia.org/wiki/Bloom_filter
 [2]: https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=1204223
+[3]: https://github.com/jvirkki/libbloom
 
