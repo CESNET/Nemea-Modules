@@ -77,6 +77,7 @@ ldconfig
 %{_bindir}/nemea/nfdump_reader_test
 %{_bindir}/nemea/nfwriter
 %{_bindir}/nemea/proto_traffic
+%{_bindir}/nemea/pdns_exporter.py
 %{_bindir}/nemea/scalar_agg
 %{_bindir}/nemea/sipbf2idea.py
 %{_bindir}/nemea/svm-tools

@@ -322,6 +322,11 @@ int get_filter_from_file(char *filename, struct unirec_output_t **output_specifi
    int ret;
    char *file_buffer = NULL;
 
+   // Added NULL check to handle possible NULL when reloading
+   if (!filename) {
+      return 7;
+   }
+
    // Copy file content into buffer
    if ((file_buffer = load_file(filename)) == NULL) {
       return 7;

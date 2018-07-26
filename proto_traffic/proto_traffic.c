@@ -194,7 +194,10 @@ void *accept_clients(void *arg)
             );
 
       if (size > 0) {
-         send(client_fd, str, size, 0);
+         if (send(client_fd, str, size, 0) != 0) {
+            fprintf(stderr, "Error: Send failed.\n");
+         }
+
          free(str);
       }
 
@@ -228,7 +231,7 @@ int main(int argc, char **argv)
    /**
     * Let TRAP library parse program arguments, extract its parameters and initialize module interfaces
     */
-   TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
+   TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info)
 
    /**
     * Register signal handler.
@@ -317,7 +320,7 @@ cleanup:
    }
 
    pthread_attr_destroy(&thrAttr);
-   TRAP_DEFAULT_FINALIZATION();
+   TRAP_DEFAULT_FINALIZATION()
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    ur_finalize();
 

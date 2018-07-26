@@ -20,7 +20,7 @@ REQ_FORMAT = "ipaddr SRC_IP,uint32 ADDR_CNT,time TIME_FIRST,time TIME_LAST," + \
              "ipaddr DST_IP12,ipaddr DST_IP13,ipaddr DST_IP14,ipaddr DST_IP15"
 
 # Main conversion function
-def convert_to_idea(rec, opts=None):
+def convert_to_idea(rec, opts):
     endTime = getIDEAtime(rec.TIME_LAST)
     idea={
        "Format": "IDEA0",
@@ -44,7 +44,7 @@ def convert_to_idea(rec, opts=None):
           'Name': 'undefined',
           'SW': ['Nemea','haddrscan_detector'],
           'Type': ['Flow', 'Statistical'],
-          'AggrWin': '00:10:00',
+          'AggrWin': opts.aggrwin,
        }],
     }
     # Set IP addresses (IPv4 / IPv6)
@@ -59,5 +59,9 @@ def convert_to_idea(rec, opts=None):
 
 # Run the module
 if __name__ == "__main__":
-   Run(MODULE_NAME, MODULE_DESC, REQ_TYPE, REQ_FORMAT, convert_to_idea)
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument('--aggrwin', metavar="HH:MM:SS", default="00:05:00", type=str,
+            help='Aggregation window length (AggrWin field of IDEA), default="00:05:00"')
+
+    Run(MODULE_NAME, MODULE_DESC, REQ_TYPE, REQ_FORMAT, convert_to_idea, arg_parser)
 

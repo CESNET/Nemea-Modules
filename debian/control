@@ -2,7 +2,7 @@ Source: nemea-modules
 Section: unknown
 Priority: extra
 Maintainer: CESNET <nemea@cesnet.cz> 
-Build-Depends: autotools-dev, libtrap-dev, unirec, nemea-common-dev, zlib1g-dev,
+Build-Depends: autotools-dev, libtrap-dev, unirec, nemea-common-dev, zlib1g-dev, python
 	debhelper (>=9)
 Standards-Version: 3.9.5
 Homepage: https://github.com/CESNET/Nemea-modules
@@ -14,7 +14,7 @@ Architecture: any
 Multi-Arch: same
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ${misc:Depends}
-Description: NEMEA modules
+Description: The package contains NEMEA modules for filtering, aggregation, reporting etc.
 
 Package: nemea-modules-dev
 Architecture: any

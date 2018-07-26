@@ -7,9 +7,9 @@ import json
 import optparse
 
 from optparse import OptionParser
-parser = OptionParser(add_help_option=False)
+parser = OptionParser(add_help_option=True)
 parser.add_option("-i", "--ifcspec", dest="ifcspec",
-      help="TRAP IFC specifier", metavar="IFCSPEC")
+      help="See https://nemea.liberouter.org/trap-ifcspec/", metavar="IFCSPEC")
 parser.add_option("-w", dest="filename",
     help="Write dump to FILE instead of stdout (overwrite file)", metavar="FILE")
 parser.add_option("-a", dest="filename_append",
@@ -18,6 +18,9 @@ parser.add_option("-I", "--indent", metavar="N", type=int,
     help="Pretty-print JSON with indentation set to N spaces. Note that such format can't be read by json_replay module.")
 parser.add_option("-v", "--verbose", action="store_true",
     help="Set verbose mode - print messages.")
+parser.add_option("--noflush", action="store_true",
+    help="Disable automatic flush of output buffer after writing a record (may improve performance).")
+
 
 # Parse remaining command-line arguments
 (options, args) = parser.parse_args()
@@ -55,7 +58,7 @@ while not stop:
         data = e.data
         del(e)
         pass
-    except pytrap.Terminated:
+    except (pytrap.Terminated, KeyboardInterrupt):
         break
 
     # Check for "end-of-stream" record
@@ -66,9 +69,11 @@ while not stop:
         # Decode data (and check it's valid JSON)
         rec = json.loads(data.decode("utf-8"))
         if options.verbose:
-            print("Message: {}".format(rec))
+            print("Message: {0}".format(rec))
         # Print it to file or stdout
         file.write(json.dumps(rec, indent=options.indent) + '\n')
-    except ValueException:
-        pass
+        if not options.noflush:
+            file.flush()
+    except ValueError as e:
+        sys.stderr.write(str(e) + '\n')
 

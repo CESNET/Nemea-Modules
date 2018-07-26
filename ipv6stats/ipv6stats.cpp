@@ -265,6 +265,8 @@ int main (int argc, char** argv) {
    bool present;
    stats_t stats;
 
+   memset(&stats, 0, sizeof(stats_t));
+
    // initialize TRAP interface
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);

@@ -276,20 +276,20 @@ int Flow::sendToOutput(const ur_template_t *tmplt, void *rec) const
 
 ostream& operator<<(ostream& str, const Flow &other)
 {
-   char buf[32];
+   char buf[64];
    time_t sec;
    int msec;
    ip_addr_t tmp;
    
    sec = ur_time_get_sec(other.lan_time_first);
    msec = ur_time_get_msec(other.lan_time_first);
-   strftime(buf, 31, "%FT%T", gmtime(&sec));
+   strftime(buf, 63, "%FT%T", gmtime(&sec));
 
    str << "[" << buf << "." << msec << " - ";
 
    sec = ur_time_get_sec(other.lan_time_last);
    msec = ur_time_get_msec(other.lan_time_last);
-   strftime(buf, 31, "%FT%T", gmtime(&sec));
+   strftime(buf, 63, "%FT%T", gmtime(&sec));
 
    str << buf << "." << msec << "]\t";
 
@@ -312,13 +312,13 @@ ostream& operator<<(ostream& str, const Flow &other)
 
    sec = ur_time_get_sec(other.wan_time_first);
    msec = ur_time_get_msec(other.wan_time_first);
-   strftime(buf, 31, "%FT%T", gmtime(&sec));
+   strftime(buf, 63, "%FT%T", gmtime(&sec));
 
    str << "[" << buf << "." << msec << " - ";
 
    sec = ur_time_get_sec(other.wan_time_last);
    msec = ur_time_get_msec(other.wan_time_last);
-   strftime(buf, 31, "%FT%T", gmtime(&sec));
+   strftime(buf, 63, "%FT%T", gmtime(&sec));
 
    str << buf << "." << msec << "]\t";
 
@@ -337,6 +337,7 @@ void* process_incoming_data(void *arg)
       pthread_mutex_unlock(&l_mut);
       return NULL;
    }
+
    pthread_mutex_unlock(&l_mut);
 
    while (!stop) {
@@ -348,16 +349,22 @@ void* process_incoming_data(void *arg)
          uint8_t data_fmt;
          if (trap_ctx_get_data_fmt(trap_get_global_ctx(), TRAPIFC_INPUT, (int) scope, &data_fmt, &spec) != TRAP_E_OK) {
             fprintf(stderr, "Data format was not loaded.\n");
+            return NULL;
          } else {
             pthread_mutex_lock(&l_mut);
             tmplt = ur_define_fields_and_update_template(spec, tmplt);
             if (tmplt == NULL) {
                fprintf(stderr, "Template could not be edited.\n");
+               pthread_mutex_unlock(&l_mut);
+               return NULL;
             } else {
                if (tmplt->direction == UR_TMPLT_DIRECTION_BI) {
                   char *spec_cpy = ur_cpy_string(spec);
                   if (spec_cpy == NULL) {
                      fprintf(stderr, "Memory allocation problem.\n");
+                     ur_free_template(tmplt);
+                     pthread_mutex_unlock(&l_mut);
+                     return NULL;
                   } else {
                      trap_ctx_set_data_fmt(trap_get_global_ctx(), tmplt->ifc_out, TRAP_FMT_UNIREC, spec_cpy);
                   }
@@ -420,7 +427,7 @@ int main(int argc, char **argv)
          g_check_time *= 1000;
          break;
       case 'f':
-         if (sscanf(optarg, "%" SCNu64 "", &g_check_time) != 1 || g_free_time == 0) {
+         if (sscanf(optarg, "%" SCNu64 "", &g_free_time) != 1 || g_free_time == 0) {
             fprintf(stderr, "Error: Invalid value of argument -f.\n");
             FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
             TRAP_DEFAULT_FINALIZATION();
@@ -535,8 +542,8 @@ int main(int argc, char **argv)
             }
 
             ret = f.sendToOutput(tmplt, out_rec);
-            TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, continue, break);
-            //cout << f << endl;
+            TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, break, break);
+            cout << f << endl;
             break;
          }
       }
