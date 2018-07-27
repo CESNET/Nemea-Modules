@@ -55,10 +55,10 @@
 #include <curl/curl.h>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
-#include <bloom.h>
 
 #include "blooming_history_functions.h"
 #include "fields.h"
+#include "bloom.h"
 
 
 UR_FIELDS (

@@ -48,7 +48,8 @@
 
 #include <curl/curl.h>
 #include <unirec/unirec.h>
-#include <bloom.h>
+
+#include "bloom.h"
 
 
 /**
