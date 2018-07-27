@@ -142,7 +142,7 @@ int set_default_values(struct unirec_output_t *output_specifier) {
             *(skip_str_chr(ptr + 1, '"')) = '\0';
          }
          if (ur_set_from_string(output_specifier->out_tmplt, output_specifier->out_rec, ur_get_id_by_name(token), ptr + 1) != 0) {
-            fprintf(stderr, "set_defualt_values: Failed to get string from field.\n");
+            fprintf(stderr, "set_default_values: Failed to get string from field.\n");
             return 1;
          }
       // Default value is not set
@@ -215,7 +215,7 @@ int parse_file(char *str, struct unirec_output_t **output_specifiers, int n_outp
       // Beginning of filter
       case ':':
          beg_ptr = end_ptr + 1;
-                 if ((end_ptr = skip_str_chr(end_ptr, ';')) == NULL) {
+         if ((end_ptr = skip_str_chr(end_ptr, ';')) == NULL) {
             fprintf(stderr, "Syntax error while parsing file: delimiter ';' not found.\n");
             return -1;
          } else if (end_ptr == beg_ptr) {
