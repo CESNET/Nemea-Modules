@@ -211,8 +211,9 @@ void ip_anonymize(void *field_ptr, uint8_t mode)
 */
 char *string_anonymize(void *field_ptr, uint32_t field_len, uint8_t mode, regex_t regex_IPV4, regex_t regex_IPV6)
 {
+#define OCCURENCES 2
    int reti;
-   regmatch_t ip[2]; // expecting MAX 1 occurence, see man regexec for more info
+   regmatch_t ip[OCCURENCES]; /* looking for 1 match, according to man regexec() need array of N+1 size */
    ip_addr_t tmp_ip;
    char *output = NULL;
    char *field = (char *) field_ptr;
@@ -222,9 +223,9 @@ char *string_anonymize(void *field_ptr, uint32_t field_len, uint8_t mode, regex_
    field[field_len] = '\0';
 
    /* Check whether in field exists IPv4 or IPv6 address in string form */
-   reti = regexec(&regex_IPV4, field, 2, ip, 0);
+   reti = regexec(&regex_IPV4, field, OCCURENCES, ip, 0);
    if (reti == REG_NOMATCH) {
-      reti = regexec(&regex_IPV6, field, 2, ip, 0);
+      reti = regexec(&regex_IPV6, field, OCCURENCES, ip, 0);
       if (reti == REG_NOMATCH) {
          field[field_len] = backup;
          return output;
