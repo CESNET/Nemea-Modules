@@ -5,12 +5,14 @@ This NEMEA module selects records according to parameters in filter and sends on
 
 ## Interfaces
 - Input: 1
-- Output: variable
+- Output: 1 - 32
 
 ## Parameters
 ### Module specific parameters
   - `-O TMPLT`  Specify UniRec template expected on the output interface.
+    If you do not use template module will copy the template from input.
   - `-F FILTR`	Specify filter.
+    If you do not use filter module will forward all incomming messages.
   - `-f FILE`	Read template and filter from FILE.
   - `-c N`		Quit after N records are received.
 
@@ -64,15 +66,33 @@ Almost all data types from unirec are supported:
 
 ### Format
 #### Command line
-Filter specified on command line with `-F` flag is a single expression which is evaluated for the output interface.
+Filter specified on command line with `-F` flag is a single expression which is evaluated for the output interface. For example: `-F "SRC_PORT == 23"`
 
 #### File
-Filter specified in a file provides more flexibility. Format of the file is `[TEMPLATE_1]:FILTER_1;...;[TEMPLATE_N]:FILTER_N;` where each semicolon separated item corresponds with one output interface. One-line comments starting with `#` are allowed. To reload filter while unirecfilter is running, send signal SIGUSR1 (10) to the process.
+Filter specified in a file provides more flexibility. Format of the file is `TEMPLATE_1:FILTER_1;...;TEMPLATE_N:FILTER_N;` where each semicolon separated item corresponds with one output interface. One-line comments starting with `#` are allowed. To reload filter while unirecfilter is running, send signal SIGUSR1 (10) to the process.
 
 ## Default values
-You can use syntax FIELD=value in the template to specify default value used if field is not present on the input (f.e. uint32 BAR=1)
+You can use syntax FIELD=value in the template to specify default value used if field is not present on the input (f.e. uint32 BAR=1). Example bellow.
+`./unirecfilter -i u:test_ifc_in,u:test_ifc_out -O "ipaddr SRC_IP, ipaddr DST_IP, uint16 SRC_PORT, uint16 DST_PORT, string MESSAGE=\"this_is_message\""`
 
 ## Usage
 `./unirecfilter -i IFC_SPEC [-O TMPLT] [-F FLTR]`
 
 `./unirecfilter -i IFC_SPEC [-f FILE]`
+
+Here are some examples of running unirecfilter.
+`./unirecfilter -i u:test_ifc_in,u:test_ifc_out -O "ipaddr SRC_IP, ipaddr DST_IP, uint16 SRC_PORT, uint16 DST_PORT"`
+`./unirecfilter -i u:test_ifc_in,u:test_ifc_out -c 100 -F "SRC_PORT > 20"`
+`./unirecfilter -i u:test_ifc_in,u:test_ifc_out -c 100 -O "ipaddr SRC_IP, ipaddr DST_IP, uint16 DST_PORT, uint16 SRC_PORT" -F "SRC_PORT == 443 || SRC_PORT == 53"`
+
+Below is an example of config file "filter.txt" to be used with the -f parameter:
+```
+ipaddr DST_IP,ipaddr SRC_IP:SRC_PORT == 443; #port matching number 443
+uint16 SRC_PORT:SRC_PORT >= 23 || DST_PORT >= 23; #usage of or
+string BAR=not_present:BAR ~= "not_present"; #regex usage
+```
+
+You can then use filter file as shown below:
+`unirecfilter -i u:test_ifc_in,u:test_ifc_out:timeout=HALF_WAIT,u:test_ifc_in,u:test_ifc_out2:timeout=HALF_WAIT -f "filter.txt"`
+
+Especially notice interface option `:timeout=HALF_WAIT`. It will enable the module to run even for interfaces that are not listening. Meaning the module will not hang while waiting for someone to connect. It will drop the message and move on to sending next one. These dropped messages will count towart -c option (when this option is enabled).
