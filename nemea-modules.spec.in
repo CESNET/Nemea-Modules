@@ -16,7 +16,7 @@ Requires: libpcap
 Requires: libcurl
 Provides: nemea-modules
 BuildRequires: gcc gcc-c++ make doxygen pkgconfig nemea-framework-devel bison flex
-BuildRequires: libpcap-devel openssl-devel libnf-devel bzip2-devel libcurl-devel
+BuildRequires: libpcap-devel openssl-devel libnf-devel bzip2-devel libcurl4-openssl-dev
 
 %description
 
