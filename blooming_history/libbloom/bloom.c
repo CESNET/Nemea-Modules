@@ -22,7 +22,7 @@
 #include <unistd.h>
 
 #include "bloom.h"
-#include "murmur2/murmurhash2.h"
+#include "murmurhash2.h"
 
 #define MAKESTRING(n) STRING(n)
 #define STRING(n) #n

@@ -1,6 +1,6 @@
 bin_PROGRAMS=blooming_history # test_blooming_history
 
-AM_CPPFLAGS=-I$(srcdir)/libbloom -I$(srcdir)libbloom/murmur2
+AM_CPPFLAGS=-I$(srcdir)/libbloom -I$(srcdir)/libbloom/murmur2
 
 blooming_history_SOURCES= blooming_history.c \
 	blooming_history_functions.c blooming_history_functions.h \
