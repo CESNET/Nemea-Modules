@@ -37,6 +37,7 @@ addons:
       - python-dev
       - libpcap-dev
       - libyaml-dev
+      - libcurl-dev
   coverity_scan:
     project:
       name: "CESNET/Nemea-Modules"
