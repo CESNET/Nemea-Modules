@@ -1,3 +1,19 @@
+2018-07-27 (Jaroslav Hlavac): Documentation improvement, usage examples, checking return values in unirecfilter.c + Anonymizer.c bugfix (#82)
+2018-07-23 (tomasmax95): Add pdns_exporter module for exporting flow data to json for Passive DNS (#79)
+2018-07-23 (Dominik Soukup): Mux,Demux: libtrap api bugfix
+2018-07-23 (Dominik Soukup): Mux,Demux: libtrap api bugfix
+2018-07-23 (Tomas Jansky): scalar-agregator: added explaining comments
+2018-07-22 (Václav Bartoš): vportscan/haddrscan2idea: AggrWin can be set by parameter
+2018-07-19 (Tomas Jansky): unirecfilter: fixed possible pointer dereferencing and resource leak (coverity issues)
+2018-07-19 (Tomas Jansky): scalar_aggregator: code refactoring, fixed multiple memory leaks and possible segfaults (8 coverity issues)
+2018-07-19 (Tomas Jansky): proto_traffic: added error output if send() fails, removed unnecessary semicolons
+2018-07-19 (Tomas Jansky): ipv6stats: fixed possible uinitialized values of stats->end_of_window (reported by coverity)
+2018-07-19 (Tomas Jansky): merger: removed unnecessary semicolons
+2018-07-19 (Tomas Jansky): endiverter: removed unnecessary semicolons around certain macros (fixed logical dead code signalled from coverity -- semicolon after macro)
+2018-07-19 (Václav Bartoš): json_dump: Improved exception handling
+2018-07-19 (Václav Bartoš): json_dump: Automatic flushing after each record
+2018-07-19 (Tomas Cejka): python modules: add link to IFCSPEC doc in the help (-h)
+2018-07-19 (Tomas Cejka): python modules: enable basic help
 Nemea-2.0:
 	* added new modules (see ChangeLog for the list)
 	* replaced "script" by Supervisor to control and monitor Nemea

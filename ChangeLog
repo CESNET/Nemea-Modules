@@ -1,3 +1,11 @@
+2018-07-30 nemea-modules-2.7.0
+	Bugfixes in unirecfilter.
+	Bugfixes in anonymizer.
+	Add feature flush output to json_dump.
+	Bugfixes in json_dump.
+	Enabled help string for python modules.
+	Add module pdns_exporter.
+
 2018-07-19 nemea-modules-2.6.4
 	* unirecfilter:
 		added feature of comparison timestamps
