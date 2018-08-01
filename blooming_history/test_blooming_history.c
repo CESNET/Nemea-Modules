@@ -46,7 +46,7 @@
 #include "blooming_history_functions.h"
 
 
-void test_is_from_prefix(const char * ip_str, const char * prefix_str, int32_t prefix_length, int expected_result)
+void test_is_from_prefix(const char *ip_str, const char *prefix_str, int32_t prefix_length, int expected_result)
 {
    ip_addr_t ip, prefix;
 

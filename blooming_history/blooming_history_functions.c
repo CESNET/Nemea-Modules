@@ -44,7 +44,7 @@
 #include "blooming_history_functions.h"
 
 
-int is_from_prefix(ip_addr_t * ip, ip_addr_t * protected_prefix, int32_t protected_prefix_length)
+int is_from_prefix(ip_addr_t *ip, ip_addr_t *protected_prefix, int32_t protected_prefix_length)
 {
    // Both IPv4
    if(ip_is4(ip) && ip_is4(protected_prefix)) {
@@ -56,11 +56,11 @@ int is_from_prefix(ip_addr_t * ip, ip_addr_t * protected_prefix, int32_t protect
       int bytes_match;
 
       // Compare whole bytes
-      bytes_match = memcmp((const char *)ip, (const char *)protected_prefix, protected_prefix_length/8) == 0;
+      bytes_match = memcmp((const char *) ip, (const char *) protected_prefix, protected_prefix_length / 8) == 0;
 
       // Compare remaining byte
       if (bytes_match && protected_prefix_length % 8 != 0) {
-         int byte_index = protected_prefix_length/8;
+         int byte_index = protected_prefix_length / 8;
          uint8_t mask = 0xff << (8 - (protected_prefix_length % 8));
 
          return bytes_match && ((ip->bytes[byte_index] & mask) == (protected_prefix->bytes[byte_index] & mask));
@@ -73,11 +73,11 @@ int is_from_prefix(ip_addr_t * ip, ip_addr_t * protected_prefix, int32_t protect
 }
 
 
-int curl_init_handle(CURL ** curl, const char * aggregator_service)
+int curl_init_handle(CURL **curl, const char *aggregator_service)
 {
    *curl = curl_easy_init();
 
-   if(!(*curl)){
+   if (!(*curl)) {
       return -1;
    }
 
@@ -98,15 +98,15 @@ int curl_init_handle(CURL ** curl, const char * aggregator_service)
 }
 
 
-int curl_send_bloom(CURL * curl, const struct bloom * bloom_filter)
+int curl_send_bloom(CURL *curl, const struct bloom *bloom_filter)
 {
    int error = 0;
    long code;
    CURLcode res;
 
-   uint8_t* buffer = NULL;
+   uint8_t *buffer = NULL;
    int32_t buffer_size;
-   struct curl_slist* list = NULL;
+   struct curl_slist *list = NULL;
 
    if(!curl) {
       return -3;
@@ -126,11 +126,11 @@ int curl_send_bloom(CURL * curl, const struct bloom * bloom_filter)
    /* specify POST data */
    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, buffer);
    /* libcurl will strlen() by itself otherwise */
-   curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)buffer_size);
+   curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long) buffer_size);
    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
 
    res = curl_easy_perform(curl);
-   if(res != CURLE_OK) {
+   if (res != CURLE_OK) {
       fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
       error = -4;
    }
@@ -147,7 +147,7 @@ int curl_send_bloom(CURL * curl, const struct bloom * bloom_filter)
 }
 
 
-void curl_free_handle(CURL ** curl)
+void curl_free_handle(CURL **curl)
 {
    curl_easy_cleanup(*curl);
    *curl = NULL;

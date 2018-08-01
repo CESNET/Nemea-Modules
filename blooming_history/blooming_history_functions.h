@@ -60,7 +60,7 @@
  * \param[in] protected_prefix_length   Length of the IP prefix.
  * \returns 1 if the ip is from prefix, 0 otherwise.
 */
-int is_from_prefix(ip_addr_t * ip, ip_addr_t * protected_prefix, int32_t protected_prefix_length);
+int is_from_prefix(ip_addr_t *ip, ip_addr_t *protected_prefix, int32_t protected_prefix_length);
 
 
 /**
@@ -75,7 +75,7 @@ int is_from_prefix(ip_addr_t * ip, ip_addr_t * protected_prefix, int32_t protect
  *      0 - success
  *     -1 - initialization failed
 */
-int curl_init_handle(CURL ** curl, const char * aggregator_service);
+int curl_init_handle(CURL **curl, const char *aggregator_service);
 
 
 /**
@@ -91,7 +91,7 @@ int curl_init_handle(CURL ** curl, const char * aggregator_service);
  *     -4 - libcurl error
  *     -5 - HTTP status code other than 200 OK
 */
-int curl_send_bloom(CURL * curl, const struct bloom * bloom_filter);
+int curl_send_bloom(CURL *curl, const struct bloom *bloom_filter);
 
 
 /**
@@ -99,6 +99,6 @@ int curl_send_bloom(CURL * curl, const struct bloom * bloom_filter);
  *
  * \param[in] curl   Libcurl easy handle.
 */
-void curl_free_handle(CURL ** curl);
+void curl_free_handle(CURL **curl);
 
 #endif // __BLOOMING_HISTORY_FUNCTIONS_H_

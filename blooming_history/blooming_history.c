@@ -68,7 +68,6 @@ UR_FIELDS (
 
 trap_module_info_t *module_info = NULL;
 
-//BASIC(char *, char *, int, int)
 #define MODULE_BASIC_INFO(BASIC) \
    BASIC("History gathering module", \
         "This module gathers history of communicating entities and stores them in a bloom filter.", 1, 0)
@@ -79,7 +78,6 @@ trap_module_info_t *module_info = NULL;
    PARAM('p', "prefix", "Protected IP prefix. Only communication with addresses from this prefix will be recorded", required_argument, "string") \
    PARAM('t', "interval", "Interval in seconds for periodic filter upload to the aggregator service.", required_argument, "int32") \
    PARAM('s', "service", "IP address of the aggregator service.", required_argument, "string")
-   //PARAM(char, char *, char *, no_argument  or  required_argument, char *)
 
 static int stop = 0;
 
@@ -112,7 +110,7 @@ int32_t PROTECTED_PREFIX_LENGTH = 0;
 /**
 * URI of Aggregator service
 */
-char* AGGREGATOR_SERVICE = NULL;
+char *AGGREGATOR_SERVICE = NULL;
 
 /**
 * Interval between bloom filter upload to Aggregator service
@@ -133,7 +131,7 @@ pthread_cond_t    CV_TIMER_STOP = PTHREAD_COND_INITIALIZER;
 /**
 * Current bloom filter
 */
-struct bloom * BLOOM;
+struct bloom *BLOOM;
 
 
 /**
@@ -143,12 +141,12 @@ struct bloom * BLOOM;
  *
  * \param[in]  attr   Not used.
 */
-void * pthread_entry_upload(void * attr)
+void *pthread_entry_upload(void *attr)
 {
    struct timespec ts;
-   struct bloom* bloom_new;
-   struct bloom* bloom_send;
-   CURL* curl = NULL;
+   struct bloom *bloom_new;
+   struct bloom *bloom_send;
+   CURL *curl = NULL;
    int error = 0;
 
    curl_init_handle(&curl, AGGREGATOR_SERVICE);
@@ -217,7 +215,7 @@ int main(int argc, char **argv)
          break;
       case 'p':
          {
-            char* prefix_slash = strchr(optarg, '/');
+            char *prefix_slash = strchr(optarg, '/');
 
             if (prefix_slash == NULL) {
                error = 1;
@@ -275,7 +273,7 @@ int main(int argc, char **argv)
 
    /* Setup upload thread */
    error = pthread_create(&pthread_upload, NULL, pthread_entry_upload, NULL);
-   if(error) {
+   if (error) {
       fprintf(stderr, "Error: Failed to create timer thread.\n");
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       TRAP_DEFAULT_FINALIZATION();
@@ -284,7 +282,7 @@ int main(int argc, char **argv)
 
    /* Create UniRec templates */
    ur_template_t *in_tmplt = ur_create_input_template(0, "SRC_IP,DST_IP", NULL);
-   if (in_tmplt == NULL){
+   if (in_tmplt == NULL) {
       fprintf(stderr, "Error: Input template could not be created.\n");
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       TRAP_DEFAULT_FINALIZATION();
@@ -297,6 +295,10 @@ int main(int argc, char **argv)
       const void *in_rec;
       uint16_t in_rec_size;
       ip_addr_t src_ip, dst_ip;
+
+      int is_from_prefix_src, is_from_prefix_dst;
+      ip_addr_t *ip = NULL;
+
 
       ret = TRAP_RECEIVE(0, in_rec, in_rec_size, in_tmplt);
       TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
@@ -311,45 +313,40 @@ int main(int argc, char **argv)
          }
       }
 
-      {
-         int is_from_prefix_src, is_from_prefix_dst;
-         ip_addr_t* ip = NULL;
+      src_ip = ur_get(in_tmplt, in_rec, F_SRC_IP);
+      dst_ip = ur_get(in_tmplt, in_rec, F_DST_IP);
 
-         src_ip = ur_get(in_tmplt, in_rec, F_SRC_IP);
-         dst_ip = ur_get(in_tmplt, in_rec, F_DST_IP);
+      is_from_prefix_src = is_from_prefix(&src_ip, &PROTECTED_PREFIX, PROTECTED_PREFIX_LENGTH);
+      is_from_prefix_dst = is_from_prefix(&dst_ip, &PROTECTED_PREFIX, PROTECTED_PREFIX_LENGTH);
 
-         is_from_prefix_src = is_from_prefix(&src_ip, &PROTECTED_PREFIX, PROTECTED_PREFIX_LENGTH);
-         is_from_prefix_dst = is_from_prefix(&dst_ip, &PROTECTED_PREFIX, PROTECTED_PREFIX_LENGTH);
-
-         if (is_from_prefix_src && !is_from_prefix_dst) {
-            ip = &dst_ip;
-         } else if (!is_from_prefix_src && is_from_prefix_dst) {
-            ip = &src_ip;
-         } else {
-            continue;
-         }
+      if (is_from_prefix_src && !is_from_prefix_dst) {
+         ip = &dst_ip;
+      } else if (!is_from_prefix_src && is_from_prefix_dst) {
+         ip = &src_ip;
+      } else {
+         continue;
+      }
 
 #ifdef DEBUG
-         {
-            char src_ip_str[INET6_ADDRSTRLEN];
-            char dst_ip_str[INET6_ADDRSTRLEN];
-            char add_ip_str[INET6_ADDRSTRLEN];
-            ip_to_str(&src_ip, src_ip_str);
-            ip_to_str(&dst_ip, dst_ip_str);
-            ip_to_str(ip, add_ip_str);
-            printf("src_ip:%s, dst_ip:%s, added_ip:%s\n", src_ip_str, dst_ip_str, add_ip_str);
-         }
+      {
+         char src_ip_str[INET6_ADDRSTRLEN];
+         char dst_ip_str[INET6_ADDRSTRLEN];
+         char add_ip_str[INET6_ADDRSTRLEN];
+         ip_to_str(&src_ip, src_ip_str);
+         ip_to_str(&dst_ip, dst_ip_str);
+         ip_to_str(ip, add_ip_str);
+         printf("src_ip:%s, dst_ip:%s, added_ip:%s\n", src_ip_str, dst_ip_str, add_ip_str);
+      }
 #endif // DEBUG
 
-         if (ip_is4(ip)) {
-            pthread_mutex_lock(&MUTEX_BLOOM_SWAP);
-            bloom_add(BLOOM, ip_get_v4_as_bytes(ip), 4);
-            pthread_mutex_unlock(&MUTEX_BLOOM_SWAP);
-         } else {
-            pthread_mutex_lock(&MUTEX_BLOOM_SWAP);
-            bloom_add(BLOOM, ip->ui8, 16); 
-            pthread_mutex_unlock(&MUTEX_BLOOM_SWAP);
-         }
+      if (ip_is4(ip)) {
+         pthread_mutex_lock(&MUTEX_BLOOM_SWAP);
+         bloom_add(BLOOM, ip_get_v4_as_bytes(ip), 4);
+         pthread_mutex_unlock(&MUTEX_BLOOM_SWAP);
+      } else {
+         pthread_mutex_lock(&MUTEX_BLOOM_SWAP);
+         bloom_add(BLOOM, ip->ui8, 16); 
+         pthread_mutex_unlock(&MUTEX_BLOOM_SWAP);
       }
    }
 

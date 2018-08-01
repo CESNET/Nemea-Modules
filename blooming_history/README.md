@@ -9,7 +9,7 @@ The intended usage is that the service stores the filters. When the time is
 right (e.g. a DDoS attack incoming) the service further aggregates the stored
 bloom filters received in a longer period of time and sends the result to a DDoS
 mitigation device (e.g. CESNET DMD, Linux machine). The device can then filter
-based on the addresses "white-lised" in the aggregated filter.
+based on the addresses "white-listed" in the aggregated filter.
 
 Given that the bloom filter should contain addresses of "well behaved" entities,
 some filtering might be necessary (i.e. using `unirecfilter` module). This
