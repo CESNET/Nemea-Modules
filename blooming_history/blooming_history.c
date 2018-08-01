@@ -73,11 +73,20 @@ trap_module_info_t *module_info = NULL;
         "This module gathers history of communicating entities and stores them in a bloom filter.", 1, 0)
 
 #define MODULE_PARAMS(PARAM) \
-   PARAM('n', "number", "Expected number of distinct entries (addresess) for long aggregated period.", required_argument, "int32") \
-   PARAM('e', "error", "False possitive error rate at \"count\" entries.", required_argument, "float") \
-   PARAM('p', "prefix", "Protected IP prefix. Only communication with addresses from this prefix will be recorded", required_argument, "string") \
-   PARAM('t', "interval", "Interval in seconds for periodic filter upload to the aggregator service.", required_argument, "int32") \
-   PARAM('s', "service", "IP address of the aggregator service.", required_argument, "string")
+   PARAM('n', "number", "Expected number of distinct entries (ip addresess) for expected "          \
+                        "aggregation period. For example the upload <interval> is set to 5min, "    \
+                        "but we will want to aggregate over 2 weeks period from the Aggregator "    \
+                        "service).", required_argument, "int32")                                    \
+   PARAM('e', "error", "False positive error rate of the underlying Bloom filter at <number> "      \
+                        "entries.", required_argument, "float")                                     \
+   PARAM('p', "prefix", "Protected IP prefix. Only communication with addresses from this prefix "  \
+                        "will be recorded in the Bloom filter.", required_argument, "string")       \
+   PARAM('t', "interval", "Interval in seconds, after which an old Bloom filter is sent to the "    \
+                          "Aggregator service and replaced by a new empty filter.",                 \
+                          required_argument, "int32")                                               \
+   PARAM('s', "service", "IP address of the Aggregator service. Bloom filter will be sent to this " \
+                         "service via HTTP POST each <interval> seconds.", required_argument,       \
+                         "string")
 
 static int stop = 0;
 
