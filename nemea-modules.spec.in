@@ -13,9 +13,10 @@ Requires: nemea-framework
 Requires: libnf
 Requires: openssl
 Requires: libpcap
+Requires: libcurl
 Provides: nemea-modules
 BuildRequires: gcc gcc-c++ make doxygen pkgconfig nemea-framework-devel bison flex
-BuildRequires: libpcap-devel openssl-devel libnf-devel bzip2-devel
+BuildRequires: libpcap-devel openssl-devel libnf-devel bzip2-devel libcurl4-openssl-dev
 
 %description
 
@@ -48,6 +49,7 @@ ldconfig
 %{_bindir}/nemea/amplification2idea.py
 %{_bindir}/nemea/anonymizer
 %{_bindir}/nemea/bruteforce2idea.py
+%{_bindir}/nemea/blooming_history
 %{_bindir}/nemea/csv2nf.sh
 %{_bindir}/nemea/ddos_detector2idea.py
 %{_bindir}/nemea/debug_sender.py

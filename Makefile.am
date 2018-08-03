@@ -53,6 +53,9 @@ if HAVE_LIBPCAP
 SUBDIRS += flow_meter
 endif
 
+if HAVE_LIBCURL
+SUBDIRS += blooming_history
+endif
 
 RPMDIR = RPMBUILD
 
