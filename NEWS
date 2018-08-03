@@ -1,3 +1,6 @@
+2018-08-03 (Tomas Cejka): rpm: fixed dependency on libcurl-devel
+2018-08-03 (Filip Křesťan): New module Blooming history (#83)
+
 2018-07-27 (Jaroslav Hlavac): Documentation improvement, usage examples, checking return values in unirecfilter.c + Anonymizer.c bugfix (#82)
 2018-07-23 (tomasmax95): Add pdns_exporter module for exporting flow data to json for Passive DNS (#79)
 2018-07-23 (Dominik Soukup): Mux,Demux: libtrap api bugfix
