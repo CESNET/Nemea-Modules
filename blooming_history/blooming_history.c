@@ -159,6 +159,7 @@ void *pthread_entry_upload(void *attr)
    int error = 0;
    char url[320];
    long timestamp_from, timestamp_to;
+   uint64_t timestamp_from, timestamp_to;
 
    curl_init_handle(&curl);
 
