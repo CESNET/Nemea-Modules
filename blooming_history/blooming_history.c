@@ -45,10 +45,13 @@
 #include <config.h>
 #endif
 
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <signal.h>
 #include <getopt.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 #include <pthread.h>
 
@@ -157,8 +160,7 @@ void *pthread_entry_upload(void *attr)
    struct bloom *bloom_send;
    CURL *curl = NULL;
    int error = 0;
-   char url[320];
-   long timestamp_from, timestamp_to;
+   char *url = NULL;
    uint64_t timestamp_from, timestamp_to;
 
    curl_init_handle(&curl);
@@ -185,7 +187,7 @@ void *pthread_entry_upload(void *attr)
       timestamp_to = ts.tv_sec;
 
       // Compose endpoint url
-      sprintf(url, "%s/%ld/%ld/", AGGREGATOR_SERVICE, timestamp_from, timestamp_to);
+      asprintf(&url, "%s/%ld/%ld/", AGGREGATOR_SERVICE, timestamp_from, timestamp_to);
 
       // Send to the service
       error = curl_send_bloom(curl, url, bloom_send);
@@ -195,6 +197,7 @@ void *pthread_entry_upload(void *attr)
 
       bloom_free(bloom_send);
       free(bloom_send);
+      free(url);
 
       pthread_mutex_unlock(&MUTEX_TIMER_STOP);
    }
