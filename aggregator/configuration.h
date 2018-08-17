@@ -147,9 +147,9 @@ public:
      * Return function implementation to assigned function type of field on given index.
      * @param [in] index of field to ask for function implementation.
      * @param [in] field_type of field on given index (type returned from ur_get_type()0.
-     * @return Pointer to function which implements the assigned aggregation function type.
+     * @return Pair of pointers to function which implements the assigned aggregation function type and its overflow check function.
      */
-   agg_func get_function_ptr(int index, ur_field_type_t field_type);
+   std::pair<agg_func, check_func> get_function_ptr(int index, ur_field_type_t field_type);
     /**
      * Return function implementation of specified field type for record postprocessing before sending.
      * @param [in] index of field to ask for function implementation.

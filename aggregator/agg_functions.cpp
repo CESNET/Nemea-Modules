@@ -87,3 +87,11 @@ void last_variable(const void *src, void *dst)
    var_params *params = (var_params*)dst;
    ur_set_var(OutputTemplate::out_tmplt, params->dst, params->field_id, src, params->var_len);
 }
+
+/* ================================================================= */
+/* ===================== No_check function ========================= */
+/* ================================================================= */
+int no_check(const void *a, const void *b)
+{
+   return 0;
+}

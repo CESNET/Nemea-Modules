@@ -60,7 +60,7 @@
 #include "output.h"
 #include "configuration.h"
 
-//#define DEBUG
+#define DEBUG
 #ifdef DEBUG
 #define DBG(x) fprintf x;
 #else
@@ -248,8 +248,22 @@ void * create_record(ur_template_t *tmplt, int length)
  * @param [in] out_tmplt UniRec template of stored/updated record.
  * @param [in, out] dst_rec pointer to stored/updated record.
  */
-void process_agg_functions(ur_template_t *in_tmplt, const void *src_rec, ur_template_t *out_tmplt, void *dst_rec)
+bool process_agg_functions(ur_template_t *in_tmplt, const void *src_rec, ur_template_t *out_tmplt, void *dst_rec)
 {
+   void *ptr_dst[MAX_KEY_FIELDS];
+   void *ptr_src[MAX_KEY_FIELDS];
+
+   /* Check if can continue processing */
+   for (int i = 0; i < OutputTemplate::used_fields; i++) {
+      ptr_dst[i] = ur_get_ptr_by_id(out_tmplt, dst_rec, OutputTemplate::indexes_to_record[i]);
+      ptr_src[i] = ur_get_ptr_by_id(in_tmplt, src_rec, OutputTemplate::indexes_to_record[i]);
+      /* Run operation check function - if overflow detected cannot continue with this message */
+      if (OutputTemplate::check[i](ptr_src[i], ptr_dst[i]) != 0) {
+         DBG((stderr, "overflow detected on field %s.\n", ur_get_name(OutputTemplate::indexes_to_record[i])));
+         return false;
+      }
+   }
+
    // Always increase count when processing functions
    ur_set(out_tmplt, dst_rec, F_COUNT, ur_get(out_tmplt, dst_rec, F_COUNT) + 1);
 
@@ -265,22 +279,20 @@ void process_agg_functions(ur_template_t *in_tmplt, const void *src_rec, ur_temp
    if (record > stored)
       ur_set(out_tmplt, dst_rec, F_TIME_LAST, ur_get(in_tmplt, src_rec, F_TIME_LAST));
 
-
-   void *ptr_dst;
-   void *ptr_src;
    // Process all registered fields with their agg function
    for (int i = 0; i < OutputTemplate::used_fields; i++) {
       if (ur_is_fixlen(i)) {
-         ptr_dst = ur_get_ptr_by_id(out_tmplt, dst_rec, OutputTemplate::indexes_to_record[i]);
-         ptr_src = ur_get_ptr_by_id(in_tmplt, src_rec, OutputTemplate::indexes_to_record[i]);
-         OutputTemplate::process[i](ptr_src, ptr_dst);
+         //ptr_dst = ur_get_ptr_by_id(out_tmplt, dst_rec, OutputTemplate::indexes_to_record[i]);
+         //ptr_src = ur_get_ptr_by_id(in_tmplt, src_rec, OutputTemplate::indexes_to_record[i]);
+         OutputTemplate::process[i](ptr_src[i], ptr_dst[i]);
       }
       else {
          var_params params = {dst_rec, i, ur_get_var_len(in_tmplt, src_rec, OutputTemplate::indexes_to_record[i])};
-         ptr_src = ur_get_ptr_by_id(in_tmplt, src_rec, OutputTemplate::indexes_to_record[i]);
-         OutputTemplate::process[i](ptr_src, (void*)&params);
+         //ptr_src = ur_get_ptr_by_id(in_tmplt, src_rec, OutputTemplate::indexes_to_record[i]);
+         OutputTemplate::process[i](ptr_src[i], (void*)&params);
       }
    }
+   return true;
 }
 
 /* ----------------------------------------------------------------- */
@@ -610,7 +622,8 @@ int main(int argc, char **argv)
                KeyTemplate::add_field(id, ur_get_size(id));
             }
             else {
-               OutputTemplate::add_field(id, config.get_function_ptr(i, ur_get_type(id)), config.is_func(i, AVG), config.get_avg_ptr(i, ur_get_type(id)));
+               std::pair<agg_func, check_func> agg_func_tmp = config.get_function_ptr(i, ur_get_type(id));
+               OutputTemplate::add_field(id, agg_func_tmp.first, agg_func_tmp.second, config.is_func(i, AVG), config.get_avg_ptr(i, ur_get_type(id)));
             }
          }
          char *tmplt_def = config.return_template_def();
@@ -673,7 +686,15 @@ int main(int argc, char **argv)
             init_record_data(in_tmplt, in_rec, OutputTemplate::out_tmplt, stored_rec);
          }
          else {
-            process_agg_functions(in_tmplt, in_rec, OutputTemplate::out_tmplt, stored_rec);
+            /* Try to process the message */
+            bool processed = process_agg_functions(in_tmplt, in_rec, OutputTemplate::out_tmplt, stored_rec);
+            /* Cannot continue processing -> emergency export needed */
+            if(processed == false){
+               if(!send_record_out(OutputTemplate::out_tmplt, stored_rec)) {
+                  break;
+               }
+               init_record_data(in_tmplt, in_rec, OutputTemplate::out_tmplt, stored_rec);
+            }
          }
       }
       else {

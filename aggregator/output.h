@@ -58,6 +58,11 @@ typedef void (*agg_func)(const void *src, void *dst);
  * Define pointer to make_avg function template.
  */
 typedef void (*final_avg)(void *record, uint32_t count);
+/**
+ * Overflow check function pointer type definition.
+ * Defines pointer to check_safe_signed_add, check_safe_unsigned_add, no_check function templates.
+ */
+typedef int (*check_func)(const void *a, const void *b);
 
 /**
  * Class to represent template for output records and its fields processing.
@@ -70,6 +75,7 @@ public:
    static agg_func process[MAX_KEY_FIELDS];           /*!< Pointer to aggregation function of field data type. */
    static bool prepare_to_send;                       /*!< Flag is record postprocessing required by assigned aggregation function. */
    static final_avg avg_fields[MAX_KEY_FIELDS];       /*!< Pointer to postprocessing function for average function of field data type. */
+   static check_func check[MAX_KEY_FIELDS];           /*!< Pointer to overflow check function for given process operation. */
 
    /**
     * Assign field with all required parameters to template.
@@ -78,7 +84,7 @@ public:
     * @param [in] avg_flag whether the field has avg function assigned.
     * @param [in] foo2 pointer to postprocessing average function or NULL instead.
     */
-   static void add_field(int record_id, agg_func foo, bool avg_flag, final_avg foo2);
+   static void add_field(int record_id, agg_func foo, check_func foo2, bool avg_flag, final_avg foo3);
    /**
     * Reset all fields to default (empty) state.
     */

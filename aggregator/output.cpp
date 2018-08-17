@@ -56,16 +56,18 @@
 ur_template_t *OutputTemplate::out_tmplt = NULL;
 int OutputTemplate::indexes_to_record [MAX_KEY_FIELDS];
 agg_func (OutputTemplate::process[MAX_KEY_FIELDS]);
+check_func (OutputTemplate::check[MAX_KEY_FIELDS]);
 int OutputTemplate::used_fields = 0;
 bool OutputTemplate::prepare_to_send = false;
 final_avg OutputTemplate::avg_fields[MAX_KEY_FIELDS];
 
 /* ----------------------------------------------------------------- */
-void OutputTemplate::add_field(int record_id, agg_func foo, bool avg, final_avg foo2)
+void OutputTemplate::add_field(int record_id, agg_func foo, check_func foo2, bool avg, final_avg foo3)
 {
    indexes_to_record[used_fields] = record_id;
    process[used_fields] = foo;
-   avg_fields[used_fields] = foo2;
+   check[used_fields] = foo2;
+   avg_fields[used_fields] = foo3;
    // If avg used for the first time set prepare_to_send flag
    if (!prepare_to_send && avg) {
       prepare_to_send = true;

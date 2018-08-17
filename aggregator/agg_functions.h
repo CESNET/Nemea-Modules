@@ -46,6 +46,46 @@
 #ifndef AGGREGATOR_AGG_FUNCTIONS_H
 #define AGGREGATOR_AGG_FUNCTIONS_H
 
+#include <climits>
+#include "output.h"
+
+/**
+ * Control function which checks signed data type T overflow when doing addition.
+ * @tparam T Template type variable, have to be signed (eg. int).
+ * @param a [in] Pointer to first operand.
+ * @param b [in] Pointer to second operand.
+ * @return Return 0 when no overflow occurs, different value (mostly 1) otherwise.
+ */
+template<typename T>
+int check_safe_signed_add(const void *a, const void *b) {
+   //T, T
+   int bits = sizeof(T) * CHAR_BIT;
+   uint64_t r = (uint64_t)(*((T*)a)) + (uint64_t)(*((T*)b));
+   return (((uint64_t)(*((T*)a)) ^ r) & ((uint64_t)(*((T*)b)) ^ r)) >> (bits - 1);
+}
+
+/**
+ * Control function which checks unsigned data type T overflow when doing addition.
+ * @tparam T Template type variable, have to be unsigned (eg. uint).
+ * @param a [in] Pointer to first operand.
+ * @param b [in] Pointer to second operand.
+ * @return Return 0 when no overflow occurs, 1 otherwise.
+ */
+template<typename T>
+int check_safe_unsigned_add(const void *a, const void *b) {
+   T possible_result = *((T*)a) + *((T*)b);
+   return possible_result < *((T*)a);
+}
+
+/**
+ * Overflow check function which has to be used, when no overflow check needed.
+ * All params used only for function pointer compatibility, no other use.
+ * @param a [in] First operand.
+ * @param b [in] Second operand.
+ * @return Always return 0 meaning safe continue of agg func. processing.
+ */
+int no_check(const void *a, const void *b);
+
 /**
  * Makes sum of values stored on src and dst pointers from given type T.
  * @tparam T template type variable.

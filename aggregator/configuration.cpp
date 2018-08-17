@@ -41,6 +41,7 @@
  *
  */
 
+#include <utility>
 #include "configuration.h"
 
 Config::Config() : used_fields(0), timeout_type(TIMEOUT_ACTIVE), variable_flag(false)
@@ -121,9 +122,11 @@ bool Config::is_func(int index, int func_id)
    return false;
 }
 
-agg_func Config::get_function_ptr(int index, ur_field_type_t field_type)
+//agg_func Config::get_function_ptr(int index, ur_field_type_t field_type)
+std::pair<agg_func, check_func> Config::get_function_ptr(int index, ur_field_type_t field_type)
 {
-   agg_func out = &nope;
+   std::pair<agg_func, check_func> out (&nope, &no_check);
+
    if ((index < 0) || (index > used_fields - 1)) {
       return out;
    }
@@ -132,291 +135,299 @@ agg_func Config::get_function_ptr(int index, ur_field_type_t field_type)
       case SUM:
          switch (field_type) {
             case UR_TYPE_INT8:
-               out = &sum<int8_t>;
+               out.first = &sum<int8_t>;
+               out.second = &check_safe_signed_add<int8_t>;
                break;
             case UR_TYPE_INT16:
-               out = &sum<int16_t>;
+               out.first = &sum<int16_t>;
+               out.second = &check_safe_signed_add<int16_t>;
                break;
             case UR_TYPE_INT32:
-               out = &sum<int32_t>;
+               out.first = &sum<int32_t>;
+               out.second = &check_safe_signed_add<int32_t>;
                break;
             case UR_TYPE_INT64:
-               out = &sum<int64_t>;
+               out.first = &sum<int64_t>;
+               out.second = &check_safe_signed_add<int64_t>;
                break;
             case UR_TYPE_UINT8:
-               out = &sum<uint8_t>;
+               out.first = &sum<uint8_t>;
+               out.second = &check_safe_unsigned_add<uint8_t>;
                break;
             case UR_TYPE_UINT16:
-               out = &sum<uint16_t>;
+               out.first = &sum<uint16_t>;
+               out.second = &check_safe_unsigned_add<uint16_t>;
                break;
             case UR_TYPE_UINT32:
-               out = &sum<uint32_t>;
+               out.first = &sum<uint32_t>;
+               out.second = &check_safe_unsigned_add<uint32_t>;
                break;
             case UR_TYPE_UINT64:
-               out = &sum<uint64_t>;
+               out.first = &sum<uint64_t>;
+               out.second = &check_safe_unsigned_add<uint64_t>;
                break;
             case UR_TYPE_FLOAT:
-               out = &sum<float>;
+               out.first = &sum<float>;
                break;
             case UR_TYPE_DOUBLE:
-               out = &sum<double>;
+               out.first = &sum<double>;
                break;
             default:
                fprintf(stderr, "Only int, uint, float and double can use sum function, first assigned instead.\n");
-               out = &nope;
+               out.first = &nope;
          }
          break;
       case AVG:
          switch (field_type) {
             case UR_TYPE_INT8:
-               out = &avg<int8_t>;
+               out.first = &avg<int8_t>;
                break;
             case UR_TYPE_INT16:
-               out = &avg<int16_t>;
+               out.first = &avg<int16_t>;
                break;
             case UR_TYPE_INT32:
-               out = &avg<int32_t>;
+               out.first = &avg<int32_t>;
                break;
             case UR_TYPE_INT64:
-               out = &avg<int64_t>;
+               out.first = &avg<int64_t>;
                break;
             case UR_TYPE_UINT8:
-               out = &avg<uint8_t>;
+               out.first = &avg<uint8_t>;
                break;
             case UR_TYPE_UINT16:
-               out = &avg<uint16_t>;
+               out.first = &avg<uint16_t>;
                break;
             case UR_TYPE_UINT32:
-               out = &avg<uint32_t>;
+               out.first = &avg<uint32_t>;
                break;
             case UR_TYPE_UINT64:
-               out = &avg<uint64_t>;
+               out.first = &avg<uint64_t>;
                break;
             case UR_TYPE_FLOAT:
-               out = &avg<float>;
+               out.first = &avg<float>;
                break;
             case UR_TYPE_DOUBLE:
-               out = &avg<double>;
+               out.first = &avg<double>;
                break;
             default:
                fprintf(stderr, "Only int, uint, float and double can use avg function, first assigned instead.\n");
-               out = &nope;
+               out.first = &nope;
          }
          break;
       case MIN:
          switch (field_type) {
             case UR_TYPE_INT8:
-               out = &min<int8_t>;
+               out.first = &min<int8_t>;
                break;
             case UR_TYPE_INT16:
-               out = &min<int16_t>;
+               out.first = &min<int16_t>;
                break;
             case UR_TYPE_INT32:
-               out = &min<int32_t>;
+               out.first = &min<int32_t>;
                break;
             case UR_TYPE_INT64:
-               out = &min<int64_t>;
+               out.first = &min<int64_t>;
                break;
             case UR_TYPE_UINT8:
-               out = &min<uint8_t>;
+               out.first = &min<uint8_t>;
                break;
             case UR_TYPE_UINT16:
-               out = &min<uint16_t>;
+               out.first = &min<uint16_t>;
                break;
             case UR_TYPE_UINT32:
-               out = &min<uint32_t>;
+               out.first = &min<uint32_t>;
                break;
             case UR_TYPE_UINT64:
-               out = &min<uint64_t>;
+               out.first = &min<uint64_t>;
                break;
             case UR_TYPE_FLOAT:
-               out = &min<float>;
+               out.first = &min<float>;
                break;
             case UR_TYPE_DOUBLE:
-               out = &min<double>;
+               out.first = &min<double>;
                break;
             case UR_TYPE_CHAR:
-               out = &min<char>;
+               out.first = &min<char>;
                break;
             case UR_TYPE_TIME:
-               out = &min<uint64_t>;
+               out.first = &min<uint64_t>;
                break;
             case UR_TYPE_IP:
-               out = &min_ip;
+               out.first = &min_ip;
                break;
             default:
                fprintf(stderr, "Only fixed length fields can use min function, first assigned instead.\n");
-               out = &nope;
+               out.first = &nope;
          }
          break;
       case MAX:
          switch (field_type) {
             case UR_TYPE_INT8:
-               out = &max<int8_t>;
+               out.first = &max<int8_t>;
                break;
             case UR_TYPE_INT16:
-               out = &max<int16_t>;
+               out.first = &max<int16_t>;
                break;
             case UR_TYPE_INT32:
-               out = &max<int32_t>;
+               out.first = &max<int32_t>;
                break;
             case UR_TYPE_INT64:
-               out = &max<int64_t>;
+               out.first = &max<int64_t>;
                break;
             case UR_TYPE_UINT8:
-               out = &max<uint8_t>;
+               out.first = &max<uint8_t>;
                break;
             case UR_TYPE_UINT16:
-               out = &max<uint16_t>;
+               out.first = &max<uint16_t>;
                break;
             case UR_TYPE_UINT32:
-               out = &max<uint32_t>;
+               out.first = &max<uint32_t>;
                break;
             case UR_TYPE_UINT64:
-               out = &max<uint64_t>;
+               out.first = &max<uint64_t>;
                break;
             case UR_TYPE_FLOAT:
-               out = &max<float>;
+               out.first = &max<float>;
                break;
             case UR_TYPE_DOUBLE:
-               out = &max<double>;
+               out.first = &max<double>;
                break;
             case UR_TYPE_CHAR:
-               out = &max<char>;
+               out.first = &max<char>;
                break;
             case UR_TYPE_TIME:
-               out = &max<uint64_t>;
+               out.first = &max<uint64_t>;
                break;
             case UR_TYPE_IP:
-               out = &max_ip;
+               out.first = &max_ip;
                break;
             default:
                fprintf(stderr, "Only fixed length fields can use max function, first assigned instead.\n");
-               out = &nope;
+               out.first = &nope;
          }
          break;
       case FIRST:
          // Keep nope function because first value is set by copy from input record
-         out = &nope;
+         out.first = &nope;
          break;
       case LAST:
          switch (field_type) {
             case UR_TYPE_INT8:
-               out = &last<int8_t>;
+               out.first = &last<int8_t>;
                break;
             case UR_TYPE_INT16:
-               out = &last<int16_t>;
+               out.first = &last<int16_t>;
                break;
             case UR_TYPE_INT32:
-               out = &last<int32_t>;
+               out.first = &last<int32_t>;
                break;
             case UR_TYPE_INT64:
-               out = &last<int64_t>;
+               out.first = &last<int64_t>;
                break;
             case UR_TYPE_UINT8:
-               out = &last<uint8_t>;
+               out.first = &last<uint8_t>;
                break;
             case UR_TYPE_UINT16:
-               out = &last<uint16_t>;
+               out.first = &last<uint16_t>;
                break;
             case UR_TYPE_UINT32:
-               out = &last<uint32_t>;
+               out.first = &last<uint32_t>;
                break;
             case UR_TYPE_UINT64:
-               out = &last<uint64_t>;
+               out.first = &last<uint64_t>;
                break;
             case UR_TYPE_FLOAT:
-               out = &last<float>;
+               out.first = &last<float>;
                break;
             case UR_TYPE_DOUBLE:
-               out = &last<double>;
+               out.first = &last<double>;
                break;
             case UR_TYPE_CHAR:
-               out = &last<char>;
+               out.first = &last<char>;
                break;
             case UR_TYPE_TIME:
-               out = &last<uint64_t>;
+               out.first = &last<uint64_t>;
                break;
             case UR_TYPE_IP:
-               out = &last<ip_addr_t>;
+               out.first = &last<ip_addr_t>;
                break;
             case UR_TYPE_STRING:
-               out = &last_variable;
+               out.first = &last_variable;
                break;
             case UR_TYPE_BYTES:
-               out = &last_variable;
+               out.first = &last_variable;
                break;
             default:
                fprintf(stderr, "Type is not supported by current version of module, using first instead.\n");
-               out = &nope;
+               out.first = &nope;
          }
          break;
       case BIT_OR:
          switch (field_type) {
             case UR_TYPE_INT8:
-               out = &bitwise_or<int8_t>;
+               out.first = &bitwise_or<int8_t>;
                break;
             case UR_TYPE_INT16:
-               out = &bitwise_or<int16_t>;
+               out.first = &bitwise_or<int16_t>;
                break;
             case UR_TYPE_INT32:
-               out = &bitwise_or<int32_t>;
+               out.first = &bitwise_or<int32_t>;
                break;
             case UR_TYPE_INT64:
-               out = &bitwise_or<int64_t>;
+               out.first = &bitwise_or<int64_t>;
                break;
             case UR_TYPE_UINT8:
-               out = &bitwise_or<uint8_t>;
+               out.first = &bitwise_or<uint8_t>;
                break;
             case UR_TYPE_UINT16:
-               out = &bitwise_or<uint16_t>;
+               out.first = &bitwise_or<uint16_t>;
                break;
             case UR_TYPE_UINT32:
-               out = &bitwise_or<uint32_t>;
+               out.first = &bitwise_or<uint32_t>;
                break;
             case UR_TYPE_UINT64:
-               out = &bitwise_or<uint64_t>;
+               out.first = &bitwise_or<uint64_t>;
                break;
             case UR_TYPE_CHAR:
-               out = &bitwise_or<char>;
+               out.first = &bitwise_or<char>;
                break;
             default:
                fprintf(stderr, "Only int, uint and char can use bitwise functions, first assigned instead.\n");
-               out = &nope;
+               out.first = &nope;
          }
          break;
       case BIT_AND:
          switch (field_type) {
             case UR_TYPE_INT8:
-               out = &bitwise_and<int8_t>;
+               out.first = &bitwise_and<int8_t>;
                break;
             case UR_TYPE_INT16:
-               out = &bitwise_and<int16_t>;
+               out.first = &bitwise_and<int16_t>;
                break;
             case UR_TYPE_INT32:
-               out = &bitwise_and<int32_t>;
+               out.first = &bitwise_and<int32_t>;
                break;
             case UR_TYPE_INT64:
-               out = &bitwise_and<int64_t>;
+               out.first = &bitwise_and<int64_t>;
                break;
             case UR_TYPE_UINT8:
-               out = &bitwise_and<uint8_t>;
+               out.first = &bitwise_and<uint8_t>;
                break;
             case UR_TYPE_UINT16:
-               out = &bitwise_and<uint16_t>;
+               out.first = &bitwise_and<uint16_t>;
                break;
             case UR_TYPE_UINT32:
-               out = &bitwise_and<uint32_t>;
+               out.first = &bitwise_and<uint32_t>;
                break;
             case UR_TYPE_UINT64:
-               out = &bitwise_and<uint64_t>;
+               out.first = &bitwise_and<uint64_t>;
                break;
             case UR_TYPE_CHAR:
-               out = &bitwise_and<char>;
+               out.first = &bitwise_and<char>;
                break;
             default:
                fprintf(stderr, "Only int, uint and char can use bitwise functions, first assigned instead.\n");
-               out = &nope;
+               out.first = &nope;
          }
          break;
    }
