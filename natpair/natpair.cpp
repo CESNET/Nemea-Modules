@@ -83,6 +83,7 @@ uint64_t g_check_time = DEFAULT_CHECK_TIME;  ///< Frequency of flow cache cleani
 uint64_t g_free_time = DEFAULT_FREE_TIME;    ///< Maximum time for which unpaired flows can remain in flow cache.
 uint32_t g_cache_size = DEFAULT_CACHE_SIZE;  ///< Number of elements in the flow cache which triggers cache cleaning.
 uint32_t g_router_ip;                        ///< IP address of the WAN interface of the router performing NAT process.
+uint8_t th_alive = THREAD_CNT;               ///< Number of alive threads.
 
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
@@ -208,16 +209,6 @@ bool Flow::operator==(const Flow &other) const
 ur_time_t Flow::getTime() const
 {
    return ((scope == LAN) ? lan_time_last : wan_time_last);
-}
-
-/**
- * \brief Get scope of the flow.
- *
- * \return Scope of the flow.
- */
-net_scope_t Flow::getScope() const
-{
-   return scope;
 }
 
 /**
@@ -517,6 +508,7 @@ void* process_incoming_data(void *arg)
       if (f.prepare(tmplt, data, scope)) {
          /* Insert the partial Flow object to  the shared queue. */
          pthread_mutex_lock(&q_mut);
+         pushed++;
          q.push(f);
          pthread_mutex_unlock(&q_mut);
          /* Signal the main thread that it has work that needs to be done. */
@@ -524,7 +516,14 @@ void* process_incoming_data(void *arg)
       }
    }
 
-   sem_post(&q_empty);
+   /* Decrease the number of ongoing threads. The last thread increases the semaphore, resulting in shutting down the main thread. */
+   pthread_mutex_lock(&q_mut);
+   if (--th_alive == 0) {
+      pthread_mutex_unlock(&q_mut);
+      sem_post(&q_empty);
+   } else {
+      pthread_mutex_unlock(&q_mut);
+   }
 
    /* Lock deletion of UniRec template. */
    pthread_mutex_lock(&l_mut);
@@ -689,6 +688,9 @@ int main(int argc, char **argv)
 
             /* Send the complete Flow object to the output interface. */
             ret = f.sendToOutput(tmplt, out_rec);
+            if (ret != TRAP_E_OK) {
+               fprintf(stderr, "ERROR: Unable to send data to output interface: %s.\n", trap_last_error_msg);
+            }
             TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, break, break);
             //cout << f << endl;
             break;
@@ -743,7 +745,6 @@ cleanup:
    }
    
    ur_finalize();
-
    return 0;
 }
 

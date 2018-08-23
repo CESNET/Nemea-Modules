@@ -173,13 +173,6 @@ public:
    ur_time_t getTime() const;
 
    /**
-    * \brief Get scope of the flow.
-    *
-    * \return Scope of the flow.
-    */
-   net_scope_t getScope() const;
-
-   /**
     * \brief Send complete Flow object via the libtrap output interface.
     *
     * \param[in] tmplt  UniRec output template.
