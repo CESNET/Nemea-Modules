@@ -508,7 +508,6 @@ void* process_incoming_data(void *arg)
       if (f.prepare(tmplt, data, scope)) {
          /* Insert the partial Flow object to  the shared queue. */
          pthread_mutex_lock(&q_mut);
-         pushed++;
          q.push(f);
          pthread_mutex_unlock(&q_mut);
          /* Signal the main thread that it has work that needs to be done. */
@@ -691,6 +690,7 @@ int main(int argc, char **argv)
             if (ret != TRAP_E_OK) {
                fprintf(stderr, "ERROR: Unable to send data to output interface: %s.\n", trap_last_error_msg);
             }
+
             TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, break, break);
             //cout << f << endl;
             break;
