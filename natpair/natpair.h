@@ -2,10 +2,10 @@
  * \file natpair.h
  * \brief Module for pairing flows which undergone Network address translation (NAT) process.
  * \author Tomas Jansky <janskto1@fit.cvut.cz>
- * \date 2017
+ * \date 2017 - 2018
  */
 /*
- * Copyright (C) 2017 CESNET
+ * Copyright (C) 2017 - 2018 CESNET
  *
  * LICENSE TERMS
  *
@@ -59,20 +59,21 @@ using namespace std;
    printf(__VA_ARGS__); \
 }
 
-#define UNIREC_INPUT_TEMPLATE "DST_IP,SRC_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST"
-#define UNIREC_OUTPUT_TEMPLATE "LAN_IP,RTR_IP,WAN_IP,LAN_PORT,RTR_PORT,WAN_PORT,TIME_FIRST,TIME_LAST,PROTOCOL,DIRECTION"
-#define THREAD_CNT 2
+#define UNIREC_INPUT_TEMPLATE "DST_IP,SRC_IP,SRC_PORT,DST_PORT,PROTOCOL,TIME_FIRST,TIME_LAST"                              ///< UniRec input template.
+#define UNIREC_OUTPUT_TEMPLATE "LAN_IP,RTR_IP,WAN_IP,LAN_PORT,RTR_PORT,WAN_PORT,TIME_FIRST,TIME_LAST,PROTOCOL,DIRECTION"   ///< UniRec output template.
 
-#define IP_P_1_START 167772160   // 10.0.0.0
-#define IP_P_1_END   184549375   // 10.255.255.255
-#define IP_P_2_START 2886729728  // 172.16.0.0
-#define IP_P_2_END   2887778303  // 172.31.255.255
-#define IP_P_3_START 3232235520  // 192.168.0.0
-#define IP_P_3_END   3232301055  // 192.168.255.255
+#define THREAD_CNT 2    ///< Number of threads for handling input interfaces. LAN and WAN.
 
-#define DEFAULT_CHECK_TIME 600000
-#define DEFAULT_FREE_TIME  5000
-#define DEFAULT_CACHE_SIZE 2000
+#define IP_P_1_START 167772160   ///< 10.0.0.0
+#define IP_P_1_END   184549375   ///< 10.255.255.255
+#define IP_P_2_START 2886729728  ///< 172.16.0.0
+#define IP_P_2_END   2887778303  ///< 172.31.255.255
+#define IP_P_3_START 3232235520  ///< 192.168.0.0
+#define IP_P_3_END   3232301055  ///< 192.168.255.255
+
+#define DEFAULT_CHECK_TIME 600000   ///< Frequency with which the flowcache is cleared of old data (10 minutes).
+#define DEFAULT_FREE_TIME  5000     ///< Maximum time for which unpaired flows can remain in flow cache (5 minutes).
+#define DEFAULT_CACHE_SIZE 2000     ///< Number of elements in the flow cache which triggers cache cleaning.
 
 /**
  * \brief Holds possible directions of network flows.
@@ -80,7 +81,7 @@ using namespace std;
 enum nat_direction_t {
    LANtoWAN = 0,  ///< The network flow travels from LAN to WAN.
    WANtoLAN,      ///< The network flow travels from WAN to LAN.
-   NONE           ///< The flow probably did not undegone the NAT process (communication inside LAN).
+   NONE           ///< The flow probably did not undergone the NAT process (communication inside LAN).
 };
 
 /**

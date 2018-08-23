@@ -2,10 +2,10 @@
  * \file natpair.cpp
  * \brief Module for pairing flows which undergone the Network address translation (NAT) process.
  * \author Tomas Jansky <janskto1@fit.cvut.cz>
- * \date 2017
+ * \date 2017 - 2018
  */
 /*
- * Copyright (C) 2017 CESNET
+ * Copyright (C) 2017 - 2018 CESNET
  *
  * LICENSE TERMS
  *
@@ -56,32 +56,34 @@
 #include "fields.h"
 
 UR_FIELDS (
-   ipaddr DST_IP,
-   ipaddr SRC_IP,
-   uint16 DST_PORT,
-   uint16 SRC_PORT,
-   ipaddr LAN_IP,    // IP address of the client in LAN
-   ipaddr RTR_IP,    // IP address of the WAN interface of the router performing NAT proccess
-   ipaddr WAN_IP,    // IP address of the host in WAN
-   uint16 LAN_PORT,  // port of the client in LAN
-   uint16 RTR_PORT,  // port on the WAN interface of the router performing NAT proccess
-   uint16 WAN_PORT,  // port of the host in LAN
-   time TIME_FIRST,  // time of the first packet in the flow
-   time TIME_LAST,   // time of the last packet in the flow
-   uint8 PROTOCOL,   // protocol used (TCP, UDP...)
-   uint8 DIRECTION   // 0 stands for LAN to WAN, 1 stands for WAN to LAN
+   ipaddr DST_IP,    ///< destination IP address of the network flow
+   ipaddr SRC_IP,    ///< source IP address of the network flow
+   uint16 DST_PORT,  ///< destination port of the network flow
+   uint16 SRC_PORT,  ///< source port of the network flow
+   ipaddr LAN_IP,    ///< IP address of the client in LAN
+   ipaddr RTR_IP,    ///< IP address of the WAN interface of the router performing NAT process
+   ipaddr WAN_IP,    ///< IP address of the host in WAN
+   uint16 LAN_PORT,  ///< port of the client in LAN
+   uint16 RTR_PORT,  ///< port on the WAN interface of the router performing NAT process
+   uint16 WAN_PORT,  ///< port of the host in LAN
+   time TIME_FIRST,  ///< time of the first packet in the flow
+   time TIME_LAST,   ///< time of the last packet in the flow
+   uint8 PROTOCOL,   ///< protocol used (TCP, UDP...)
+   uint8 DIRECTION   ///< 0 stands for LAN to WAN, 1 stands for WAN to LAN
 )
 
-trap_module_info_t *module_info = NULL;
-queue<Flow> q;
-static int stop = 0;
-pthread_t th[THREAD_CNT];
-pthread_mutex_t q_mut,l_mut;
-sem_t q_empty;
-uint64_t g_check_time = DEFAULT_CHECK_TIME;
-uint64_t g_free_time = DEFAULT_FREE_TIME;
-uint32_t g_cache_size = DEFAULT_CACHE_SIZE;
-uint32_t g_router_ip;
+trap_module_info_t *module_info = NULL;      ///< Module info for libtrap.
+queue<Flow> q;                               ///< Shared queue which contains partially filled Flow objects.
+static int stop = 0;                         ///< Indicates whether the module should stop.
+pthread_t th[THREAD_CNT];                    ///< Array of PIDs of threads handling input interfaces.
+pthread_mutex_t q_mut;                       ///< Mutex used for locking the shared queue.
+pthread_mutex_t l_mut;                       ///< Mutex used for locking UniRec parts during initialization and finalization.
+sem_t q_empty;                               ///< Semaphore indicating whether the shared queue contains any objects which need processing.
+uint64_t g_check_time = DEFAULT_CHECK_TIME;  ///< Frequency of flow cache cleaning.
+uint64_t g_free_time = DEFAULT_FREE_TIME;    ///< Maximum time for which unpaired flows can remain in flow cache.
+uint32_t g_cache_size = DEFAULT_CACHE_SIZE;  ///< Number of elements in the flow cache which triggers cache cleaning.
+uint32_t g_router_ip;                        ///< IP address of the WAN interface of the router performing NAT process.
+
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 #define MODULE_BASIC_INFO(BASIC) \
