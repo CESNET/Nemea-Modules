@@ -429,7 +429,7 @@ ostream& operator<<(ostream& str, const Flow &f)
 
 /**
  * \brief Main function for processing network flows from input interfaces.
- * 
+ *
  * \param[in] arg Pointer to a net_scope_t structure indicating interface from which the network flows should be read (LAN or WAN).
  *
  * \return NULL.
@@ -440,10 +440,10 @@ void* process_incoming_data(void *arg)
    /* Convert passed argument to net_scope_t enum. */
    net_scope_t scope = ((uint64_t)arg == 0) ? LAN : WAN;
 
-   /* 
+   /*
       Lock the creation of UniRec template.
 
-      ******************* IMPORTANT ******************* 
+      ******************* IMPORTANT *******************
       To whomever who is reading this: if UniRec is by any chance finally thread safe,
       consider yourself lucky to rewrite this function without unnecessary locks.
    */
@@ -458,7 +458,7 @@ void* process_incoming_data(void *arg)
 
    pthread_mutex_unlock(&l_mut);
 
-   /* 
+   /*
       Basically just expanded TRAP_RECEIVE macro, but with added locks,
       since UniRec was not thread safe at the time of creation of this module.
       Sorry...
@@ -665,7 +665,7 @@ int main(int argc, char **argv)
          continue;
       }
 
-      /* 
+      /*
          Some similar (with same key) partial Flow objects were found.
          Iterate through them and attempt to pair this partial Flow object to another previously inserted Flow object.
       */

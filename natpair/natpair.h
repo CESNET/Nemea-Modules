@@ -80,7 +80,7 @@ using namespace std;
 enum nat_direction_t {
    LANtoWAN = 0,  ///< The network flow travels from LAN to WAN.
    WANtoLAN,      ///< The network flow travels from WAN to LAN.
-   NONE           ///< The flow probably did not undegone the NAT process (communication inside LAN). 
+   NONE           ///< The flow probably did not undegone the NAT process (communication inside LAN).
 };
 
 /**
@@ -226,6 +226,6 @@ private:
    ur_time_t wan_time_first;  ///< Time when the communication was first observed in WAN.
    ur_time_t wan_time_last;   ///< Time when the communication was last observed in WAN.
    uint8_t protocol;          ///< Protocol used (TCP / UDP).
-   uint8_t direction;         ///< Direction of the network flow (LAN->WAN, WAN->LAN). 
+   uint8_t direction;         ///< Direction of the network flow (LAN->WAN, WAN->LAN).
    net_scope_t scope;         ///< Scope specifies on which interface was the network flow first seen.
 };
