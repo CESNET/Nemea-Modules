@@ -64,6 +64,17 @@ Almost all data types from unirec are supported:
 - `bytes` variable-length array of bytes (not expected to be printable characters), surrounded by double quotes
 - `time` UniRec timestamp, such as `TIME_FIRST`, `TIME_LAST`. The time column can be compared with date&time specified in format: `YYYY-mm-ddTHH:MM:SS.sss`, where `.sss` represents miliseconds and is an optional part (Ex. `2018-01-10T21:17:00`). Note that the timestamp should be in UTC timezone.
 
+**Subnets**
+
+UniRec fields of `ipaddr` type (such as `SRC_IP`, `DST_IP`) can be compared with host IP addresses or with a subnet in the notation `IP/BITS`, where `BITS` represents
+a number of leading '1' bits in the netmask.
+
+Example: `-F "SRC_IP == 10.0.0.0/8"`
+
+Note: `IP` need not to be necessarily a network address (it can be any IP address) because it is masked during the initiation of the filter (e.g., `10.1.1.1/8` becomes `10.0.0.0`).
+
+Operator `==` returns true if and only if an `SRC_IP` belong to the given subnet.
+
 ### Format
 #### Command line
 Filter specified on command line with `-F` flag is a single expression which is evaluated for the output interface. For example: `-F "SRC_PORT == 23"`
