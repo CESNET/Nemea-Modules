@@ -89,6 +89,47 @@ op_pair cmp_op_table[] = {
    { "~=", OP_RE }
 };
 
+/**
+ * Apply netmask mask to an IP address in tg_ip.
+ *
+ * \param[in,out] tg_ip pointer to IP address that will be masked (binary and with mask)
+ * \param[in] mask   pointer to netmask (32 resp. 128 bits of leading ones and trailing zeros) created by ip_make_mask()
+ */
+void ip_mask(ip_addr_t *tg_ip, ip_addr_t *mask)
+{
+   if (ip_is4(tg_ip)) {
+      tg_ip->ui64[0] = 0;
+      tg_ip->ui32[2] &= mask->ui32[2];
+      tg_ip->ui32[3] = 0xFFFFFFFF;
+   } else {
+      tg_ip->ui64[0] &= mask->ui64[0];
+      tg_ip->ui64[1] &= mask->ui64[1];
+   }
+}
+
+/**
+ * Create a netmask with mbits leading '1' bits into tg_ip.
+ *
+ * \param[in,out] tg_ip Pointer to an IP address (IPv4 or IPv6) that will be converted into netmask (binary & with mask). The IP must be set in advance in order to distinguish IPv4 and IPv6.
+ * \param[in] mbits   Number of leading ones ('1') in the netmask, it must be lower than 32 resp. 128 bits for IPv4 resp. IPv6.
+ */
+void ip_make_mask(ip_addr_t *tg_ip, uint8_t mbits)
+{
+#define IP4BITMASK(n) (n == 0 ? 0 : -1 << (32 - n))
+#define IP6HBITMASK(n) (n == 0 ? 0LL : -1LL << (64 - n))
+   if (ip_is4(tg_ip)) {
+      tg_ip->ui32[2] = htonl(IP4BITMASK(mbits));
+   } else {
+      if (mbits > 64) {
+         tg_ip->ui64[0] = 0xFFFFFFFFFFFFFFFFULL;
+         tg_ip->ui64[1] = IP6HBITMASK(mbits - 64);
+      } else {
+         tg_ip->ui64[0] = IP6HBITMASK(mbits);
+         tg_ip->ui64[0] = 0ULL;
+      }
+   }
+}
+
 cmp_op get_op_type(char *cmp) {
    size_t table_size = sizeof(cmp_op_table) / sizeof(cmp_op_table[0]);
 
@@ -226,6 +267,48 @@ struct ast *newIP(char *column, char *cmp, char *ipAddr)
       return (struct ast *) newast;
    }
    free(ipAddr);
+
+   int id = ur_get_id_by_name(column);
+   if (id == UR_E_INVALID_NAME) {
+      printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
+      newast->id = UR_INVALID_FIELD;
+   } else if (ur_get_type(id) != UR_TYPE_IP) {
+      printf("Warning: Type of %s is not IP address. Corresponding rule will always evaluate false.\n", column);
+      newast->id = UR_INVALID_FIELD;
+   } else {
+      newast->id = id;
+   }
+   return (struct ast *) newast;
+}
+
+struct ast *newIPNET(char *column, char *cmp, char *ipAddr)
+{
+   struct ipnet *newast = (struct ipnet *) malloc(sizeof(struct ipnet));
+   newast->type = NODE_T_NET;
+   newast->column = column;
+   newast->cmp = get_op_type(cmp);
+   free(cmp);
+
+   char *mask = strchr(ipAddr, '/');
+   if (mask == NULL) {
+      newast->id = UR_INVALID_FIELD;
+      printf("Warning: %s is not a valid IP subnet. Corresponding rule will always evaluate false.\n", ipAddr);
+      return (struct ast *) newast;
+   }
+   newast->mask = atoi(mask + 1);
+   *mask = '\0';
+
+   if (!ip_from_str(ipAddr, &(newast->ipAddr))) {
+      printf("Warning: %s is not a valid IP address. Corresponding rule will always evaluate false.\n", ipAddr);
+      newast->id = UR_INVALID_FIELD;
+      free(ipAddr);
+      return (struct ast *) newast;
+   }
+   free(ipAddr);
+
+   newast->ipMask = newast->ipAddr;
+   ip_make_mask(&newast->ipMask, newast->mask);
+   ip_mask(&newast->ipAddr, &newast->ipMask);
 
    int id = ur_get_id_by_name(column);
    if (id == UR_E_INVALID_NAME) {
@@ -418,6 +501,48 @@ void printAST(struct ast *ast)
             ((struct protocol*) ast)->data);
       break;
 
+   case NODE_T_NET: {
+      if (((struct ipnet *) ast)->id == UR_INVALID_FIELD) { // There was error with this expr., print it in red color
+         printf("%s", TTY_RED);
+      }
+      char str[46];
+      ip_to_str(&(((struct ipnet *) ast)->ipAddr), str);
+
+      printf("%s", ((struct ipnet *) ast)->column);
+
+      switch (((struct ipnet *) ast)->cmp) {
+      case (OP_EQ):
+         printf(" == ");
+         break;
+      case (OP_NE):
+         printf(" != ");
+         break;
+      case (OP_LT):
+         printf(" < ");
+         break;
+      case (OP_LE):
+         printf(" <= ");
+         break;
+      case (OP_GT):
+         printf(" > ");
+         break;
+      case (OP_GE):
+         printf(" >= ");
+         break;
+      default:
+         printf(" <invalid operator> ");
+      }
+      printf("%s/%" PRIu8, str, ((struct ipnet*) ast)->mask);
+      ip_to_str(&(((struct ipnet *) ast)->ipMask), str);
+      printf(" (%s)" , str);
+
+      if (((struct ipnet *) ast)->id == UR_INVALID_FIELD) {
+         printf("%s", TTY_RESET);
+      }
+
+      break;
+   }
+
    case NODE_T_IP: {
       if (((struct ip*) ast)->id == UR_INVALID_FIELD) { // There was error with this expr., print it in red color
          printf("%s", TTY_RED);
@@ -519,6 +644,9 @@ void freeAST(struct ast *ast)
    case NODE_T_PROTOCOL:
       free(((struct protocol*) ast)->cmp);
       free(((struct protocol*) ast)->data);
+      break;
+   case NODE_T_NET:
+      free(((struct ipnet *) ast)->column);
       break;
    case NODE_T_IP:
       free(((struct ip *) ast)->column);
@@ -660,6 +788,37 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
       }
       return compareUnsigned(*(ur_time_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_datetime *) ast)->id)),
                              ((struct expression_datetime *) ast)->date, ((struct expression_datetime *) ast)->cmp);
+   case NODE_T_NET: {
+      if (((struct ip*) ast)->id == UR_INVALID_FIELD) {
+         return 0;
+      }
+      ip_addr_t cur_ip = *((ip_addr_t *) (ur_get_ptr_by_id(in_tmplt, in_rec, ((struct ip*) ast)->id)));
+
+      cmp_op cmp = ((struct ip*) ast)->cmp;
+
+      /* check if both IPs are of the same version and return if not */
+      int curtype = ip_is4(&cur_ip);
+      int settype = ip_is4(&(((struct ipnet*) ast)->ipAddr));
+      if (curtype != settype) {
+         return cmp == OP_NE || cmp == OP_LT || cmp == OP_GT;
+      }
+
+      /* mask current IP and then just compare it */
+      ip_mask(&cur_ip, &((struct ipnet *) ast)->ipMask);
+      int cmp_res = ip_cmp(&cur_ip, &(((struct ipnet*) ast)->ipAddr));
+
+
+      if (cmp_res == 0) {
+         // Same addresses
+         return cmp == OP_EQ || cmp == OP_LE || cmp == OP_GE;
+      } else if (cmp_res < 0) {
+         // Address in record is lower than the given one
+         return cmp == OP_NE || cmp == OP_LT || cmp == OP_LE;
+      } else {
+         // Address in record is higher than the given one
+         return cmp == OP_NE || cmp == OP_GT || cmp == OP_GE;
+      }
+   }
    case NODE_T_IP:
       if (((struct ip*) ast)->id == UR_INVALID_FIELD) {
          return 0;
@@ -755,6 +914,7 @@ void changeProtocol(struct ast **ast)
       *ast = newExpression(retezec, cmp, protocol, 0);
       return;
    case NODE_T_IP:
+   case NODE_T_NET:
    case NODE_T_STRING:
    case NODE_T_NEGATION:
       return;
