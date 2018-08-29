@@ -456,7 +456,7 @@ void printAST(struct ast *ast)
       }
 
       break;
-      }
+   }
 
    case NODE_T_STRING:
       if (((struct str*) ast)->id == UR_INVALID_FIELD) { // There was error with this expr., print it in red color
@@ -521,8 +521,7 @@ void freeAST(struct ast *ast)
       free(((struct protocol*) ast)->data);
       break;
    case NODE_T_IP:
-      free(((struct ip*) ast)->column);
-      // free(&(((struct ip*) ast)->ipAddr));
+      free(((struct ip *) ast)->column);
       break;
    case NODE_T_STRING:
       free(((struct str*) ast)->column);
