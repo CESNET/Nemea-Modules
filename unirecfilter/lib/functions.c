@@ -789,23 +789,23 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
       return compareUnsigned(*(ur_time_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_datetime *) ast)->id)),
                              ((struct expression_datetime *) ast)->date, ((struct expression_datetime *) ast)->cmp);
    case NODE_T_NET: {
-      if (((struct ip*) ast)->id == UR_INVALID_FIELD) {
+      if (((struct ipnet *) ast)->id == UR_INVALID_FIELD) {
          return 0;
       }
-      ip_addr_t cur_ip = *((ip_addr_t *) (ur_get_ptr_by_id(in_tmplt, in_rec, ((struct ip*) ast)->id)));
+      ip_addr_t cur_ip = *((ip_addr_t *) (ur_get_ptr_by_id(in_tmplt, in_rec, ((struct ipnet *) ast)->id)));
 
-      cmp_op cmp = ((struct ip*) ast)->cmp;
+      cmp_op cmp = ((struct ipnet *) ast)->cmp;
 
       /* check if both IPs are of the same version and return if not */
       int curtype = ip_is4(&cur_ip);
-      int settype = ip_is4(&(((struct ipnet*) ast)->ipAddr));
+      int settype = ip_is4(&(((struct ipnet *) ast)->ipAddr));
       if (curtype != settype) {
          return cmp == OP_NE || cmp == OP_LT || cmp == OP_GT;
       }
 
       /* mask current IP and then just compare it */
       ip_mask(&cur_ip, &((struct ipnet *) ast)->ipMask);
-      int cmp_res = ip_cmp(&cur_ip, &(((struct ipnet*) ast)->ipAddr));
+      int cmp_res = ip_cmp(&cur_ip, &(((struct ipnet *) ast)->ipAddr));
 
 
       if (cmp_res == 0) {
