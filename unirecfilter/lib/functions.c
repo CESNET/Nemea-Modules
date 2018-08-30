@@ -115,17 +115,18 @@ void ip_mask(ip_addr_t *tg_ip, ip_addr_t *mask)
  */
 void ip_make_mask(ip_addr_t *tg_ip, uint8_t mbits)
 {
-#define IP4BITMASK(n) (n == 0 ? 0 : -1 << (32 - n))
-#define IP6HBITMASK(n) (n == 0 ? 0LL : -1LL << (64 - n))
+#define ntohll(x) ((1==ntohl(1)) ? (x) : ((uint64_t)ntohl((x) & 0xFFFFFFFF) << 32) | ntohl((x) >> 32))
+#define IP4BITMASK(n) (n == 0 ? 0 : ntohl(-1 << (32 - n)))
+#define IP6HBITMASK(n) (n == 0 ? 0LL : ntohll(-1LL << (64 - n)))
    if (ip_is4(tg_ip)) {
-      tg_ip->ui32[2] = htonl(IP4BITMASK(mbits));
+      tg_ip->ui32[2] = IP4BITMASK(mbits);
    } else {
       if (mbits > 64) {
          tg_ip->ui64[0] = 0xFFFFFFFFFFFFFFFFULL;
          tg_ip->ui64[1] = IP6HBITMASK(mbits - 64);
       } else {
          tg_ip->ui64[0] = IP6HBITMASK(mbits);
-         tg_ip->ui64[0] = 0ULL;
+         tg_ip->ui64[1] = 0ULL;
       }
    }
 }
