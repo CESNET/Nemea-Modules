@@ -187,12 +187,16 @@ void *pthread_entry_upload(void *attr)
       timestamp_to = ts.tv_sec;
 
       // Compose endpoint url
-      asprintf(&url, "%s/%ld/%ld/", AGGREGATOR_SERVICE, timestamp_from, timestamp_to);
+      error = asprintf(&url, "%s/%ld/%ld/", AGGREGATOR_SERVICE, timestamp_from, timestamp_to);
+      if (error < 0) {
+         fprintf(stderr, "Error(%d): memory allocation failed\n", error);
+         exit(1);
+      }
 
       // Send to the service
       error = curl_send_bloom(curl, url, bloom_send);
       if (error) {
-         fprintf(stderr, "Error(%d) sending filter\n", error);
+         fprintf(stderr, "Error(%d): sending filter\n", error);
       }
 
       bloom_free(bloom_send);
