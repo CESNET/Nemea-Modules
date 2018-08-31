@@ -73,7 +73,7 @@ int is_from_prefix(ip_addr_t *ip, ip_addr_t *protected_prefix, int32_t protected
 }
 
 
-int curl_init_handle(CURL **curl, const char *aggregator_service)
+int curl_init_handle(CURL **curl)
 {
    *curl = curl_easy_init();
 
@@ -81,8 +81,7 @@ int curl_init_handle(CURL **curl, const char *aggregator_service)
       return -1;
    }
 
-   // None of below calls should fail (apart from OOM)
-   curl_easy_setopt(*curl, CURLOPT_URL, aggregator_service);
+   // None of the following calls should fail (apart from OOM)
    // POST request method
    curl_easy_setopt(*curl, CURLOPT_POST, 1L);
    // follow redirections
@@ -98,7 +97,7 @@ int curl_init_handle(CURL **curl, const char *aggregator_service)
 }
 
 
-int curl_send_bloom(CURL *curl, const struct bloom *bloom_filter)
+int curl_send_bloom(CURL *curl, const char *aggregator_service_url, const struct bloom *bloom_filter)
 {
    int error = 0;
    long code;
@@ -123,6 +122,8 @@ int curl_send_bloom(CURL *curl, const struct bloom *bloom_filter)
    // TODO curl does not compress anything for us
    /* list = curl_slist_append(list, "Content-Encoding: gzip"); */
 
+   /* set url */
+   curl_easy_setopt(curl, CURLOPT_URL, aggregator_service_url);
    /* specify POST data */
    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, buffer);
    /* libcurl will strlen() by itself otherwise */

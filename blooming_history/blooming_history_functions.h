@@ -75,14 +75,15 @@ int is_from_prefix(ip_addr_t *ip, ip_addr_t *protected_prefix, int32_t protected
  *      0 - success
  *     -1 - initialization failed
 */
-int curl_init_handle(CURL **curl, const char *aggregator_service);
+int curl_init_handle(CURL **curl);
 
 
 /**
  * Serialize and send bloom filter struct to a aggregator service via HTTP POST.
  *
- * \param[in] curl           Libcurl easy handle.
- * \param[in] bloom_filter   Bloom filter to be sent.
+ * \param[in] curl                      Libcurl easy handle.
+ * \param[in] aggregator_service_url    Aggregator service upload uri.
+ * \param[in] bloom_filter              Bloom filter to be sent.
  * \returns
  *      0 - success
  *     -1 - bloom filter not initialized
@@ -91,7 +92,7 @@ int curl_init_handle(CURL **curl, const char *aggregator_service);
  *     -4 - libcurl error
  *     -5 - HTTP status code other than 200 OK
 */
-int curl_send_bloom(CURL *curl, const struct bloom *bloom_filter);
+int curl_send_bloom(CURL *curl, const char *aggregator_service_url, const struct bloom *bloom_filter);
 
 
 /**

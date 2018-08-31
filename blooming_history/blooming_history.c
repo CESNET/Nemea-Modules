@@ -45,10 +45,13 @@
 #include <config.h>
 #endif
 
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <signal.h>
 #include <getopt.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 #include <pthread.h>
 
@@ -157,13 +160,16 @@ void *pthread_entry_upload(void *attr)
    struct bloom *bloom_send;
    CURL *curl = NULL;
    int error = 0;
+   char *url = NULL;
+   uint64_t timestamp_from, timestamp_to;
 
-   curl_init_handle(&curl, AGGREGATOR_SERVICE);
+   curl_init_handle(&curl);
 
    while (!stop) {
       // This is the actuall "sleeping" (gets woken up on module stop)
       pthread_mutex_lock(&MUTEX_TIMER_STOP);
       clock_gettime(CLOCK_REALTIME, &ts);
+      timestamp_from = ts.tv_sec;
       ts.tv_sec += UPLOAD_INTERVAL;
       pthread_cond_timedwait(&CV_TIMER_STOP, &MUTEX_TIMER_STOP, &ts);
 
@@ -177,14 +183,25 @@ void *pthread_entry_upload(void *attr)
       BLOOM = bloom_new;
       pthread_mutex_unlock(&MUTEX_BLOOM_SWAP);
 
+      clock_gettime(CLOCK_REALTIME, &ts);
+      timestamp_to = ts.tv_sec;
+
+      // Compose endpoint url
+      error = asprintf(&url, "%s/%ld/%ld/", AGGREGATOR_SERVICE, timestamp_from, timestamp_to);
+      if (error < 0) {
+         fprintf(stderr, "Error(%d): memory allocation failed\n", error);
+         exit(1);
+      }
+
       // Send to the service
-      error = curl_send_bloom(curl, bloom_send);
+      error = curl_send_bloom(curl, url, bloom_send);
       if (error) {
-         fprintf(stderr, "Error(%d) sending filter\n", error);
+         fprintf(stderr, "Error(%d): sending filter\n", error);
       }
 
       bloom_free(bloom_send);
       free(bloom_send);
+      free(url);
 
       pthread_mutex_unlock(&MUTEX_TIMER_STOP);
    }
@@ -205,7 +222,7 @@ int main(int argc, char **argv)
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
- 
+
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
       case 'n':
@@ -234,7 +251,7 @@ int main(int argc, char **argv)
             *prefix_slash = '\0';
             if (!ip_from_str(optarg, &PROTECTED_PREFIX)) {
                fprintf(stderr, "Error: Invalid protected prefix format\n");
-               error = 1; 
+               error = 1;
                break;
             }
 
@@ -268,7 +285,7 @@ int main(int argc, char **argv)
    {
       char protected_ip_prefix_str[INET6_ADDRSTRLEN];
       ip_to_str(&PROTECTED_PREFIX, protected_ip_prefix_str);
-      printf("ENTRIES:%d, fpr:%f, prefix:%s, prefix_length:%d, interval:%d, service:%s\n", 
+      printf("ENTRIES:%d, fpr:%f, prefix:%s, prefix_length:%d, interval:%d, service:%s\n",
             ENTRIES, FP_ERROR_RATE, protected_ip_prefix_str, PROTECTED_PREFIX_LENGTH, UPLOAD_INTERVAL, AGGREGATOR_SERVICE);
    }
 #endif // DEBUG
@@ -354,7 +371,7 @@ int main(int argc, char **argv)
          pthread_mutex_unlock(&MUTEX_BLOOM_SWAP);
       } else {
          pthread_mutex_lock(&MUTEX_BLOOM_SWAP);
-         bloom_add(BLOOM, ip->ui8, 16); 
+         bloom_add(BLOOM, ip->ui8, 16);
          pthread_mutex_unlock(&MUTEX_BLOOM_SWAP);
       }
    }
