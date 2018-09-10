@@ -1,9 +1,5 @@
 #!/usr/bin/env python
 
-# In case we are in nemea/modules/report2idea/ipblacklist and we want to import from repo:
-import os, sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "nemea-framework", "pycommon"))
-
 import argparse
 
 # The whole functionality of reporting is here:
@@ -14,8 +10,8 @@ from report2idea import *
 MODULE_NAME = "ipblacklist2idea"
 MODULE_DESC = "Converts output of ipblacklistfilter module to IDEA."
 
-REQ_TYPE = pytrap.FMT_UNIREC
-REQ_FORMAT = "ipaddr DST_IP,ipaddr SRC_IP,uint8 PROTOCOL,uint16 SRC_PORT,uint16 DST_PORT,uint64 BYTES,uint64 DST_BLACKLIST,uint64 SRC_BLACKLIST,time TIME_FIRST,time TIME_LAST,uint32 EVENT_SCALE,uint32 PACKETS"
+REQ_TYPE = pytrap.FMT_JSON
+REQ_FORMAT = "aggregated_ipblacklist"
 
 # Blacklist ID to name lookup table (it is loaded from file specified by --blacklist-config in __main__)
 bl_conv = {}
@@ -24,12 +20,6 @@ proto_conv = {
     1 : 'icmp',
     6 : 'tcp',
     17 : 'udp',
-}
-
-# Blacklist name (lowercase) to threshold lookup table (default is 1)
-bl_scale_tholds = {
-   'spamhaus' : '40',
-   'tor' : '150',
 }
 
 
@@ -44,8 +34,8 @@ def load_config(config):
     bls = {}
     with open(config, "r") as f:
         tree = xml.parse(f)
-    rootElement = tree.getroot()
-    blacklists = list(list(list(rootElement)[0])[0])
+    rootElement = tree.find(".//array[@type='IP']")
+    blacklists = list(rootElement)
 
     for struct in blacklists:
         elems = list(struct)
@@ -58,7 +48,7 @@ def load_config(config):
             if attr == "name":
                 bl_name = el.text
             elif attr == "id":
-                bl_id = 2**int(el.text)
+                bl_id = 2 ** (int(el.text) - 1)
             elif attr == "type":
                 bl_type = el.text
             elif attr == "source":
@@ -75,29 +65,98 @@ def convert_to_idea(rec, opts=None):
     Get fields from UniRec message 'rec' and convert it into an IDEA message (Python dict()).
 
     rec - Record received on TRAP input interface (the report to convert).
-          Its format satisfies what was defined by REQ_TYPE and REQ_FORMAT.
+          Expected format is FMT_JSON and ipblacklist specifier.
+          The example input data are as follows:
+              {
+                "src_sent_bytes": 0,
+                "protocol": 6,
+                "source_ports": [],
+                "ts_last": 1533728805.882,
+                "tgt_sent_packets": 9,
+                "src_sent_flows": 0,
+                "targets": [
+                  "35.186.199.62"
+                ],
+                "sources": [
+                  "93.171.202.150"
+                ],
+                "tgt_sent_flows": 1,
+                "ts_first": 1533728776.706,
+                "blacklist_bmp": 16,
+                "tgt_sent_bytes": 964,
+                "src_sent_packets": 0
+              }
+
+              {
+                "src_sent_bytes": 1363,
+                "protocol": 6,
+                "source_ports": [],
+                "ts_last": 1533728807.499,
+                "ipb_bl": 3,
+                "tgt_sent_packets": 6,
+                "src_sent_flows": 1,
+                "targets": [],
+                "sources": [
+                  "148.32.5.111",
+                  "99.15.32.108"
+                ],
+                "tgt_sent_flows": 1,
+                "ts_first": 1533728802.075,
+                "ipa_bl": 1,
+                "tgt_sent_bytes": 1363,
+                "src_sent_packets": 6
+              }
+
+              {
+                "src_sent_bytes": 6815,
+                "protocol": 6,
+                "source_ports": [],
+                "ts_last": 1533728807.499,
+                "tgt_sent_packets": 0,
+                "src_sent_flows": 5,
+                "targets": [
+                  "150.32.5.111",
+                  "149.32.5.111",
+                  "152.32.5.111",
+                  "153.32.5.111",
+                  "151.32.5.111"
+                ],
+                "sources": [
+                  "100.15.32.108"
+                ],
+                "tgt_sent_flows": 0,
+                "ts_first": 1533728802.075,
+                "blacklist_bmp": 1,
+                "tgt_sent_bytes": 0,
+                "src_sent_packets": 30
+              }
+
     opts - options parsed from command line (as returned by argparse.ArgumentParser)
 
     Return report in IDEA format (as Python dict). If None is returned, the alert is skipped.
     """
-    global bl_conv, bl_scale_tholds
+    global bl_conv
+    #import pdb
+    #pdb.set_trace()
 
     if not bl_conv:
         bl_conv = load_config(opts.blacklist_config)
 
-    endTime = getIDEAtime(rec.TIME_LAST)
     protocol = ""
-    if rec.PROTOCOL in proto_conv:
-        protocol = proto_conv[rec.PROTOCOL]
+    if rec["protocol"] in proto_conv:
+        protocol = proto_conv[rec["protocol"]]
+    time_first = getIDEAtime(pytrap.UnirecTime(rec["ts_first"]))
+    time_last = getIDEAtime(pytrap.UnirecTime(rec["ts_first"]))
     idea = {
         "Format": "IDEA0",
         "ID": getRandomId(),
         "CreateTime": getIDEAtime(), # Set current time
-        "EventTime": getIDEAtime(rec.TIME_FIRST),
-        "DetectTime": endTime,
-        'CeaseTime': endTime,
-        "PacketCount": rec.PACKETS,
-        "ByteCount": rec.BYTES,
+        "EventTime": time_first,
+        "DetectTime": time_last,
+        'CeaseTime': time_last,
+        "FlowCount": rec["src_sent_flows"] + rec["tgt_sent_flows"],
+        "PacketCount": rec["src_sent_packets"] + rec["tgt_sent_packets"],
+        "ByteCount": rec["src_sent_bytes"] + rec["tgt_sent_bytes"],
 
         "Source": [],
         'Node': [{
@@ -111,34 +170,38 @@ def convert_to_idea(rec, opts=None):
 
     export = False
     tor = False
-    blacklist = rec.SRC_BLACKLIST | rec.DST_BLACKLIST
-    src_addr = {}
-    dst_addr = {}
+    src_addr = { "Proto": [ protocol ] }
     src_entries = set()
-    dst_entries = set()
+    src_bl_map = dict()
     src_type = set()
-    dst_type = set()
+    tgt_addr = { "Proto": [ protocol ] }
+    tgt_type = set()
     sources = set()
 
-    if rec.SRC_IP:
-        src_addr = {
-            "Proto": [ protocol ]
-        }
-        # Add Port for TCP (6) or UDP (17)
-        if rec.PROTOCOL in [6, 17]:
-            src_addr["Port"] = [ rec.SRC_PORT ]
-        setAddr(src_addr, rec.SRC_IP)
-    if rec.DST_IP:
-        dst_addr = {
-            "Proto": [ protocol ],
-        }
-        if rec.PROTOCOL != 1:
-            dst_addr["Port"] = [ rec.DST_PORT ]
-        setAddr(dst_addr, rec.DST_IP)
+    ips = [pytrap.UnirecIPAddr(ip) for ip in rec.get("sources", [])]
+
+    for ip in rec.get("targets", []):
+        setAddr(tgt_addr, pytrap.UnirecIPAddr(ip))
+
+    if rec["protocol"] in [6, 17] and rec["source_ports"]:
+        src_addr["Port"] = rec["source_ports"]
+
+    botnet = False
+    blacklist_bmp = rec.get("blacklist_bmp", 0)
+    ipa_bl = rec.get("ipa_bl", 0)
+    ipb_bl = rec.get("ipb_bl", 0)
+    message_bl_sum = (blacklist_bmp | ipa_bl | ipb_bl)
+    if blacklist_bmp:
+        oneway = True
+    else:
+        oneway = False
+        ips = [pytrap.UnirecIPAddr(i) for i in rec.get("sources", [])]
+        ipa = min(ips)
+        ipb = max(ips)
 
     for bit in bl_conv:
 
-        if bit & blacklist:
+        if bit & message_bl_sum:
             cur_bl = bl_conv[bit]
         else:
             # this bit is not a blacklist
@@ -146,75 +209,83 @@ def convert_to_idea(rec, opts=None):
 
         cur_bl_name = cur_bl["name"].lower()
 
-        if (rec.EVENT_SCALE < int(bl_scale_tholds.get(cur_bl_name, 1))):
-            # alert is not significant enough to put it into alert
-            continue
-
         tor = False
-        if cur_bl_name == "tor":
+        curbltype = cur_bl["type"].lower()
+        if curbltype == "tor":
             tor = True
             category.add( "Suspicious.TOR" )
-            if rec.SRC_IP and bit & rec.SRC_BLACKLIST:
-                src_type.add("TOR")
-                src_entries.add("TOR exit node")
-            else:
-                pass # don't set Type for address contacting TOR exit node
-            if rec.DST_IP and bit & rec.DST_BLACKLIST:
-                dst_type.add("TOR")
-                dst_entries.add("TOR exit node")
-            else:
-                pass # don't set Type for address contacted by TOR exit node
+            src_type.add("TOR")
+            src_entries.add("TOR exit node")
             sources.add(cur_bl["source"])
-        elif cur_bl["type"] == "BOTNET":
+        elif curbltype == "botnet":
             category.add( "Intrusion.Botnet" )
             src_type.add("Botnet")
-            dst_type.add("Botnet")
-            if bit & rec.DST_BLACKLIST:
-                dst_type.add("CC")
-            if bit & rec.SRC_BLACKLIST:
-                src_type.add("CC")
-        elif cur_bl["type"] == "SPAM":
+            src_type.add("CC")
+            tgt_type.add("Botnet")
+            botnet = True
+        elif curbltype == "spam":
             category.add( "Abusive.Spam" )
-        elif cur_bl["type"] == "Ransomware":
+        elif curbltype == "ransomware":
             category.add( "Malware.Ransomware" )
 
-        if rec.SRC_IP and bit & rec.SRC_BLACKLIST and not tor:
+        if not tor:
             src_entries.add(cur_bl["name"])
-        if rec.DST_IP and bit & rec.DST_BLACKLIST and not tor:
-            dst_entries.add(cur_bl["name"])
+        if not oneway:
+            if bit & ipa_bl:
+                if str(ipa) not in src_bl_map:
+                    src_bl_map[str(ipa)] = set()
+                src_bl_map[str(ipa)].add(cur_bl["name"])
+            if bit & ipb_bl:
+                if str(ipb) not in src_bl_map:
+                    src_bl_map[str(ipb)] = set()
+                src_bl_map[str(ipb)].add(cur_bl["name"])
         sources.add(cur_bl["source"])
+
+    for ip in ips:
+        setAddr(src_addr, ip)
+
     if not category:
         # No threshold reached
         return None
     idea["Category"] = list(category)
     note = ""
-    if src_entries:
-        note = 'Source IP {0} was found on blacklist(s): {1}.'.format(rec.SRC_IP, ", ".join(list(src_entries)))
-    if dst_entries:
-        if note:
-            note = note + " "
-        note = 'Destination IP {0} was found on blacklist(s): {1}.'.format(rec.DST_IP, ", ".join(list(dst_entries)))
-    if note:
-        idea["Note"] = note
+    if src_entries and oneway:
 
-    if src_addr:
+        idea["Note"] = 'IP {0} was found on blacklist(s): {1}.'.format(", ".join(rec["sources"]), ", ".join(list(src_entries)))
+
+        descsrc = "{0} (listed: {1})".format(", ".join(rec["sources"]), ", ".join(list(src_entries)))
+    elif not oneway:
+        descsrc = ", ".join(["{0} (listed: {1})".format(i, ", ".join(src_bl_map[i])) for i in src_bl_map])
+    else:
+        descsrc = "{0}".format(", ".join(rec["sources"]))
+
+    if rec.get("targets", []):
+        desctgt = "{0}".format(", ".join(rec["targets"]))
+        idea['Description'] = "{0} communicated with {1}.".format(descsrc, desctgt)
+    else:
+        idea['Description'] = "Observed communication of {0}.".format(descsrc)
+
+    if src_type:
         src_addr["Type"] = list(src_type)
-        idea['Source'].append(src_addr)
-    if dst_addr:
-        dst_addr["Type"] = list(dst_type)
-        idea['Source'].append(dst_addr)
-
-    if src_entries:
-        descSRC = "{0} (listed: {1})".format(rec.SRC_IP, ", ".join(list(src_entries)))
+    if tgt_type:
+        tgt_addr["Type"] = list(tgt_type)
+    if botnet:
+        if rec.get("targets", []):
+            idea['Source'].append(tgt_addr)
     else:
-        descSRC = "{0}".format(rec.SRC_IP)
+        if rec.get("targets", []):
+            idea['Target'] = []
+            idea['Target'].append(tgt_addr)
+        if rec["src_sent_flows"]:
+            src_addr["OutFlowCount"] = rec["src_sent_flows"]
+            src_addr["OutByteCount"] = rec["src_sent_bytes"]
+            src_addr["OutPacketsCount"] = rec["src_sent_packets"]
+        if rec["tgt_sent_flows"]:
+            src_addr["InFlowCount"] = rec["tgt_sent_flows"]
+            src_addr["InByteCount"] = rec["tgt_sent_bytes"]
+            src_addr["InPacketsCount"] = rec["tgt_sent_packets"]
+    idea['Source'].append(src_addr)
 
-    if dst_entries:
-        descDST = "{0} (listed: {1})".format(rec.DST_IP, ", ".join(list(dst_entries)))
-    else:
-        descDST = "{0}".format(rec.DST_IP)
-
-    idea['Description'] = "{0} connected to {1}.".format(descSRC, descDST)
     if sources:
         idea['Ref'] = list(sources)
     return idea
