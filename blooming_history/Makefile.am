@@ -7,7 +7,7 @@ blooming_history_SOURCES= blooming_history.c \
 	fields.c fields.h \
 	libbloom/bloom.c libbloom/bloom.h \
 	libbloom/murmur2/MurmurHash2.c libbloom/murmur2/murmurhash2.h
-blooming_history_LDADD=-lcurl -lm
+blooming_history_LDADD=-lcurl -lm -ltrap -lunirec
 
 # FIXME Fails rpmbuild if we do not include this in the rpm
 # test_blooming_history_SOURCES=test_blooming_history.c \
