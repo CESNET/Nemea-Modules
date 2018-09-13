@@ -4,7 +4,7 @@ import argparse
 
 # The whole functionality of reporting is here:
 from report2idea import *
-
+from datetime import timedelta
 
 # Moudle name, description and required input data format
 MODULE_NAME = "urlblacklist2idea"
@@ -24,7 +24,7 @@ proto_conv = {
 
 
 def load_config(config):
-    """Load `config` file of ipblacklistfilter module (bl_usrConfigFile.xml).
+    """Load `config` file of blacklist_downloader module (bl_downloader_config.xml).
     This file contains a list of blacklists, their names and URLs.
 
     load_config() returns dictionary, where the key is id (= 2**ID from file) and
@@ -34,7 +34,7 @@ def load_config(config):
     bls = {}
     with open(config, "r") as f:
         tree = xml.parse(f)
-    rootElement = tree.find(".//array[@type='IP']")
+    rootElement = tree.find(".//array[@type='URL']")
     blacklists = list(rootElement)
 
     for struct in blacklists:
@@ -59,77 +59,49 @@ def load_config(config):
         bls[bl_id] = {"name": bl_name, "type": bl_type, "source": bl_source}
     return bls
 
+
+# Convert minutes to IDEA AggrWin format, e.g. 00:05:00 or 536D10:20:30
+def minutes_to_aggr_win(minutes):
+    td = str(timedelta(minutes=minutes))
+    if minutes < 600:
+        return "0" + td
+    if minutes < 1440:
+        return td
+
+    days, time = td.split(',')
+    if minutes % 1440 < 600:
+        time = "0" + time.strip()
+
+    return days.split(' ')[0] + "D" + time.strip()
+
 # Main conversion function
 def convert_to_idea(rec, opts=None):
     """
     Get fields from UniRec message 'rec' and convert it into an IDEA message (Python dict()).
 
     rec - Record received on TRAP input interface (the report to convert).
-          Expected format is FMT_JSON and ipblacklist specifier.
+          Expected format is FMT_JSON and urlblacklist specifier.
           The example input data are as follows:
               {
-                "src_sent_bytes": 0,
-                "protocol": 6,
-                "source_ports": [],
-                "ts_last": 1533728805.882,
-                "tgt_sent_packets": 9,
-                "src_sent_flows": 0,
-                "targets": [
-                  "35.186.199.62"
-                ],
-                "sources": [
-                  "93.171.202.150"
-                ],
-                "tgt_sent_flows": 1,
-                "ts_first": 1533728776.706,
-                "blacklist_bmp": 16,
-                "tgt_sent_bytes": 964,
-                "src_sent_packets": 0
-              }
-
-              {
-                "src_sent_bytes": 1363,
-                "protocol": 6,
-                "source_ports": [],
-                "ts_last": 1533728807.499,
-                "ipb_bl": 3,
-                "tgt_sent_packets": 6,
-                "src_sent_flows": 1,
-                "targets": [],
-                "sources": [
-                  "148.32.5.111",
-                  "99.15.32.108"
-                ],
-                "tgt_sent_flows": 1,
-                "ts_first": 1533728802.075,
-                "ipa_bl": 1,
-                "tgt_sent_bytes": 1363,
-                "src_sent_packets": 6
-              }
-
-              {
-                "src_sent_bytes": 6815,
-                "protocol": 6,
-                "source_ports": [],
-                "ts_last": 1533728807.499,
-                "tgt_sent_packets": 0,
-                "src_sent_flows": 5,
-                "targets": [
-                  "150.32.5.111",
-                  "149.32.5.111",
-                  "152.32.5.111",
-                  "153.32.5.111",
-                  "151.32.5.111"
-                ],
-                "sources": [
-                  "100.15.32.108"
-                ],
-                "tgt_sent_flows": 0,
-                "ts_first": 1533728802.075,
-                "blacklist_bmp": 1,
-                "tgt_sent_bytes": 0,
-                "src_sent_packets": 30
-              }
+                  "source_url": "avatars.mds.yandex.net",
+                  "source_ports": [
+                    443
+                  ],
+                  "targets": [
+                    "147.231.11.227",
+                    "147.231.253.30"
+                  ],
+                  "tgt_sent_flows": 2,
+                  "ts_first": 1536661056.436,
+                  "tgt_sent_bytes": 2793,
+                  "source_ip": "87.250.247.181",
+                  "ts_last": 1536661116.883,
+                  "protocol": 6,
+                  "tgt_sent_packets": 25,
+                  "blacklist_bmp": 8,
+                  "referer": "",
+                  "agg_win_minutes": 5
+               }
 
     opts - options parsed from command line (as returned by argparse.ArgumentParser)
 
@@ -152,15 +124,13 @@ def convert_to_idea(rec, opts=None):
         "EventTime": time_first,
         "DetectTime": time_last,
         'CeaseTime': time_last,
-        "FlowCount": rec["tgt_sent_flows"],
-        "PacketCount": rec["tgt_sent_packets"],
-        "ByteCount": rec["tgt_sent_bytes"],
 
         "Source": [],
         'Node': [{
             'Name': 'undefined',
             'SW': [ 'Nemea', 'urlblacklistfilter' ],
-            'Type': [ 'Flow', 'Blacklist' ]
+            'Type': [ 'Flow', 'Blacklist' ],
+            'AggrWin': minutes_to_aggr_win(int(rec["agg_win_minutes"]))
         }],
     }
 
@@ -176,15 +146,12 @@ def convert_to_idea(rec, opts=None):
     tgt_type = set()
     sources = set()
 
-    ips = [pytrap.UnirecIPAddr(ip) for ip in rec.get("source", [])]
-
     for ip in rec.get("targets", []):
         setAddr(tgt_addr, pytrap.UnirecIPAddr(ip))
 
     if rec["protocol"] in [6, 17] and rec["source_ports"]:
         src_addr["Port"] = rec["source_ports"]
 
-    botnet = False
     blacklist_bmp = rec.get("blacklist_bmp", 0)
 
     for bit in bl_conv:
@@ -194,58 +161,46 @@ def convert_to_idea(rec, opts=None):
             # this bit is not a blacklist
             continue
 
-        cur_bl_name = cur_bl["name"].lower()
-
         curbltype = cur_bl["type"].lower()
         if curbltype == "malware":
             category.add("Malware" )
             sources.add(cur_bl["source"])
-        elif curbltype == "botnet":
-            category.add( "Intrusion.Botnet" )
-            src_type.add("Botnet")
-            src_type.add("CC")
-            tgt_type.add("Botnet")
-            botnet = True
-        elif curbltype == "spam":
-            category.add( "Abusive.Spam" )
         elif curbltype == "phishing":
             category.add( "Fraud.Phishing" )
         elif curbltype == "booters":
             category.add( "Fraud" )
 
+        src_entries.add(cur_bl["name"])
         sources.add(cur_bl["source"])
 
-    for ip in ips:
-        setAddr(src_addr, ip)
+    setAddr(src_addr, pytrap.UnirecIPAddr(rec.get('source_ip')))
 
     if not category:
         # No threshold reached
         return None
 
     idea["Category"] = list(category)
-    note = ""
 
-    idea["Note"] = 'URL {0} was found on blacklist(s): {1}.'.format((rec["source"]), ", ".join(list(src_entries)))
+    idea["Note"] = "URL: '{0}' was found on blacklist(s): {1}.".format((rec["source_url"]), ", ".join(list(src_entries)))
 
     if rec.get("targets", []):
-        desctgt = "{0}".format(", ".join(rec["targets"]))
-        idea['Description'] = "URL: '{0}' was requested by {1}.".format(rec["source_url"], desctgt)
+        desctgt = "{0}".format(", ".join(rec["targets"])) if len(rec["targets"]) <= 3 else \
+                  (", ".join(rec["targets"][:3]) + " and {} more".format(len(rec["targets"][3:])))
+        idea['Description'] = "URL: '{0}', blacklisted by '{1}' was requested by {2}."\
+            .format(rec["source_url"], ', '.join(list(src_entries)), desctgt)
 
     if src_type:
         src_addr["Type"] = list(src_type)
     if tgt_type:
         tgt_addr["Type"] = list(tgt_type)
-    if botnet:
-        if rec.get("targets", []):
-            idea['Source'].append(tgt_addr)
-    else:
-        if rec.get("targets", []):
-            idea['Target'] = []
-            idea['Target'].append(tgt_addr)
-        if rec["tgt_sent_flows"]:
-            src_addr["InFlowCount"] = rec["tgt_sent_flows"]
-            src_addr["InByteCount"] = rec["tgt_sent_bytes"]
-            src_addr["InPacketsCount"] = rec["tgt_sent_packets"]
+    if rec.get("targets", []):
+        idea['Target'] = []
+        idea['Target'].append(tgt_addr)
+    if rec["tgt_sent_flows"]:
+        src_addr["InFlowCount"] = rec["tgt_sent_flows"]
+        src_addr["InByteCount"] = rec["tgt_sent_bytes"]
+        src_addr["InPacketsCount"] = rec["tgt_sent_packets"]
+
     idea['Source'].append(src_addr)
 
     if sources:
@@ -256,7 +211,7 @@ def convert_to_idea(rec, opts=None):
 # If conversion functionality needs to be parametrized, an ArgumentParser can be passed to Run function.
 # These parameters are then parsed from command line and passed as "opts" parameter of the conversion function.
 parser = argparse.ArgumentParser()
-parser.add_argument('--blacklist-config', help="Set path to bld_userConfigFile.xml of ipblacklistfilter. Default: /etc/nemea/ipblacklistfilter/bld_userConfigFile.xml", default="/etc/nemea/ipblacklistfilter/bld_userConfigFile.xml")
+parser.add_argument('--blacklist-config', help="Set path to bl_downloader_config.xml of urlblacklistfilter. Default: /usr/local/etc/blacklistfilter/bl_downloader_config.xml ", default="/usr/local/etc/blacklistfilter/bl_downloader_config.xml ")
 
 # Run the module
 if __name__ == "__main__":
