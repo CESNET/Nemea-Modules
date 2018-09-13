@@ -59,6 +59,17 @@ def load_config(config):
         bls[bl_id] = {"name": bl_name, "type": bl_type, "source": bl_source}
     return bls
 
+def ip_list2description(iplist):
+    if type(iplist) == list:
+        if len(iplist) <= 2:
+            return ", ".join(iplist)
+        else:
+            return "{0}, {1}, and {2} more".format(iplist[0], iplist[1], len(iplist) - 2)
+    elif type(iplist) == str:
+        return iplist
+    else:
+        raise TypeException("ip_list2description() expects list or str argument.")
+
 # Main conversion function
 def convert_to_idea(rec, opts=None):
     """
@@ -162,6 +173,7 @@ def convert_to_idea(rec, opts=None):
         'Node': [{
             'Name': 'undefined',
             'SW': [ 'Nemea', 'ipblacklistfilter' ],
+            'AggrWin': opts.aggrwin,
             'Type': [ 'Flow', 'Blacklist' ]
         }],
     }
@@ -200,7 +212,6 @@ def convert_to_idea(rec, opts=None):
         ipb = max(ips)
 
     for bit in bl_conv:
-
         if bit & message_bl_sum:
             cur_bl = bl_conv[bit]
         else:
@@ -241,8 +252,28 @@ def convert_to_idea(rec, opts=None):
                 src_bl_map[str(ipb)].add(cur_bl["name"])
         sources.add(cur_bl["source"])
 
-    for ip in ips:
-        setAddr(src_addr, ip)
+    if oneway:
+        for ip in ips:
+            setAddr(src_addr, ip)
+    else:
+        ipa = ips[0]
+        ipb = ips[1]
+        setAddr(src_addr, ipa)
+        setAddr(tgt_addr, ipb)
+        if ipa < ipb:
+            src_addr["InFlowCount"] = rec.get("ipa_sent_flows", 0)
+            src_addr["InByteCount"] = rec.get("ipa_sent_bytes", 0)
+            src_addr["InPacketsCount"] = rec.get("ipa_sent_packets", 0)
+            src_addr["OutFlowCount"] = rec.get("ipb_sent_flows", 0)
+            src_addr["OutByteCount"] = rec.get("ipb_sent_bytes", 0)
+            src_addr["OutPacketsCount"] = rec.get("ipb_sent_packets", 0)
+        else:
+            src_addr["InFlowCount"] = rec.get("ipb_sent_flows", 0)
+            src_addr["InByteCount"] = rec.get("ipb_sent_bytes", 0)
+            src_addr["InPacketsCount"] = rec.get("ipb_sent_packets", 0)
+            src_addr["OutFlowCount"] = rec.get("ipa_sent_flows", 0)
+            src_addr["OutByteCount"] = rec.get("ipa_sent_bytes", 0)
+            src_addr["OutPacketsCount"] = rec.get("ipa_sent_packets", 0)
 
     if not category:
         # No threshold reached
@@ -260,8 +291,7 @@ def convert_to_idea(rec, opts=None):
         descsrc = "{0}".format(", ".join(rec["sources"]))
 
     if rec.get("targets", []):
-        desctgt = "{0}".format(", ".join(rec["targets"]))
-        idea['Description'] = "{0} communicated with {1}.".format(descsrc, desctgt)
+        idea['Description'] = "{0} communicated with {1}.".format(descsrc, ip_list2description(rec["targets"]))
     else:
         idea['Description'] = "Observed communication of {0}.".format(descsrc)
 
@@ -270,20 +300,22 @@ def convert_to_idea(rec, opts=None):
     if tgt_type:
         tgt_addr["Type"] = list(tgt_type)
     if botnet:
-        if rec.get("targets", []):
+        if rec.get("targets", []) or not oneway:
             idea['Source'].append(tgt_addr)
     else:
-        if rec.get("targets", []):
+        if rec.get("targets", []) or oneway:
             idea['Target'] = []
             idea['Target'].append(tgt_addr)
-        if rec["src_sent_flows"]:
-            src_addr["OutFlowCount"] = rec["src_sent_flows"]
-            src_addr["OutByteCount"] = rec["src_sent_bytes"]
-            src_addr["OutPacketsCount"] = rec["src_sent_packets"]
-        if rec["tgt_sent_flows"]:
-            src_addr["InFlowCount"] = rec["tgt_sent_flows"]
-            src_addr["InByteCount"] = rec["tgt_sent_bytes"]
-            src_addr["InPacketsCount"] = rec["tgt_sent_packets"]
+            # tgt_addr was used for 2nd Source
+        elif not oneway:
+            idea['Source'].append(tgt_addr)
+
+        src_addr["OutFlowCount"] = rec.get("src_sent_flows", 0)
+        src_addr["OutByteCount"] = rec.get("src_sent_bytes", 0)
+        src_addr["OutPacketsCount"] = rec.get("src_sent_packets", 0)
+        src_addr["InFlowCount"] = rec.get("tgt_sent_flows", 0)
+        src_addr["InByteCount"] = rec.get("tgt_sent_bytes", 0)
+        src_addr["InPacketsCount"] = rec.get("tgt_sent_packets", 0)
     idea['Source'].append(src_addr)
 
     if sources:
@@ -295,6 +327,8 @@ def convert_to_idea(rec, opts=None):
 # These parameters are then parsed from command line and passed as "opts" parameter of the conversion function.
 parser = argparse.ArgumentParser()
 parser.add_argument('--blacklist-config', help="Set path to bld_userConfigFile.xml of ipblacklistfilter. Default: /etc/nemea/ipblacklistfilter/bld_userConfigFile.xml", default="/etc/nemea/ipblacklistfilter/bld_userConfigFile.xml")
+parser.add_argument('--aggrwin', metavar="HH:MM:SS", default="00:05:00", type=str,
+            help='Aggregation window length (AggrWin field of IDEA), default="00:05:00"')
 
 # Run the module
 if __name__ == "__main__":
