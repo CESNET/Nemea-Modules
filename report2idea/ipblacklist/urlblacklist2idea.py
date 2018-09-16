@@ -74,6 +74,7 @@ def minutes_to_aggr_win(minutes):
 
     return days.split(' ')[0] + "D" + time.strip()
 
+
 # Main conversion function
 def convert_to_idea(rec, opts=None):
     """
@@ -82,7 +83,7 @@ def convert_to_idea(rec, opts=None):
     rec - Record received on TRAP input interface (the report to convert).
           Expected format is FMT_JSON and urlblacklist specifier.
           The example input data are as follows:
-              {
+                {
                   "source_url": "avatars.mds.yandex.net",
                   "source_ports": [
                     443
@@ -100,8 +101,30 @@ def convert_to_idea(rec, opts=None):
                   "tgt_sent_packets": 25,
                   "blacklist_bmp": 8,
                   "referer": "",
-                  "agg_win_minutes": 5
-               }
+                  "agg_win_minutes": 5,
+                  "is_only_fqdn": true
+                }
+
+                {
+                    "source_url": "adamfoparadio.fr/PayPal/myaccount/card.php"
+                    "is_only_fqdn": false,
+                    "protocol": 6,
+                    "source_ports": [
+                        80
+                    ],
+                    "tgt_sent_bytes": 365,
+                    "agg_win_minutes": 5,
+                    "tgt_sent_packets": 6,
+                    "ts_last": 1537128274.763,
+                    "referer": "",
+                    "blacklist_bmp": 4,
+                    "tgt_sent_flows": 1,
+                    "source_ip": "162.213.255.66",
+                    "ts_first": 1537128273.047,
+                    "targets": [
+                        "192.168.1.107"
+                    ],
+                }
 
     opts - options parsed from command line (as returned by argparse.ArgumentParser)
 
@@ -136,11 +159,8 @@ def convert_to_idea(rec, opts=None):
 
     category = set()
 
-    export = False
-    tor = False
     src_addr = { "Proto": [ protocol ] }
     src_entries = set()
-    src_bl_map = dict()
     src_type = set()
     tgt_addr = { "Proto": [ protocol ] }
     tgt_type = set()
@@ -151,6 +171,13 @@ def convert_to_idea(rec, opts=None):
 
     if rec["protocol"] in [6, 17] and rec["source_ports"]:
         src_addr["Port"] = rec["source_ports"]
+
+    if rec["is_only_fqdn"]:
+        src_addr["Hostname"] = rec["source_url"]
+    else:
+        src_addr["URL"] = rec["source_url"]
+
+    src_type.add("OriginBlacklist")
 
     blacklist_bmp = rec.get("blacklist_bmp", 0)
 
@@ -164,11 +191,16 @@ def convert_to_idea(rec, opts=None):
         curbltype = cur_bl["type"].lower()
         if curbltype == "malware":
             category.add("Malware" )
-            sources.add(cur_bl["source"])
         elif curbltype == "phishing":
-            category.add( "Fraud.Phishing" )
+            category.add("Fraud.Phishing")
         elif curbltype == "booters":
-            category.add( "Fraud" )
+            category.add("Fraud")
+            src_type.add("Booter")
+        elif curbltype == "botnet":
+            category.add("Intrusion.Botnet")
+            src_type.add("Botnet")
+            src_type.add("CC")
+            tgt_type.add("Botnet")
 
         src_entries.add(cur_bl["name"])
         sources.add(cur_bl["source"])
@@ -185,17 +217,15 @@ def convert_to_idea(rec, opts=None):
 
     if rec.get("targets", []):
         desctgt = "{0}".format(", ".join(rec["targets"])) if len(rec["targets"]) <= 3 else \
-                  (", ".join(rec["targets"][:3]) + " and {} more".format(len(rec["targets"][3:])))
-        idea['Description'] = "URL: '{0}', blacklisted by '{1}' was requested by {2}."\
+            (", ".join(rec["targets"][:3]) + " and {} more".format(len(rec["targets"][3:])))
+
+        idea['Description'] = "URL: '{0}' (listed: {1}) was requested by {2}." \
             .format(rec["source_url"], ', '.join(list(src_entries)), desctgt)
 
     if src_type:
         src_addr["Type"] = list(src_type)
     if tgt_type:
         tgt_addr["Type"] = list(tgt_type)
-    if rec.get("targets", []):
-        idea['Target'] = []
-        idea['Target'].append(tgt_addr)
     if rec["tgt_sent_flows"]:
         src_addr["InFlowCount"] = rec["tgt_sent_flows"]
         src_addr["InByteCount"] = rec["tgt_sent_bytes"]
@@ -203,8 +233,13 @@ def convert_to_idea(rec, opts=None):
 
     idea['Source'].append(src_addr)
 
+    # Add targets to Source (of trouble), since we want to send the alert to it
+    if rec.get("targets", []):
+        idea['Source'].append(tgt_addr)
+
     if sources:
         idea['Ref'] = list(sources)
+
     return idea
 
 
