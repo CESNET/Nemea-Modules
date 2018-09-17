@@ -159,13 +159,14 @@ void *pthread_entry_upload(void *attr)
    struct bloom *bloom_new;
    struct bloom *bloom_send;
    CURL *curl = NULL;
-   int error = 0;
    char *url = NULL;
    uint64_t timestamp_from, timestamp_to;
 
    curl_init_handle(&curl);
 
    while (!stop) {
+      int curl_error = 0, asprintf_error = 0;
+
       // This is the actuall "sleeping" (gets woken up on module stop)
       pthread_mutex_lock(&MUTEX_TIMER_STOP);
       clock_gettime(CLOCK_REALTIME, &ts);
@@ -187,16 +188,16 @@ void *pthread_entry_upload(void *attr)
       timestamp_to = ts.tv_sec;
 
       // Compose endpoint url
-      error = asprintf(&url, "%s/%ld/%ld/", AGGREGATOR_SERVICE, timestamp_from, timestamp_to);
-      if (error < 0) {
-         fprintf(stderr, "Error(%d): memory allocation failed\n", error);
+      asprintf_error = asprintf(&url, "%s/%ld/%ld/", AGGREGATOR_SERVICE, timestamp_from, timestamp_to);
+      if (asprintf_error < 0) {
+         fprintf(stderr, "Error(%d): memory allocation failed\n", asprintf_error);
          exit(1);
       }
 
       // Send to the service
-      error = curl_send_bloom(curl, url, bloom_send);
-      if (error) {
-         fprintf(stderr, "Error(%d): sending filter\n", error);
+      curl_error = curl_send_bloom(curl, url, bloom_send);
+      if (curl_error) {
+         fprintf(stderr, "Error(%d): sending filter\n", curl_error);
       }
 
       bloom_free(bloom_send);
