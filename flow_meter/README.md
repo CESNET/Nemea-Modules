@@ -93,13 +93,13 @@ List of unirec fields exported together with basic flow fields on interface by H
 
 | Unirec field        | Type   | Description                 |
 |:-------------------:|:------:|:---------------------------:|
-| HTTP_METHOD         | string | HTTP request method         |
-| HTTP_HOST           | string | HTTP request host           |
-| HTTP_URL            | string | HTTP request url            |
-| HTTP_USER_AGENT     | string | HTTP request user agent     |
-| HTTP_REFERER        | string | HTTP request referer        |
-| HTTP_RESPONSE_CODE  | uint16 | HTTP response code          |
-| HTTP_CONTENT_TYPE   | string | HTTP response content type  |
+| HTTP_REQUEST_METHOD          | string | HTTP request method         |
+| HTTP_REQUEST_HOST            | string | HTTP request host           |
+| HTTP_REQUEST_URL             | string | HTTP request url            |
+| HTTP_REQUEST_AGENT           | string | HTTP request user agent     |
+| HTTP_REQUEST_REFERER         | string | HTTP request referer        |
+| HTTP_RESPONSE_STATUS_CODE    | uint16 | HTTP response code          |
+| HTTP_RESPONSE_CONTENT_TYPE   | string | HTTP response content type  |
 
 ### HTTPS
 List of unirec fields exported together with basic flow fields on interface by HTTPS plugin.
