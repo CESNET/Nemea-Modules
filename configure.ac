@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-modules], [2.7.1], [nemea@cesnet.cz])
+AC_INIT([nemea-modules], [2.8.0], [nemea@cesnet.cz])
 AC_CONFIG_SRCDIR([flowcounter/flowcounter.c])
 AC_CONFIG_HEADERS([config.h])
-RELEASE=2
+RELEASE=1
 AC_SUBST(RELEASE)
 USERNAME=`git config --get user.name`
 USERMAIL=`git config --get user.email`

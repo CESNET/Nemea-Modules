@@ -1,3 +1,22 @@
+2018-09-18 (Tomas Cejka): blacklist2idea: add url blacklist reports, improved ip blacklist reports  (#93)
+2018-09-17 (Filip Křesťan): blooming_history: maintenance variable reuse (#90)
+2018-09-17 (Filip Šuster): [flow_meter] Fix exported HTTP field names (#91)
+2018-09-11 (Tomas Jansky): blooming_history: fixed failing repobuild due to missing linker dependencies
+2018-09-03 (Tomas Cejka): agg: readme: fixed typo + updated link to web
+2018-08-31 (Filip Křesťan): blooming_history: Use new API endpoint for bloom filter upload (#87)
+2018-08-31 (Vaclav Bartos): urfilter: fixed IPv6 prefix parsing
+2018-08-31 (Tomas Cejka): fixup! urfilter: FEATURE subnets in IP comparison
+2018-08-31 (Tomas Cejka): urfilter: subnets: updated README
+2018-08-31 (Tomas Cejka): urfilter: FEATURE subnets in IP comparison
+2018-08-31 (Tomas Cejka): urfilter: BUGFIX stop on parsing error (syntax error)
+2018-08-31 (Tomas Cejka): urfilter: cleanup - useless comment and coding style
+2018-08-23 (Tomas Jansky): natpair: buildfix - removed debugging fragment
+2018-08-23 (Tomas Jansky): natpair: fixed bug when the main thread ended prematurely
+2018-08-23 (Tomas Jansky): natpair: final adjustements in documentation
+2018-08-23 (Tomas Jansky): natpair: removed trailing whitespaces
+2018-08-23 (Tomas Jansky): natpair: added documentation
+2018-08-14 (Michal Slabihoudek): Hotfix: Using of incorrect ur_template.
+
 2018-08-03 (Tomas Cejka): rpm: fixed dependency on libcurl-devel
 2018-08-03 (Filip Křesťan): New module Blooming history (#83)
 

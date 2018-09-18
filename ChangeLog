@@ -1,3 +1,23 @@
+2018-09-18 nemea-modules-2.8.0
+	* blacklist2idea:
+		Change format that is expected by ipblacklist2idea.py
+		Improved content of IP blacklist alerts
+		Add urlblacklist2idea.py module to convert output of URL blacklist filter into alerts
+	* blooming_history:
+		Use new API endpoint for bloom filter upload (#87)
+		Maintenance of source codes variable reuse (#90)
+	* agg:
+		Bugfixes
+		Updated doc
+	* unirecfilter:
+		Add subnets feature to unirecfilter.
+		Fix stopping the module on parsing/syntax error in unirecfilter.
+	* natpair:
+		Documentation
+		Bugfixes
+	* flow_meter:
+		Change HTTP template: compatibility with CESNET/FlowMon settings
+
 2018-08-03 nemea-modules-2.7.1
 	* Add module blooming_history.
 2018-07-30 nemea-modules-2.7.0
