@@ -157,7 +157,7 @@ def convert_to_idea(rec, opts=None):
     if rec["protocol"] in proto_conv:
         protocol = proto_conv[rec["protocol"]]
     time_first = getIDEAtime(pytrap.UnirecTime(rec["ts_first"]))
-    time_last = getIDEAtime(pytrap.UnirecTime(rec["ts_first"]))
+    time_last = getIDEAtime(pytrap.UnirecTime(rec["ts_last"]))
     idea = {
         "Format": "IDEA0",
         "ID": getRandomId(),
