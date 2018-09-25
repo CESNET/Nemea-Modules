@@ -236,6 +236,8 @@ def convert_to_idea(rec, opts=None):
             category.add("Abusive.Spam")
         elif curbltype == "ransomware":
             category.add("Malware.Ransomware")
+        elif curbltype == "mining":
+            category.add("Suspicious.Miner")
 
         if not tor:
             src_entries.add(cur_bl["name"])
