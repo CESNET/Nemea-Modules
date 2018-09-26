@@ -17,9 +17,9 @@ REQ_FORMAT = "aggregated_ipblacklist"
 bl_conv = {}
 
 proto_conv = {
-    1 : 'icmp',
-    6 : 'tcp',
-    17 : 'udp',
+    1: 'icmp',
+    6: 'tcp',
+    17: 'udp',
 }
 
 
@@ -34,8 +34,8 @@ def load_config(config):
     bls = {}
     with open(config, "r") as f:
         tree = xml.parse(f)
-    rootElement = tree.find(".//array[@type='IP']")
-    blacklists = list(rootElement)
+    root_element = tree.find(".//array[@type='IP']")
+    blacklists = list(root_element)
 
     for struct in blacklists:
         elems = list(struct)
@@ -59,6 +59,7 @@ def load_config(config):
         bls[bl_id] = {"name": bl_name, "type": bl_type, "source": bl_source}
     return bls
 
+
 def ip_list2description(iplist):
     if type(iplist) == list:
         if len(iplist) <= 2:
@@ -68,7 +69,8 @@ def ip_list2description(iplist):
     elif type(iplist) == str:
         return iplist
     else:
-        raise TypeException("ip_list2description() expects list or str argument.")
+        raise TypeError("ip_list2description() expects list or str argument.")
+
 
 # Main conversion function
 def convert_to_idea(rec, opts=None):
@@ -147,8 +149,6 @@ def convert_to_idea(rec, opts=None):
     Return report in IDEA format (as Python dict). If None is returned, the alert is skipped.
     """
     global bl_conv
-    #import pdb
-    #pdb.set_trace()
 
     if not bl_conv:
         bl_conv = load_config(opts.blacklist_config)
@@ -161,7 +161,7 @@ def convert_to_idea(rec, opts=None):
     idea = {
         "Format": "IDEA0",
         "ID": getRandomId(),
-        "CreateTime": getIDEAtime(), # Set current time
+        "CreateTime": getIDEAtime(),
         "EventTime": time_first,
         "DetectTime": time_last,
         'CeaseTime': time_last,
@@ -172,21 +172,19 @@ def convert_to_idea(rec, opts=None):
         "Source": [],
         'Node': [{
             'Name': 'undefined',
-            'SW': [ 'Nemea', 'ipblacklistfilter' ],
+            'SW': ['Nemea', 'ipblacklistfilter'],
             'AggrWin': opts.aggrwin,
-            'Type': [ 'Flow', 'Blacklist' ]
+            'Type': ['Flow', 'Blacklist']
         }],
     }
 
     category = set()
 
-    export = False
-    tor = False
-    src_addr = { "Proto": [ protocol ] }
+    src_addr = {"Proto": [protocol]}
     src_entries = set()
     src_bl_map = dict()
     src_type = set()
-    tgt_addr = { "Proto": [ protocol ] }
+    tgt_addr = {"Proto": [protocol]}
     tgt_type = set()
     sources = set()
 
@@ -218,26 +216,26 @@ def convert_to_idea(rec, opts=None):
             # this bit is not a blacklist
             continue
 
-        cur_bl_name = cur_bl["name"].lower()
-
         tor = False
         curbltype = cur_bl["type"].lower()
         if curbltype == "tor":
             tor = True
-            category.add( "Suspicious.TOR" )
+            category.add("Suspicious.TOR")
             src_type.add("TOR")
             src_entries.add("TOR exit node")
             sources.add(cur_bl["source"])
         elif curbltype == "botnet":
-            category.add( "Intrusion.Botnet" )
+            category.add("Intrusion.Botnet")
             src_type.add("Botnet")
             src_type.add("CC")
             tgt_type.add("Botnet")
             botnet = True
         elif curbltype == "spam":
-            category.add( "Abusive.Spam" )
+            category.add("Abusive.Spam")
         elif curbltype == "ransomware":
-            category.add( "Malware.Ransomware" )
+            category.add("Malware.Ransomware")
+        elif curbltype == "mining":
+            category.add("Suspicious.Miner")
 
         if not tor:
             src_entries.add(cur_bl["name"])
@@ -279,11 +277,8 @@ def convert_to_idea(rec, opts=None):
         # No threshold reached
         return None
     idea["Category"] = list(category)
-    note = ""
     if src_entries and oneway:
-
         idea["Note"] = 'IP {0} was found on blacklist(s): {1}.'.format(", ".join(rec["sources"]), ", ".join(list(src_entries)))
-
         descsrc = "{0} (listed: {1})".format(", ".join(rec["sources"]), ", ".join(list(src_entries)))
     elif not oneway:
         descsrc = ", ".join(["{0} (listed: {1})".format(i, ", ".join(src_bl_map[i])) for i in src_bl_map])
