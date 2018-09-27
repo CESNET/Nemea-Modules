@@ -87,15 +87,21 @@ int urfilter_compile(urfilter_t *unirec_filter)
 
 int urfilter_match(urfilter_t *unirec_filter, const ur_template_t *template, const void *record)
 {
-   if (!unirec_filter->tree && unirec_filter->filter) {
-      if (urfilter_compile(unirec_filter) == 0) {
+   if (!unirec_filter->tree) {
+      if (unirec_filter->filter) {
+         if (urfilter_compile(unirec_filter) != URFILTER_TRUE) {
+            printf("[URFilter] Syntax error in filter: %s.\n", unirec_filter->filter);
+            return URFILTER_ERROR;
+         }
+      } else {
+         printf("[URFilter] Missing filter.\n");
          return URFILTER_ERROR;
       }
    }
    
    // empty filter means always TRUE
    if (!unirec_filter->filter) {
-      return 1;
+      return URFILTER_TRUE;
    }
    
    if (unirec_filter->tree) {
@@ -103,7 +109,7 @@ int urfilter_match(urfilter_t *unirec_filter, const ur_template_t *template, con
    }
 
    printf("[URFilter] Trying to match UniRec to uninitalized filter. Returning FALSE.\n");
-   return 0;
+   return URFILTER_FALSE;
 }
 
 void urfilter_destroy(urfilter_t *object)

@@ -9,7 +9,7 @@ MODULE_NAME = "ddos_detector2idea"
 MODULE_DESC = "Converts output of ddos_detector module to IDEA."
 
 REQ_TYPE = pytrap.FMT_UNIREC
-REQ_FORMAT = "ipaddr DST_IP,uint64 BYTES,time TIME_FIRST,time TIME_LAST"
+REQ_FORMAT = "ipaddr DST_IP,uint64 BYTES,time TIME_FIRST,time TIME_LAST,uint64 EVENT_ID"
 
 # Main conversion function
 def convert_to_idea(rec, opts=None):
@@ -19,7 +19,7 @@ def convert_to_idea(rec, opts=None):
     idea = {
         "Format": "IDEA0",
         "ID": getRandomId(),
-        "AltNames": [rec.EVENT_ID],
+        "AltNames": [str(rec.EVENT_ID)],
         "CreateTime": getIDEAtime(), # Set current time
         "EventTime": getIDEAtime(rec.TIME_FIRST),
         "DetectTime": endTime,

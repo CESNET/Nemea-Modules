@@ -54,10 +54,10 @@ UniRec fields required:
 Flows sent to the output interface are in UniRec format. Each record contains the following UniRec fields:
 
  - LAN\_IP (ipaddr): IP address of the client in LAN
- - RTR\_IP (ipaddr): IP address of the WAN interface of the router performing NAT proccess
+ - RTR\_IP (ipaddr): IP address of the WAN interface of the router performing NAT process
  - WAN\_IP (ipaddr): IP address of the host in WAN
  - LAN\_PORT (uint16): port of the client in LAN
- - RTR\_PORT (uint16): port on the WAN interface of the router performing NAT proccess
+ - RTR\_PORT (uint16): port on the WAN interface of the router performing NAT process
  - WAN\_PORT (uint16): port of the host in LAN
  - TIME\_FIRST (time): time of the first packet in the flow
  - TIME\_LAST (time): time of the last packet in the flow
@@ -82,7 +82,7 @@ Additional parameters:
 
     -r <string> IPv4 address of WAN interface of the router which performs the NAT process.
 
-    -s <uint32>	Number of elements in the flow cache which triggers chache cleaning. (default: 2000)
+    -s <uint32>	Number of elements in the flow cache which triggers cache cleaning. (default: 2000)
 
 Parameter **-r** must always be specified.
 

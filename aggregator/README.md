@@ -4,7 +4,7 @@
 ## Description
 This module serves for UniRec records aggregation processing. The module can aggregate UniRec records based on user-specified keys, aggregation functions and time interval. The input of this module is a (infinit) sequence of UniRec records. The output of this module is a sequence of aggregated UniRec records according to user settings.
 
-"User can specify aggregation functions by options listed [below](./README.md#module-specific-parameters), all options may be used repeatedly. **URFIELD** stands for name of the UniRec field.
+User can specify aggregation functions by options listed [below](./README.md#module-specific-parameters), all options may be used repeatedly. **URFIELD** stands for name of the UniRec field.
 
 Module can work with 3 different timeout types (Active, Passive, Global) or their combination (Mixed = Active,Passive).
 
@@ -36,4 +36,4 @@ Module receives UniRec and sends UniRec containing the fields which take part in
 - `-vv`              Be more verbose.
 - `-vvv`             Be even more verbose.
 
-For more informations and examples visit the http://nemea.liberouter.org/aggregation.
+For more informations and examples visit the http://nemea.liberouter.org/doc/aggregation.

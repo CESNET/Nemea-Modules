@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-modules], [2.6.4], [nemea@cesnet.cz])
+AC_INIT([nemea-modules], [2.8.1], [nemea@cesnet.cz])
 AC_CONFIG_SRCDIR([flowcounter/flowcounter.c])
 AC_CONFIG_HEADERS([config.h])
-RELEASE=2
+RELEASE=1
 AC_SUBST(RELEASE)
 USERNAME=`git config --get user.name`
 USERMAIL=`git config --get user.email`
@@ -102,6 +102,22 @@ if test x$have_openssl = xyes; then
   RPM_BUILDREQ+=" openssl-devel"
 else
   AC_DEFINE([HAVE_OPENSSL], [0], [Define to 1 if the openssl is available])
+fi
+
+AC_ARG_WITH([libcurl],
+        [AS_HELP_STRING([--without-libcurl], [Force to disable libcurl])],
+        [if test x$withval = xyes; then
+        PKG_CHECK_MODULES([libcurl], [libcurl], [have_libcurl="yes"], [have_libcurl="no"])
+        fi],
+        [PKG_CHECK_MODULES([libcurl], [libcurl], [have_libcurl="yes"], [have_libcurl="no"])])
+
+AM_CONDITIONAL([HAVE_LIBCURL], [test x$have_libcurl = xyes])
+if test x$have_libcurl = xyes; then
+  AC_DEFINE([HAVE_LIBCURL], [1], [Define to 1 if the libcurl is available])
+  RPM_REQUIRES+=" libcurl"
+  RPM_BUILDREQ+=" libcurl-devel"
+else
+  AC_DEFINE([HAVE_LIBCURL], [0], [Define to 1 if the libcurl is available])
 fi
 
 AC_ARG_WITH([flowcachesize],
@@ -202,6 +218,7 @@ AM_CONDITIONAL(MAKE_DEB, test x$DEBUILD != x)
 AC_CONFIG_FILES([Makefile
                  aggregator/Makefile
                  anonymizer/Makefile
+                 blooming_history/Makefile
                  debug_sender/Makefile
                  device_classifier/Makefile
                  device_classifier/libsvm/tools/train.sh

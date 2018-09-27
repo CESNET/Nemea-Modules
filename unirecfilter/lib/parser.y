@@ -11,6 +11,7 @@
     struct ast *newExpressionFP(char *column, char *cmp, double number);
     struct ast *newExpressionDateTime(char *column, char *cmp, char *datetime);
     struct ast *newIP(char *column, char *cmp, char *ip);
+    struct ast *newIPNET(char *column, char *cmp, char *ipAddr);
     struct ast *newString(char *column, char *cmp, char *s);
     struct ast *newProtocol(char *cmp, char *data);
     struct ast *newBrack(struct ast *b);
@@ -39,6 +40,7 @@
 %token <string> IP
 %token <string> DATETIME
 %token <string> STRING
+%token <string> NET
 %token AND OR
 %token LEFT RIGHT PROTOCOL
 %token END
@@ -72,7 +74,9 @@ exp:
     | PROTOCOL EQ PROTO_NAME { $$ = (struct ast *) newProtocol($2, $3); }
     | PROTOCOL EQ STRING { $$ = (struct ast *) newProtocol($2, $3); }
     | COLUMN EQ IP { $$ = (struct ast *) newIP($1, $2, $3); }
+    | COLUMN EQ NET { $$ = (struct ast *) newIPNET($1, $2, $3); }
     | COLUMN CMP IP { $$ = (struct ast *) newIP($1, $2, $3); }
+    | COLUMN CMP NET { $$ = (struct ast *) newIPNET($1, $2, $3); }
     | COLUMN EQ STRING { $$ = (struct ast *) newString($1, $2, $3); }
     | COLUMN REGEX STRING { $$ = (struct ast *) newString($1, $2, $3); }
     | COLUMN EQ SIGNED { $$ = newExpression($1, $2, $3, 1); }

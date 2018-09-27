@@ -1,3 +1,45 @@
+2018-09-26 (Tomas Cejka): ddos_detector2idea: bugfix convert altname to str from int
+2018-09-26 (Filip Šuster): blacklist2idea: Add cryptominer category, code cleanup (#94)
+2018-09-19 (Tomas Cejka): rpm: add new (blacklistfilter) modules into package
+
+2018-09-18 (Tomas Cejka): blacklist2idea: add url blacklist reports, improved ip blacklist reports  (#93)
+2018-09-17 (Filip Křesťan): blooming_history: maintenance variable reuse (#90)
+2018-09-17 (Filip Šuster): [flow_meter] Fix exported HTTP field names (#91)
+2018-09-11 (Tomas Jansky): blooming_history: fixed failing repobuild due to missing linker dependencies
+2018-09-03 (Tomas Cejka): agg: readme: fixed typo + updated link to web
+2018-08-31 (Filip Křesťan): blooming_history: Use new API endpoint for bloom filter upload (#87)
+2018-08-31 (Vaclav Bartos): urfilter: fixed IPv6 prefix parsing
+2018-08-31 (Tomas Cejka): fixup! urfilter: FEATURE subnets in IP comparison
+2018-08-31 (Tomas Cejka): urfilter: subnets: updated README
+2018-08-31 (Tomas Cejka): urfilter: FEATURE subnets in IP comparison
+2018-08-31 (Tomas Cejka): urfilter: BUGFIX stop on parsing error (syntax error)
+2018-08-31 (Tomas Cejka): urfilter: cleanup - useless comment and coding style
+2018-08-23 (Tomas Jansky): natpair: buildfix - removed debugging fragment
+2018-08-23 (Tomas Jansky): natpair: fixed bug when the main thread ended prematurely
+2018-08-23 (Tomas Jansky): natpair: final adjustements in documentation
+2018-08-23 (Tomas Jansky): natpair: removed trailing whitespaces
+2018-08-23 (Tomas Jansky): natpair: added documentation
+2018-08-14 (Michal Slabihoudek): Hotfix: Using of incorrect ur_template.
+
+2018-08-03 (Tomas Cejka): rpm: fixed dependency on libcurl-devel
+2018-08-03 (Filip Křesťan): New module Blooming history (#83)
+
+2018-07-27 (Jaroslav Hlavac): Documentation improvement, usage examples, checking return values in unirecfilter.c + Anonymizer.c bugfix (#82)
+2018-07-23 (tomasmax95): Add pdns_exporter module for exporting flow data to json for Passive DNS (#79)
+2018-07-23 (Dominik Soukup): Mux,Demux: libtrap api bugfix
+2018-07-23 (Dominik Soukup): Mux,Demux: libtrap api bugfix
+2018-07-23 (Tomas Jansky): scalar-agregator: added explaining comments
+2018-07-22 (Václav Bartoš): vportscan/haddrscan2idea: AggrWin can be set by parameter
+2018-07-19 (Tomas Jansky): unirecfilter: fixed possible pointer dereferencing and resource leak (coverity issues)
+2018-07-19 (Tomas Jansky): scalar_aggregator: code refactoring, fixed multiple memory leaks and possible segfaults (8 coverity issues)
+2018-07-19 (Tomas Jansky): proto_traffic: added error output if send() fails, removed unnecessary semicolons
+2018-07-19 (Tomas Jansky): ipv6stats: fixed possible uinitialized values of stats->end_of_window (reported by coverity)
+2018-07-19 (Tomas Jansky): merger: removed unnecessary semicolons
+2018-07-19 (Tomas Jansky): endiverter: removed unnecessary semicolons around certain macros (fixed logical dead code signalled from coverity -- semicolon after macro)
+2018-07-19 (Václav Bartoš): json_dump: Improved exception handling
+2018-07-19 (Václav Bartoš): json_dump: Automatic flushing after each record
+2018-07-19 (Tomas Cejka): python modules: add link to IFCSPEC doc in the help (-h)
+2018-07-19 (Tomas Cejka): python modules: enable basic help
 Nemea-2.0:
 	* added new modules (see ChangeLog for the list)
 	* replaced "script" by Supervisor to control and monitor Nemea
