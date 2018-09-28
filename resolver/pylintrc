@@ -1,0 +1,16 @@
+# -*- mode: conf; -*-
+
+[MASTER]
+ignore: .git
+
+[REPORTS]
+output-format: parseable
+reports: no
+
+[MESSAGES CONTROL]
+disable: locally-disabled, no-self-use, bad-continuation
+
+[DESIGN]
+max-statements: 200
+max-branches: 40
+max-locals: 30

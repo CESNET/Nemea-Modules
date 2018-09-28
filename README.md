@@ -27,6 +27,8 @@ functionality/purposes are:
   from detectors and store them into database (MongoDB), file or send
   them into Warden
 
+* [resolver](resolver): amend flow records with resolved fields
+
 * [merger](merger): module for joining multiple input streams of
   messages into one output stream of messages
 

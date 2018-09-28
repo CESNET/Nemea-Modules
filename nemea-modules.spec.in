@@ -1,3 +1,11 @@
+%if 0%{?el6}%{?el7}
+%global python3_pkgversion 34
+%endif
+
+%if x%{?python3_pkgversion} == x
+%global python3_pkgversion 3
+%endif
+
 Summary: Package with basic NEMEA modules
 Name: nemea-modules
 Version: @PACKAGE_VERSION@
@@ -14,6 +22,7 @@ Requires: libnf
 Requires: openssl
 Requires: libpcap
 Requires: libcurl
+Requires: python%{python3_pkgversion}-nemea-pytrap
 Provides: nemea-modules
 BuildRequires: gcc gcc-c++ make doxygen pkgconfig nemea-framework-devel bison flex
 BuildRequires: libpcap-devel openssl-devel libnf-devel bzip2-devel libcurl-devel
@@ -80,6 +89,7 @@ ldconfig
 %{_bindir}/nemea/nfwriter
 %{_bindir}/nemea/proto_traffic
 %{_bindir}/nemea/pdns_exporter.py
+%{_bindir}/nemea/resolver.py
 %{_bindir}/nemea/scalar_agg
 %{_bindir}/nemea/sipbf2idea.py
 %{_bindir}/nemea/svm-tools
