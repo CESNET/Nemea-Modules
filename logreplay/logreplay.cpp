@@ -90,8 +90,13 @@ int verbose;
 
 void trap_default_signal_handler(int signal)
 {
+   static int sig_counter = 0;
    if (signal == SIGTERM || signal == SIGINT) {
       stop = 1;
+      sig_counter++;
+      if (sig_counter > 1) {
+         trap_terminate();
+      }
    }
 }
 
