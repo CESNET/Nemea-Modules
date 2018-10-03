@@ -120,10 +120,25 @@ unsigned int max_num_records = 0; // Exit after this number of records is receiv
 char enabled_max_num_records = 0; // Limit of message is set when non-zero
 
 pthread_mutex_t mtx;
+pthread_t *threads;
 
 static FILE *file; // Output file
 
-TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
+void trap_default_signal_handler(int signal)
+{
+   static int sig_counter = 0;
+   if (signal == SIGTERM || signal == SIGINT) {
+      stop = 1;
+      trap_terminate();
+      if (sig_counter == 0) {
+         for (int i = 0; i < n_inputs; i++) {
+            pthread_kill(threads[i], SIGINT);
+         }
+      }
+
+      sig_counter++;
+   }
+}
 
 void *capture_thread(void *arg)
 {
@@ -568,7 +583,7 @@ Available types are: int8, int16, int32, int64, uint8, uint16, uint32, uint64, c
    // ***** Start a thread for each interface *****
 
    int *interfaces = (int *) malloc(n_inputs * sizeof(int));
-   pthread_t *threads = (pthread_t *) malloc(n_inputs * sizeof(pthread_t));
+   threads = (pthread_t *) malloc(n_inputs * sizeof(pthread_t));
    pthread_attr_t attr;
    pthread_attr_init(&attr);
    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);

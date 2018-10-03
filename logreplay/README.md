@@ -1,16 +1,22 @@
 # Logreplay module - README
 
 ## Description
-This module converts CSV format of data, from logger module to UniRec format and sends it to the output interface. Input CSV format is expected to have UniRec specifier on the first line (logger parameter -t).
+
+This module converts CSV format of data, from logger module to UniRec
+format and sends it to the output interface. Input CSV format is
+expected to have UniRec specifier on the first line (logger parameter
+-t).
 
 ## Interfaces
+
 - Input: 0
-- Output: 1 (UniRec; format depends on first line in CSV, which specifies types of stored fields)
+- Output: 1 (UniRec; format depends on first line in CSV, which
+  specifies types of stored fields)
 
 ## Parameters
 ### Module specific parameters
-- `-f FILE` File containing CSV data from logger module
-- `-c N` 	Quit after N records are recieved
+- `-f FILE` File containing CSV data from logger module.
+- `-c N` 	Quit after N records are sent.
 - `-n` 		Do not send "EOF message" at the end.
 
 ### Common TRAP parameters
