@@ -29,43 +29,82 @@ bl_config = None
 
 
 class Common(object):
-    def __init__(self, rec):
+    description_ip = "{0} (listed: {1}) communicated with {2}."
+    description_url = "URL '{0}' (listed: {1}) was requested by {2}."
+    note = "{0} '{1}' was found on blacklist: {2}"
+
+    def __init__(self, rec, bl):
+        self.rec = rec
+        self.bl = bl
         self.idea = {
-            "Category": rec["category"],
+            "Category": [bl["category"]],
             "Format": "IDEA0",
             "ID": getRandomId(),
             "CreateTime": getIDEAtime(),
             "EventTime": getIDEAtime(pytrap.UnirecTime(rec["ts_first"])),
             "DetectTime": getIDEAtime(pytrap.UnirecTime(rec["ts_last"])),
-            'CeaseTime': getIDEAtime(pytrap.UnirecTime(rec["ts_last"])),
-            # TODO: Are these cumulative counts needed?
-            "FlowCount": rec["src_sent_flows"] + rec["tgt_sent_flows"],
-            "PacketCount": rec["src_sent_packets"] + rec["tgt_sent_packets"],
-            "ByteCount": rec["src_sent_bytes"] + rec["tgt_sent_bytes"],
-            'Node': [{
-                'Name': 'undefined',
-                'SW': ['Nemea', 'blacklistfilter'],
-                'AggrWin': minutes_to_aggr_win(int(rec["agg_win_minutes"])),
-                'Type': ['Flow', 'Blacklist']
+            "CeaseTime": getIDEAtime(pytrap.UnirecTime(rec["ts_last"])),
+            "Node": [{
+                "Name": "undefined",
+                "SW": ["Nemea", "blacklistfilter"],
+                "AggrWin": minutes_to_aggr_win(int(rec["agg_win_minutes"])),
+                "Type": ["Flow", "Blacklist"]
             }],
+
+            "Ref": [bl["source"]]
         }
 
     def get_idea(self):
         return self.idea
 
+    def set_common_ip(self):
+        self.idea["Note"] = Common.note.format(self.rec["type"].upper(),
+                                               self.rec["source"],
+                                               self.bl["name"])
+
+        self.idea["Description"] = Common.description_ip.format(self.rec["source"],
+                                                                self.bl["name"],
+                                                                ip_list2description(self.rec["targets"]))
+
+        self.idea["FlowCount"] = self.rec["src_sent_flows"] + self.rec["tgt_sent_flows"]
+        self.idea["PacketCount"] = self.rec["src_sent_packets"] + self.rec["tgt_sent_packets"]
+        self.idea["ByteCount"] = self.rec["src_sent_bytes"] + self.rec["tgt_sent_bytes"]
+
+    def set_common_url(self):
+        self.idea["Note"] = Common.note.format(self.rec["type"].upper(),
+                                               self.rec["source_url"],
+                                               self.bl["name"])
+
+        self.idea["Description"] = Common.description_url.format(self.rec["source_url"],
+                                                                 self.bl["name"],
+                                                                 ip_list2description(self.rec["targets"]))
+
+        self.idea["FlowCount"] = self.rec["tgt_sent_flows"]
+        self.idea["PacketCount"] = self.rec["tgt_sent_packets"]
+        self.idea["ByteCount"] = self.rec["tgt_sent_bytes"]
 
 
-class Malware(Common):
-    def __init__(self, rec):
-        super(Malware, self).__init__(rec)
-        self.idea["co_jsem"] = 'Malware'
+class General(Common):
+    def __init__(self, rec, bl):
+        super(General, self).__init__(rec, bl)
+        if rec["type"] == "ip":
+            self.set_common_ip()
+        else:
+            self.set_common_url()
 
 
-class SuspiciousBooter(Common):
-    def __init__(self, rec):
-        super(SuspiciousBooter, self).__init__(rec)
-        self.idea["co_jsem"] = 'SuspiciousBooter'
 
+# class Malware(Common):
+#     def __init__(self, rec, bl):
+#         super(Malware, self).__init__(rec, bl)
+#
+#         self.idea["Note"] = Common.note.format('ABC', rec[''])
+#
+#
+# class SuspiciousBooter(Common):
+#     def __init__(self, rec, bl):
+#         super(SuspiciousBooter, self).__init__(rec, bl)
+#
 
 # ---------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------
@@ -73,14 +112,10 @@ class SuspiciousBooter(Common):
 
 
 def convert_to_idea(rec, opts=None):
-    try:
-        rec["is_only_fqdn"]
-        print('This is URL alert')
-        bl_type = 'url_dns'
-
-    except KeyError:
-        print('This is IP alert')
-        bl_type = 'ip'
+    if rec["type"] == "ip":
+        bl_type = "ip"
+    else:
+        bl_type = "url_dns"
 
     global bl_config
     if not bl_config:
@@ -91,11 +126,13 @@ def convert_to_idea(rec, opts=None):
     category_class = current_bl["category"].replace('.', '')
     module = __import__('__main__')
 
-    category_class = getattr(module, category_class)
+    try:
+        category_class = getattr(module, category_class)
+        category_instance = category_class(rec, current_bl)
+    except AttributeError:
+        category_instance = General(rec, current_bl)
 
-    category_instance = category_class(rec)
-
-    print(category_instance.get_idea())
+    return category_instance.get_idea()
 
 
 def load_config(config):
