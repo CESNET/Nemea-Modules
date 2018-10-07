@@ -28,7 +28,11 @@ bl_config = None
 # ---------------------------------------------------------------------------------------
 
 
-class Common(object):
+class IdeaTemplate(object):
+    """
+    Idea template class generating all common fields of an IDEA message
+    """
+
     description_ip = "{0} (listed: {1}) communicated with {2}."
     description_url = "URL '{0}' (listed: {1}) was requested by {2}."
     note = "{0} '{1}' was found on blacklist: {2}"
@@ -69,14 +73,14 @@ class Common(object):
     def get_idea(self):
         return self.idea
 
-    def set_common_ip(self):
-        self.idea["Note"] = Common.note.format(self.rec["type"].upper(),
-                                               self.rec["source"],
-                                               self.bl["name"])
+    def set_common_ip_fields(self):
+        self.idea["Note"] = IdeaTemplate.note.format(self.rec["type"].upper(),
+                                                     self.rec["source"],
+                                                     self.bl["name"])
 
-        self.idea["Description"] = Common.description_ip.format(self.rec["source"],
-                                                                self.bl["name"],
-                                                                ip_list2description(self.rec["targets"]))
+        self.idea["Description"] = IdeaTemplate.description_ip.format(self.rec["source"],
+                                                                      self.bl["name"],
+                                                                      ip_list2description(self.rec["targets"]))
 
         self.idea["FlowCount"] = self.rec["src_sent_flows"] + self.rec["tgt_sent_flows"]
         self.idea["PacketCount"] = self.rec["src_sent_packets"] + self.rec["tgt_sent_packets"]
@@ -100,14 +104,14 @@ class Common(object):
         self.idea["Source"].append(self.src_addr)
         self.idea["Source"].append(self.tgt_addr)
 
-    def set_common_url(self):
-        self.idea["Note"] = Common.note.format(self.rec["type"].upper(),
-                                               self.rec["source_url"],
-                                               self.bl["name"])
+    def set_common_url_fields(self):
+        self.idea["Note"] = IdeaTemplate.note.format(self.rec["type"].upper(),
+                                                     self.rec["source_url"],
+                                                     self.bl["name"])
 
-        self.idea["Description"] = Common.description_url.format(self.rec["source_url"],
-                                                                 self.bl["name"],
-                                                                 ip_list2description(self.rec["targets"]))
+        self.idea["Description"] = IdeaTemplate.description_url.format(self.rec["source_url"],
+                                                                       self.bl["name"],
+                                                                       ip_list2description(self.rec["targets"]))
 
         setAddr(self.src_addr, pytrap.UnirecIPAddr(self.rec["source_ip"]))
 
@@ -133,16 +137,20 @@ class Common(object):
         self.idea["Source"].append(self.tgt_addr)
 
 
-class General(Common):
+class GeneralAlert(IdeaTemplate):
+    """
+    Class representing a general IDEA message of any blacklist category (including IP and URL alerts),
+    specialized categories (e.g. Intrusion.Botnet) are supposed to inherit from this class and rewrite IDEA as needed
+    """
     def __init__(self, rec, bl):
-        super(General, self).__init__(rec, bl)
+        super(GeneralAlert, self).__init__(rec, bl)
         if rec["type"] == "ip":
-            self.set_common_ip()
+            self.set_common_ip_fields()
         else:
-            self.set_common_url()
+            self.set_common_url_fields()
 
 
-class IntrusionBotnet(General):
+class IntrusionBotnet(GeneralAlert):
     def __init__(self, rec, bl):
         super(IntrusionBotnet, self).__init__(rec, bl)
 
@@ -150,11 +158,11 @@ class IntrusionBotnet(General):
         self.tgt_addr["Type"] = ["Botnet"]
 
 
-class SuspiciousMiner(General):
+class SuspiciousMiner(GeneralAlert):
     def __init__(self, rec, bl):
         super(SuspiciousMiner, self).__init__(rec, bl)
 
-        self.src_addr["Type"] = ["Pool Server"]
+        self.src_addr["Type"] = ["PoolServer"]
         self.tgt_addr["Type"] = ["Miner"]
 
 
@@ -164,6 +172,21 @@ class SuspiciousMiner(General):
 
 
 def convert_to_idea(rec, opts=None):
+    """
+    Converts the aggregated (ip/url)blacklistfilter event(json) to the IDEA format.
+    It dynamically matches the blacklist category to alert classes (e.g. Intrusion.Botnet instantiates the class
+    IntrusionBotnet). If there is no specific match, GeneralAlert is created, it also dynamically distinguishes IP/URL
+    alerts.
+
+    Args:
+        rec: the record from ip/url blacklistfilter
+        opts: cmd options
+
+    Returns:
+        dict: idea
+    """
+
+    # Set blacklist type according to the detector who sent the alert
     if rec["type"] == "ip":
         bl_type = "ip"
     else:
@@ -171,29 +194,38 @@ def convert_to_idea(rec, opts=None):
 
     global bl_config
     if not bl_config:
-        bl_config = load_config(opts.blacklist_config)
+        bl_config = load_blacklists(opts.blacklist_config)
 
+    # Fetch the corresponding blacklist
     current_bl = [val for key, val in bl_config[bl_type].items() if key == rec["blacklist_bmp"]][0]
 
+    # Try to match category to class (e.g. Intrusion.Botnet -> IntrusionBotnet
     category_class = current_bl["category"].replace('.', '')
     module = __import__('__main__')
-
     try:
         category_class = getattr(module, category_class)
         category_instance = category_class(rec, current_bl)
     except AttributeError:
-        category_instance = General(rec, current_bl)
+        category_instance = GeneralAlert(rec, current_bl)
 
     return category_instance.get_idea()
 
 
-def load_config(config):
-    """Load `config` file of blacklistfilter module (bl_downloader_config.xml).
+def load_blacklists(config):
+    """
+    Load `config` file of blacklistfilter module (bl_downloader_config.xml).
     This file contains a list of blacklists, their names and URLs.
 
     load_config() returns dictionary, where the key is id (= 2**ID from file) and
     value is a dictionary of "name", "type", "source" and other parameters.
+
+    Args:
+        config: config file
+
+    Returns:
+        dict: blacklists
     """
+
     bls = {}
     with open(config, "r") as f:
         tree = xml.parse(f)
@@ -233,8 +265,17 @@ def load_config(config):
     return bls
 
 
-# Convert minutes to IDEA AggrWin format, e.g. 00:05:00 or 536D10:20:30
 def minutes_to_aggr_win(minutes):
+    """
+    Converts minutes to IDEA AggrWin format (e.g. 00:05:00 or 536D10:20:30)
+
+    Args:
+        minutes (int): minutes to convert
+
+    Returns:
+        str: converted string
+    """
+
     td = str(timedelta(minutes=minutes))
     if minutes < 600:
         return "0" + td
@@ -249,6 +290,16 @@ def minutes_to_aggr_win(minutes):
 
 
 def ip_list2description(iplist):
+    """
+    Converts long lists of target IPs to shorter description
+
+    Args:
+        iplist: list of target IP addresses
+
+    Returns:
+        str: description string suffix
+    """
+
     if type(iplist) == list:
         if len(iplist) <= 2:
             return ", ".join(iplist)
@@ -263,15 +314,16 @@ def ip_list2description(iplist):
 # If conversion functionality needs to be parametrized, an ArgumentParser can be passed to Run function.
 # These parameters are then parsed from command line and passed as "opts" parameter of the conversion function.
 parser = argparse.ArgumentParser()
-parser.add_argument('--blacklist-config', help="Set path to config file of blacklist downloader. Default: /etc/nemea/blacklistfilter/bl_downloader_config.xml", default="/etc/nemea/blacklistfilter/bl_downloader_config.xml")
+parser.add_argument('--blacklist-config', help="Set path to config file of blacklist downloader. Default: /etc/nemea/blacklistfilter/bl_downloader_config.xml",
+                    default="/etc/nemea/blacklistfilter/bl_downloader_config.xml")
 
 # Run the module
 if __name__ == "__main__":
     Run(
-        module_name = MODULE_NAME,
-        module_desc = MODULE_DESC,
-        req_type = REQ_TYPE,
-        req_format = REQ_FORMAT,
-        conv_func = convert_to_idea,
-        arg_parser = parser
+        module_name=MODULE_NAME,
+        module_desc=MODULE_DESC,
+        req_type=REQ_TYPE,
+        req_format=REQ_FORMAT,
+        conv_func=convert_to_idea,
+        arg_parser=parser
     )
