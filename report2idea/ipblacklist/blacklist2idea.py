@@ -166,6 +166,20 @@ class SuspiciousMiner(GeneralAlert):
         self.tgt_addr["Type"] = ["Miner"]
 
 
+class SuspiciousBooter(GeneralAlert):
+    def __init__(self, rec, bl):
+        super(SuspiciousBooter, self).__init__(rec, bl)
+
+        self.src_addr["Type"] = ["Booter"]
+
+
+class FraudPhishing(GeneralAlert):
+    def __init__(self, rec, bl):
+        super(FraudPhishing, self).__init__(rec, bl)
+
+        self.src_addr["Type"] = ["Phishing"]
+
+
 # ---------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------
@@ -197,7 +211,7 @@ def convert_to_idea(rec, opts=None):
         bl_config = load_blacklists(opts.blacklist_config)
 
     # Fetch the corresponding blacklist
-    current_bl = [val for key, val in bl_config[bl_type].items() if key == rec["blacklist_bmp"]][0]
+    current_bl = [val for key, val in bl_config[bl_type].items() if key == rec["blacklist_id"]][0]
 
     # Try to match category to class (e.g. Intrusion.Botnet -> IntrusionBotnet
     category_class = current_bl["category"].replace('.', '')
