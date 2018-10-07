@@ -36,6 +36,17 @@ class Common(object):
     def __init__(self, rec, bl):
         self.rec = rec
         self.bl = bl
+        self.protocol = ""
+
+        if rec["protocol"] in proto_conv:
+            self.protocol = proto_conv[rec["protocol"]]
+            self.tgt_addr = {"Proto": [self.protocol]}
+            self.src_addr = {"Proto": [self.protocol]}
+        else:
+            # Add protocol only if it's known
+            self.tgt_addr = {}
+            self.src_addr = {}
+
         self.idea = {
             "Category": [bl["category"]],
             "Format": "IDEA0",
@@ -44,6 +55,7 @@ class Common(object):
             "EventTime": getIDEAtime(pytrap.UnirecTime(rec["ts_first"])),
             "DetectTime": getIDEAtime(pytrap.UnirecTime(rec["ts_last"])),
             "CeaseTime": getIDEAtime(pytrap.UnirecTime(rec["ts_last"])),
+            "Source": [],
             "Node": [{
                 "Name": "undefined",
                 "SW": ["Nemea", "blacklistfilter"],
@@ -70,6 +82,24 @@ class Common(object):
         self.idea["PacketCount"] = self.rec["src_sent_packets"] + self.rec["tgt_sent_packets"]
         self.idea["ByteCount"] = self.rec["src_sent_bytes"] + self.rec["tgt_sent_bytes"]
 
+        setAddr(self.src_addr, pytrap.UnirecIPAddr(self.rec["source"]))
+
+        for ip in self.rec["targets"]:
+            setAddr(self.tgt_addr, pytrap.UnirecIPAddr(ip))
+
+        if self.rec["protocol"] in [6, 17] and self.rec["source_ports"]:
+            self.src_addr["Port"] = self.rec["source_ports"]
+
+        self.src_addr["OutFlowCount"] = self.rec["src_sent_flows"]
+        self.src_addr["OutByteCount"] = self.rec["src_sent_bytes"]
+        self.src_addr["OutPacketsCount"] = self.rec["src_sent_packets"]
+        self.src_addr["InFlowCount"] = self.rec["tgt_sent_flows"]
+        self.src_addr["InByteCount"] = self.rec["tgt_sent_bytes"]
+        self.src_addr["InPacketsCount"] = self.rec["tgt_sent_packets"]
+
+        self.idea["Source"].append(self.src_addr)
+        self.idea["Source"].append(self.tgt_addr)
+
     def set_common_url(self):
         self.idea["Note"] = Common.note.format(self.rec["type"].upper(),
                                                self.rec["source_url"],
@@ -79,9 +109,28 @@ class Common(object):
                                                                  self.bl["name"],
                                                                  ip_list2description(self.rec["targets"]))
 
-        self.idea["FlowCount"] = self.rec["tgt_sent_flows"]
-        self.idea["PacketCount"] = self.rec["tgt_sent_packets"]
-        self.idea["ByteCount"] = self.rec["tgt_sent_bytes"]
+        setAddr(self.src_addr, pytrap.UnirecIPAddr(self.rec["source_ip"]))
+
+        for ip in self.rec["targets"]:
+            setAddr(self.tgt_addr, pytrap.UnirecIPAddr(ip))
+
+        if self.rec["protocol"] in [6, 17] and self.rec["source_ports"]:
+            self.src_addr["Port"] = self.rec["source_ports"]
+
+        if self.rec["is_only_fqdn"]:
+            self.src_addr["Hostname"] = self.rec["source_url"]
+        else:
+            self.src_addr["URL"] = self.rec["source_url"]
+
+        self.src_addr["Type"] = ["OriginBlacklist"]
+
+        if self.rec["tgt_sent_flows"]:
+            self.src_addr["InFlowCount"] = self.rec["tgt_sent_flows"]
+            self.src_addr["InByteCount"] = self.rec["tgt_sent_bytes"]
+            self.src_addr["InPacketsCount"] = self.rec["tgt_sent_packets"]
+
+        self.idea["Source"].append(self.src_addr)
+        self.idea["Source"].append(self.tgt_addr)
 
 
 class General(Common):
@@ -93,18 +142,21 @@ class General(Common):
             self.set_common_url()
 
 
+class IntrusionBotnet(General):
+    def __init__(self, rec, bl):
+        super(IntrusionBotnet, self).__init__(rec, bl)
 
-# class Malware(Common):
-#     def __init__(self, rec, bl):
-#         super(Malware, self).__init__(rec, bl)
-#
-#         self.idea["Note"] = Common.note.format('ABC', rec[''])
-#
-#
-# class SuspiciousBooter(Common):
-#     def __init__(self, rec, bl):
-#         super(SuspiciousBooter, self).__init__(rec, bl)
-#
+        self.src_addr["Type"] = ["CC", "Botnet"]
+        self.tgt_addr["Type"] = ["Botnet"]
+
+
+class SuspiciousMiner(General):
+    def __init__(self, rec, bl):
+        super(SuspiciousMiner, self).__init__(rec, bl)
+
+        self.src_addr["Type"] = ["Pool Server"]
+        self.tgt_addr["Type"] = ["Miner"]
+
 
 # ---------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------
