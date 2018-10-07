@@ -149,8 +149,6 @@ def convert_to_idea(rec, opts=None):
     Return report in IDEA format (as Python dict). If None is returned, the alert is skipped.
     """
     global bl_conv
-    # import pdb
-    # pdb.set_trace()
 
     if not bl_conv:
         bl_conv = load_config(opts.blacklist_config)
