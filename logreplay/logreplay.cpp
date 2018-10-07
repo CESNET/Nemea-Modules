@@ -70,7 +70,9 @@
 UR_FIELDS(
 )
 
-#define DYN_FIELD_MAX_SIZE 1024 // Maximum size of dynamic field, longer fields will be cutted to this size
+// Maximum size of dynamic field, longer fields will be cut to this
+// size
+#define DYN_FIELD_MAX_SIZE 1024
 
 // Struct with information about module
 trap_module_info_t *module_info = NULL;
@@ -80,7 +82,7 @@ trap_module_info_t *module_info = NULL;
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('f', "file", "Specify path to a file to be read.", required_argument, "string") \
-  PARAM('c', "cut", "Quit after N records are received.", required_argument, "uint32") \
+  PARAM('c', "cut", "Quit after N records are sent.", required_argument, "uint32") \
   PARAM('d', "disable_timing", "Disable time delays during sending data according to the `time` column.", no_argument, "none") \
   PARAM('n', "no_eof", "Don't send 'EOF message' at the end.", no_argument, "none")
 
@@ -90,8 +92,13 @@ int verbose;
 
 void trap_default_signal_handler(int signal)
 {
+   static int sig_counter = 0;
    if (signal == SIGTERM || signal == SIGINT) {
       stop = 1;
+      sig_counter++;
+      if (sig_counter > 1) {
+         trap_terminate();
+      }
    }
 }
 
@@ -179,8 +186,10 @@ int main(int argc, char **argv)
    ur_template_t *utmpl = NULL;
    void *data = NULL;
    map<int,string> dynamic_field_map;
-   unsigned int num_records = 0; // Number of records received (total of all inputs)
-   unsigned int max_num_records = 0; // Exit after this number of records is received
+   // Number of records sent (total of all inputs)
+   unsigned int num_records = 0;
+   // Exit after this number of records have been sent
+   unsigned int max_num_records = 0;
    char is_limited = 0;
    time_t last_timestamp = 0, cur_timestamp = 0;
 
@@ -378,7 +387,7 @@ exit:
       f_in.close();
    }
    if (verbose >= 0) {
-      printf("Exitting ...\n");
+      printf("Exiting ...\n");
    }
 
    if (send_eof) {

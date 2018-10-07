@@ -1,3 +1,7 @@
+2018-09-26 (Tomas Cejka): ddos_detector2idea: bugfix convert altname to str from int
+2018-09-26 (Filip Šuster): blacklist2idea: Add cryptominer category, code cleanup (#94)
+2018-09-19 (Tomas Cejka): rpm: add new (blacklistfilter) modules into package
+
 2018-09-18 (Tomas Cejka): blacklist2idea: add url blacklist reports, improved ip blacklist reports  (#93)
 2018-09-17 (Filip Křesťan): blooming_history: maintenance variable reuse (#90)
 2018-09-17 (Filip Šuster): [flow_meter] Fix exported HTTP field names (#91)
