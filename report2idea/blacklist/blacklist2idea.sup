@@ -1,0 +1,105 @@
+<module>
+<name>blacklist_downloader</name>
+<enabled>true</enabled>
+<path>/usr/bin/nemea/bl_downloader.py</path>
+<params>--repo-path /usr/etc/blacklistfilter/blacklist_repo</params>
+<trapinterfaces/>
+</module>
+
+<module>
+<name>ipblacklistfilter</name>
+<enabled>true</enabled>
+<path>/usr/bin/nemea/ipblacklistfilter</path>
+<params/>
+<trapinterfaces>
+<interface>
+  <type>UNIXSOCKET</type>
+  <direction>IN</direction>
+  <params>flow_data_source</params>
+</interface>
+<interface>
+  <type>UNIXSOCKET</type>
+  <direction>OUT</direction>
+  <params>ipblacklist_aggregator_ur_sock</params>
+</interface>
+</trapinterfaces>
+</module>
+
+<module>
+<name>ipblacklist_aggregator_ur</name>
+<enabled>true</enabled>
+<path>/usr/bin/nemea/agg</path>
+<params>-k SRC_IP -k DST_IP -k PROTOCOL -k DST_PORT -s BYTES -s PACKETS -o SRC_BLACKLIST -o DST_BLACKLIST -t p:300</params>
+<trapinterfaces>
+<interface>
+  <type>UNIXSOCKET</type>
+  <direction>IN</direction>
+  <params>ipblacklist_aggregator_ur_sock</params>
+</interface>
+<interface>
+  <type>UNIXSOCKET</type>
+  <direction>OUT</direction>
+  <params>blacklist_aggregator_ip</params>
+</interface>
+</trapinterfaces>
+</module>
+
+<module>
+<name>blacklist_aggregator_json</name>
+<enabled>true</enabled>
+<path>/usr/bin/nemea/blacklist_aggregator.py</path>
+<params/>
+<trapinterfaces>
+<interface>
+  <type>UNIXSOCKET</type>
+  <direction>IN</direction>
+  <params>blacklist_aggregator_ip</params>
+</interface>
+<interface>
+  <type>UNIXSOCKET</type>
+  <direction>IN</direction>
+  <params>blacklist_aggregator_url</params>
+</interface>
+<interface>
+  <type>UNIXSOCKET</type>
+  <direction>OUT</direction>
+  <params>blacklist2idea_sock</params>
+</interface>
+</trapinterfaces>
+</module>
+
+<module>
+<name>blacklist2idea</name>
+<enabled>true</enabled>
+<path>/usr/bin/nemea/blacklist2idea.py</path>
+<params>--blacklist-config /etc/nemea/blacklistfilter/bl_downloader_config.xml --config /usr/etc/blacklistfilter/config.yaml</params>
+<trapinterfaces>
+<interface>
+  <type>UNIXSOCKET</type>
+  <direction>IN</direction>
+  <params>blacklist2idea_sock</params>
+</interface>
+</trapinterfaces>
+</module>
+
+<module>
+<name>urlblacklistfilter</name>
+<enabled>true</enabled>
+<path>/usr/bin/nemea/urlblacklistfilter</path>
+<params/>
+<trapinterfaces>
+<interface>
+  <type>UNIXSOCKET</type>
+  <direction>IN</direction>
+  <params>http_data_source</params>
+</interface>
+<interface>
+  <type>UNIXSOCKET</type>
+  <direction>OUT</direction>
+  <params>blacklist_aggregator_url</params>
+</interface>
+</trapinterfaces>
+</module>
+
+
+
