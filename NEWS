@@ -1,3 +1,10 @@
+2018-10-09 (Filip Šuster): Blacklist2idea: Universal reporter (#104)
+2018-10-04 (Jaroslav Hlavac): json_dump.py: added README
+2018-10-04 (Jaroslav Hlavac): json_replay: added README
+2018-09-30 (Tomáš Jánský): logreplay: fixed bug when logreplay did not terminate (#99)
+2018-09-30 (Tomáš Jánský): logger: fixed bug when logger did not terminate (#98)
+2018-09-27 (Ulrik Haugen): Tweak logreplay strings and documentation
+
 2018-09-26 (Tomas Cejka): ddos_detector2idea: bugfix convert altname to str from int
 2018-09-26 (Filip Šuster): blacklist2idea: Add cryptominer category, code cleanup (#94)
 2018-09-19 (Tomas Cejka): rpm: add new (blacklistfilter) modules into package

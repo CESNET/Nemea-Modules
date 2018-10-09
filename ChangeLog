@@ -1,3 +1,16 @@
+2018-10-09 nemea-modules-2.8.2
+	* blacklist2idea:
+		Change alert format for blacklistfilter - all IPs are in Source.
+		Source code refactoring.
+		Change format of config file - IDEA Category is a part of the config.
+	* json_dump.py:
+		Updated documentation.
+	* json_replay:
+		Updated documentation.
+	* logreplay:
+		FIx termination of logreplay module.
+	* logger:
+		Fix temination of logger module.
 2018-09-26 nemea-modules-2.8.1
 	* ddos_detector2idea:
 		Fixed AltNames attribute in ddos_detector2idea.
