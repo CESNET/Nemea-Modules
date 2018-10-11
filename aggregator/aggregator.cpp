@@ -159,6 +159,7 @@ namespace std {
 /* ----------------------------------------------------------------- */
 
 static int stop = 0;
+int  msg_dropped = 0;
 static std::unordered_map<Key , void*> storage;                   // Need to be global because of trap_terminate
 time_t time_last_from_record = time(NULL);             // Passive timeout time info set due to records time
 pthread_mutex_t storage_mutex = PTHREAD_MUTEX_INITIALIZER;                 // For storage modifying sections
@@ -361,7 +362,8 @@ bool send_record_out(ur_template_t *out_tmplt, void *out_rec)
       return true;
    }
 
-   fprintf(stderr, "Cannot send record due to error or time_out\n");
+   //fprintf(stderr, "Cannot send record due to error or time_out\n");
+   msg_dropped++;
    return false;
 }
 
@@ -679,10 +681,7 @@ int main(int argc, char **argv)
             }
          }
          if (new_time_window) {
-            if(!send_record_out(OutputTemplate::out_tmplt, stored_rec)) {
-               break;
-            }
-
+            send_record_out(OutputTemplate::out_tmplt, stored_rec);
             init_record_data(in_tmplt, in_rec, OutputTemplate::out_tmplt, stored_rec);
          }
          else {
@@ -719,6 +718,7 @@ int main(int argc, char **argv)
    pthread_join(timeout_thread, NULL);
    DBG((stderr, "Other threads ended, cleaning storage and exiting.\n"));
    // All other threads not running now, no need to use mutexes there
+   fprintf(stderr, "Msg not sent due to LibTrap error: %d\n", msg_dropped);
 
    flush_storage();
    trap_send(0, "", 1);
