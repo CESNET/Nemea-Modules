@@ -55,12 +55,14 @@
 #include "fields.h"
 
 #include <unordered_map>
+#include <queue>
 #include <pthread.h>
+#include <semaphore.h>
 
 #include "output.h"
 #include "configuration.h"
 
-#define DEBUG
+//#define DEBUG
 #ifdef DEBUG
 #define DBG(x) fprintf x;
 #else
@@ -160,10 +162,12 @@ namespace std {
 
 static int stop = 0;
 static std::unordered_map<Key , void*> storage;                   // Need to be global because of trap_terminate
+std::queue<void*> records_to_send;                     /* Queue for records to send out */
 time_t time_last_from_record = time(NULL);             // Passive timeout time info set due to records time
 pthread_mutex_t storage_mutex = PTHREAD_MUTEX_INITIALIZER;                 // For storage modifying sections
 pthread_mutex_t time_last_from_record_mutex = PTHREAD_MUTEX_INITIALIZER;   // For modifying Passive timeout time info
-void flush_storage();
+pthread_mutex_t queue_access = PTHREAD_MUTEX_INITIALIZER;         // For sending queue modification access
+sem_t g_Full;                           /* Semaphore to hibernate thread when queue is empty */
 
 /**
  * Function to handle SIGTERM and SIGINT signals used to stop the module.
@@ -213,14 +217,16 @@ void print_template_fields(ur_template_t* tmplt)
  * @param [in] in_tmplt input UniRec template to free.
  * @param [in] out_tmplt output UniRec template to free.
  * @param [in] storage Container with stored data to be freed.
+ * @param [in] attr Attribute for pthread_create() to be destroyed.
  */
-void clean_memory(ur_template_t *in_tmplt, ur_template_t *out_tmplt, std::unordered_map<Key, void*> storage){
+void clean_memory(ur_template_t *in_tmplt, ur_template_t *out_tmplt, std::unordered_map<Key, void*> &storage, pthread_attr_t &attr){
    std::unordered_map<Key, void*>::iterator it;
    for ( it = storage.begin(); it != storage.end(); it++) {
       ur_free_record(it->second);
    }
    storage.clear();
 
+   pthread_attr_destroy(&attr);
    TRAP_DEFAULT_FINALIZATION();
    ur_free_template(in_tmplt);
    if (out_tmplt)
@@ -336,47 +342,110 @@ void prepare_to_send(void *stored_rec)
 }
 /* ----------------------------------------------------------------- */
 /**
- * Makes all necessary steps before record can be send to output interface.
- * @param [in] out_tmplt UniRec template of stored/output record.
- * @param [in] out_rec pointer to record which is going to be send
- * @return True if record successfully sent, false if record was not send.
+ * Send UniRec record through libTrap interface.
+ * @param [in] record UniRec record to send.
+ * @return True if record successfully sent, false otherwise.
  */
-bool send_record_out(ur_template_t *out_tmplt, void *out_rec)
+bool send_record(void* record)
 {
-
-   DBG((stderr, "Count of message to send is: %d\n", ur_get(out_tmplt, out_rec, F_COUNT)));
-
-   if(OutputTemplate::prepare_to_send) {
-      prepare_to_send(out_rec);
-   }
-
-   // Send record to interface 0.
+   bool success = false;
    int i = 0;
+   // Send record to interface 0
    for (; i < MAX_TIMEOUT_RETRY; i++) {
-      DBG((stderr, "Trying to send..\n"));
-      int ret = trap_send(0, out_rec, ur_rec_fixlen_size(out_tmplt) + ur_rec_varlen_size(out_tmplt, out_rec));
+      DBG((stderr, "%d try to send..\n", i));
+      int ret = trap_send(0, record, ur_rec_fixlen_size(OutputTemplate::out_tmplt) + ur_rec_varlen_size(OutputTemplate::out_tmplt, record));
 
       // Handle possible errors
       TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, continue, break);
-      return true;
+      success = true;
+      break;
    }
 
-   fprintf(stderr, "Cannot send record due to error or time_out\n");
-   return false;
+   #ifdef DEBUG
+   if (success == false) {
+         fprintf(stderr, "Cannot send record due to error or time_out\n");
+      }
+   #endif
+
+   return success;
+}
+
+/* ----------------------------------------------------------------- */
+/**
+ * Dedicated thread function to send marked records through libTrap interface and free its allocated memory.
+ * Takes no arguments.
+ * @return No usable return value.
+ */
+void* send_records(void*)
+{
+   int discarded_messages = 0;
+   while (1) {
+      sem_wait(&g_Full);                  /* If not empty continue with processing elements */
+      pthread_mutex_lock(&queue_access);
+      void *record = records_to_send.front();
+      records_to_send.pop();
+      pthread_mutex_unlock(&queue_access);
+
+      /* No other number to process, exiting the consumer thread */
+      if(record == NULL) {
+         DBG((stderr, "Exit notification received, closing thread.\n"))
+         break;
+      }
+
+      // Send record to interface 0.
+      bool success = send_record(record);
+      ur_free_record(record);
+
+      if (success == false) {
+         discarded_messages++;
+      }
+   }
+   fprintf(stderr, "Records not sent due to a libTrap err: %d.\n", discarded_messages);
+   return NULL;
+}
+/* ----------------------------------------------------------------- */
+/**
+ * Move record pointer from processing storage to queue for sending it out.
+ * Call this function only with locked "storage" mutex.
+ * @param [in] out_rec pointer to record which is going to be send
+ * @param [in] out_rec_storage_addr Iterator pointing to message place inside processing storage.
+ */
+void mark_record_to_send(void *out_rec, std::unordered_map<Key, void*>::iterator *out_rec_storage_addr)
+{
+   if(OutputTemplate::prepare_to_send) {
+      prepare_to_send(out_rec);
+   }
+   /* Remove record from processing storage if requested (not NULL)*/
+   if (out_rec_storage_addr != NULL) {
+      *(out_rec_storage_addr) = storage.erase(*out_rec_storage_addr);
+   }
+
+   pthread_mutex_lock(&queue_access);
+   records_to_send.push(out_rec);
+   pthread_mutex_unlock(&queue_access);
+   sem_post(&g_Full);
+
 }
 
 /* ----------------------------------------------------------------- */
 /**
  * Tries to send out all stored records, free their memory and clear the storage.
+ * @param [in] with_other_thread Send now (false) or mark_record_to_send() with dedicated thread.
  */
-void flush_storage()
+void flush_storage(bool with_other_thread)
 {
-   // Send all stored data
-  
    std::unordered_map<Key, void*>::iterator it;
-   for ( it = storage.begin(); it != storage.end(); it++) {
-      send_record_out(OutputTemplate::out_tmplt, it->second);
-      ur_free_record(it->second);
+   // Send all stored data with another thread
+   if (with_other_thread == true) {
+      for ( it = storage.begin(); it != storage.end(); it++) {
+         mark_record_to_send(it->second, NULL);
+      }
+   } // Send all stored data with this thread
+   else {
+      for ( it = storage.begin(); it != storage.end(); it++) {
+         send_record(it->second);
+         ur_free_record(it->second);
+      }
    }
    storage.clear();
 }
@@ -399,7 +468,7 @@ void *check_timeouts(void *input)
 
          // Lock the storage -- CRITICAL SECTION START
          pthread_mutex_lock(&storage_mutex);
-         flush_storage();
+         flush_storage(true);
          // Unlock the storage -- CRITICAL SECTION END
          pthread_mutex_unlock(&storage_mutex);
          time_t end = time(NULL);
@@ -431,9 +500,7 @@ void *check_timeouts(void *input)
          for (std::unordered_map<Key, void*>::iterator it = storage.begin(); it != storage.end(); ) {
             if (ur_time_get_sec(ur_get(OutputTemplate::out_tmplt, it->second, F_TIME_LAST)) < time_last_from_record - timeout) {
                // Send record out
-               send_record_out(OutputTemplate::out_tmplt, it->second);
-               ur_free_record(it->second);
-               it = storage.erase(it);
+               mark_record_to_send(it->second, &it);
             }
             else {
                ++it;
@@ -559,9 +626,21 @@ int main(int argc, char **argv)
       return -1;
    }
 
+   /* Initialize semaphore */
+   sem_init ( &g_Full, 0, 0 );             /* Init value to 0 -> nothing to process by consumer */
+
+   /* Create and set thread attributes */
+   pthread_attr_t   attr;
+   pthread_attr_init(&attr);
+   pthread_attr_setdetachstate ( &attr, PTHREAD_CREATE_JOINABLE );
+
    /* **** Create new thread for checking timeouts **** */
    pthread_t timeout_thread;
-   pthread_create(&timeout_thread, NULL, &check_timeouts, (void*)&config);
+   pthread_create(&timeout_thread, &attr, &check_timeouts, (void*)&config);
+
+   /* **** Create dedicated thread for messages (records) sending **** */
+   pthread_t sending_thread;
+   pthread_create(&sending_thread, &attr, &send_records, NULL);
 
    /* **** Main processing loop **** */
 
@@ -592,17 +671,27 @@ int main(int argc, char **argv)
          // Lock the storage -- CRITICAL SECTION START
          pthread_mutex_lock( &storage_mutex );
 
-         for ( it = storage.begin(); it != storage.end(); it++) {
-            send_record_out(OutputTemplate::out_tmplt, it->second);
-            ur_free_record(it->second);
+         flush_storage(false);
+
+
+         /* records_to_send queue HAS TO BE EMPTY BEFORE RESET OUTPUT TEMPLATE */
+         int waiting_to_send;
+         while (1) {
+            if (sem_getvalue(&g_Full, &waiting_to_send) != 0) {
+               perror("TRAP_E_FORMAT_CHANGE:sem_getvalue");
+               clean_memory(in_tmplt, NULL, storage, attr);
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               return 1;
+            }
+            if (waiting_to_send <= 0) {
+               break;
+            }
+            DBG((stderr, "Cannot reset Output template, remaining to send %d records.\n", waiting_to_send));
+            usleep(250);
          }
-         storage.clear();
 
          OutputTemplate::reset();
          KeyTemplate::reset();
-
-         //print_all_defined_ur_fields();
-         //print_template_fields(in_tmplt);
 
          int id;
          for (int i = 0; i < config.get_used_fields(); i++) {
@@ -610,7 +699,7 @@ int main(int argc, char **argv)
 
             if (id == UR_E_INVALID_NAME) {
                fprintf(stderr, "Requested field %s not in input records, cannot continue.\n", config.get_name(i));
-               clean_memory(in_tmplt, NULL, storage);
+               clean_memory(in_tmplt, NULL, storage, attr);
                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                return 1;
             }
@@ -632,7 +721,7 @@ int main(int argc, char **argv)
 
          if (OutputTemplate::out_tmplt == NULL){
             fprintf(stderr, "Error: Output template could not be created.\n");
-            clean_memory(in_tmplt, NULL, storage);
+            clean_memory(in_tmplt, NULL, storage, attr);
             FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
             return -1;
          }
@@ -679,21 +768,32 @@ int main(int argc, char **argv)
             }
          }
          if (new_time_window) {
-            if(!send_record_out(OutputTemplate::out_tmplt, stored_rec)) {
-               break;
+            /* Create new UniRec record to replace current */
+            int var_length = config.is_variable() == false ? 0 : 2048;
+            void * record_to_store = create_record(OutputTemplate::out_tmplt, var_length);
+            if (!record_to_store) {
+               fprintf(stderr, "Error: Memory allocation problem (output record).\n");
+               clean_memory(in_tmplt, OutputTemplate::out_tmplt, storage, attr);
+               FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+               return -1;
             }
+            /* Initialize new record with received data */
+            init_record_data(in_tmplt, in_rec, OutputTemplate::out_tmplt, record_to_store);
+            /* Replace pointer in processing storage with new record */
+            inserted.first->second = record_to_store;
 
-            init_record_data(in_tmplt, in_rec, OutputTemplate::out_tmplt, stored_rec);
+            mark_record_to_send(stored_rec, NULL);
          }
          else {
             /* Try to process the message */
             bool processed = process_agg_functions(in_tmplt, in_rec, OutputTemplate::out_tmplt, stored_rec);
             /* Cannot continue processing -> emergency export needed */
             if(processed == false){
-               if(!send_record_out(OutputTemplate::out_tmplt, stored_rec)) {
-                  break;
-               }
-               init_record_data(in_tmplt, in_rec, OutputTemplate::out_tmplt, stored_rec);
+               int var_length = config.is_variable() == false ? 0 : 2048;
+               void * record_to_store = create_record(OutputTemplate::out_tmplt, var_length);
+               init_record_data(in_tmplt, in_rec, OutputTemplate::out_tmplt, record_to_store);
+               inserted.first->second = record_to_store;
+               mark_record_to_send(stored_rec, NULL);
             }
          }
       }
@@ -703,8 +803,8 @@ int main(int argc, char **argv)
          int var_length = config.is_variable() == false ? 0 : 2048;
          void * out_rec = create_record(OutputTemplate::out_tmplt, var_length);
          if (!out_rec) {
-            clean_memory(in_tmplt, OutputTemplate::out_tmplt, storage);
             fprintf(stderr, "Error: Memory allocation problem (output record).\n");
+            clean_memory(in_tmplt, OutputTemplate::out_tmplt, storage, attr);
             FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
             return -1;
          }
@@ -716,18 +816,27 @@ int main(int argc, char **argv)
    }
 
    DBG((stderr, "Module canceled, waiting for running threads.\n"));
-   pthread_join(timeout_thread, NULL);
-   DBG((stderr, "Other threads ended, cleaning storage and exiting.\n"));
-   // All other threads not running now, no need to use mutexes there
+   /* Put the exit element into record_to_send to exit the dedicated sending thread */
+   pthread_mutex_lock(&queue_access);
+   records_to_send.push(NULL);
+   pthread_mutex_unlock(&queue_access);
+   sem_post(&g_Full);
 
-   flush_storage();
+   /* Wait for other threads to exit */
+   pthread_join(timeout_thread, NULL);
+   pthread_join(sending_thread, NULL);
+   DBG((stderr, "Other threads ended, cleaning storage and exiting.\n"));
+   // All other threads not running now, no need to use mutexes from there
+
+   flush_storage(false);
    trap_send(0, "", 1);
    sleep(1);
    trap_terminate();
 
    /* **** Cleanup **** */
+   sem_destroy(&g_Full);
    // Free unirec templates and stored records
-   clean_memory(in_tmplt, OutputTemplate::out_tmplt, storage);
+   clean_memory(in_tmplt, OutputTemplate::out_tmplt, storage, attr);
    // Release allocated memory for module_info structure
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
