@@ -389,7 +389,7 @@ void capture_thread(int index)
                   if (data_out == NULL) {
                      fprintf(stderr, "ERROR: Allocation of record\n");
                      fail = 1;
-                  }               
+                  }
                }
                if (fail == 1) {
                   break;
@@ -422,7 +422,7 @@ void capture_thread(int index)
                break;
             }
          }
-      
+
          ur_copy_fields(out_template, data_out, in_template[index], rec);
 
          #pragma omp critical
@@ -564,7 +564,7 @@ Available types are: int8, int16, int32, int64, uint8, uint16, uint32, uint64, c
          goto exit;
       }
       char *f_names = ur_ifc_data_fmt_to_field_names(out_template_str);
-      out_template = ur_create_output_template(0, out_template_str, NULL);
+      out_template = ur_create_output_template(0, f_names, NULL);
       free(f_names);
       if (out_template == NULL) {
          fprintf(stderr, "Memory allocation error\n");

@@ -30,6 +30,6 @@ Timestamp aware version only:
 - `-vvv`             Be even more verbose.
 
 ## Usage
-`./merger -i "ttttu;localhost,8801;localhost,8802;localhost,8803;localhost,8804;DNS_out" -n 4 -u "DST_IP,SRC_IP,BYTES,DNS_RR_TTL,DNS_ANSWERS,DNS_CLASS,DNS_ID,DNS_PSIZE,DNS_QTYPE,DNS_RLENGTH,DST_PORT,SRC_PORT,DNS_DO,DNS_RCODE,PROTOCOL,DNS_NAME,DNS_RDATA"`
+`./merger -i "t:localhost:8801,t:localhost:8802,t:localhost:8803,t:localhost:8804,u:DNS_out" -n 4 -u "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,uint32 DNS_RR_TTL,uint16 DNS_ANSWERS,uint16 DNS_CLASS,uint16 DNS_ID,uint16 DNS_PSIZE,uint16 DNS_QTYPE,uint16 DNS_RLENGTH,uint16 DST_PORT,uint16 SRC_PORT,uint8 DNS_DO,uint8 DNS_RCODE,uint8 PROTOCOL,string DNS_NAME,bytes DNS_RDATA"`
 
 This command will start merger with 4 inputs (on localhost, TCP ports 8801 - 4), output stream on Unix socket "DNS_out", with UniRec template given by listed fields.
