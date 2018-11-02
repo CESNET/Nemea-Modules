@@ -68,6 +68,27 @@ NR==1 {
    }
    for (i=1; i<=NF; i++) {
       sub("^[^ ]* ", "", $i); sub("PROTOCOL", "PROTO", $i)
+      if ($i == "DST_IP") {
+         DST_IP = i;
+      } else if ($i == "SRC_IP") {
+         SRC_IP = i;
+      } else if ($i == "BYTES") {
+         BYTES = i;
+      } else if ($i == "TIME_FIRST") {
+         TIME_FIRST = i;
+      } else if ($i == "TIME_LAST") {
+         TIME_LAST = i;
+      } else if ($i == "PACKETS") {
+         PACKETS = i;
+      } else if ($i == "SRC_PORT") {
+         SRC_PORT = i;
+      } else if ($i == "DST_PORT") {
+         DST_PORT = i;
+      } else if ($i == "PROTO") {
+         PROTO = i;
+      } else if ($i == "TCP_FLAGS") {
+         TCP_FLAGS = i;
+      }
    }
 }
 
@@ -82,19 +103,19 @@ FNR==1 && NR!=1 {
 }
 
 {
-   if (ENVIRON["SHORT_IP_ONLY"] == "yes" && length($2) >= 15) {
+   if (ENVIRON["SHORT_IP_ONLY"] == "yes" && length($SRC_IP) >= 15) {
       # skip long IP addresses (IPv6)
       next
    }
    if (NR >=2) {
-      sub(".[^.]*$", "", $5)
-      sub(".[^.]*$", "", $6)
+      sub(".[^.]*$", "", $TIME_FIRST)
+      sub(".[^.]*$", "", $TIME_LAST)
    }
 
-   proto=($11 == 6?"TCP":($11 == 17?"UDP":($11 == 1?"ICMP":$11)))
-   tcpflags=($12 == "TCP_FLAGS")?"TCPFLG":(and($12, 32)?"U":".")(and($12, 16)?"A":".")(and($12, 8)?"P":".")(and($12, 4)?"R":".")(and($12, 2)?"S":".")(and($12, 1)?"F":".")
+   proto=($PROTO == 6?"TCP":($PROTO == 17?"UDP":($PROTO == 1?"ICMP":$PROTO)))
+   tcpflags=($TCP_FLAGS == "TCP_FLAGS")?"TCPFLG":(and($TCP_FLAGS, 32)?"U":".")(and($TCP_FLAGS, 16)?"A":".")(and($TCP_FLAGS, 8)?"P":".")(and($TCP_FLAGS, 4)?"R":".")(and($TCP_FLAGS, 2)?"S":".")(and($TCP_FLAGS, 1)?"F":".")
 
    printf("%19s\t%19s\t%24s  ->  %24s\t%s\t%s\t%3s\t%5s\n",
-         $5, $6, $2" : "$9, $1" : "$8, proto, tcpflags, $7, $3)
+         $TIME_FIRST, $TIME_LAST, $SRC_IP" : "$SRC_PORT, $DST_IP" : "$DST_PORT, proto, tcpflags, $PACKETS, $BYTES)
 }' "$@"
 
