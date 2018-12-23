@@ -104,7 +104,9 @@ TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 	A(udp, 17) \
 	A(icmp6, 58) \
 	A(esp, 50) \
-	A(gre, 47)
+	A(gre, 47) \
+       A(sctp, 132)
+
 
 #define FOREACH_PROTOCOLS(A) PROTOCOLS(A)
 
