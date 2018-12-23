@@ -81,6 +81,7 @@ struct RecordExtPassiveDNS : RecordExt {
 
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
+#ifndef DISABLE_UNIREC
       ur_set(tmplt, record, F_DNS_ID, id);
       ur_set(tmplt, record, F_DNS_ATYPE, atype);
       ur_set_string(tmplt, record, F_DNS_NAME, aname);
@@ -90,6 +91,7 @@ struct RecordExtPassiveDNS : RecordExt {
       } else if (ip_version == 6) {
          ur_set(tmplt, record, F_DNS_IP, ip_from_16_bytes_be((char *) ip.v6));
       }
+#endif
    }
    virtual int fillIPFIX(uint8_t *buffer, int size)
    {

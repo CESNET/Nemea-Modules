@@ -108,6 +108,7 @@ struct RecordExtNTP : RecordExt {
 
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
+#ifndef DISABLE_UNIREC
       ur_set(tmplt, record, F_NTP_LEAP, leap);
       ur_set(tmplt, record, F_NTP_VERSION, version);
       ur_set(tmplt, record, F_NTP_MODE, mode);
@@ -121,6 +122,7 @@ struct RecordExtNTP : RecordExt {
       ur_set_string(tmplt, record, F_NTP_ORIG, origin);
       ur_set_string(tmplt, record, F_NTP_RECV, receive);
       ur_set_string(tmplt, record, F_NTP_SENT, sent);
+#endif
    }
 
    virtual int fillIPFIX(uint8_t *buffer, int size)

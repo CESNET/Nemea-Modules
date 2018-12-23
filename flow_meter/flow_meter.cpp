@@ -283,7 +283,15 @@ int main(int argc, char *argv[])
       /* TRAP initialization */
       ifc_cnt = count_trap_interfaces(argc, argv);
       module_info->num_ifc_out = ifc_cnt;
+#ifndef DISABLE_UNIREC
       TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
+#else
+      puts("ipfixprobe version " VERSION);
+      puts("ipfixprobe is a simplified flow exporter (flow_meter) without libtrap&UniRec support.");
+      puts("");
+      puts("Usage: ipfixprobe [-I interface] -x host:port [-u] [-p http,https,dns,sip,ntp,smtp,basic,arp,passivedns] [-r file]");
+      puts("");
+#endif
    } else if (verbose >= 0) {
       for (int i = verbose; i + 1 < argc; i++) {
          argv[i] = argv[i + 1];
@@ -292,11 +300,15 @@ int main(int argc, char *argv[])
    }
 
    if (export_unirec && export_ipfix) {
+#ifndef DISABLE_UNIREC
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
       TRAP_DEFAULT_FINALIZATION();
+#endif
       return error("Cannot export to IPFIX and Unirec at the same time.");
    } else if (!export_unirec && !export_ipfix) {
+#ifndef DISABLE_UNIREC
       FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+#endif
       return error("Specify exporter output Unirec (-i) or IPFIX (-x/--ipfix).");
    }
 
@@ -312,12 +324,16 @@ int main(int argc, char *argv[])
             options.basic_ifc_num = -1;
             int ret = parse_plugin_settings(string(optarg), plugin_wrapper.plugins, options);
             if (ret < 0) {
+#ifndef DISABLE_UNIREC
                TRAP_DEFAULT_FINALIZATION();
+#endif
                return error("Invalid argument for option -p");
             }
             if (ifc_cnt && ret != ifc_cnt) {
+#ifndef DISABLE_UNIREC
                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                TRAP_DEFAULT_FINALIZATION();
+#endif
                return error("Number of output ifc interfaces does not correspond number of items in -p parameter.");
             }
          }
@@ -326,8 +342,10 @@ int main(int argc, char *argv[])
          {
             uint32_t tmp;
             if (!str_to_uint32(optarg, tmp)) {
+#ifndef DISABLE_UNIREC
                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                TRAP_DEFAULT_FINALIZATION();
+#endif
                return error("Invalid argument for option -c");
             }
             pkt_limit = tmp;
@@ -345,16 +363,20 @@ int main(int argc, char *argv[])
             char *check;
             check = strchr(optarg, ':');
             if (check == NULL) {
+#ifndef DISABLE_UNIREC
                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                TRAP_DEFAULT_FINALIZATION();
+#endif
                return error("Invalid argument for option -t");
             }
 
             *check = '\0';
             double tmp1, tmp2;
             if (!str_to_double(optarg, tmp1) || !str_to_double(check + 1, tmp2) || tmp1 < 0 || tmp2 < 0) {
+#ifndef DISABLE_UNIREC
                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                TRAP_DEFAULT_FINALIZATION();
+#endif
                return error("Invalid argument for option -t");
             }
 
@@ -370,8 +392,10 @@ int main(int argc, char *argv[])
          break;
       case 'l':
          if (!str_to_uint32(optarg, options.snaplen)) {
+#ifndef DISABLE_UNIREC
             FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
             TRAP_DEFAULT_FINALIZATION();
+#endif
             return error("Invalid argument for option -l");
          }
          if (options.snaplen < MIN_SNAPLEN) {
@@ -386,8 +410,10 @@ int main(int argc, char *argv[])
          if (strcmp(optarg, "default")) {
             uint32_t tmp;
             if (!str_to_uint32(optarg, tmp) || tmp <= 3 || tmp > 30) {
+#ifndef DISABLE_UNIREC
                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                TRAP_DEFAULT_FINALIZATION();
+#endif
                return error("Invalid argument for option -s");
             }
 
@@ -400,8 +426,10 @@ int main(int argc, char *argv[])
          {
             double tmp;
             if (!str_to_double(optarg, tmp)) {
+#ifndef DISABLE_UNIREC
                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                TRAP_DEFAULT_FINALIZATION();
+#endif
                return error("Invalid argument for option -S");
             }
             double_to_timeval(tmp, options.cache_stats_interval);
@@ -413,15 +441,19 @@ int main(int argc, char *argv[])
          break;
       case 'L':
          if (!str_to_uint64(optarg, link)) {
+#ifndef DISABLE_UNIREC
             FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
             TRAP_DEFAULT_FINALIZATION();
+#endif
             return error("Invalid argument for option -L");
          }
          break;
       case 'D':
          if (!str_to_uint8(optarg, dir)) {
+#ifndef DISABLE_UNIREC
             FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
             TRAP_DEFAULT_FINALIZATION();
+#endif
             return error("Invalid argument for option -D");
          }
          break;
@@ -436,8 +468,10 @@ int main(int argc, char *argv[])
             host = optarg;
             size_t tmp = host.find_last_of(":");
             if (tmp == string::npos) {
+#ifndef DISABLE_UNIREC
                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                TRAP_DEFAULT_FINALIZATION();
+#endif
                return error("Invalid argument for option -x");
             }
 
@@ -448,8 +482,10 @@ int main(int argc, char *argv[])
             trim_str(port);
 
             if (host == "" || port == "") {
+#ifndef DISABLE_UNIREC
                FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
                TRAP_DEFAULT_FINALIZATION();
+#endif
                return error("Invalid argument for option -x");
             }
 
@@ -463,8 +499,10 @@ int main(int argc, char *argv[])
          udp = true;
          break;
       default:
+#ifndef DISABLE_UNIREC
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
          TRAP_DEFAULT_FINALIZATION();
+#endif
          return error("Invalid arguments");
       }
    }
@@ -472,10 +510,14 @@ int main(int argc, char *argv[])
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
 
    if (options.interface != "" && options.pcap_file != "") {
+#ifndef DISABLE_UNIREC
       TRAP_DEFAULT_FINALIZATION();
+#endif
       return error("Cannot capture from file and from interface at the same time.");
    } else if (options.interface == "" && options.pcap_file == "") {
+#ifndef DISABLE_UNIREC
       TRAP_DEFAULT_FINALIZATION();
+#endif
       return error("Specify capture interface (-I) or file for reading (-r). ");
    }
 
@@ -504,42 +546,56 @@ int main(int argc, char *argv[])
    PcapReader packetloader(options);
    if (options.interface == "") {
       if (packetloader.open_file(options.pcap_file, parse_every_pkt) != 0) {
+#ifndef DISABLE_UNIREC
          TRAP_DEFAULT_FINALIZATION();
+#endif
          return error("Can't open input file: " + options.pcap_file);
       }
    } else {
+#ifndef DISABLE_UNIREC
       if (export_unirec) {
          for (int i = 0; i < ifc_cnt; i++) {
             trap_ifcctl(TRAPIFC_OUTPUT, i, TRAPCTL_SETTIMEOUT, TRAP_HALFWAIT);
          }
       }
+#endif
 
       if (packetloader.init_interface(options.interface, options.snaplen, parse_every_pkt) != 0) {
+#ifndef DISABLE_UNIREC
          TRAP_DEFAULT_FINALIZATION();
+#endif
          return error("Unable to initialize libpcap: " + packetloader.error_msg);
       }
    }
 
    if (filter != "") {
       if (packetloader.set_filter(filter) != 0) {
+#ifndef DISABLE_UNIREC
          TRAP_DEFAULT_FINALIZATION();
+#endif
          return error(packetloader.error_msg);
       }
    }
 
    NHTFlowCache flowcache(options);
+#ifndef DISABLE_UNIREC
    UnirecExporter flowwriter(options.eof);
+#endif
    IPFIXExporter flow_writer_ipfix;
 
    if (export_unirec) {
+#ifndef DISABLE_UNIREC
       if (flowwriter.init(plugin_wrapper.plugins, ifc_cnt, options.basic_ifc_num, link, dir, odid) != 0) {
          TRAP_DEFAULT_FINALIZATION();
          return error("Unable to initialize UnirecExporter.");
       }
       flowcache.set_exporter(&flowwriter);
+#endif
    } else {
       if (flow_writer_ipfix.init(plugin_wrapper.plugins, options.basic_ifc_num, link, host, port, udp, (verbose >= 0), dir) != 0) {
+#ifndef DISABLE_UNIREC
          TRAP_DEFAULT_FINALIZATION();
+#endif
          return error("Unable to initialize IPFIXExporter.");
       }
       flowcache.set_exporter(&flow_writer_ipfix);
@@ -582,9 +638,13 @@ int main(int argc, char *argv[])
 
    if (ret < 0) {
       packetloader.close();
+#ifndef DISABLE_UNIREC
       flowwriter.close();
+#endif
       delete [] packet.packet;
+#ifndef DISABLE_UNIREC
       TRAP_DEFAULT_FINALIZATION();
+#endif
       return error("Error during reading: " + packetloader.error_msg);
    }
 
@@ -595,11 +655,15 @@ int main(int argc, char *argv[])
 
    /* Cleanup. */
    flowcache.finish();
+#ifndef DISABLE_UNIREC
    flowwriter.close();
+#endif
    packetloader.close();
 
    delete [] packet.packet;
+#ifndef DISABLE_UNIREC
    TRAP_DEFAULT_FINALIZATION();
+#endif
 
    return EXIT_SUCCESS;
 }

@@ -370,6 +370,7 @@ struct RecordExtSIP : RecordExt {
 
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
+#ifndef DISABLE_UNIREC
       ur_set(tmplt, record, F_SIP_MSG_TYPE, msg_type);
       ur_set(tmplt, record, F_SIP_STATUS_CODE, status_code);
       ur_set_string(tmplt, record, F_SIP_CSEQ, cseq);
@@ -379,6 +380,7 @@ struct RecordExtSIP : RecordExt {
       ur_set_string(tmplt, record, F_SIP_USER_AGENT, user_agent);
       ur_set_string(tmplt, record, F_SIP_REQUEST_URI, request_uri);
       ur_set_string(tmplt, record, F_SIP_VIA, via);
+#endif
    }
    virtual int fillIPFIX(uint8_t *buffer, int size)
    {
