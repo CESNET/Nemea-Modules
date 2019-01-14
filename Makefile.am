@@ -16,6 +16,7 @@ merger \
 mux \
 demux \
 natpair \
+prefix_tags \
 proto_traffic \
 pdns_exporter \
 report2idea \
