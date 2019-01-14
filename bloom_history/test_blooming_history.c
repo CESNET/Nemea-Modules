@@ -1,5 +1,5 @@
 /**
- * \file test_blooming_history.c
+ * \file test_bloom_history.c
  * \brief History of communicating entities using bloom filters.
  * \author Filip Krestan <krestfi1@fit.cvut.cz>
  * \date 2018
@@ -43,7 +43,7 @@
 
 #include <unirec/unirec.h>
 
-#include "blooming_history_functions.h"
+#include "bloom_history_functions.h"
 
 
 void test_is_from_prefix(const char *ip_str, const char *prefix_str, int32_t prefix_length, int expected_result)

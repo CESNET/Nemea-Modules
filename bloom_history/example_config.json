@@ -1,0 +1,6 @@
+[
+  {"id": 1, "bloom_fp_error_rate": 0.01, "bloom_entries": 20000000, "api_url": "https://localhost:8081/1"},
+  {"id": 2, "bloom_fp_error_rate": 0.01, "bloom_entries": 20000000, "api_url": "https://localhost:8081/2"},
+  {"id": 3, "bloom_fp_error_rate": 0.01, "bloom_entries": 20000000, "api_url": "https://localhost:8081/3"},
+  {"id": 4, "bloom_fp_error_rate": 0.01, "bloom_entries": 20000000, "api_url": "https://localhost:8081/4"},
+]
