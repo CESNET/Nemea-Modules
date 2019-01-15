@@ -5,6 +5,8 @@ bin_PROGRAMS=bloom_history # test_bloom_history
 
 AM_CPPFLAGS=-I$(srcdir)/libbloom -I$(srcdir)/libbloom/murmur2
 
+EXTRA_DIST=bloom_history.h bloom_history_config.h bloom_history_functions.h
+
 bloom_history_SOURCES= bloom_history.c \
 	bloom_history_functions.c bloom_history_functions.h \
 	bloom_history_config.c bloom_history_config.h \
