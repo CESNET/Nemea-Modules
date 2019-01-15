@@ -1,5 +1,4 @@
 bin_PROGRAMS=bloom_history
-noinst_PROGRAMS=test_bloom_history
 
 # Devel
 # prefix_tags_CFLAGS=-g -O0 -fsanitize=address -fno-omit-frame-pointer -DDEBUG=1
@@ -15,13 +14,6 @@ bloom_history_SOURCES= bloom_history.c \
 	libbloom/bloom.c libbloom/bloom.h \
 	libbloom/murmur2/MurmurHash2.c libbloom/murmur2/murmurhash2.h
 bloom_history_LDADD=-lcurl -lm -ltrap -lunirec
-
-test_bloom_history_SOURCES=test_blooming_history.c \
-	bloom_history_functions.c bloom_history_functions.h \
-	fields.c fields.h \
-	libbloom/bloom.c libbloom/bloom.h \
-	libbloom/murmur2/MurmurHash2.c libbloom/murmur2/murmurhash2.h
-test_bloom_history_LDADD=-lcurl -lm
 
 pkgdocdir=${docdir}/bloom_history
 dist_pkgdoc_DATA=README.md
