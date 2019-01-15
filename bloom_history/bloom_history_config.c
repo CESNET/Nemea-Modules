@@ -1,7 +1,7 @@
 #include <errno.h>
 #include <stdint.h>
 
-#include <jansson.h>
+#include <libtrap/jansson.h>
 #include <unirec/unirec.h>
 
 #include "bloom.h"
