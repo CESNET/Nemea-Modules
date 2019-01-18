@@ -8,14 +8,14 @@
 #include "prefix_tags_config.h"
 
 
-void tags_config_init(struct tags_config* config) {
+void tags_config_init(struct tags_config *config) {
    config->size = 0;
    config->id = NULL;
    config->ip_prefix_length = NULL;
    config->ip_prefix = NULL;
 }
 
-int tags_config_add_record(struct tags_config* config, uint32_t id, ip_addr_t ip_prefix, uint32_t ip_prefix_length)
+int tags_config_add_record(struct tags_config *config, uint32_t id, ip_addr_t ip_prefix, uint32_t ip_prefix_length)
 {
    size_t new_size = config->size + 1;
 
@@ -35,7 +35,7 @@ int tags_config_add_record(struct tags_config* config, uint32_t id, ip_addr_t ip
    return 0;
 }
 
-void tags_config_free(struct tags_config* config)
+void tags_config_free(struct tags_config *config)
 {
    if (config->id) {
       free(config->id);
@@ -52,7 +52,7 @@ void tags_config_free(struct tags_config* config)
    config->size = 0;
 }
 
-int tags_parse_ip_prefix(const char* ip_prefix, ip_addr_t* addr, uint32_t* prefix_length)
+int tags_parse_ip_prefix(const char *ip_prefix, ip_addr_t *addr, uint32_t *prefix_length)
 {
    long prefix_length_l;
    char *prefix_slash = strchr(ip_prefix, '/');
@@ -60,7 +60,7 @@ int tags_parse_ip_prefix(const char* ip_prefix, ip_addr_t* addr, uint32_t* prefi
    if (prefix_slash == NULL) {
       return -1;
    }
-   *((char*)prefix_slash) = '\0'; // Don't do tihs at home kids
+   *((char *)prefix_slash) = '\0'; // Don't do tihs at home kids
 
    if (!ip_from_str(ip_prefix, addr)) {
       return -1;
@@ -78,7 +78,7 @@ int tags_parse_ip_prefix(const char* ip_prefix, ip_addr_t* addr, uint32_t* prefi
    return 0;
 }
 
-int parse_config(const char* config_file, struct tags_config* config)
+int parse_config(const char *config_file, struct tags_config *config)
 {
    int error = 0;
 

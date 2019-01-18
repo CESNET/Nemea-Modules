@@ -52,7 +52,7 @@ int CHECK_SRC_IP = 1;
 int CHECK_DST_IP = 1;
 
 
-int prefix_tags(struct tags_config* config) {
+int prefix_tags(struct tags_config *config) {
    int error = 0;
    uint32_t prefix_tag;
    const void *data_in = NULL;

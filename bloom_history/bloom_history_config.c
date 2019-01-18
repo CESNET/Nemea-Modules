@@ -9,7 +9,7 @@
 #include "bloom_history_config.h"
 
 
-void bloom_history_config_init(struct bloom_history_config* config)
+void bloom_history_config_init(struct bloom_history_config *config)
 {
    config->size = 0;
    config->id = NULL;
@@ -20,7 +20,7 @@ void bloom_history_config_init(struct bloom_history_config* config)
    config->bloom_list_size = 0;
 }
 
-int bloom_history_config_add_record(struct bloom_history_config* config, uint32_t id, const char* api_url, 
+int bloom_history_config_add_record(struct bloom_history_config *config, uint32_t id, const char *api_url,
                                     int32_t bloom_entries, double bloom_fp_error_rate)
 {
    size_t new_size = config->size + 1;
@@ -51,7 +51,7 @@ int bloom_history_config_add_record(struct bloom_history_config* config, uint32_
    return 0;
 }
 
-void bloom_history_config_free(struct bloom_history_config* config)
+void bloom_history_config_free(struct bloom_history_config *config)
 {
    if (config->id) {
       free(config->id);
@@ -91,7 +91,7 @@ void bloom_history_config_free(struct bloom_history_config* config)
    config->bloom_list_size = 0;
 }
 
-int bloom_history_parse_config(const char* config_file, struct bloom_history_config *config)
+int bloom_history_parse_config(const char *config_file, struct bloom_history_config *config)
 {
    int error = 0;
    size_t max_id = 0;
@@ -103,8 +103,8 @@ int bloom_history_parse_config(const char* config_file, struct bloom_history_con
       fprintf(stderr, "Error: %s\n", strerror(errno));
       return -1;
    }
-   json_error_t* j_error = NULL;
-   json_t* j_root = json_loadf(fp, JSON_REJECT_DUPLICATES, j_error);
+   json_error_t *j_error = NULL;
+   json_t *j_root = json_loadf(fp, JSON_REJECT_DUPLICATES, j_error);
    if (j_root == NULL) {
       if (j_error != NULL) {
          fprintf(stderr, "Error: parsing config on line %d: %s\n", j_error->line, j_error->text);

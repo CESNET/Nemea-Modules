@@ -2,6 +2,7 @@
 #define __BLOOM_HISTORY_H_
 #define _GNU_SOURCE
 
+/* TODO revisit includes - are they necessary here? */
 #include <pthread.h>
 #include <signal.h>
 
