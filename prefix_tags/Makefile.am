@@ -13,5 +13,14 @@ prefix_tags_LDADD=-ltrap -lunirec
 pkgdocdir=${docdir}/prefix_tags
 dist_pkgdoc_DATA=README.md
 
+# Tests
+noinst_PROGRAMS = test_prefix_tags
+TESTS = test_prefix_tags
+
+test_prefix_tags_SOURCES = \
+	test_prefix_tags.c \
+	prefix_tags_functions.c prefix_tags_functions.h
+test_prefix_tags_CFLAGS = $(CFLAGS) -g -O0 -fsanitize=address -fno-omit-frame-pointer
+
 include ../aminclude.am
 
