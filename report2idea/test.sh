@@ -98,7 +98,7 @@ json_cleanup()
          arr[j++]=fields[i]
        }
        asort(arr);
-       for (i=1; i<length(arr)) {
+       for (i=1; i<length(arr); i++) {
           printf("%s, ", arr[i]);
        }
        printf("%s\n", arr[i]);
