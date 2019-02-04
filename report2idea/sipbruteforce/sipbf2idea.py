@@ -59,7 +59,8 @@ def convert_to_idea(rec, opts=None):
     if rec.SBFD_EVENT_TYPE == 0:
         # brute-force
         idea["Category"] = [ "Attempt.Login" ]
-        idea["Description"] = "SIP BruteForce login attempt, user account: " + rec.SBFD_USER
+        idea["Description"] = "SIP BruteForce login attempt."
+        idea["Note"] = "Event is related to user account: " + rec.SBFD_USER
         if rec.SBFD_BREACH_TIME != pytrap.UnirecTime(0):
             idea["BreachTime"] = getIDEAtime(rec.SBFD_BREACH_TIME)
             idea["Description"] = "Successful " + idea["Description"]
@@ -67,16 +68,16 @@ def convert_to_idea(rec, opts=None):
     elif rec.SBFD_EVENT_TYPE == 1:
         # distributed brute-force
         idea["Category"] = [ "Attempt.Login" ]
-        idea["Description"] = "distributed SIP BruteForce login attempt, user account: " + rec.SBFD_USER
+        idea["Note"] = "Event is related to user account: " + rec.SBFD_USER
         if rec.SBFD_BREACH_TIME != pytrap.UnirecTime(0):
             idea["BreachTime"] = getIDEAtime(rec.SBFD_BREACH_TIME)
-            idea["Description"] = "Successful " + idea["Description"]
+            idea["Description"] = "Successful distributed SIP BruteForce login attempt."
         else:
-            idea["Description"] = "Distributed SIP BruteForce login attempt, user account: " + rec.SBFD_USER
+            idea["Description"] = "Distributed SIP BruteForce login attempt."
     elif rec.SBFD_EVENT_TYPE == 2:
         # scan
         idea["Category"] = [ "Recon.Scanning" ]
-        idea["Description"] = "Scan of SIP user accounts"
+        idea["Description"] = "Scan of SIP user accounts."
 
     setAddr(idea['Source'][0], rec.SBFD_SOURCE)
     setAddr(idea['Target'][0], rec.SBFD_TARGET)
