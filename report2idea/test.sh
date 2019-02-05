@@ -90,19 +90,18 @@ json_cleanup()
        gsub(/[{[]/, "")
        gsub("}", ",")
        gsub("]", ",")
-       gsub(":", ",")
+       gsub(" ", "")
        n = split($0, fields, ",")
        j=1
        for (i=1; i<=n; i++) {
-         gsub(" ", "", fields[i])
          arr[j++]=fields[i]
        }
        asort(arr);
        for (i=1; i<length(arr); i++) {
-          printf("%s, ", arr[i]);
+          printf("%s,", arr[i]);
        }
        printf("%s\n", arr[i]);
-   }'
+   }' | tr -s , | sed 's/^[, ]*//;'
 }
 
 #usage: test_conversion <script name> <node name> <input data> <output data>
