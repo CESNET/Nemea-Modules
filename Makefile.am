@@ -19,6 +19,7 @@ natpair \
 proto_traffic \
 pdns_exporter \
 report2idea \
+resolver \
 topn \
 traffic_repeater \
 unirec2json \
