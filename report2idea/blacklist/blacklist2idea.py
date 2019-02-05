@@ -247,8 +247,8 @@ def load_blacklists(config):
     ip_root_element = tree.find(".//array[@type='IP']")
     url_dns_root_element = tree.find(".//array[@type='URL/DNS']")
 
-    ip_blacklists = list(ip_root_element)
-    url_dns_blacklists = list(url_dns_root_element)
+    ip_blacklists = list(ip_root_element) if ip_root_element is not None and len(ip_root_element) else list()
+    url_dns_blacklists = list(url_dns_root_element) if url_dns_root_element is not None and len(url_dns_root_element) else list()
 
     for blacklists in [ip_blacklists, url_dns_blacklists]:
         bl_type = 'ip' if blacklists is ip_blacklists else 'url_dns'
