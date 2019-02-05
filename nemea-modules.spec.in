@@ -58,7 +58,7 @@ ldconfig
 %{_bindir}/nemea/amplification2idea.py
 %{_bindir}/nemea/anonymizer
 %{_bindir}/nemea/bruteforce2idea.py
-%{_bindir}/nemea/blooming_history
+%{_bindir}/nemea/bloom_history
 %{_bindir}/nemea/csv2nf.sh
 %{_bindir}/nemea/ddos_detector2idea.py
 %{_bindir}/nemea/debug_sender.py
@@ -87,6 +87,7 @@ ldconfig
 %{_bindir}/nemea/nfdump_reader
 %{_bindir}/nemea/nfdump_reader_test
 %{_bindir}/nemea/nfwriter
+%{_bindir}/nemea/prefix_tags
 %{_bindir}/nemea/proto_traffic
 %{_bindir}/nemea/pdns_exporter.py
 %{_bindir}/nemea/resolver.py

@@ -218,7 +218,7 @@ AM_CONDITIONAL(MAKE_DEB, test x$DEBUILD != x)
 AC_CONFIG_FILES([Makefile
                  aggregator/Makefile
                  anonymizer/Makefile
-                 blooming_history/Makefile
+                 bloom_history/Makefile
                  debug_sender/Makefile
                  device_classifier/Makefile
                  device_classifier/libsvm/tools/train.sh
@@ -247,6 +247,7 @@ AC_CONFIG_FILES([Makefile
                  nemea-modules.spec
                  nfreader/Makefile
                  pdns_exporter/Makefile
+                 prefix_tags/Makefile
                  proto_traffic/Makefile
                  proto_traffic/munin/Makefile
                  report2idea/Makefile

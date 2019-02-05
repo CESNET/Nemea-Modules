@@ -16,6 +16,7 @@ merger \
 mux \
 demux \
 natpair \
+prefix_tags \
 proto_traffic \
 pdns_exporter \
 report2idea \
@@ -55,7 +56,7 @@ SUBDIRS += flow_meter
 endif
 
 if HAVE_LIBCURL
-SUBDIRS += blooming_history
+SUBDIRS += bloom_history
 endif
 
 RPMDIR = RPMBUILD
