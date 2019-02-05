@@ -104,7 +104,7 @@ json_cleanup()
    }' | tr -s , | sed 's/^[, ]*//;'
 }
 
-#usage: test_conversion <script name> <node name> <input data> <output data>
+#usage: test_conversion <script name> <node name> <input data> <output data> <optional params>
 test_conversion()
 {
    # The Test:
@@ -128,14 +128,19 @@ rules:
       exit 1
    fi
 
+   SCRIPT_NAME="$1"
+   NODE_NAME="$2"
+   INPUT_DATA="$3"
+   OUTPUT_DATA="$4"
+   shift 4
    # prepare stored input
-   echo -n "$3" | base64 -d | gunzip > "$data"
+   echo -n "$INPUT_DATA" | base64 -d | gunzip > "$data"
    # generate output
-   "$srcdir/${1}2idea.py" -i "f:$data" -n "$2" --config <(echo "$config") | tee "$1.idea" |
+   "$srcdir/${SCRIPT_NAME}2idea.py" -i "f:$data" -n "$NODE_NAME" --config <(echo "$config") "$@" | tee "$SCRIPT_NAME.idea" |
       # clean it from variable info
       json_cleanup |
       # compare it with prepared expected data (previously base64 encoded and gzipped)
-      diff -u - <(echo -n "$4" | base64 -d | gunzip | json_cleanup) ||
+      diff -u - <(echo -n "$OUTPUT_DATA" | base64 -d | gunzip  | json_cleanup)  ||
       { echo "${1}2idea FAILED :-("; ((errors++)); }
 
    # cleanup
