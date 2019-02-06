@@ -1,51 +1,60 @@
 SUBDIRS=. tests
-bin_PROGRAMS=flow_meter
-flow_meter_SOURCES=flow_meter.cpp \
-		    flow_meter.h \
-		    packet.h \
-		    packetreceiver.h \
-		    pcapreader.h \
-		    flowexporter.h \
-		    flowifc.h \
-		    flowcache.h \
+bin_PROGRAMS=flow_meter ipfixprobe
+
+ipfixprobe_LIBS=-lpcap
+ipfixprobe_LDADD=-lpcap
+ipfixprobe_CXXFLAGS=-std=c++98 -Wno-write-strings
+ipfixprobe_CPPFLAGS=-DDISABLE_UNIREC
+flow_meter_src=flow_meter.cpp \
+		flow_meter.h \
+		packet.h \
+		packetreceiver.h \
+		pcapreader.h \
+		flowexporter.h \
+		flowifc.h \
+		flowcache.h \
+		pcapreader.cpp \
+		nhtflowcache.cpp \
+		nhtflowcache.h \
+		stats.cpp \
+		stats.h \
+		flowcacheplugin.h \
+		httpplugin.cpp \
+		httpplugin.h \
+		sipplugin.cpp \
+		sipplugin.h \
+		httpsplugin.cpp \
+		httpsplugin.h \
+		smtpplugin.cpp \
+		smtpplugin.h \
+		dnsplugin.cpp \
+		dnsplugin.h \
+		passivednsplugin.cpp \
+		passivednsplugin.h \
+		ntpplugin.cpp \
+		ntpplugin.h \
+		ipaddr.h \
+		arpplugin.cpp \
+		arpplugin.h \
+		ipfixexporter.cpp \
+		ipfix-elements.h \
+		ipfixexporter.h \
+		xxhash.c \
+		xxhash.h \
+		dns.h \
+		conversion.h \
+		conversion.cpp
+ipfixprobe_SOURCES=$(flow_meter_src)
+
+flow_meter_SOURCES=$(flow_meter_src) \
 		    unirecexporter.h \
-		    pcapreader.cpp \
-		    nhtflowcache.cpp \
-		    nhtflowcache.h \
 		    unirecexporter.cpp \
-		    stats.cpp \
-		    stats.h \
-		    flowcacheplugin.h \
-		    httpplugin.cpp \
-		    httpplugin.h \
-		    sipplugin.cpp \
-		    sipplugin.h \
-		    httpsplugin.cpp \
-		    httpsplugin.h \
-		    smtpplugin.cpp \
-		    smtpplugin.h \
 		    fields.c \
-		    fields.h \
-		    dnsplugin.cpp \
-		    dnsplugin.h \
-		    passivednsplugin.cpp \
-		    passivednsplugin.h \
-		    ntpplugin.cpp \
-		    ntpplugin.h \
-		    ipaddr.h \
-		    arpplugin.cpp \
-		    arpplugin.h \
-		    ipfixexporter.cpp \
-		    ipfix-elements.h \
-		    ipfixexporter.h \
-		    xxhash.c \
-		    xxhash.h \
-		    dns.h \
-		    conversion.h \
-		    conversion.cpp
+		    fields.h
 
 flow_meter_LDADD=-ltrap -lunirec -lpcap
 flow_meter_CXXFLAGS=-std=c++98 -Wno-write-strings
+
 pkgdocdir=${docdir}/flow_meter
 pkgdoc_DATA=README.md
 EXTRA_DIST=README.md \

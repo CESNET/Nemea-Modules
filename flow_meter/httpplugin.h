@@ -81,11 +81,13 @@ struct RecordExtHTTPReq : RecordExt {
 
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
+#ifndef DISABLE_UNIREC
       ur_set_string(tmplt, record, F_HTTP_REQUEST_METHOD, method);
       ur_set_string(tmplt, record, F_HTTP_REQUEST_HOST, host);
       ur_set_string(tmplt, record, F_HTTP_REQUEST_URL, uri);
       ur_set_string(tmplt, record, F_HTTP_REQUEST_AGENT, user_agent);
       ur_set_string(tmplt, record, F_HTTP_REQUEST_REFERER, referer);
+#endif
    }
 
    virtual int fillIPFIX(uint8_t *buffer, int size)
@@ -158,8 +160,10 @@ struct RecordExtHTTPResp : RecordExt {
 
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
+#ifndef DISABLE_UNIREC
       ur_set(tmplt, record, F_HTTP_RESPONSE_STATUS_CODE, code);
       ur_set_string(tmplt, record, F_HTTP_RESPONSE_CONTENT_TYPE, content_type);
+#endif
    }
    virtual int fillIPFIX(uint8_t *buffer, int size)
    {

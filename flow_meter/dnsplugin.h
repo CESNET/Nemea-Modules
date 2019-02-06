@@ -93,6 +93,7 @@ struct RecordExtDNS : RecordExt {
 
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
+#ifndef DISABLE_UNIREC
          ur_set(tmplt, record, F_DNS_ID, id);
          ur_set(tmplt, record, F_DNS_ANSWERS, answers);
          ur_set(tmplt, record, F_DNS_RCODE, rcode);
@@ -104,6 +105,7 @@ struct RecordExtDNS : RecordExt {
          ur_set_var(tmplt, record, F_DNS_RDATA, data, rlength);
          ur_set(tmplt, record, F_DNS_PSIZE, psize);
          ur_set(tmplt, record, F_DNS_DO, dns_do);
+#endif
    }
    virtual int fillIPFIX(uint8_t *buffer, int size)
    {

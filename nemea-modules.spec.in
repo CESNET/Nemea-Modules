@@ -67,7 +67,8 @@ ldconfig
 %{_bindir}/nemea/email_reporter.py
 %{_bindir}/nemea/endiverter
 %{_bindir}/nemea/flowcounter
-%attr(0754, root, nemead) %{_bindir}/nemea/flow_meter
+%attr(0755, root, nemead) %{_bindir}/nemea/flow_meter
+%attr(0755, root, nemead) %{_bindir}/nemea/ipfixprobe
 %{_bindir}/nemea/haddrscan2idea.py
 %{_bindir}/nemea/hoststats2idea.py
 %{_bindir}/nemea/idea2idea.py

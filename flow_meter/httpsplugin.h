@@ -70,7 +70,9 @@ struct RecordExtHTTPS : RecordExt {
 
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
+#ifndef DISABLE_UNIREC
       ur_set_string(tmplt, record, F_HTTPS_SNI, sni);
+#endif
    }
 
    virtual int fillIPFIX(uint8_t *buffer, int size)
