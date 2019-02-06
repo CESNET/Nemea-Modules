@@ -1,3 +1,27 @@
+2019-02-05 (Tomas Cejka): prefix_tags: test: remove debug CFLAGS options because of linking issues
+2019-02-05 (Tomas Cejka): blacklist2idea: test: updated expected output, pass path to config file
+2019-02-05 (Tomas Cejka): report2idea: FEATURE improved test script - allow additional arguments
+2019-02-05 (Tomas Cejka): blacklist2idea: BUGFIX failure on "empty" config file
+2019-02-05 (Tomas Cejka): report2idea: tests: BUGFIX improved json_cleanup function
+2019-02-05 (Tomas Cejka): report2idea: tests: update expected output data
+2019-02-05 (Tomas Cejka): report2idea: BUGFIX fixed for loop in awk - missing arg
+2019-02-05 (Tomas Cejka): sipbf2idea: update test - expected output
+2019-02-04 (Tomas Cejka): sipbf2idea: changed Description and SIP URI moved into Note
+2019-01-18 (Filip Krestan): bloom_history&prefix_tags: fix coding style
+2019-01-18 (Filip Krestan): Add tests to prefix_tags module
+2019-01-15 (Filip Krestan): Remove unused tests from bloom_history
+2019-01-15 (Tomas Cejka): bloom_history: BUGFIX enabled test as noinst_
+2019-01-15 (Tomas Cejka): bloom_history&prefix_tags: BUGFIX use jansson from libtrap
+2019-01-15 (Tomas Cejka): bloom_history: BUGFIX add header files to dist
+2019-01-15 (Filip Krestan): Rename blooming_history to bloom_history
+2019-01-15 (Filip Krestan): Add prefix_tags module
+2018-11-02 (Tomas Cejka): logger: improved converter csv2nf.sh to parse header and find columns
+2018-10-30 (Ulrik Haugen): Tune mailreporter recipients handling
+2018-10-14 (Jiri Havranek): report2idea: fixed config.yml.example
+2018-10-12 (Jiri Havranek): merger: updated README.md and fixed template format
+2018-10-11 (Ulrik Haugen): Add resolver module
+2018-10-11 (Ulrik Haugen): Fix typos, recode, fold long lines and add whitespace
+
 2018-10-09 (Filip Šuster): Blacklist2idea: Universal reporter (#104)
 2018-10-04 (Jaroslav Hlavac): json_dump.py: added README
 2018-10-04 (Jaroslav Hlavac): json_replay: added README

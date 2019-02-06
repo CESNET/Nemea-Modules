@@ -1,3 +1,23 @@
+2019-02-06 nemea-modules-2.9.0
+	* prefix_tags:
+		Add new module to add a label into flow records according to
+		prefix
+	* report2idea:
+		Bugfix in tests which were not performing at all.
+	* blacklist2idea:
+		Bugfix in config loading when the file does not contain
+		blacklists.
+	* sipbf2idea:
+		Improved alert format according to feedback from warden-info.
+	* bloom_history:
+		Add new module that stores observed IPs into a bloom filter to
+		be checked afterwards.
+	* logger-csv2nf:
+		Improved header parsing in csv2nf.sh to find columns
+		automatically.
+	* merger:
+		Doc update.
+
 2018-10-09 nemea-modules-2.8.2
 	* blacklist2idea:
 		Change alert format for blacklistfilter - all IPs are in Source.
