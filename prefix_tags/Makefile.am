@@ -21,5 +21,7 @@ test_prefix_tags_SOURCES = \
 	test_prefix_tags.c \
 	prefix_tags_functions.c prefix_tags_functions.h
 
+test_prefix_tags_LDADD=-lunirec
+
 include ../aminclude.am
 
