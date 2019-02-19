@@ -689,7 +689,7 @@ int main(int argc, char **argv)
             bool processed = process_agg_functions(in_tmplt, in_rec, OutputTemplate::out_tmplt, stored_rec);
             /* Cannot continue processing -> emergency export needed */
             if(processed == false){
-               send_record_out(OutputTemplate::out_tmplt, stored_rec)               
+               send_record_out(OutputTemplate::out_tmplt, stored_rec);               
                init_record_data(in_tmplt, in_rec, OutputTemplate::out_tmplt, stored_rec);
             }
          }
