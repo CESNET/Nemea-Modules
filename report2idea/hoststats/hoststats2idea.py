@@ -42,7 +42,8 @@ def convert_to_idea(rec, opts=None):
     Return report in IDEA format (as Python dict)
     """
     def VERBOSE(msg):
-        if opts.verbose:
+        # default VERBOSE_LEVEL = 3 in report2idea
+        if opts.verbose < 3:
             print(MODULE_NAME+": "+msg)
     
     # Set fields which are always present
@@ -86,7 +87,8 @@ def convert_to_idea(rec, opts=None):
                 'Proto': ['udp', 'domain'],
             }]
             setAddr(idea['Target'][0], rec.DST_IP)
-            idea['Description'] = str(rec.DST_IP)+' received abnormally high number of large DNS replies - probably a victim of DNS amplification DoS attack'
+            idea['Description'] = 'Abnormally high number of large DNS replies'
+            idea['Note'] = str(rec.DST_IP)+' received abnormally high number of large DNS replies - probably a victim of DNS amplification DoS attack'
         if rec.SRC_IP:
             idea['Source'] = [{
                 'Type': ['Backscatter'],
@@ -94,7 +96,8 @@ def convert_to_idea(rec, opts=None):
                 'Proto': ['udp', 'domain'],
             }]
             setAddr(idea['Source'][0], rec.SRC_IP)
-            idea['Description'] = str(rec.SRC_IP)+' sent abnormally high number of large DNS replies - it was probably misused for DNS amplification DoS attack'
+            idea['Description'] = 'Abnormally high number of large DNS replies'
+            idea['Note'] = str(rec.SRC_IP)+' sent abnormally high number of large DNS replies - it was probably misused for DNS amplification DoS attack'
         
         idea['FlowCount'] = rec.EVENT_SCALE  # number of incoming replies greater than limit (currently 1000B)
       
@@ -119,14 +122,18 @@ def convert_to_idea(rec, opts=None):
         # Description
         if 'Target' in idea: # victim
             if rec.PROTOCOL == 6:
-                idea['Description'] = 'Abnormally high number of TCP SYN packets received by '+str(rec.DST_IP)+' (probably SYN flood attack)'
+                idea['Description'] = 'Abnormally high number of TCP SYN packets'
+                idea['Note'] = 'Abnormally high number of TCP SYN packets received by '+str(rec.DST_IP)+' (probably SYN flood attack)'
             else:
-                idea['Description'] = 'Abnormally high number of packets received by '+str(rec.DST_IP)+' (probably flooding DoS attack)'
+                idea['Description'] = 'Abnormally high number of packets'
+                idea['Note'] = 'Abnormally high number of packets received by '+str(rec.DST_IP)+' (probably flooding DoS attack)'
         elif 'Source' in idea: # attacker
             if rec.PROTOCOL == 6:
-                idea['Description'] = 'Abnormally high number of TCP SYN packets emitted by '+str(rec.SRC_IP)+' (probably SYN flood attack)'
+                idea['Description'] = 'Abnormally high number of TCP SYN packets'
+                idea['Note'] = 'Abnormally high number of TCP SYN packets emitted by '+str(rec.SRC_IP)+' (probably SYN flood attack)'
             else:
-                idea['Description'] = 'Abnormally high number of packets emmited by '+str(rec.SRC_IP)+' (probably flooding DoS attack)'
+                idea['Description'] = 'Abnormally high number of packets'
+                idea['Note'] = 'Abnormally high number of packets emmited by '+str(rec.SRC_IP)+' (probably flooding DoS attack)'
          
         # Parse information from NOTE (victim)
         match = re.match(
@@ -141,7 +148,7 @@ def convert_to_idea(rec, opts=None):
             if 'Source' not in idea:
                 idea['Source'] = [{}]
             idea['Source'][0]['Count'] = int(match.group(5))
-            idea['Source'][0]['Note'] = 'Count of sources is approximate'
+            idea['Source'][0]['Note'] = 'Number of sources is approximate'
         
         # Parse information from NOTE (attacker)
         match = re.match(
@@ -156,7 +163,7 @@ def convert_to_idea(rec, opts=None):
             if 'Target' not in idea:
                 idea['Target'] = [{}]
             idea['Target'][0]['Count'] = int(match.group(5))
-            idea['Target'][0]['Note'] = 'Count of destinations is approximate'
+            idea['Target'][0]['Note'] = 'Number of destinations is approximate'
                
     # SSH Bruteforce
     elif rec.EVENT_TYPE == EVT_T_BRUTEFORCE:
