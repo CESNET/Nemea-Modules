@@ -17,11 +17,11 @@ REQ_TYPE = pytrap.FMT_UNIREC
 REQ_FORMAT = "uint8 EVENT_TYPE,time TIME_FIRST,time TIME_LAST,ipaddr SRC_IP,ipaddr DST_IP,uint8 PROTOCOL,uint32 EVENT_SCALE,string NOTE"
 
 # Event type contants (from old "unirec/fields" file)
-EVT_T_PORTSCAN                    =  1  # Portscan (unspecified type)
+#EVT_T_PORTSCAN                    =  1  # Portscan (unspecified type) [not used] 
 EVT_T_PORTSCAN_H                  =  2  # Horizontal portscan (one or a few ports, many addresses)
-EVT_T_PORTSCAN_V                  =  3  # Vertical portscan (one address, many ports)
+#EVT_T_PORTSCAN_V                  =  3  # Vertical portscan (one address, many ports) [not used] 
 EVT_T_DOS                         = 10  # Denial of service attack (unspecified type)
-EVT_T_SYNFLOOD                    = 11  # TCP SYN flood
+#EVT_T_SYNFLOOD                    = 11  # TCP SYN flood [not used, SYN floods are reported as DOS] 
 EVT_T_DNSAMP                      = 15  # DNS Amplification attack
 EVT_T_BRUTEFORCE                  = 30  # Bruteforce password guessing
 
