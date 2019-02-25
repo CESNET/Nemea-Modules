@@ -1,3 +1,11 @@
+2019-02-25 nemea-modules-2.10.0
+	* hoststats2idea:
+		Fixed format of IDEA messages - Description/Note.
+	* prefix_tags:
+		Fixed compilation&linkage.
+	* rpm:
+		Add ipfixprobe module, the simplified flow_meter.
+
 2019-02-06 nemea-modules-2.9.0
 	* prefix_tags:
 		Add new module to add a label into flow records according to

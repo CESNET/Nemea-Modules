@@ -1,3 +1,10 @@
+2019-02-25 (Václav Bartoš): hoststats2idea: Added comments to unused event type codes
+2019-02-25 (Tomas Cejka): hoststats2idea: changed Note and Description, disable verbose by default
+2019-02-19 (Tomas Cejka): prefix_tags: test: HOTFIX add missing linker flags -lunirec
+2018-12-23 (Tomas Cejka): rpm: add ipfixprobe module
+2018-12-23 (Tomas Cejka): configure: backup and restore LIBS
+2018-12-23 (Tomas Cejka): flow_meter: ipfixprobe without libtrap dependency
+
 2019-02-05 (Tomas Cejka): prefix_tags: test: remove debug CFLAGS options because of linking issues
 2019-02-05 (Tomas Cejka): blacklist2idea: test: updated expected output, pass path to config file
 2019-02-05 (Tomas Cejka): report2idea: FEATURE improved test script - allow additional arguments
