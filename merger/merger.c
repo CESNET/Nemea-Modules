@@ -223,7 +223,7 @@ void ta_capture_thread(int index)
             } else {
                // Some error has occured
                if (verbose >= 0) {
-                  fprintf(stderr, "Error: trap_get_data() returned %i (%s)\n", ret, trap_last_error_msg);
+                  fprintf(stderr, "Error: trap_recv() returned %i (%s)\n", ret, trap_last_error_msg);
                }
             }
             if(!outage_flag){
