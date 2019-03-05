@@ -14,7 +14,7 @@
 /usr/bin/nemea/haddrscan2idea.py
 /usr/bin/nemea/hoststats2idea.py
 /usr/bin/nemea/idea2idea.py
-/usr/bin/nemea/ipblacklist2idea.py
+/usr/bin/nemea/blacklist2idea.py
 /usr/bin/nemea/ipv6stats
 /usr/bin/nemea/json_dump.py
 /usr/bin/nemea/json_replay.py
@@ -47,7 +47,7 @@
 /usr/share/nemea-supervisor/reporters/dnstunnel2idea.sup
 /usr/share/nemea-supervisor/reporters/haddrscan2idea.sup
 /usr/share/nemea-supervisor/reporters/hoststats2idea.sup
-/usr/share/nemea-supervisor/reporters/ipblacklist2idea.sup
+/usr/share/nemea-supervisor/reporters/blacklist2idea.sup
 /usr/share/nemea-supervisor/reporters/miner2idea.sup
 /usr/share/nemea-supervisor/reporters/sipbf2idea.sup
 /usr/share/nemea-supervisor/reporters/venom2idea.sup
@@ -62,7 +62,7 @@
 /etc/warden/dnstunnel/config.cfg
 /etc/warden/haddrscan/config.cfg
 /etc/warden/hoststats/config.cfg
-/etc/warden/ipblacklist/config.cfg
+/etc/warden/blacklist/config.cfg
 /etc/warden/minerdetector/config.cfg
 /etc/warden/sipbruteforce/config.cfg
 /etc/warden/venom/config.cfg
