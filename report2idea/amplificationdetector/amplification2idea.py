@@ -37,7 +37,6 @@ def convert_to_idea(rec, opts=None):
         "EventTime": getIDEAtime(rec.TIME_FIRST),
         "CeaseTime": endTime,
         "DetectTime": endTime,
-        "Type": [ "Flow", "Statistical" ],
         "Category": [ "Availability.DDoS" ],
         "Source": [{
             'Type': ['Backscatter'],
@@ -60,6 +59,7 @@ def convert_to_idea(rec, opts=None):
         'Node': [{
             'Name': 'undefined',
             'SW': ['Nemea', 'amplification_detection' ],
+            'Type': [ 'Flow', 'Statistical' ],
         }],
     }
     setAddr(idea['Source'][0], rec.SRC_IP)
