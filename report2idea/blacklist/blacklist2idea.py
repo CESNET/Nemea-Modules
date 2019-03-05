@@ -33,9 +33,8 @@ class IdeaTemplate(object):
     Idea template class generating all common fields of an IDEA message
     """
 
-    description_ip = "{0} (listed: {1}) communicated with {2}."
-    description_url = "URL '{0}' (listed: {1}) was requested by {2}."
-    note = "{0} '{1}' was found on blacklist: {2}"
+    note_ip = "{0} (listed on {1} blacklist: {2}) communicated with {3}."
+    note_url = "URL '{0}' (listed on {1} blacklist: {2}) was requested by {3}."
 
     def __init__(self, rec, bl):
         self.rec = rec
@@ -74,13 +73,12 @@ class IdeaTemplate(object):
         return self.idea
 
     def set_common_ip_fields(self):
-        self.idea["Note"] = IdeaTemplate.note.format(self.rec["type"].upper(),
-                                                     self.rec["source"],
-                                                     self.bl["name"])
+        self.idea["Description"] = "Suspicious communication with IP listed on {0} blacklist".format(self.bl["name"])
+        self.idea["Note"] = IdeaTemplate.note_ip.format(self.rec["source"],
+                                                        self.rec["type"].upper(),
+                                                        self.bl["name"],
+                                                        ip_list2description(self.rec["targets"]))
 
-        self.idea["Description"] = IdeaTemplate.description_ip.format(self.rec["source"],
-                                                                      self.bl["name"],
-                                                                      ip_list2description(self.rec["targets"]))
 
         self.idea["FlowCount"] = self.rec["src_sent_flows"] + self.rec["tgt_sent_flows"]
         self.idea["PacketCount"] = self.rec["src_sent_packets"] + self.rec["tgt_sent_packets"]
@@ -105,13 +103,11 @@ class IdeaTemplate(object):
         self.idea["Source"].append(self.tgt_addr)
 
     def set_common_url_fields(self):
-        self.idea["Note"] = IdeaTemplate.note.format(self.rec["type"].upper(),
-                                                     self.rec["source_url"],
-                                                     self.bl["name"])
-
-        self.idea["Description"] = IdeaTemplate.description_url.format(self.rec["source_url"],
-                                                                       self.bl["name"],
-                                                                       ip_list2description(self.rec["targets"]))
+        self.idea["Description"] = "Suspicious communication with domain name listed on {0} blacklist".format(self.bl["name"])
+        self.idea["Note"] = IdeaTemplate.url_note.format(self.rec["source_url"],
+                                                         self.rec["type"].upper(),
+                                                         self.bl["name"],
+                                                         ip_list2description(self.rec["targets"]))
 
         setAddr(self.src_addr, pytrap.UnirecIPAddr(self.rec["source_ip"]))
 
