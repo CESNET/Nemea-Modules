@@ -1,3 +1,11 @@
+2019-03-06 (Tomas Cejka): blacklist2idea: improved URL/domain name description
+2019-03-06 (Tomas Cejka): blacklist2idea: BUGFIX bad reference to attribute
+2019-03-05 (Tomas Cejka): blacklist2idea: updated test
+2019-03-05 (Tomas Cejka): blacklist2idea: changed IDEA format - Description/Note
+2019-03-05 (Filip Suster): report2idea: delete old ipblacklist files
+2019-03-05 (Petr Velan): Type moved under Node in amplification2idea
+2019-03-01 (Tomas Cejka): merger: MAINTENANCE update output message replace "trap_get_data()"
+
 2019-02-25 (Václav Bartoš): hoststats2idea: Added comments to unused event type codes
 2019-02-25 (Tomas Cejka): hoststats2idea: changed Note and Description, disable verbose by default
 2019-02-19 (Tomas Cejka): prefix_tags: test: HOTFIX add missing linker flags -lunirec

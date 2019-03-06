@@ -1,3 +1,10 @@
+2019-03-06 nemea-modules-2.10.1
+	* blacklist2idea:
+		Fixed IDEA format of amplification2idea.
+	* amplification2idea:
+		Fixed IDEA format of amplification2idea.
+	* report2idea:
+		Cleanup - deleted ipblacklist2idea.
 2019-02-25 nemea-modules-2.10.0
 	* hoststats2idea:
 		Fixed format of IDEA messages - Description/Note.
