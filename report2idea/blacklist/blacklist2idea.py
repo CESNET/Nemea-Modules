@@ -103,7 +103,10 @@ class IdeaTemplate(object):
         self.idea["Source"].append(self.tgt_addr)
 
     def set_common_url_fields(self):
-        self.idea["Description"] = "Suspicious communication with domain name listed on {0} blacklist".format(self.bl["name"])
+
+        dsc = "Suspicious communication with {0} listed on {1} blacklist"
+        self.idea["Description"] = dsc.format("domain name" if self.rec["is_only_fqdn"] else "URL",
+                                              self.bl["name"])
         self.idea["Note"] = IdeaTemplate.note_url.format(self.rec["source_url"],
                                                          self.rec["type"].upper(),
                                                          self.bl["name"],
