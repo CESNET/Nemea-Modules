@@ -11,7 +11,7 @@ import argparse
 import re
 
 # Module parameters
-MODULE_NAME = "hoststats2idea"
+MODULE_NAME = "hoststats"
 MODULE_DESC = "Converts output of HostStatsNemea module to IDEA."
 REQ_TYPE = pytrap.FMT_UNIREC
 REQ_FORMAT = "uint8 EVENT_TYPE,time TIME_FIRST,time TIME_LAST,ipaddr SRC_IP,ipaddr DST_IP,uint8 PROTOCOL,uint32 EVENT_SCALE,string NOTE"

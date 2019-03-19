@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "ne
 from report2idea import *
 
 # Moudle name, description and required input data format
-MODULE_NAME = "haddrscan2idea"
+MODULE_NAME = "haddrscan"
 MODULE_DESC = "Converts output of haddrscan detector (horizontal scans) to IDEA."
 REQ_TYPE = pytrap.FMT_UNIREC
 REQ_FORMAT = "ipaddr SRC_IP,uint32 ADDR_CNT,time TIME_FIRST,time TIME_LAST," + \

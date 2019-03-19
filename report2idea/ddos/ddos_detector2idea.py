@@ -5,7 +5,7 @@ import argparse
 from report2idea import *
 
 # Module name, description and required input data format
-MODULE_NAME = "ddos_detector2idea"
+MODULE_NAME = "ddos_detector"
 MODULE_DESC = "Converts output of ddos_detector module to IDEA."
 
 REQ_TYPE = pytrap.FMT_UNIREC

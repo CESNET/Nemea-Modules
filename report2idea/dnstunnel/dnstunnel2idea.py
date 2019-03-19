@@ -11,7 +11,7 @@ from report2idea import *
 
 
 # Moudle name, description and required input data format
-MODULE_NAME = "dnstunnel2idea"
+MODULE_NAME = "dnstunnel"
 MODULE_DESC = "Converts output of dnstunnel_detection module to IDEA."
 REQ_TYPE = pytrap.FMT_UNIREC
 REQ_FORMAT = "ipaddr SRC_IP,time TIME_FIRST,time TIME_LAST,uint32 EVENT_ID,uint32 TUNNEL_CNT_PACKET,float TUNNEL_PER_NEW_DOMAIN,float TUNNEL_PER_SUBDOMAIN,uint8 TUNNEL_TYPE,string TUNNEL_DOMAIN"

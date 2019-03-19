@@ -12,7 +12,7 @@ import socket
 
 
 # Moudle name, description and required input data format
-MODULE_NAME = "sipbf2idea"
+MODULE_NAME = "sipbruteforce"
 MODULE_DESC = "Converts output of sip_bf_detector module to IDEA."
 
 REQ_TYPE = pytrap.FMT_UNIREC

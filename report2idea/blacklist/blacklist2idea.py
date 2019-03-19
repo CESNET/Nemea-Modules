@@ -9,7 +9,7 @@ import xml.etree.ElementTree as xml
 
 
 # Moudle name, description and required input data format
-MODULE_NAME = "blacklist2idea"
+MODULE_NAME = "blacklist"
 MODULE_DESC = "Converts output of (ip,url,dns)blacklistfilter modules to IDEA."
 
 REQ_TYPE = pytrap.FMT_JSON

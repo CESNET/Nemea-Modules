@@ -11,7 +11,7 @@ from report2idea import *
 
 
 # Moudle name, description and required input data format
-MODULE_NAME = "minerdetector2idea"
+MODULE_NAME = "minerdetector"
 MODULE_DESC = "Converts output of minerdetector module to IDEA."
 
 REQ_TYPE = pytrap.FMT_UNIREC
