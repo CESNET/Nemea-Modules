@@ -85,11 +85,15 @@
 json_cleanup()
 {
     gawk '{
+       gsub(/^[^{]*/, "")
+       gsub(/'"'"'/, "\"")
        gsub(/,* *"[^"]*Time": *"[^"]*",*/, ",")
        gsub(/,* *"ID": *"[^"]*",*/, ",")
-       gsub(/[{[]/, "")
+       gsub(/:/, ",")
+       gsub(/{/, ",")
        gsub("}", ",")
        gsub("]", ",")
+       gsub(/\[/, ",")
        gsub(" ", "")
        n = split($0, fields, ",")
        j=1
@@ -101,6 +105,7 @@ json_cleanup()
           printf("%s,", arr[i]);
        }
        printf("%s\n", arr[i]);
+       delete arr
    }' | tr -s , | sed 's/^[, ]*//;'
 }
 
