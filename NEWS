@@ -1,3 +1,7 @@
+2019-03-21 (Tomas Cejka): report2idea: BUGFIX split IDEA to sort all parts, delete array after usage
+2019-03-19 (Tomas Cejka): report2idea: rename reporters
+2019-03-07 (Tomas Cejka): build: update Makefile.am for logger&topn - enforce C std
+
 2019-03-06 (Tomas Cejka): blacklist2idea: improved URL/domain name description
 2019-03-06 (Tomas Cejka): blacklist2idea: BUGFIX bad reference to attribute
 2019-03-05 (Tomas Cejka): blacklist2idea: updated test
