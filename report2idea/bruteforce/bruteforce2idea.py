@@ -12,7 +12,7 @@ import socket
 
 
 # Moudle name, description and required input data format
-MODULE_NAME = "bruteforce2idea"
+MODULE_NAME = "bruteforce"
 MODULE_DESC = "Converts output of brute_force_detector module to IDEA."
 
 REQ_TYPE = pytrap.FMT_UNIREC

@@ -10,7 +10,7 @@ import argparse
 from report2idea import *
 
 # Moudle name, description and required input data format
-MODULE_NAME = "venom2idea"
+MODULE_NAME = "venom"
 MODULE_DESC = """Creates IDEA messages for detected attempts of Venom rootkit activation.
 
 Note: There is no Venom detection module in Nemea, the detection is done on exporter and a special field is added to flows detected as Venom activation attempt."""

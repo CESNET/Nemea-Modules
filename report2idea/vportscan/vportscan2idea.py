@@ -10,7 +10,7 @@ import argparse
 from report2idea import *
 
 # Moudle name, description and required input data format
-MODULE_NAME = "vportscan2idea"
+MODULE_NAME = "vportscan"
 MODULE_DESC = "Converts output of vportscan detector (vertical scans) to IDEA."
 REQ_TYPE = pytrap.FMT_JSON
 # REQ_FORMAT must match the value set by vportscan_aggregator.py
