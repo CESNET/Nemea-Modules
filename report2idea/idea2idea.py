@@ -8,7 +8,7 @@ import argparse
 # Module parameters
 MODULE_NAME = "idea2idea"
 MODULE_DESC = "Pass IDEA message unchanged (for testing and debugging purposes)"
-REQ_TYPE = trap.TRAP_FMT_JSON
+REQ_TYPE = pytrap.FMT_JSON
 REQ_FORMAT = "IDEA"
 
 # Main conversion function
