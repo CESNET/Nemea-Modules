@@ -1,0 +1,87 @@
+#!/bin/bash
+#
+# SPDX-License-Identifier: BSD-3-Clause
+# Author: Tomas Cejka <cejkat@cesnet.cz>
+#
+
+helpstring="$0 -w <warden_config.cfg> -c <reporters_config.yml> [-dvh] [-n filername]
+
+This script takes warden_client.cfg configuration file (warconf) and
+reporters_config.yml configuration file (repconf) given as arguments (see help
+-h), the 'namespace' information is extracted from repconf, and all occurencies
+of 'name' or 'Name' in warconf are replaced with the 'namespace'.'filername'.
+(default 'filername': filer).
+
+The aim of this wrapper is to use 'namespace' configured on one place in
+repconf.
+
+Finally after modification of warconf, warden_filer.py is executed (i.e. it
+must be present somewhere in PATH) as a sender with warconf.
+
+Additional options:
+-d   debug - do not execute warden_filer, do not modify warconf
+-h   show this help
+-n   filername, default is set to "filer"
+-v   verbose - print additional information (values of some internal variables)
+"
+
+PATH="$PATH:/usr/bin/nemea/"
+
+# path to warden_filer
+warden_filer="$(which warden_filer.py 2> /dev/null)"
+
+# control variables
+verbose=0
+debug=0
+name="filer"
+
+# parse options, c ~ repconf, w ~ warconf, v ~ verbose, d ~ debug - don't run,
+# n ~ filername, h ~ help
+while getopts w:c:n:vdh NAME; do
+   case "$NAME" in
+      c) repconf="$OPTARG" ;;
+      w) warconf="$OPTARG" ;;
+      v) verbose=1 ;;
+      d) debug=1 ;;
+      n) name="$OPTARG" ;;
+      h) echo "$helpstring"; exit 1 ;;
+   esac
+done
+
+if [ -z "$repconf" -o -z "$warconf" ]; then
+   echo "Error, -w and -c options are mandatory." >&2
+   exit 1
+fi
+
+if [ -z "$warden_filer" ]; then
+   echo "Missing warden_filer.py, its installation is needed." >&2
+   exit 1
+fi
+
+# set control variables to skip execution and avoid modification
+if [ "$debug" -eq 1 ]; then
+   PRINT=echo
+   SEDMOD=""
+else
+   PRINT=""
+   SEDMOD="-i"
+fi
+
+if [ "$verbose" -eq 1 ]; then
+   echo repconf="$repconf"
+   echo warconf="$warconf"
+fi
+
+# extract namespace from repconf, e.g., from "namespace: com.example.nemea"
+namespace="$(sed -n 's/^namespace:\s*\(.*\)/\1/p' "$repconf")"
+
+if [ "$verbose" -eq 1 ]; then
+   echo namespace="$namespace"
+fi
+
+# modify warconf to set new name
+sed $SEDMOD 's/^\(\s*\)\("[nN]ame":\s*\)"[^"]*"\(.*\)/\1\2"'"$namespace.$name"'"\3/' "$warconf"
+
+# execute warden_filer.py
+$PRINT exec "$warden_filer" -c "$warconf" sender
+
