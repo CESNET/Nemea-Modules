@@ -102,6 +102,7 @@ ldconfig
 %{_bindir}/nemea/venom2idea.py
 %{_bindir}/nemea/voipfraud2idea.py
 %{_bindir}/nemea/vportscan2idea.py
+%{_bindir}/nemea/nemea_warden_filer
 %{_docdir}/nemea-modules/*/*
 %config(noreplace) %{_sysconfdir}/nemea/email_reporter/example.cfg
 %config(noreplace) %{_sysconfdir}/nemea/email_reporter/generic.cfg

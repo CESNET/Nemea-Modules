@@ -265,6 +265,7 @@ AC_CONFIG_FILES([Makefile
                  report2idea/venom/Makefile
                  report2idea/voipfraud/Makefile
                  report2idea/vportscan/Makefile
+                 report2idea/warden_filer/Makefile
                  resolver/Makefile
                  scalar-aggregator/Makefile
                  topn/Makefile
