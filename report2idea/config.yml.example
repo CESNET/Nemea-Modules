@@ -1,3 +1,5 @@
+---
+namespace: com.example.nemea
 custom_actions:
   - id: store_mongo
     mongo:
