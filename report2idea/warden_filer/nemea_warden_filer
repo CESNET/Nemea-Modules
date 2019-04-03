@@ -72,8 +72,18 @@ if [ "$verbose" -eq 1 ]; then
    echo warconf="$warconf"
 fi
 
+if [ ! -r "$repconf" ]; then
+   echo "Cannot open $repconf. File is missing or permissions prevents from reading." >&2
+   exit 1
+fi
+
 # extract namespace from repconf, e.g., from "namespace: com.example.nemea"
-namespace="$(sed -n 's/^namespace:\s*\(.*\)/\1/p' "$repconf")"
+namespace="$(sed -n 's/^namespace:\s*'"[\"']"'\?\('"[^\"']"'*\).*/\1/p' "$repconf")"
+
+if [ -z "$namespace" ]; then
+   echo "Missing 'namespace' in the $repconf file." >&2
+   exit 1
+fi
 
 if [ "$verbose" -eq 1 ]; then
    echo namespace="$namespace"
