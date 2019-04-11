@@ -355,7 +355,7 @@ int main(int argc, char **argv)
    }
 
    if (in_template != NULL) {
-      for (int i = 0; i < module_info->num_ifc_in; i++) {
+      for (i = 0; i < module_info->num_ifc_in; i++) {
          ur_free_template(in_template[i]);
       }
       free(in_template);
