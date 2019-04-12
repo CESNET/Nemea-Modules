@@ -41,7 +41,8 @@
  *
  */
 
-#include <nemea-common/super_fast_hash.h>
+/* include from nemea-common/ */
+#include <super_fast_hash.h>
 
 #include <unirec/unirec.h>
 
