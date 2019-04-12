@@ -1,6 +1,7 @@
 SUBDIRS=. tests
 bin_PROGRAMS=flow_meter ipfixprobe
 
+LIBS=$(NONNEMEA_LIBS)
 ipfixprobe_LIBS=-lpcap
 ipfixprobe_LDADD=-lpcap
 ipfixprobe_CXXFLAGS=-std=c++98 -Wno-write-strings
@@ -52,7 +53,7 @@ flow_meter_SOURCES=$(flow_meter_src) \
 		    fields.c \
 		    fields.h
 
-flow_meter_LDADD=-ltrap -lunirec -lpcap
+flow_meter_LDADD=$(NEMEA_FRAMEWORK_LIBS) -ltrap -lunirec -lpcap
 flow_meter_CXXFLAGS=-std=c++98 -Wno-write-strings
 
 pkgdocdir=${docdir}/flow_meter
