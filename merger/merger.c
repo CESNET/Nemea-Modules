@@ -96,7 +96,6 @@ void *capture_thread(void *arg)
          }
          if (!ignoreineof) {
             private_stop = 1;
-            stop = 1;
             break;
          }
       } else if (rec_size < ur_rec_fixlen_size(in_template[index])) {
@@ -156,7 +155,6 @@ void *capture_thread(void *arg)
             fprintf(stderr, "Error: trap_send() returned %i (%s)\n", ret, trap_last_error_msg);
          }
          private_stop = 1; // Module was terminated while waiting for new data (e.g. by Ctrl-C)
-         stop = 1;
          break;
       }
 
