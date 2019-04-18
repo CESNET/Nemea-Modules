@@ -249,6 +249,7 @@ AC_CONFIG_FILES([Makefile
                  logger/Makefile
                  logreplay/Makefile
                  merger/Makefile
+                 merger/test/Makefile
                  mux/Makefile
                  demux/Makefile
                  natpair/Makefile

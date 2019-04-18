@@ -1,3 +1,5 @@
+SUBDIRS=test
+
 bin_PROGRAMS=merger
 merger_SOURCES=merger.c fields.c fields.h
 merger_LDADD=-lunirec -ltrap
