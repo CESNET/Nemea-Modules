@@ -51,6 +51,7 @@ static void *out_rec = NULL;
 
 pthread_mutex_t unirec_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_t *thr_list;
+char *thr_init;
 
 /**
  * Capture thread to receive incomming messages and send them via shared output interface.
@@ -326,18 +327,26 @@ int main(int argc, char **argv)
 
    /* Prepare list of threads */
    thr_list = calloc(module_info->num_ifc_in, sizeof(thr_list[0]));
+   thr_init = calloc(module_info->num_ifc_in, sizeof(thr_init[0]));
+
+   if (thr_list == NULL || thr_init == NULL) {
+      goto exit_clean_template;
+   }
 
    /* Start a thread for each interface that will receive messages and send
     * them via common output IFC */
    for (i = 0; i < module_info->num_ifc_in; ++i) {
       if (pthread_create(&thr_list[i], NULL, capture_thread, &i) != 0) {
-         /* TODO */
+         fprintf(stderr, "Interrupted creation of threads due to failure.\n");
+         break;
       }
+      thr_init[i] = 1;
    }
 
    for (i = 0; i < module_info->num_ifc_in; ++i) {
-      if (pthread_join(thr_list[i], NULL) != 0) {
-         /* TODO */
+      if (thr_init[i] == 1 && pthread_join(thr_list[i], NULL) != 0) {
+         /* error */
+         fprintf(stderr, "Error: could not join thread %d.\n", i);
       }
    }
 
@@ -345,7 +354,7 @@ int main(int argc, char **argv)
 
    // ***** Cleanup *****
    if (verbose >= 0) {
-      printf("Exitting ...\n");
+      fprintf(stderr, "Exitting ...\n");
    }
 
    if (!noeof) {
@@ -354,6 +363,7 @@ int main(int argc, char **argv)
       trap_send_flush(0);
    }
 
+exit_clean_template:
    if (in_template != NULL) {
       for (i = 0; i < module_info->num_ifc_in; i++) {
          ur_free_template(in_template[i]);
@@ -363,10 +373,12 @@ int main(int argc, char **argv)
    ur_free_template(out_template);
 
 exit:
-   // Do all necessary cleanup before exiting
+   // Do the remaining cleanup before exiting
    ur_finalize();
    TRAP_DEFAULT_FINALIZATION()
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+   free(thr_list);
+   free(thr_init);
 
    return ret;
 }
