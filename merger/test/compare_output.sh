@@ -13,3 +13,5 @@ echo Merger finished
 
 diff -u <(${builddir}/../../logger/logger -t -i f:out | sort) ${srcdir}/expected
 
+# cleanup
+rm -f out
