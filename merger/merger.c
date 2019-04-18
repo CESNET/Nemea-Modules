@@ -50,8 +50,8 @@ static ur_template_t *out_template; // UniRec template of output interface
 static void *out_rec = NULL;
 
 pthread_mutex_t unirec_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_t *thr_list;
-char *thr_init;
+pthread_t *thr_list = NULL;
+char *thr_init = NULL;
 
 /**
  * Capture thread to receive incomming messages and send them via shared output interface.
@@ -269,6 +269,11 @@ int main(int argc, char **argv)
 
    const void **msgs = calloc(module_info->num_ifc_in, sizeof(msgs[0]));
    uint16_t *msgs_size = calloc(module_info->num_ifc_in, sizeof(msgs_size[0]));
+
+   if (msgs == NULL || msgs_size == NULL) {
+      free(msgs); /* could be successfully allocated */
+      goto exit;
+   }
 
    out_template = NULL;
 
