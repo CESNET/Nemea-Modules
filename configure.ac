@@ -85,10 +85,16 @@ AX_OPENMP([], [AC_MSG_ERROR([OpenMP was not found. Some modules need it (e.g. me
 AC_SUBST(OPENMP_CFLAGS)
 
 backup_libs=${LIBS}
+NONNEMEA_LIBS=${backup_libs}
+AC_SUBST(NEMEA_FRAMEWORK_LIBS)
+
 AX_LIBTRAP_CHECK
 AX_UNIREC_CHECK
 AX_NEMEACOMMON_CHECK
-LIBS=${backup_libs}
+NEMEA_FRAMEWORK_LIBS=${LIBS}
+AC_SUBST(NEMEA_FRAMEWORK_LIBS)
+#LIBS=${backup_libs}
+
 
 AC_ARG_WITH([openssl],
         [AS_HELP_STRING([--without-openssl], [Force to disable openssl])],
@@ -243,6 +249,7 @@ AC_CONFIG_FILES([Makefile
                  logger/Makefile
                  logreplay/Makefile
                  merger/Makefile
+                 merger/test/Makefile
                  mux/Makefile
                  demux/Makefile
                  natpair/Makefile
