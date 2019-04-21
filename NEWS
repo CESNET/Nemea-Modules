@@ -1,3 +1,23 @@
+2019-04-18 (Tomas Cejka): merger: test: add cleanup
+2019-04-18 (Tomas Cejka): merger: tests: add files into dist
+2019-04-18 (Tomas Cejka): merger: add test for checking output data
+2019-04-18 (Tomas Cejka): merger: BUGFIX do not stop the whole module when a thread finishes
+2019-04-18 (Tomas Cejka): merger: check return value of allocation functions
+2019-04-18 (Tomas Cejka): merger: finished TODOs, added error messages
+2019-04-12 (Tomas Cejka): flow_meter: update test references - MAC address representation
+2019-04-12 (Tomas Cejka): flow_meter&ipfixprobe: improved solution of linker parameters
+2019-04-12 (Tomas Cejka): aggregator: fixed build as a nemea/ submodule
+2019-04-11 (Tomas Cejka): merger: fixed non-complient syntax
+2019-04-10 (Tomas Cejka): merger: new version of simplified merger without openmp
+2019-04-08 (Tomas Cejka): logger: moved source code for conversion to CSV into UniRec
+2019-04-03 (Tomas Cejka): warden_filer: ímproved according to review by @vaclavbartos
+2019-03-27 (Tomas Cejka): report2idea: warden_filer wrapper
+2019-03-22 (Pavel Valach): prefix_tags: add libtrap as a linker dependency
+2019-03-22 (Tomas Cejka): report2idea: updated config.yml.example
+2019-03-22 (Tomas Cejka): idea2idea: BUGFIX bad constant name
+2018-12-23 (Tomas Cejka): csv2nf: MAC addresses support
+2018-12-23 (Tomas Cejka): proto_traffic: add SCTP statistic
+
 2019-03-21 (Tomas Cejka): report2idea: BUGFIX split IDEA to sort all parts, delete array after usage
 2019-03-19 (Tomas Cejka): report2idea: rename reporters
 2019-03-07 (Tomas Cejka): build: update Makefile.am for logger&topn - enforce C std

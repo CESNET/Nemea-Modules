@@ -1,3 +1,26 @@
+2019-04-21 nemea-modules-2.11.0
+	* merger:
+		New simplified version based on pthread for openwrt.
+	* flow_meter:
+		Updated test references because of MAC UniRec type conversion.
+	* flow_meter&ipfixprobe:
+		Improved build - linker parameters.
+	* aggregator:
+		Fixed build.
+	* logger:
+		Moved translation code into UniRec API.
+	* warden_filer:
+		New wrapper for warden filer that reads namespace from
+		reporters config.
+	* prefix_tags:
+		Fixed build.
+	* idea2idea:
+		Bugfix undefined reference.
+	* csv2nf:
+		MAC address support.
+	* proto_traffic:
+		Extended statistic of proto_traffic by SCTP.
+
 2019-03-21 nemea-modules-2.10.2
 	* report2idea:
 		Renamed reporting modules because of namespace feature.
