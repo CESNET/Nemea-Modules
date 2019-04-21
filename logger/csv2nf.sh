@@ -88,6 +88,10 @@ NR==1 {
          PROTO = i;
       } else if ($i == "TCP_FLAGS") {
          TCP_FLAGS = i;
+      } else if ($i == "SRC_MAC") {
+         SRC_MAC = i;
+      } else if ($i == "DST_MAC") {
+         DST_MAC = i;
       }
    }
 }
@@ -115,7 +119,12 @@ FNR==1 && NR!=1 {
    proto=($PROTO == 6?"TCP":($PROTO == 17?"UDP":($PROTO == 1?"ICMP":$PROTO)))
    tcpflags=($TCP_FLAGS == "TCP_FLAGS")?"TCPFLG":(and($TCP_FLAGS, 32)?"U":".")(and($TCP_FLAGS, 16)?"A":".")(and($TCP_FLAGS, 8)?"P":".")(and($TCP_FLAGS, 4)?"R":".")(and($TCP_FLAGS, 2)?"S":".")(and($TCP_FLAGS, 1)?"F":".")
 
-   printf("%19s\t%19s\t%24s  ->  %24s\t%s\t%s\t%3s\t%5s\n",
-         $TIME_FIRST, $TIME_LAST, $SRC_IP" : "$SRC_PORT, $DST_IP" : "$DST_PORT, proto, tcpflags, $PACKETS, $BYTES)
+   if (ENVIRON["SHOW_MAC"] == "yes") {
+      printf("%19s\t%44s  ->  %44s\t%s\t%s\t%3s\t%5s\n",
+            $TIME_FIRST, $SRC_IP" ("$SRC_MAC") : "$SRC_PORT, $DST_IP" ("$DST_MAC"): "$DST_PORT, proto, tcpflags, $PACKETS, $BYTES)
+   } else {
+      printf("%19s\t%19s\t%24s  ->  %24s\t%s\t%s\t%3s\t%5s\n",
+            $TIME_FIRST, $TIME_LAST, $SRC_IP" : "$SRC_PORT, $DST_IP" : "$DST_PORT, proto, tcpflags, $PACKETS, $BYTES)
+   }
 }' "$@"
 
