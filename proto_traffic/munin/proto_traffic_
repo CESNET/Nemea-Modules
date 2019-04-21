@@ -17,7 +17,7 @@ data_temp_file = "/tmp/munin_proto_traffic_data.txt"
 # munin interval, if data file is older then munin_interval, get newer
 munin_interval = 3
 
-headers = ["tcp", "udp", "icmp", "icmp6", "gre", "other"]
+headers = ["tcp", "udp", "icmp", "icmp6", "gre", "sctp", "other"]
 
 #connecting to socket if created by C module proto_traffic
 def receiveData():
