@@ -49,7 +49,7 @@
 // Information if sigaction is available for nemea signal macro registration
 #ifdef HAVE_CONFIG_H
 #include <config.h>
-#endif
+#endif // HAVE_CONFIG_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,7 +59,6 @@
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 #include <unirec/unirec2csv.h>
-#include <pthread.h>
 #include <ctype.h>
 #include <inttypes.h>
 #include "fields.h"
@@ -70,18 +69,16 @@ UR_FIELDS()
 trap_module_info_t *module_info = NULL;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("logger","This module logs all incoming UniRec records to standard output or into a specified file. Each record is written as one line containing values of its fields in human-readable format separated by chosen delimiters (CSV format). If you use more than one input interface you have to specify output format by parameter \"-o\".",-1,0)
+  BASIC("logger","This module logs all incoming UniRec records to standard output or into a specified file. Each record is written as one line containing values of its fields in human-readable format separated by chosen delimiters (CSV format).",1,0)
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('w', "write", "Write output to FILE instead of stdout (rewrite the file).", required_argument, "string") \
   PARAM('a', "append", "Write output to FILE instead of stdout (append to the end).", required_argument, "string") \
-  PARAM('o', "output_fields", "Set of fields included in the output (UniRec data format example:\"uint32 FOO,time BAR\")", required_argument, "string") \
+  PARAM('o', "output_fields", "(currently unavailable)Set of fields included in the output (UniRec data format example:\"uint32 FOO,time BAR\")", required_argument, "string") \
   PARAM('t', "title", "Write names of fields on the first line.", no_argument, "none") \
   PARAM('T', "time", "Add the time when the record was received as the first field.", no_argument, "none") \
-  PARAM('n', "ifc_num", "Add the number of interface the record was received on as the first field (or second when -T is specified).", no_argument, "none") \
-  PARAM('N', "interface_count", "Number of input interfaces. Default: 1 interface", required_argument, "uint32") \
   PARAM('c', "cut", "Quit after N records are received, 0 can be useful in combination with -t to print UniRec.", required_argument, "uint32") \
-  PARAM('d', "delimiter", "Optionally modifies delimiter to inserted value X (implicitely ','). Delimiter has to be one character, except for printable escape sequences.", required_argument, "string")
+  PARAM('d', "delimiter", "Optionally modifies delimiter to inserted value X (implicitly ','). Delimiter has to be one character, except for printable escape sequences.", required_argument, "string")
 
 /* If delimiter is escape sequence, assigns its value from input to delimiter var. */
 #define ESCAPE_SEQ(arg,err_cmd) do { \
@@ -103,14 +100,11 @@ trap_module_info_t *module_info = NULL;
            }\
         } while (0)
 
-
 static int stop = 0;
 
 int verbose;
-static int n_inputs = 1; // Number of input interfaces
-static ur_template_t **templates = NULL; // UniRec templates of input interfaces (array of length n_inputs)
+static ur_template_t *in_template = NULL; // UniRec templates of input interfaces (array of length n_inputs)
 static ur_template_t *out_template = NULL; // UniRec template with union of fields of all inputs
-int print_ifc_num = 0;
 int print_time = 0;
 int print_title = 0;
 uint8_t out_template_defined = 0;
@@ -120,36 +114,28 @@ unsigned int num_records = 0; // Number of records received (total of all inputs
 unsigned int max_num_records = 0; // Exit after this number of records is received
 char enabled_max_num_records = 0; // Limit of message is set when non-zero
 
-pthread_mutex_t mtx;
-pthread_t *threads;
-
 static FILE *file; // Output file
 
+
+// Signal handler registered through TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER()
 void trap_default_signal_handler(int signal)
 {
-   static int sig_counter = 0;
    if (signal == SIGTERM || signal == SIGINT) {
       stop = 1;
       trap_terminate();
-      if (sig_counter == 0) {
-         for (int i = 0; i < n_inputs; i++) {
-            pthread_kill(threads[i], SIGINT);
-         }
-      }
-
-      sig_counter++;
    }
 }
 
-void *capture_thread(void *arg)
+
+void capture_data()
 {
-   int index =  *(int *) arg, fail = 0, ret;
+   int fail = 0, ret;
    uint8_t data_fmt = TRAP_FMT_UNKNOWN;
    urcsv_t *csv = NULL;
-   char *strout = NULL;
+   char *str_out = NULL;
 
    if (verbose >= 1) {
-      printf("Thread %i started.\n", index);
+      printf("Capturing started.\n");
    }
 
    // Read data from input and log them to a file
@@ -158,24 +144,24 @@ void *capture_thread(void *arg)
       uint16_t rec_size;
 
       if (verbose >= 2) {
-         printf("Thread %i: calling trap_recv()\n", index);
+         printf("Calling trap_recv()\n");
       }
 
-      // Receive data from index-th input interface, wait until data are available
-      ret = trap_recv(index, &rec, &rec_size);
+      // Receive data from input interface 0, wait until data are available
+      ret = trap_recv(0, &rec, &rec_size);
       if (ret == TRAP_E_FORMAT_CHANGED) {
          const char *spec = NULL;
-         if (trap_get_data_fmt(TRAPIFC_INPUT, index, &data_fmt, &spec) != TRAP_E_OK) {
+         if (trap_get_data_fmt(TRAPIFC_INPUT, 0, &data_fmt, &spec) != TRAP_E_OK) {
             fprintf(stderr, "Error: Data format was not loaded.\n");
             break;
          } else {
-            templates[index] = ur_define_fields_and_update_template(spec, templates[index]);
-            if (templates[index] == NULL) {
+            in_template = ur_define_fields_and_update_template(spec, in_template);
+            if (in_template == NULL) {
                fprintf(stderr, "Error: Template could not be created.\n");
                break;
             }
-            pthread_mutex_lock(&mtx);
-            if (out_template_defined == 0) { // Check whether it is first thread trying to define output ifc template
+
+            if (out_template_defined == 0) {
                out_template = ur_define_fields_and_update_template(spec, out_template);
                if (out_template == NULL) {
                  fprintf(stderr, "Error: Output interface template couldn't be created.\n");
@@ -185,76 +171,77 @@ void *capture_thread(void *arg)
                   out_template_defined = 1;
                }
             }
-            csv = urcsv_init(templates[index], delimiter);
+
+			 if (fail == 1) {
+				 break;
+			 }
+
+            csv = urcsv_init(in_template, delimiter);
 
             if (print_title == 1 && out_template_defined == 1) {
                print_title = 0;
-               // Print a header - names of output UniRec fields
+               // Print header - names of output UniRec fields
                if (print_time) {
                   fprintf(file, "time,");
                }
-               if (print_ifc_num) {
-                  fprintf(file, "ifc,");
-               }
-               strout = urcsv_header(csv);
-               if (strout == NULL) {
+               str_out = urcsv_header(csv);
+               if (str_out == NULL) {
                   fprintf(stderr, "Memory allocation error\n");
                   fail = 1;
                } else {
-                  fprintf(file, "%s\n", strout);
-                  free(strout);
+                  fprintf(file, "%s\n", str_out);
+                  free(str_out);
                   fflush(file);
                }
             }
-            pthread_mutex_unlock(&mtx);
 
             if (fail == 1) {
                break;
             }
+			 if ((enabled_max_num_records != 0) && (max_num_records == 0))
+			 {
+				break;
+			 }
          }
       } else {
         TRAP_DEFAULT_RECV_ERROR_HANDLING(ret, continue, break);
-      }
+      } // end if (ret == TRAP_E_FORMAT_CHANGED)
 
-      if (verbose >= 2) {
-         printf("Thread %i: received %hu bytes of data\n", index, rec_size);
+      if (verbose >= 1) {
+         printf("Received %hu bytes of data\n", rec_size);
       }
 
       // Check size of received data
-      if (rec_size < ur_rec_fixlen_size(templates[index])) {
+      if (rec_size < ur_rec_fixlen_size(in_template)) {
          if (rec_size <= 1) {
             if (verbose >= 0) {
-               printf("Interface %i received ending record, the interface will be closed.\n", index);
+               printf("Received ending record, interface will be closed.\n");
             }
             break; // End of data (used for testing purposes)
          } else {
             fprintf(stderr, "Error: data with wrong size received (expected size: >= %hu, received size: %hu)\n",
-                    ur_rec_fixlen_size(templates[index]), rec_size);
+                    ur_rec_fixlen_size(in_template), rec_size);
             break;
          }
       }
 
       // Print contents of received UniRec to output
-      pthread_mutex_lock(&mtx);
       if (print_time) {
          char str[32];
          time_t ts = time(NULL);
          strftime(str, 31, "%FT%T", gmtime(&ts));
          fprintf(file, "%s,", str);
       }
-      if (print_ifc_num) {
-         fprintf(file,"%i,", index);
-      }
-      strout = urcsv_record(csv, rec);
-      fprintf(file,"%s\n", strout);
-      free(strout);
+
+      str_out = urcsv_record(csv, rec);
+      fprintf(file,"%s\n", str_out);
+      free(str_out);
       fflush(file);
 
       num_records++;
-      pthread_mutex_unlock(&mtx);
 
       // Check whether maximum number of records has been reached
-      if (max_num_records && num_records >= max_num_records) {
+      if (enabled_max_num_records && num_records >= max_num_records) {
          stop = 1;
          trap_terminate();
          break;
@@ -264,10 +251,9 @@ void *capture_thread(void *arg)
    urcsv_free(&csv);
 
    if (verbose >= 1) {
-      printf("Thread %i exitting.\n", index);
+      printf("Finished capturing.\n");
    }
 
-   return NULL;
 }
 
 
@@ -279,7 +265,9 @@ int main(int argc, char **argv)
    int append = 0;
    out_template_defined = 0;
 
-   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+
+   INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+
    // ***** Process parameters *****
 
    // Let TRAP library parse command-line arguments and extract its parameters
@@ -314,22 +302,22 @@ int main(int argc, char **argv)
          out_filename = optarg;
          break;
       case 'o':
+      	 fprintf(stderr, "Warning: parameter -o is currently not supported and will be ignored.\n");
          out_template_str = optarg;
          break;
       case 't':
          print_title = 1;
          break;
-      case 'n':
-         print_ifc_num = 1;
-         break;
-      case 'N':
-         n_inputs = atoi(optarg);
-         break;
       case 'T':
          print_time = 1;
          break;
       case 'c':
-         max_num_records = atoi(optarg);
+
+         max_num_records = strtol(optarg, NULL, 10);
+         if(max_num_records < 0)
+		 {
+         	fprintf(stderr, "Error: Negative -c parameter. (max. records captured)");
+		 }
          enabled_max_num_records = 1;
          break;
       case 'd':
@@ -353,27 +341,6 @@ int main(int argc, char **argv)
 
    // ***** TRAP initialization *****
 
-   if (verbose >= 0) {
-      printf("Number of inputs: %i\n", n_inputs);
-   }
-   if (n_inputs < 1) {
-      fprintf(stderr, "Error: Number of input interfaces must be positive integer.\n");
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-      return 0;
-   }
-   if (n_inputs > 32) {
-      fprintf(stderr, "Error: More than 32 interfaces is not allowed by TRAP library.\n");
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-      return 4;
-   }
-   if (out_template_str == NULL && n_inputs > 1) {
-      fprintf(stderr, "Error: If you use more than one interface, output template has to be specified.\n");
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-      return 4;
-   }
-
-   // Set number of input interfaces
-   module_info->num_ifc_in = n_inputs;
 
    if (verbose >= 0) {
       printf("Initializing TRAP library ...\n");
@@ -398,31 +365,26 @@ int main(int argc, char **argv)
    if (verbose >= 0) {
       printf("Creating UniRec templates ...\n");
    }
-   templates = (ur_template_t**)calloc(n_inputs, sizeof(*templates));
-   if (templates == NULL) {
+
+   //initialize template for negotiation
+   in_template = ur_create_input_template(0, NULL, NULL);
+   if (in_template == NULL) {
       fprintf(stderr, "Memory allocation error.\n");
-      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-      return -1;
+	   FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+
+	   ret = -1;
+      goto exit;
    }
-   //initialize templates for negotiation
-   for (int i = 0; i < n_inputs; i++) {
-      templates[i] = ur_create_input_template(i, NULL, NULL);
-      if (templates[i] == NULL) {
-         fprintf(stderr, "Memory allocation error.\n");
-         ret = -1;
-         goto exit;
-      }
-      trap_set_required_fmt(i, TRAP_FMT_UNIREC, NULL);
-   }
+   trap_set_required_fmt(0, TRAP_FMT_UNIREC, NULL);
 
    // Create output UniRec template (user-specified or union of all inputs)
    if (out_template_str != NULL) {
       if (ur_define_set_of_fields(out_template_str) != UR_OK) {
-         fprintf(stderr, "Error: output template format is not accurate.\n \
-It should be: \"type1 name1,type2 name2,...\".\n \
-Name of field may be any string matching the reqular expression [A-Za-z][A-Za-z0-9_]*\n\
-Available types are: int8, int16, int32, int64, uint8, uint16, uint32, uint64, char,\
- float, double, ipaddr, macaddr, time, string, bytes\n");
+         fprintf(stderr, "Error: output template format is not accurate.\n"
+                         "It should be: \"type1 name1,type2 name2,...\".\n"
+                         "Name of field may be any string matching the reqular expression [A-Za-z][A-Za-z0-9_]*\n"
+                         "Available types are: int8, int16, int32, int64, uint8, uint16, uint32, uint64, char,"
+                         "float, double, ipaddr, macaddr, time, string, bytes\n");
          ret = 2;
          goto exit;
       }
@@ -462,39 +424,8 @@ Available types are: int8, int16, int32, int64, uint8, uint16, uint32, uint64, c
       printf("Initialization done.\n");
    }
 
-   if ((enabled_max_num_records != 0) && (max_num_records == 0)) {
-      // stop after printed title
-      goto exit;
-   }
-
-   // ***** Start a thread for each interface *****
-
-   int *interfaces = (int *) malloc(n_inputs * sizeof(int));
-   threads = (pthread_t *) malloc(n_inputs * sizeof(pthread_t));
-   pthread_attr_t attr;
-   pthread_attr_init(&attr);
-   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-   pthread_mutex_init(&mtx, NULL);
-
-   for (int i = 0; i < n_inputs; i++) {
-      interfaces[i] = i;
-      if (pthread_create(&threads[i], &attr, capture_thread, &interfaces[i]) != 0) {
-         fprintf(stderr, "pthread_create() failed\n");
-         pthread_attr_destroy(&attr);
-         pthread_mutex_destroy(&mtx);
-         free(threads);
-         free(interfaces);
-         goto exit;
-      }
-   }
-   pthread_attr_destroy(&attr);
-
-   for (int i = 0; i < n_inputs; i++) {
-      pthread_join(threads[i], NULL);
-   }
-   pthread_mutex_destroy(&mtx);
-   free(threads);
-   free(interfaces);
+   // ***** Process data *****
+	capture_data();
 
    ret = 0;
 
@@ -510,13 +441,7 @@ exit:
    // Do all necessary cleanup before exiting
    TRAP_DEFAULT_FINALIZATION();
 
-   if (templates) {
-      for (int i = 0; i < n_inputs; i++) {
-         ur_free_template(templates[i]);
-      }
-   free(templates);
-   }
-
+   ur_free_template(in_template);
    ur_free_template(out_template);
    ur_finalize();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
