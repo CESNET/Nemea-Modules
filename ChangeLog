@@ -1,3 +1,7 @@
+2019-05-24 nemea-modules-2.11.1
+	* Removed old python3.4 version from spec file
+	* Doc update by Ulrik
+
 2019-04-21 nemea-modules-2.11.0
 	* merger:
 		New simplified version based on pthread for openwrt.
