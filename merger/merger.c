@@ -111,7 +111,7 @@ void *capture_thread(void *arg)
          const char *spec = NULL;
          if (trap_get_data_fmt(TRAPIFC_INPUT, index, &data_fmt, &spec) != TRAP_E_OK) {
             fprintf(stderr, "Data format was not loaded.");
-            goto unlock_exit;
+            goto unlock_thread_exit;
          } else {
             if (out_rec != NULL) {
                free(out_rec);
@@ -121,13 +121,13 @@ void *capture_thread(void *arg)
             in_template[index] = ur_define_fields_and_update_template(spec, in_template[index]);
             if (in_template[index] == NULL) {
                fprintf(stderr, "Template could not be edited");
-               goto unlock_exit;
+               goto unlock_thread_exit;
             } else {
                out_template = ur_expand_template(spec, out_template);
                char *spec_cpy = ur_template_string(out_template);
                if (spec_cpy == NULL) {
                   fprintf(stderr, "Memory allocation problem.");
-                  goto unlock_exit;
+                  goto unlock_thread_exit;
                }
                trap_set_data_fmt(0, TRAP_FMT_UNIREC, spec_cpy);
             }
@@ -135,7 +135,7 @@ void *capture_thread(void *arg)
             out_rec = ur_create_record(out_template, UR_MAX_SIZE);
             if (out_rec == NULL) {
                fprintf(stderr, "ERROR: Allocation of record failed.\n");
-               goto unlock_exit;
+               goto unlock_thread_exit;
             }
          }
       } else {
@@ -167,7 +167,7 @@ void *capture_thread(void *arg)
    pthread_exit(NULL);
    return NULL;
 
-unlock_exit:
+unlock_thread_exit:
    pthread_mutex_unlock(&unirec_mutex);
    pthread_exit(NULL);
    return NULL;
