@@ -134,7 +134,7 @@ void *capture_thread(void *arg)
 
             out_rec = ur_create_record(out_template, UR_MAX_SIZE);
             if (out_rec == NULL) {
-               fprintf(stderr, "ERROR: Allocation of record\n");
+               fprintf(stderr, "ERROR: Allocation of record failed.\n");
                goto unlock_exit;
             }
          }
@@ -253,7 +253,7 @@ int main(int argc, char **argv)
 
    in_template = (ur_template_t **) calloc(sizeof(ur_template_t *), module_info->num_ifc_in);
    if (in_template == NULL) {
-      fprintf(stderr, "Error: allocation of templates.\n");
+      fprintf(stderr, "Error: allocation of templates failed.\n");
       ret = -1;
       goto exit;
    }
