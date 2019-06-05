@@ -54,7 +54,8 @@ pthread_t *thr_list = NULL;
 char *thr_init = NULL;
 
 /**
- * Capture thread to receive incomming messages and send them via shared output interface.
+ * Capture thread to receive incomming messages and send them via
+ * shared output interface.
  *
  * @param [in] index Index of the given link.
  */
@@ -66,10 +67,49 @@ void *capture_thread(void *arg)
    const void *rec;
    uint16_t rec_size;
    uint8_t data_fmt = TRAP_FMT_UNKNOWN;
+   static ur_template_t *new_out_template;
 
    if (verbose >= 1) {
       fprintf(stderr, "Thread %i started.\n", index);
    }
+
+   /* Receive first message to get sent data format and extend output
+    * template. */
+   trap_set_required_fmt(index, TRAP_FMT_UNIREC, "");
+   TRAP_RECEIVE(index, rec, rec_size, in_template[index]);
+
+   const char *spec = NULL;
+   if (trap_get_data_fmt(
+             TRAPIFC_INPUT, index, &data_fmt, &spec) != TRAP_E_OK) {
+      stop = 1;
+      fprintf(stderr,
+              "Data format was not loaded for input %d. Exiting.\n",
+              index);
+      goto thread_exit;
+   }
+   /* critical section of UniRec manipulation */
+   pthread_mutex_lock(&unirec_mutex);
+   if ((new_out_template = ur_expand_template(
+              spec, out_template)) == NULL) {
+      stop = 1;
+      fprintf(stderr,
+              "Failed to update output template for input %d. Exiting.\n",
+              index);
+      goto unlock_thread_exit;
+   }
+   out_template = new_out_template;
+
+   /* Set updated data format to output IFC */
+   ur_set_output_template(0, out_template);
+
+   /* Prepare UniRec message to send captured first message */
+   out_rec = ur_create_record(out_template, UR_MAX_SIZE);
+
+   ur_copy_fields(out_template, out_rec, in_template[index], rec);
+   trap_send(0, out_rec, ur_rec_size(out_template, out_rec));
+
+   pthread_mutex_unlock(&unirec_mutex);
+   /* end of critical section of UniRec manipulation */
 
    trap_ifcctl(TRAPIFC_INPUT, index, TRAPCTL_SETTIMEOUT, TRAP_WAIT);
 
@@ -169,6 +209,7 @@ void *capture_thread(void *arg)
 
 unlock_thread_exit:
    pthread_mutex_unlock(&unirec_mutex);
+thread_exit:
    pthread_exit(NULL);
    return NULL;
 }
@@ -265,14 +306,6 @@ int main(int argc, char **argv)
       printf("Initialization done.\n");
    }
 
-   const void **msgs = calloc(module_info->num_ifc_in, sizeof(msgs[0]));
-   uint16_t *msgs_size = calloc(module_info->num_ifc_in, sizeof(msgs_size[0]));
-
-   if (msgs == NULL || msgs_size == NULL) {
-      free(msgs); /* could be successfully allocated */
-      goto exit;
-   }
-
    out_template = NULL;
 
    /* Start with user-defined template given by -u parameter */
@@ -295,38 +328,9 @@ int main(int argc, char **argv)
          goto exit;
       }
    }
-   
-   /* Receive first message via each input IFC to get sent data format and extend output template */
-   for (i = 0; i < module_info->num_ifc_in; ++i) {
-      trap_set_required_fmt(i, TRAP_FMT_UNIREC, "");
-      TRAP_RECEIVE(i, msgs[i], msgs_size[i], in_template[i]);
-
-      const char *spec = NULL;
-      uint8_t data_fmt;
-      if (trap_get_data_fmt(TRAPIFC_INPUT, i, &data_fmt, &spec) != TRAP_E_OK) {
-         fprintf(stderr, "Data format was not loaded.");
-         goto exit;
-      } else {
-         if ((out_template = ur_expand_template(spec, out_template)) == NULL) {
-            fprintf(stderr, "Failed to prepare output template.\n");
-            goto exit;
-         }
-      }
-   }
 
    /* Set data format to output IFC to allow sending */
    ur_set_output_template(0, out_template);
-
-   /* Prepare local UniRec message to send captured first messages */
-   out_rec = ur_create_record(out_template, UR_MAX_SIZE);
-
-   for (i = 0; i < module_info->num_ifc_in; ++i) {
-      ur_copy_fields(out_template, out_rec, in_template[i], msgs[i]);
-      trap_send(0, out_rec, ur_rec_size(out_template, out_rec));
-   }
-   free(msgs);
-   free(msgs_size);
-
 
    /* Prepare list of threads */
    thr_list = calloc(module_info->num_ifc_in, sizeof(thr_list[0]));
