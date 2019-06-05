@@ -161,7 +161,7 @@ void *capture_thread(void *arg)
    } // end while(!stop && !private_stop)
 
    if (verbose >= 1) {
-      printf("Thread %i exitting.\n", index);
+      printf("Thread %i exiting.\n", index);
    }
 
    pthread_exit(NULL);
@@ -357,7 +357,7 @@ int main(int argc, char **argv)
 
    // ***** Cleanup *****
    if (verbose >= 0) {
-      fprintf(stderr, "Exitting ...\n");
+      fprintf(stderr, "Exiting ...\n");
    }
 
    if (!noeof) {
