@@ -36,7 +36,7 @@ trap_module_info_t *module_info = NULL;
 #define MODULE_PARAMS(PARAM) \
   PARAM('u', "unirec", "UniRec specifier of input/output data (same to all links). (default <COLLECTOR_FLOW>).", required_argument, "string") \
   PARAM('n', "noeof", "Do not send termination message.", no_argument, "none") \
-  PARAM('I', "ignore-in-eof", "Do not terminate on incomming termination message.", no_argument, "none") \
+  PARAM('I', "ignore-in-eof", "Do not terminate on incomming termination message.", no_argument, "none")
 
 static int stop = 0;
 static int verbose;
