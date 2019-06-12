@@ -292,7 +292,7 @@ int main(int argc, char **argv)
 
    // Create input and output UniRec template
 
-   in_template = (ur_template_t **) calloc(sizeof(ur_template_t *), module_info->num_ifc_in);
+   in_template = (ur_template_t **) calloc(module_info->num_ifc_in, sizeof(ur_template_t *));
    if (in_template == NULL) {
       fprintf(stderr, "Error: allocation of templates failed.\n");
       ret = -1;
