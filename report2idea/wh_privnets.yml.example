@@ -1,0 +1,23 @@
+---
+namespace: com.example.nemea
+custom_actions:
+  - id: print
+    file:
+      path: "/dev/stdout"
+
+addressgroups:
+  - id: privnets
+    list:
+      - 0.0.0.0
+      - 255.255.255.255
+      - 10.0.0.0/8
+      - 172.16.0.0/16
+      - 192.168.0.0/16
+
+rules:
+  - id: 1
+    condition: Source.IP4 in privnets or Target.IP4 in privnets
+    actions:
+      - drop
+    elseactions:
+      - print
