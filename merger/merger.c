@@ -73,6 +73,9 @@ void *capture_thread(void *arg)
       fprintf(stderr, "Thread %i started.\n", index);
    }
 
+   // Create unirec input template for current thread.
+   in_template[index] = ur_create_input_template(0, NULL, NULL);
+
    /* Receive first message to get sent data format and extend output
     * template. */
    trap_set_required_fmt(index, TRAP_FMT_UNIREC, "");
@@ -290,8 +293,6 @@ int main(int argc, char **argv)
       printf("Creating UniRec templates ...\n");
    }
 
-   // Create input and output UniRec template
-
    in_template = (ur_template_t **) calloc(module_info->num_ifc_in, sizeof(ur_template_t *));
    if (in_template == NULL) {
       fprintf(stderr, "Error: allocation of templates failed.\n");
@@ -306,6 +307,7 @@ int main(int argc, char **argv)
       printf("Initialization done.\n");
    }
 
+   // Create output UniRec template
    out_template = NULL;
 
    /* Start with user-defined template given by -u parameter */
