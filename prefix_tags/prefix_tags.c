@@ -137,6 +137,7 @@ int main(int argc, char **argv)
          error = parse_config(optarg, &config);
          debug_print("parse_config ret %d\n", error);
          if (error != 0) {
+            fprintf(stderr, "Parsing configuration file failed (%s).\n", optarg);
             error = -1;
             goto cleanup;
          }
