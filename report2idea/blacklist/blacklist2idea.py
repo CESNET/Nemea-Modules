@@ -121,9 +121,9 @@ class IdeaTemplate(object):
             self.src_addr["Port"] = self.rec["source_ports"]
 
         if self.rec["is_only_fqdn"]:
-            self.src_addr["Hostname"] = self.rec["source_url"]
+            self.src_addr["Hostname"] = [self.rec["source_url"]]
         else:
-            self.src_addr["URL"] = self.rec["source_url"]
+            self.src_addr["URL"] = [self.rec["source_url"]]
 
         self.src_addr["Type"] = ["OriginBlacklist"]
 
