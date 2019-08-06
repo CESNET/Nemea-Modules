@@ -132,6 +132,7 @@ int parse_config(const char *config_file, struct tags_config *config)
       error = tags_parse_ip_prefix(ip_prefix_c, &ip_prefix, &ip_prefix_length);
       debug_print("tags_parse_ip_prefix ip_prefix=%s ret=%d\n", ip_prefix_c, error);
       if (error) {
+         fprintf(stderr, "Malformed IP prefix %s in the configuration file.\n", ip_prefix_c);
          goto cleanup;
       }
 

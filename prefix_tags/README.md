@@ -1,14 +1,14 @@
 Prefix Tags Module
 ==================
 
-This module adds "tags" to unirec records based on src/dst ip prefix specified
+This module adds "tags" to UniRec records based on src/dst ip prefix specified
 in the configuration file.
 
-The intention of this module is to unify configuration and simplyfy prefix
+The intention of this module is to unify configuration and simplify prefix
 matching for modules that need to work on multiple IP prefixes.
 
-This module adds `PREFIX_TAG` value to output unirec records based on `SRC_IP`
-and/or `DST_IP` fileds based on configuration file.
+This module adds `PREFIX_TAG` value to output UniRec records based on `SRC_IP`
+and/or `DST_IP` fields based on configuration file.
 
 
 Interfaces
@@ -18,6 +18,7 @@ Interfaces
   - Template *MUST* contain fields `SRC_IP` or `DST_IP` (see cli options).
 - Output: One UniRec interface
   - Output template is copied from input template with `PREFIX_TAG` field added.
+  - The module sends only records with matched `PREFIX_TAG`.
 
 
 Usage
@@ -55,28 +56,21 @@ Environment variables that affects output:
   TRAP_SOCKET_DIR         Change path to socket directory (default: /var/run/libtrap).
 ```
 
-__NOTE__: By default both `SRC_IP` and `DST_IP` are being matched againts configured
-ip prefixes. In case both `SRC_IP` and `DST_IP` match some configured prefix,
-`SRC_IP` is prefered.
-
-
-Installation
-------------
-
-For this module to be compiled you need:
-
-- `jansson` JSON parsing library
-
+__NOTE__: By default both `SRC_IP` and `DST_IP` are being matched against configured
+IP prefixes. In case both `SRC_IP` and `DST_IP` match some configured prefix,
+`SRC_IP` is preferred.
 
 Configuration
 -------------
 
 See `example_config.json`.
 
+
 Key description:
 - `id` - Used as `PREFIX_TAG` value
-- `ip_prefix` - Ip prefix used to match `SRC_IP`/`DST_IP` in incoming records
+- `ip_prefix` - IP prefix used to match `SRC_IP`/`DST_IP` in incoming records
     - If `ip_prefix` specified are overlapping, first one will be used.
+    - Warning: IP addresses must be followed by netmask, e.g., `"10.0.0.0/8"`.
 
 
 - JSON keys not used by this module are ignored and will __not rise error__!
