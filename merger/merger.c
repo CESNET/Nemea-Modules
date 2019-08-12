@@ -36,7 +36,7 @@ trap_module_info_t *module_info = NULL;
 #define MODULE_PARAMS(PARAM) \
   PARAM('u', "unirec", "UniRec specifier of input/output data (same to all links). (default <COLLECTOR_FLOW>).", required_argument, "string") \
   PARAM('n', "noeof", "Do not send termination message.", no_argument, "none") \
-  PARAM('I', "ignore-in-eof", "Do not terminate on incomming termination message.", no_argument, "none") \
+  PARAM('I', "ignore-in-eof", "Do not terminate on incomming termination message.", no_argument, "none")
 
 static int stop = 0;
 static int verbose;
@@ -54,7 +54,8 @@ pthread_t *thr_list = NULL;
 char *thr_init = NULL;
 
 /**
- * Capture thread to receive incomming messages and send them via shared output interface.
+ * Capture thread to receive incomming messages and send them via
+ * shared output interface.
  *
  * @param [in] index Index of the given link.
  */
@@ -111,7 +112,7 @@ void *capture_thread(void *arg)
          const char *spec = NULL;
          if (trap_get_data_fmt(TRAPIFC_INPUT, index, &data_fmt, &spec) != TRAP_E_OK) {
             fprintf(stderr, "Data format was not loaded.");
-            goto unlock_exit;
+            goto unlock_thread_exit;
          } else {
             if (out_rec != NULL) {
                free(out_rec);
@@ -121,21 +122,21 @@ void *capture_thread(void *arg)
             in_template[index] = ur_define_fields_and_update_template(spec, in_template[index]);
             if (in_template[index] == NULL) {
                fprintf(stderr, "Template could not be edited");
-               goto unlock_exit;
+               goto unlock_thread_exit;
             } else {
                out_template = ur_expand_template(spec, out_template);
                char *spec_cpy = ur_template_string(out_template);
                if (spec_cpy == NULL) {
                   fprintf(stderr, "Memory allocation problem.");
-                  goto unlock_exit;
+                  goto unlock_thread_exit;
                }
                trap_set_data_fmt(0, TRAP_FMT_UNIREC, spec_cpy);
             }
 
             out_rec = ur_create_record(out_template, UR_MAX_SIZE);
             if (out_rec == NULL) {
-               fprintf(stderr, "ERROR: Allocation of record\n");
-               goto unlock_exit;
+               fprintf(stderr, "ERROR: Allocation of record failed.\n");
+               goto unlock_thread_exit;
             }
          }
       } else {
@@ -161,14 +162,15 @@ void *capture_thread(void *arg)
    } // end while(!stop && !private_stop)
 
    if (verbose >= 1) {
-      printf("Thread %i exitting.\n", index);
+      printf("Thread %i exiting.\n", index);
    }
 
    pthread_exit(NULL);
    return NULL;
 
-unlock_exit:
+unlock_thread_exit:
    pthread_mutex_unlock(&unirec_mutex);
+thread_exit:
    pthread_exit(NULL);
    return NULL;
 }
@@ -249,11 +251,9 @@ int main(int argc, char **argv)
       printf("Creating UniRec templates ...\n");
    }
 
-   // Create input and output UniRec template
-
-   in_template = (ur_template_t **) calloc(sizeof(ur_template_t *), module_info->num_ifc_in);
+   in_template = (ur_template_t **) calloc(module_info->num_ifc_in, sizeof(ur_template_t *));
    if (in_template == NULL) {
-      fprintf(stderr, "Error: allocation of templates.\n");
+      fprintf(stderr, "Error: allocation of templates failed.\n");
       ret = -1;
       goto exit;
    }
@@ -273,6 +273,7 @@ int main(int argc, char **argv)
       goto exit;
    }
 
+   // Create output UniRec template
    out_template = NULL;
 
    /* Start with user-defined template given by -u parameter */
@@ -357,7 +358,7 @@ int main(int argc, char **argv)
 
    // ***** Cleanup *****
    if (verbose >= 0) {
-      fprintf(stderr, "Exitting ...\n");
+      fprintf(stderr, "Exiting ...\n");
    }
 
    if (!noeof) {
@@ -385,3 +386,7 @@ exit:
 
    return ret;
 }
+
+// Local variables:
+// c-basic-offset: 3;
+// End:
