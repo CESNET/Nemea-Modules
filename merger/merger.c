@@ -34,7 +34,7 @@ trap_module_info_t *module_info = NULL;
   BASIC("merger","This module merges traffic from multiple input interfaces to one output stream (on one interface).",-1,1)
 
 #define MODULE_PARAMS(PARAM) \
-  PARAM('u', "unirec", "UniRec specifier of input/output data (same to all links). (default <COLLECTOR_FLOW>).", required_argument, "string") \
+  PARAM('u', "unirec", "User-defined UniRec template for output IFC. It enforces output template and skips waiting for input templates via input IFCs.", required_argument, "string") \
   PARAM('n', "noeof", "Do not send termination message.", no_argument, "none") \
   PARAM('I', "ignore-in-eof", "Do not terminate on incomming termination message.", no_argument, "none")
 
