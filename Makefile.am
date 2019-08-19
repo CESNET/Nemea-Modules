@@ -44,6 +44,10 @@ SUBDIRS += nfreader
 SUBDIRS += nfwriter
 endif
 
+if HAVE_LIBLUA
+SUBDIRS += luamodule
+endif
+
 if HAVE_BISON
 SUBDIRS += unirecfilter
 if HAVE_OPENSSL
