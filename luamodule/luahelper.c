@@ -408,9 +408,13 @@ int table_get_from_lua(lua_State *luaVM, int arg_offset, void **array, int elem_
       return 1;
    }
 
+#if LUA_VERSION_NUM >= 502
    lua_len(luaVM, arg_offset);
    *elem_cnt = lua_tonumber(luaVM, -1);
    lua_pop(luaVM, 1);
+#else
+   *elem_cnt = lua_objlen(luaVM, arg_offset);
+#endif
 
    *array = (void *) malloc(*elem_cnt * elem_size);
 
