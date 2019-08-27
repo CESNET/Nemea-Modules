@@ -90,7 +90,7 @@ print(ur_type("FOO", "BAR", "ABC"))
 Arguments and return values:
 - `ur_ip(ip1 [, ip2, ...])`   - Return IP address object for each IP string argument, nil when address parsing failed. Accepts strings with IP v4 or v6 addresses.
 
-IP address can be masked using `/` operator. Example:
+IP address can be masked using `/` operator. Comparsion should be done with strings e.g. `tostring(ip1) == tostring(ip2) or tostring(ip) == "10.0.0.1"`  Example:
 ```
 local ip1, ip2 = ur_ip("192.168.5.200", "::1")
 print(ip1 / 24, ip2) -- mask 192.168.5.200 with /24
