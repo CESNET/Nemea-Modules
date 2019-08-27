@@ -46,6 +46,8 @@
 #include <lua.h>
 #include <unirec/unirec.h>
 
+#define IP_PREALLOC_ARRAY_SIZE 2048
+
 /**
  * \brief Create LUA context, load script, register API functions and perform checks.
  *

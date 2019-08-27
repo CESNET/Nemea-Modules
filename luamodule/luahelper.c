@@ -54,6 +54,15 @@
 #include "luamodule.h"
 #include "luafuncs.h"
 
+/**
+ * \brief Array of IP addresses used as storage for LUA light user data.
+ */
+static ip_addr_t ip_array[IP_PREALLOC_ARRAY_SIZE];
+/**
+ * \brief Number of IP addresses used.
+ */
+static int ip_array_cnt = 0;
+
 lua_State *create_lua_context(const char *script_path)
 {
    lua_State *luaVM;
@@ -134,7 +143,7 @@ int ip_mask(lua_State *luaVM)
       set_error(luaVM, "Invalid arguments to IP mask operation");
       return 0;
    }
-   if (lua_type(luaVM, 1) == LUA_TUSERDATA) {
+   if (lua_type(luaVM, 1) == LUA_TLIGHTUSERDATA) {
       ip = *(ip_addr_t *) lua_touserdata(luaVM, 1);
    } else {
       set_error(luaVM, "Invalid arguments to IP mask operation, expected IP userdata as first operand");
@@ -177,7 +186,7 @@ int ip_tostring(lua_State *luaVM)
    char ip_str[INET6_ADDRSTRLEN];
    ip_addr_t *ip;
 
-   if (lua_gettop(luaVM) != 1 || lua_type(luaVM, 1) != LUA_TUSERDATA) {
+   if (lua_gettop(luaVM) != 1 || lua_type(luaVM, 1) != LUA_TLIGHTUSERDATA) {
       set_error(luaVM, "Expected IP address userdata");
       return 0;
    }
@@ -202,7 +211,7 @@ int ip_eq(lua_State *luaVM)
       return 0;
    }
 
-   if (lua_type(luaVM, 1) == LUA_TUSERDATA) {
+   if (lua_type(luaVM, 1) == LUA_TLIGHTUSERDATA) {
       ip = lua_touserdata(luaVM, 1);
       ip_to_str(ip, ip_str1_);
    } else if (lua_type(luaVM, 1) == LUA_TSTRING) {
@@ -212,7 +221,7 @@ int ip_eq(lua_State *luaVM)
       return 1;
    }
 
-   if (lua_type(luaVM, 2) == LUA_TUSERDATA) {
+   if (lua_type(luaVM, 2) == LUA_TLIGHTUSERDATA) {
       ip = lua_touserdata(luaVM, 2);
       ip_to_str(ip, ip_str2_);
    } else if (lua_type(luaVM, 2) == LUA_TSTRING) {
@@ -229,8 +238,9 @@ int ip_eq(lua_State *luaVM)
 
 void ip_create_meta(lua_State *luaVM, ip_addr_t ip)
 {
-   ip_addr_t *block = lua_newuserdata(luaVM, sizeof(ip));
-   *block = ip;
+   ip_array[ip_array_cnt] = ip;
+   lua_pushlightuserdata(luaVM, &ip_array[ip_array_cnt++]);
+   ip_array_cnt %= IP_PREALLOC_ARRAY_SIZE;
 
    lua_createtable(luaVM, 0, 2);
 
@@ -365,7 +375,7 @@ int value_get_from_lua(lua_State *luaVM, int arg_offset, void *ptr, int type)
          }
       case UR_TYPE_IP:
          {
-            if (lua_type(luaVM, arg_offset) != LUA_TUSERDATA) {
+            if (lua_type(luaVM, arg_offset) != LUA_TLIGHTUSERDATA) {
                return 1;
             }
             *((ip_addr_t *) ptr) = *(ip_addr_t *) lua_touserdata(luaVM, arg_offset);

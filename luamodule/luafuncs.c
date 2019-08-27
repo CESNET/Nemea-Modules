@@ -302,7 +302,7 @@ int field_ip_is(lua_State *luaVM, int version)
 
    /* Iterate through function arguments. */
    for (i = 1; i <= n; i++) {
-      if (lua_type(luaVM, i) == LUA_TUSERDATA) {
+      if (lua_type(luaVM, i) == LUA_TLIGHTUSERDATA) {
          ip = lua_touserdata(luaVM, i);
 
          if (version == 4) {
