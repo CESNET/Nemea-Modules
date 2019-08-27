@@ -54,12 +54,10 @@ receiveData().
         pass
     if (current_time - last_time) > munin_interval:
         data = receiveData()
-        sys.stderr.write("Reading from socket\n")
         with open(data_temp_file, "w") as f:
             f.write(data)
         data = data.split("\n")
     else:
-        sys.stderr.write("Reading from file\n")
         with open(data_temp_file, "r") as f:
             data = f.read()
         data = data.split("\n")
