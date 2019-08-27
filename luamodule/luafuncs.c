@@ -73,10 +73,17 @@ int field_get(lua_State *luaVM)
             lua_pushnil(luaVM);
             continue;
          }
-         field_send_to_lua(luaVM, tmplt_in, rec_in, field_id);
+      } else if (lua_type(luaVM, i) == LUA_TNUMBER) {
+         field_id = lua_tonumber(luaVM, i);
+         if (!ur_is_present(tmplt_in, field_id)) {
+            lua_pushnil(luaVM);
+            continue;
+         }
       } else {
          set_error(luaVM, "Incorrect argument(s) to '%s'", GET_FUNC_NAME);
       }
+
+      field_send_to_lua(luaVM, tmplt_in, rec_in, field_id);
    }
 
    if (n == 0) {
@@ -131,16 +138,24 @@ int field_set(lua_State *luaVM)
             lua_pushboolean(luaVM, 0);
             continue;
          }
-         if (field_get_from_lua(luaVM, i + 1, tmplt_out, rec_out, field_id)) {
+      } else if (lua_type(luaVM, i) == LUA_TNUMBER) {
+         field_id = lua_tonumber(luaVM, i);
+         if (!ur_is_present(tmplt_out, field_id)) {
             /* Parsing failed - push false. */
             lua_pushboolean(luaVM, 0);
-         } else {
-            /* Parsing succeded - push true. */
-            lua_pushboolean(luaVM, 1);
+            continue;
          }
       } else {
          set_error(luaVM, "Incorrect argument(s) to '%s'", SET_FUNC_NAME);
          break;
+      }
+
+      if (field_get_from_lua(luaVM, i + 1, tmplt_out, rec_out, field_id)) {
+         /* Parsing failed - push false. */
+         lua_pushboolean(luaVM, 0);
+      } else {
+         /* Parsing succeded - push true. */
+         lua_pushboolean(luaVM, 1);
       }
    }
 
@@ -204,6 +219,14 @@ int field_del(lua_State *luaVM)
    for (i = 1; i <= n; i++) {
       if (lua_type(luaVM, i) == LUA_TSTRING) {
          field = lua_tostring(luaVM, i);
+         lua_pushboolean(luaVM, !template_spec_delete_field(spec, field));
+      } else if (lua_type(luaVM, i) == LUA_TNUMBER) {
+         int field_id = lua_tonumber(luaVM, i);
+         if (!ur_is_present(tmplt_in, field_id)) {
+            lua_pushboolean(luaVM, 0);
+            continue;
+         }
+         field = ur_get_name(field_id);
          lua_pushboolean(luaVM, !template_spec_delete_field(spec, field));
       } else {
          free(spec);
@@ -311,4 +334,28 @@ int field_ip_is4(lua_State *luaVM)
 int field_ip_is6(lua_State *luaVM)
 {
    return field_ip_is(luaVM, 6);
+}
+
+int field_getid(lua_State *luaVM)
+{
+   int field_id;
+   int n = lua_gettop(luaVM);
+   int i;
+
+   /* Iterate through function arguments. */
+   for (i = 1; i <= n; i++) {
+      if (lua_type(luaVM, i) == LUA_TSTRING) {
+         field_id = ur_get_id_by_name(lua_tostring(luaVM, i));
+         if (field_id < 0) {
+            lua_pushnil(luaVM);
+            continue;
+         }
+         lua_pushnumber(luaVM, field_id);
+      } else {
+         set_error(luaVM, "Incorrect argument(s) to '%s'", ID_FUNC_NAME);
+         break;
+      }
+   }
+
+   return n;
 }

@@ -73,6 +73,7 @@ lua_State *create_lua_context(const char *script_path)
    lua_register(luaVM, IP_FUNC_NAME, field_ip);
    lua_register(luaVM, IP4_FUNC_NAME, field_ip_is4);
    lua_register(luaVM, IP6_FUNC_NAME, field_ip_is6);
+   lua_register(luaVM, ID_FUNC_NAME, field_getid);
 
    /* Load functions from script. */
    ret = luaL_dofile(luaVM, script_path);

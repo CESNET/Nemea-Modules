@@ -38,7 +38,7 @@ function on_record_recv()
       error("ur_get with multiple arguments failed")
    end
 
-   if pcall(ur_get, 5) or pcall(ur_get, {"BYTES"}) then
-      error("ur_get invalid arguments test should have failed")
+   if not pcall(ur_get, 5) or pcall(ur_get, {"BYTES"}) then
+      error("ur_get number ID failed)")
    end
 end

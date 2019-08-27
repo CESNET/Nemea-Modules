@@ -57,6 +57,7 @@
 #define IP_FUNC_NAME          "ur_ip"
 #define IP4_FUNC_NAME         "ur_ip4"
 #define IP6_FUNC_NAME         "ur_ip6"
+#define ID_FUNC_NAME          "ur_id"
 
 /**
  * \brief States of the module.
