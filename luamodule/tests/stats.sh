@@ -4,4 +4,4 @@ test -z "${srcdir}" && export srcdir=.
 
 . ${srcdir}/test.sh
 
-./luatest "${lua_dir}/set.lua"
+run_test "stats.lua" "mixed.ur" "stats.ur"

@@ -1,3 +1,7 @@
 #!/bin/bash
 
-./luatest get.lua
+test -z "${srcdir}" && export srcdir=.
+
+. ${srcdir}/test.sh
+
+./luatest "${lua_dir}/get.lua"

@@ -1,5 +1,5 @@
 check_PROGRAMS=luatest
-TESTS=add.sh del.sh get.sh set.sh type.sh ip.sh
+TESTS=add.sh del.sh get.sh set.sh type.sh ip.sh mask.sh stats.sh
 
 luatest_SOURCES=luatest.c \
 	luatest.h \
@@ -14,6 +14,28 @@ luatest_SOURCES=luatest.c \
 	fields.h
 luatest_LDFLAGS=-lunirec -llua -ldl -lm
 
-EXTRA_DIST=add.sh add.lua del.sh del.lua get.sh get.lua set.sh set.lua type.sh type.lua ip.sh ip.lua
+EXTRA_DIST=add.sh \
+	del.sh \
+	get.sh \
+	set.sh \
+	type.sh \
+	ip.sh \
+	mask.sh \
+	stats.sh \
+	test.sh \
+	lua/add.lua \
+	lua/del.lua \
+	lua/get.lua \
+	lua/set.lua \
+	lua/type.lua \
+	lua/ip.lua \
+	lua/mask.lua \
+	lua/stats.lua \
+	unirec/mixed.ur \
+	reference/mask.ur \
+	reference/stats.ur
 
 include ../../aminclude.am
+
+clean-local:
+	rm -rf output/
