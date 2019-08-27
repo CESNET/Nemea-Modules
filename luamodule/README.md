@@ -9,8 +9,8 @@ To compile this module, you will need the following packages:
 
 ## Arguments
 - `-i STRING`  TRAP interface specifier.
-- `-n`         Don't forward EOF message.
 - `-l STRING`  Path to LUA script.
+- `-n`         Don't forward EOF message.
 
 ## Architecture
 Module expects script to have defined three following functions:
@@ -25,16 +25,19 @@ Scripts can use the following functions provided by the module:
 - `ur_add`  - Adds new field to output record.
 - `ur_del`  - Deletes field from output record.
 - `ur_type` - Gets type of unirec field.
+- `ur_id`   - Gets ID of specified unirec field.
 - `ur_ip`   - Constructs IP address object (string capable of using mask operator '/')
 - `ur_ip4`  - Check if IP address object is of version 4.
 - `ur_ip6`  - Check if IP address object is of version 6.
+
+Module has one input and one output interface. Input template and record can be read only and output template and record are write only.
 
 Record number is saved in `_REC_COUNT` global variable.
 
 ### ur\_get
 Arguments and return values:
 - `ur_get()`                     - Return table with all fields with field name as key and value as unirec field specific value.
-- `ur_get(name1[,name2, ...])`   - Return unirec field specific value for each argument or nil if field does not exists. Accept string arguments
+- `ur_get(name1[,name2, ...])`   - Return unirec field specific value for each argument or nil if field does not exists. Accept string arguments or number (ID).
 
 Example:
 ```
@@ -47,7 +50,7 @@ end
 
 ### ur\_set
 Arguments and return values:
-- `ur_set(name1, value1[,name2, value2, ...])`  - Return true if field was set, false otherwise. Accept unirec field string name and unirec specific value.
+- `ur_set(name1, value1[,name2, value2, ...])`  - Return true if field was set, false otherwise. Accept unirec field string name or ID and unirec specific value.
 
 Example:
 ```
@@ -67,7 +70,7 @@ ur_add("int32 MY_FIELD2", "ipaddr FOO, uint8* BAR_ARR")
 
 ### ur\_del
 Arguments and return values:
-- `ur_del(fields1 [, fields2, ...])`   - Return true for each argument if field was found and removed, false otherwise. Accept unirec field name string.
+- `ur_del(fields1 [, fields2, ...])`   - Return true for each argument if field was found and removed, false otherwise. Accept unirec field name string or ID.
 
 Example:
 ```
@@ -84,6 +87,17 @@ Example:
 -- template: "int32* FOO, uint32 BAR, ipaddr IP"
 print(ur_type("FOO", "BAR", "ABC"))
 -- "int32*" "uint32" nil
+```
+
+### ur\_id
+Arguments and return values:
+- `ur_id(field1 [, field2, ...])`  - Return number with ID of field for each argument, nil if field does not exists. Accepts strings with unirec field name.
+
+Example:
+```
+-- template: "int32* FOO, uint32 BAR, ipaddr IP"
+print(ur_id("FOO", "BAR", "ABC"))
+-- 0 2 nil
 ```
 
 ### ur\_ip
