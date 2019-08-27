@@ -25,7 +25,7 @@ function on_record_recv()
    if index ~= 16 then
       error("invalid number of fields")
    end
-   if allfields["DST_IP"] / 24 ~= "77.147.32.0" or allfields["PROTOCOL"] ~= 6 or allfields["PACKETS"] ~= 19 then
+   if tostring(allfields["DST_IP"] / 24) ~= "77.147.32.0" or allfields["PROTOCOL"] ~= 6 or allfields["PACKETS"] ~= 19 then
       error("ur_get() table test failed")
    end
 

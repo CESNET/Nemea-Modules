@@ -1,32 +1,33 @@
 -- ip.lua
 
-function test_ip_create(ip, expected, is4, is6, should_fail)
-   if #ip ~= #should_fail then
+function test_ip_create(ip_strings, expected, is4, is6, should_fail)
+   if #ip_strings ~= #should_fail then
       error("Input sequences length mismatch")
    end
-   for i = 1,#ip,1 do
-      local ret, ip_str = pcall(ur_ip, ip[i])
+   for i = 1,#ip_strings,1 do
+      local ret, ip = pcall(ur_ip, ip_strings[i])
       if not ret then
          if not should_fail[i] then
-            error("ur_ip failed: " .. ip_str)
+            error("ur_ip failed: " .. ip)
          end
       else
          if should_fail[i] then
             error("ur_ip should have failed")
          end
-         if ip_str ~= expected[i] then
+
+         if tostring(ip) ~= tostring(expected[i]) then
             if expected[i] == nil then expected[i] = "(nil)" end
-            if ip_str == nil then ip_str = "(nil)" end
-            error(string.format("ur_ip('%s') returned '%s', expected '%s'", ip[i], ip_str, expected[i]))
+            if ip == nil then ip = "(nil)" end
+            error(string.format("ur_ip('%s') returned '%s', expected '%s'", ip_strings[i], ip, expected[i]))
          end
-         if ip_str ~= nil then
-            is_ipv4 = ur_ip4(ip_str)
+         if ip ~= nil then
+            is_ipv4 = ur_ip4(ip)
             if is_ipv4 ~= is4[i] then
-               error(string.format("ur_ip4('%s') returned '%s', expected '%s'", ip_str, is_ipv4, is4[i]))
+               error(string.format("ur_ip4('%s') returned '%s', expected '%s'", ip_strings[i], is_ipv4, is4[i]))
             end
-            is_ipv6 = ur_ip6(ip_str)
+            is_ipv6 = ur_ip6(ip)
             if is_ipv6 ~= is6[i] then
-               error(string.format("ur_ip6('%s') returned '%s', expected '%s'", ip_str, is_ipv6, is6[i]))
+               error(string.format("ur_ip6('%s') returned '%s', expected '%s'", ip_strings[i], is_ipv6, is6[i]))
             end
          end
       end
@@ -105,20 +106,21 @@ function on_record_recv()
       error("mask of ipv6 address should have failed")
    end
 
-   if ip1 / 32 ~= ip1 or ip1 / 0 ~= "0.0.0.0" then
+   if tostring(ip1 / 32) ~= tostring(ip1) or tostring(ip1 / 0) ~= "0.0.0.0" then
       error("/0 or /24 mask of ipv4 address failed")
    end
 
-   if ip2 / 0 ~= "::" or ip2 / 32 ~= "2001:db8::" or ip2 / 64 ~= "2001:db8:85a3:1234::" or
-      ip2 / 96 ~= "2001:db8:85a3:1234:5678:8a2e::" or ip2 / 128 ~= ip2 then
+   if tostring(ip2 / 0) ~= "::" or tostring(ip2 / 32) ~= "2001:db8::" or
+      tostring(ip2 / 64) ~= "2001:db8:85a3:1234::" or
+      tostring(ip2 / 96) ~= "2001:db8:85a3:1234:5678:8a2e::" or tostring(ip2 / 128) ~= tostring(ip2) then
       error("/0, /32, /64, /96, /128 mask of ipv6 address failed")
    end
 
-   if ip1 / 24 ~= "10.20.30.0" or (ip1 / 24) / 16 ~= "10.20.0.0" then
+   if tostring(ip1 / 24) ~= "10.20.30.0" or tostring((ip1 / 24) / 16) ~= "10.20.0.0" then
       error("/24, (/24)/16 mask of ipv4 address failed")
    end
 
-   if ip2 / 24 ~= "2001:d00::" or (ip2 / 56) / 20 ~= "2001::" then
+   if tostring(ip2 / 24) ~= "2001:d00::" or tostring((ip2 / 56) / 20) ~= "2001::" then
       error("/24, (/56)/20 mask of ipv6 address failed")
    end
 end

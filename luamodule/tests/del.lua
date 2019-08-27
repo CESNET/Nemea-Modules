@@ -6,6 +6,11 @@ function tables_cmp(a, b)
          error("compare tables failed")
       end
    end
+   for key, val in pairs(b) do
+      if val ~= a[key] then
+         error("compare tables failed")
+      end
+   end
 end
 
 function on_init()
@@ -32,14 +37,14 @@ function on_template_recv()
       error("ur_del substr test failed")
    end
 
-   local ret = table.pack(ur_del("LINK_BIT_FIELD", "DIR_BIT_FIELD", "SRC_MAC", "DST_MAC"))
-   tables_cmp(ret, {true, true, true, true, n=4})
+   local ret = {ur_del("LINK_BIT_FIELD", "DIR_BIT_FIELD", "SRC_MAC", "DST_MAC")}
+   tables_cmp(ret, {true, true, true, true})
 
-   ret = table.pack(ur_del("SRC_IP", "BAR", "DST_IP", "TOS", "TTL", "TCP_FLAGS"))
-   tables_cmp(ret, {true, false, true, true, true, true, n=6})
+   ret = {ur_del("SRC_IP", "BAR", "DST_IP", "TOS", "TTL", "TCP_FLAGS")}
+   tables_cmp(ret, {true, false, true, true, true, true})
  
-   ret = table.pack(ur_del("TIME_LAST", "TIME_FIRST", "TEST"))
-   tables_cmp(ret, {true, true, false, n=3})
+   ret = {ur_del("TIME_LAST", "TIME_FIRST", "TEST")}
+   tables_cmp(ret, {true, true, false})
 
    if pcall(ur_del) then
       error("ur_del should have failed")

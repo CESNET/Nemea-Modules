@@ -125,7 +125,6 @@ void set_error(lua_State *luaVM, const char *fmt, ...)
 
 int ip_mask(lua_State *luaVM)
 {
-   const char *ip_str = NULL;
    int mask = 0;
    int n = lua_gettop(luaVM);
    ip_addr_t ip;
@@ -134,21 +133,16 @@ int ip_mask(lua_State *luaVM)
       set_error(luaVM, "Invalid arguments to IP mask operation");
       return 0;
    }
-   if (lua_type(luaVM, 1) == LUA_TSTRING) {
-      ip_str = lua_tostring(luaVM, 1);
+   if (lua_type(luaVM, 1) == LUA_TUSERDATA) {
+      ip = *(ip_addr_t *) lua_touserdata(luaVM, 1);
    } else {
-      set_error(luaVM, "Invalid arguments to IP mask operation, expected string as first operand");
+      set_error(luaVM, "Invalid arguments to IP mask operation, expected IP userdata as first operand");
       return 0;
    }
    if (lua_type(luaVM, 2) == LUA_TNUMBER) {
       mask = lua_tonumber(luaVM, 2);
    } else {
       set_error(luaVM, "Invalid arguments to IP mask operation, expected number as second operand");
-      return 0;
-   }
-
-   if (ip_from_str(ip_str, &ip) == 0) {
-      set_error(luaVM, "Convert to IP failed in IP mask operation");
       return 0;
    }
 
@@ -165,28 +159,90 @@ int ip_mask(lua_State *luaVM)
       int bits = 32 - mask;
       uint32_t tmp = ntohl(ip.ui32[2]);
       ip.ui32[2] = htonl(tmp & ~(((uint64_t) 1 << bits) - 1));
-      ip_create_meta(luaVM, ip);
    } else {
       int bits = 128 - mask;
       for (int i = 3; i >= 0 && bits > 0; i--) {
          ip.ui32[i] = ntohl(ntohl(ip.ui32[i]) & ~(((uint64_t) 1 << (bits > 32 ? 32 : bits)) - 1));
          bits -= 32;
       }
-      ip_create_meta(luaVM, ip);
    }
+
+   ip_create_meta(luaVM, ip);
+   return 1;
+}
+
+int ip_tostring(lua_State *luaVM)
+{
+   char ip_str[INET6_ADDRSTRLEN];
+   ip_addr_t *ip;
+
+   if (lua_gettop(luaVM) != 1 || lua_type(luaVM, 1) != LUA_TUSERDATA) {
+      set_error(luaVM, "Expected IP address userdata");
+      return 0;
+   }
+
+   ip = lua_touserdata(luaVM, 1);
+   ip_to_str(ip, ip_str);
+   lua_pushstring(luaVM, ip_str);
+
+   return 1;
+}
+
+int ip_eq(lua_State *luaVM)
+{
+   char ip_str1_[INET6_ADDRSTRLEN];
+   char ip_str2_[INET6_ADDRSTRLEN];
+   const char *ip_str1 = ip_str1_;
+   const char *ip_str2 = ip_str2_;
+   ip_addr_t *ip;
+
+   if (lua_gettop(luaVM) != 2) {
+      set_error(luaVM, "Expected IP address userdata and one additional argument");
+      return 0;
+   }
+
+   if (lua_type(luaVM, 1) == LUA_TUSERDATA) {
+      ip = lua_touserdata(luaVM, 1);
+      ip_to_str(ip, ip_str1_);
+   } else if (lua_type(luaVM, 1) == LUA_TSTRING) {
+      ip_str1 = lua_tostring(luaVM, 1);
+   } else {
+      lua_pushboolean(luaVM, 0);
+      return 1;
+   }
+
+   if (lua_type(luaVM, 2) == LUA_TUSERDATA) {
+      ip = lua_touserdata(luaVM, 2);
+      ip_to_str(ip, ip_str2_);
+   } else if (lua_type(luaVM, 2) == LUA_TSTRING) {
+      ip_str2 = lua_tostring(luaVM, 2);
+   } else {
+      lua_pushboolean(luaVM, 0);
+      return 1;
+   }
+
+   lua_pushboolean(luaVM, !strcmp(ip_str1, ip_str2));
+
    return 1;
 }
 
 void ip_create_meta(lua_State *luaVM, ip_addr_t ip)
 {
-   char ip_str[INET6_ADDRSTRLEN];
+   ip_addr_t *block = lua_newuserdata(luaVM, sizeof(ip));
+   *block = ip;
 
-   ip_to_str(&ip, ip_str);
-   lua_pushstring(luaVM, ip_str);
-   lua_createtable(luaVM, 0, 0);
+   lua_createtable(luaVM, 0, 2);
 
    lua_pushstring(luaVM, "__div");
    lua_pushcfunction(luaVM, ip_mask);
+   lua_settable(luaVM, -3);
+
+   lua_pushstring(luaVM, "__eq");
+   lua_pushcfunction(luaVM, ip_eq);
+   lua_settable(luaVM, -3);
+
+   lua_pushstring(luaVM, "__tostring");
+   lua_pushcfunction(luaVM, ip_tostring);
    lua_settable(luaVM, -3);
 
    lua_setmetatable(luaVM, -2);

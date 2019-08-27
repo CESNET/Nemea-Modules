@@ -275,19 +275,17 @@ int field_ip_is(lua_State *luaVM, int version)
 {
    int n = lua_gettop(luaVM);
    int i;
-   ip_addr_t ip;
+   ip_addr_t *ip;
 
    /* Iterate through function arguments. */
    for (i = 1; i <= n; i++) {
-      if (lua_type(luaVM, i) == LUA_TSTRING) {
-         if (ip_from_str(lua_tostring(luaVM, i), &ip) == 0) {
-            lua_pushboolean(luaVM, 0);
-            continue;
-         }
+      if (lua_type(luaVM, i) == LUA_TUSERDATA) {
+         ip = lua_touserdata(luaVM, i);
+
          if (version == 4) {
-            lua_pushboolean(luaVM, ip_is4(&ip));
+            lua_pushboolean(luaVM, ip_is4(ip));
          } else if (version == 6) {
-            lua_pushboolean(luaVM, ip_is6(&ip));
+            lua_pushboolean(luaVM, ip_is6(ip));
          } else {
             lua_pushboolean(luaVM, 0);
          }
