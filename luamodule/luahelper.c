@@ -364,15 +364,10 @@ int value_get_from_lua(lua_State *luaVM, int arg_offset, void *ptr, int type)
          }
       case UR_TYPE_IP:
          {
-            if (lua_type(luaVM, arg_offset) != LUA_TSTRING) {
+            if (lua_type(luaVM, arg_offset) != LUA_TUSERDATA) {
                return 1;
             }
-            const char *ip_str = lua_tostring(luaVM, arg_offset);
-            ip_addr_t ip;
-            if (ip_from_str(ip_str, &ip) == 0) {
-               return 1;
-            }
-            *((ip_addr_t *) ptr) = ip;
+            *((ip_addr_t *) ptr) = *(ip_addr_t *) lua_touserdata(luaVM, arg_offset);
             break;
          }
       case UR_TYPE_MAC:
