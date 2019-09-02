@@ -185,8 +185,8 @@ AC_CHECK_HEADER(lua.h,
 
 AM_CONDITIONAL(HAVE_LIBLUA, test x${liblua} = xyes)
 if [[ -z "$HAVE_LIBLUA_TRUE" ]]; then
-RPM_REQUIRES+=" liblua"
-RPM_BUILDREQ+=" liblua-devel"
+RPM_REQUIRES+=" lua"
+RPM_BUILDREQ+=" lua-devel"
 fi
 
 # Checks for header files.
