@@ -20,8 +20,10 @@ Requires: libpcap
 Requires: libcurl
 Requires: python%{python3_pkgversion}-nemea-pytrap
 Provides: nemea-modules
+Provides: lua
 BuildRequires: gcc gcc-c++ make doxygen pkgconfig nemea-framework-devel bison flex
 BuildRequires: libpcap-devel openssl-devel libnf-devel bzip2-devel libcurl-devel
+BuildRequires: lua-devel
 
 %description
 
@@ -76,6 +78,7 @@ ldconfig
 %{_bindir}/nemea/link_traff2json.py
 %{_bindir}/nemea/logger
 %{_bindir}/nemea/logreplay
+%{_bindir}/nemea/luamodule
 %{_bindir}/nemea/mux
 %{_bindir}/nemea/demux
 %{_bindir}/nemea/merger
