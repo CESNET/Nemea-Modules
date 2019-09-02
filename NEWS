@@ -1,3 +1,25 @@
+2019-09-02 (Tomas Cejka): rpm: require lua dependency and update %files in spec
+2019-09-02 (Tomas Cejka): luamodule: changed dependency names
+2019-08-27 (Jiri Havranek): luamodule: updated README.md
+2019-08-27 (Jiri Havranek): luamodule: added ringbuffer as storage for IP addresses exposed to LUA as lightuserdata
+2019-08-27 (Jiri Havranek): luamodule: added ur_id LUA API function
+2019-08-27 (Jiri Havranek): luamodule: added luamodule masking and stats test
+2019-08-27 (Jiri Havranek): luamodule: fixed conversion of IP address from lua to C
+2019-08-27 (Jiri Havranek): luamodule: added recommendation for IP addresses comparsion
+2019-08-27 (Jiri Havranek): luamodule: optimized IP address masking
+2019-08-27 (Tomas Cejka): munin: link&proto traffic: remove debug output
+2019-08-26 (Jiri Havranek): luamodule: added lua 5.1 compatibility for some missing functions
+2019-08-23 (Tomas Cejka): merger: fixed distcheck - subdirs order&clean files
+2019-08-19 (Jiri Havranek): luamodule: added documentation of LUA API to README.md
+2019-08-19 (Jiri Havranek): luamodule: added module for manipulation with unirec record using LUA script
+2019-08-13 (Tomas Cejka): merger: update help for --unirec
+2019-08-13 (Tomas Cejka): merger: user-defined output template
+2019-08-12 (Tomas Cejka): merger: Minor changes
+2019-07-29 (Tomas Cejka): blacklist2idea: fixed nonvalid representation of Hostname and URL
+2019-07-26 (Tomas Cejka): prefix_tags: Fixed doc and add messages about config errors
+2019-07-05 (Tomas Cejka): report2idea: example of subnet filter
+2019-05-24 (Petr Miculek): Simplified logger to a single input interface, -o parameter marked unsupported, as it has currently no influence on the output.
+
 2019-05-24 (Tomas Cejka): rpm: removed old version of py3 from spec
 2019-05-07 (Ulrik Haugen): Update merger readme
 
