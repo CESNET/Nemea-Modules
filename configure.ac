@@ -180,6 +180,15 @@ RPM_REQUIRES+=" libpcap"
 RPM_BUILDREQ+=" libpcap-devel"
 fi
 
+AC_CHECK_HEADER(lua.h,
+        AC_CHECK_LIB(lua, luaL_newstate, [liblua=yes], AC_MSG_WARN([liblua not found. The luamodule module will not be compiled.])), AC_MSG_WARN([lua.h not found. The luamodule module will not be compiled.]))
+
+AM_CONDITIONAL(HAVE_LIBLUA, test x${liblua} = xyes)
+if [[ -z "$HAVE_LIBLUA_TRUE" ]]; then
+RPM_REQUIRES+=" lua"
+RPM_BUILDREQ+=" lua-devel"
+fi
+
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h locale.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/socket.h sys/time.h syslog.h unistd.h omp.h])
 
@@ -283,6 +292,8 @@ AC_CONFIG_FILES([Makefile
                  unirecfilter/Makefile
                  endiverter/Makefile
                  nfwriter/Makefile
+                 luamodule/Makefile
+                 luamodule/tests/Makefile
                ])
 
 AC_SUBST(RPM_REQUIRES)
