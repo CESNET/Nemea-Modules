@@ -34,6 +34,32 @@ Module has one input and one output interface. Input template and record can be 
 
 Record number is saved in `_REC_COUNT` global variable.
 
+`on_init` function may contain calls of the following functions:
+- `ur_type`
+- `ur_id`
+- `ur_ip`
+- `ur_ip4`
+- `ur_ip6`
+
+`on_template_recv` function may contain calls of the following functions:
+- `ur_add`
+- `ur_del`
+- `ur_type`
+- `ur_id`
+- `ur_ip`
+- `ur_ip4`
+- `ur_ip6`
+
+`on_record_recv` function may contain calls of the following functions:
+- `ur_get`
+- `ur_set`
+- `ur_type`
+- `ur_id`
+- `ur_ip`
+- `ur_ip4`
+- `ur_ip6`
+
+
 ### ur\_get
 Arguments and return values:
 - `ur_get()`                     - Return table with all fields with field name as key and value as unirec field specific value.
