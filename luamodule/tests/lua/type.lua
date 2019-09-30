@@ -29,6 +29,23 @@ function on_init()
    local should_fail = {false, false, false}
 
    test_type(fields, expected, should_fail)
+
+   local allfields = ur_type()
+   local fields = {}
+   local expected = {}
+   local should_fail = {}
+   local i = 0
+   for key, val in pairs(allfields) do
+      fields[i] = key
+      expected[i] = val
+      should_fail[i] = false
+      i = i + 1
+   end
+
+   if i != 16 then
+      error("Invalid number of fields")
+   end
+   test_type(fields, expected, should_fail)
 end
 
 function on_template_recv()

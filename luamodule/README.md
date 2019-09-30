@@ -107,6 +107,7 @@ local ret_tab = table.pack(ur_del("PROTOCOL", "DIR_BIT_FIELD"))
 
 ### ur\_type
 Arguments and return values:
+- `ur_type()`                          - Return table with field name, field type pairs for all fields in output template.
 - `ur_type(fields1 [, fields2, ...])`  - Return string with type of field for each argument, nil if field does not exists. Accepts strings with unirec field name.
 
 Example:

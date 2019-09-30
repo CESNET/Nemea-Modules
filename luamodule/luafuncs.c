@@ -274,6 +274,24 @@ int field_type(lua_State *luaVM)
          return 0;
       }
    }
+
+   if (n == 0) {
+      ur_field_id_t id = UR_ITER_BEGIN;
+      i = 0;
+
+      lua_createtable(luaVM, 0, tmplt_out->count);
+
+      /* Iterate over fields. */
+      while ((id = ur_iter_fields_record_order(tmplt_out, i++)) != UR_ITER_END) {
+         /* Push key. */
+         lua_pushstring(luaVM, ur_get_name(id));
+         /* Push value. */
+         lua_pushstring(luaVM, ur_field_type_str[ur_get_type(id)]);
+         /* Set key/val to table. */
+         lua_settable(luaVM, 1);
+      }
+      return 1;
+   }
    return n;
 }
 
