@@ -210,11 +210,16 @@ int field_del(lua_State *luaVM)
    }
 
    if (n == 0) {
-      set_error(luaVM, "no arguments specified to '%s' function", DEL_FUNC_NAME);
-      return 0;
+      spec = malloc(sizeof(char));
+      if (spec == NULL) {
+         set_error(luaVM, "malloc() failed");
+         return 0;
+      }
+      spec[0] = 0;
+   } else {
+      spec = ur_template_string_delimiter(tmplt_out, ',');
    }
 
-   spec = ur_template_string_delimiter(tmplt_out, ',');
    /* Iterate through function arguments. */
    for (i = 1; i <= n; i++) {
       if (lua_type(luaVM, i) == LUA_TSTRING) {

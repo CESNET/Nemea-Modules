@@ -28,7 +28,7 @@ function on_template_recv()
    end
 
    if ur_del("BY") then
-      error("ur_del sufix test failed")
+      error("ur_del prefix test failed")
    end
    if ur_del("TES") then
       error("ur_del sufix test failed")
@@ -46,9 +46,9 @@ function on_template_recv()
    ret = {ur_del("TIME_LAST", "TIME_FIRST", "TEST")}
    tables_cmp(ret, {true, true, false})
 
-   if pcall(ur_del) then
-      error("ur_del should have failed")
-   end
+   --if not pcall(ur_del) then
+   --   error("ur_del() failed")
+   --end
    if ur_del("int FOO") or ur_del("BAR") then
       error("ur_del should failed to delete nonexistent fields")
    end

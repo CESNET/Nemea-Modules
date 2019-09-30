@@ -96,6 +96,7 @@ ur_add("int32 MY_FIELD2", "ipaddr FOO, uint8* BAR_ARR")
 
 ### ur\_del
 Arguments and return values:
+- `ur_del()`                           - Delete all fields from template. Does not have return value.
 - `ur_del(fields1 [, fields2, ...])`   - Return true for each argument if field was found and removed, false otherwise. Accept unirec field name string or ID.
 
 Example:
