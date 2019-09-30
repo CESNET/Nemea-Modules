@@ -382,3 +382,9 @@ int field_getid(lua_State *luaVM)
 
    return n;
 }
+
+int field_drop(lua_State *luaVM)
+{
+   drop_message = 1;
+   return 0;
+}

@@ -77,6 +77,7 @@ ur_template_t *tmplt_out = NULL;
 const void *rec_in = NULL;
 void *rec_out = NULL;
 module_state_t module_state = STATE_INIT;
+int drop_message = 0;
 
 int main(int argc, char *argv[])
 {
@@ -157,6 +158,7 @@ int main(int argc, char *argv[])
          break; //TODO: continue or exit?
       }
       record_count++;
+      drop_message = 0;
 
       /* Copy input fields to output template. */
       ur_copy_fields(tmplt_out, rec_out, tmplt_in, rec_in);
@@ -167,9 +169,11 @@ int main(int argc, char *argv[])
       lua_getglobal(luaVM, ON_RECORD_RECV_NAME);
       lua_call(luaVM, 0, 0);
 
-      /* Send altered message to output interface. */
-      rec_size = ur_rec_size(tmplt_out, rec_out);
-      trap_send(0, rec_out, rec_size);
+      if (!drop_message) {
+         /* Send altered message to output interface. */
+         rec_size = ur_rec_size(tmplt_out, rec_out);
+         trap_send(0, rec_out, rec_size);
+      }
    }
 
    /* Cleanup. */

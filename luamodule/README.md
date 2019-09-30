@@ -29,6 +29,7 @@ Scripts can use the following functions provided by the module:
 - `ur_ip`   - Constructs IP address object (string capable of using mask operator '/')
 - `ur_ip4`  - Check if IP address object is of version 4.
 - `ur_ip6`  - Check if IP address object is of version 6.
+- `ur_drop` - Drop unirec message currently being processed.
 
 Module has one input and one output interface. Input template and record can be read only and output template and record are write only.
 
@@ -58,6 +59,7 @@ Record number is saved in `_REC_COUNT` global variable.
 - `ur_ip`
 - `ur_ip4`
 - `ur_ip6`
+- `ur_drop`
 
 
 ### ur\_get
@@ -146,3 +148,7 @@ Arguments and return values:
 ### ur\_ip6
 Arguments and return values:
 - `ur_ip6(ip1 [, ip2, ...])`   - Return true for each argument if address is IPv6, false otherwise. Accept IP address strings and objects.
+
+### ur\_drop
+Arguments and return values:
+-  `ur_drop()`    - Drop unirec message currently being processed.

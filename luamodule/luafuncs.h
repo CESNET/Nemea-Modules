@@ -134,4 +134,12 @@ int field_ip_is6(lua_State *luaVM);
  */
 int field_getid(lua_State *luaVM);
 
+/**
+ * \brief Drop unirec message.
+ *
+ * \param [in, out] luaVM Lua context.
+ * \return Number of parameter left on stack.
+ */
+int field_drop(lua_State *luaVM);
+
 #endif /* LUAMODULE_LUAFUNCS_H */

@@ -77,6 +77,7 @@ const void *rec_in = NULL;
 void *rec_in_test = NULL;
 void *rec_out = NULL;
 module_state_t module_state = STATE_INIT;
+int drop_message = 0;
 
 int create_records(ur_template_t **t_in,  void **r_in,
                    ur_template_t **t_out, void **r_out, const char *spec)

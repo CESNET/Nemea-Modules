@@ -58,6 +58,7 @@
 #define IP4_FUNC_NAME         "ur_ip4"
 #define IP6_FUNC_NAME         "ur_ip6"
 #define ID_FUNC_NAME          "ur_id"
+#define DROP_FUNC_NAME        "ur_drop"
 
 /**
  * \brief States of the module.
@@ -92,5 +93,10 @@ extern void *rec_out;
  * \brief Current state of the module.
  */
 extern module_state_t module_state;
+
+/**
+ * \brief Drop unirec message currently being processed.
+ */
+extern int drop_message;
 
 #endif /* LUAMODULE_MODULE_H */
