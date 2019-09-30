@@ -42,7 +42,7 @@ function on_init()
       i = i + 1
    end
 
-   if i != 16 then
+   if i ~= 16 then
       error("Invalid number of fields")
    end
    test_type(fields, expected, should_fail)
