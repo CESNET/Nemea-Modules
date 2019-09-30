@@ -365,6 +365,11 @@ int field_getid(lua_State *luaVM)
    int n = lua_gettop(luaVM);
    int i;
 
+   if (module_state != STATE_TEMPLATE_RECV && module_state != STATE_RECORD_RECV) {
+      set_error(luaVM, "'%s' function cannot be called in '%s' function", ID_FUNC_NAME, ON_INIT_NAME);
+      return 0;
+   }
+
    /* Iterate through function arguments. */
    for (i = 1; i <= n; i++) {
       if (lua_type(luaVM, i) == LUA_TSTRING) {
@@ -385,6 +390,11 @@ int field_getid(lua_State *luaVM)
 
 int field_drop(lua_State *luaVM)
 {
+   if (module_state != STATE_RECORD_RECV) {
+      set_error(luaVM, "'%s' function can only be called in '%s' function", ID_FUNC_NAME, ON_RECORD_RECV_NAME);
+      return 0;
+   }
+
    drop_message = 1;
    return 0;
 }

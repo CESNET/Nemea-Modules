@@ -37,7 +37,6 @@ Record number is saved in `_REC_COUNT` global variable.
 
 `on_init` function may contain calls of the following functions:
 - `ur_type`
-- `ur_id`
 - `ur_ip`
 - `ur_ip4`
 - `ur_ip6`
