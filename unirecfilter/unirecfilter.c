@@ -783,7 +783,7 @@ cleanup:
          ret = trap_send(i, output_specifiers[i]->out_rec, 1);
          if (ret != TRAP_E_OK) {
             fprintf(stderr, "ERROR while sending message of module ending: %s\n \
-               Recieving side probably did not notice shutdown of module", trap_last_error_msg);
+               Receiving side probably did not notice shutdown of module", trap_last_error_msg);
          }
       }
    }
