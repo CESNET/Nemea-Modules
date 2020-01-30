@@ -95,6 +95,7 @@ json_cleanup()
        gsub("]", ",")
        gsub(/\[/, ",")
        gsub(" ", "")
+       gsub(/\<0+/, "")
        n = split($0, fields, ",")
        j=1
        for (i=1; i<=n; i++) {
@@ -116,6 +117,7 @@ test_conversion()
    data=$(mktemp)
    errors=0
    config="
+namespace: cz.cesnet.nemea
 custom_actions:
   - id: file
     file:
@@ -141,7 +143,7 @@ rules:
    # prepare stored input
    echo -n "$INPUT_DATA" | base64 -d | gunzip > "$data"
    # generate output
-   "$srcdir/${SCRIPT_NAME}2idea.py" -i "f:$data" -n "$NODE_NAME" --config <(echo "$config") "$@" | tee "$SCRIPT_NAME.idea" |
+   "$srcdir/${SCRIPT_NAME}2idea.py" -D -i "f:$data" --config <(echo "$config") "$@" | tee "$SCRIPT_NAME.idea" |
       # clean it from variable info
       json_cleanup |
       # compare it with prepared expected data (previously base64 encoded and gzipped)
