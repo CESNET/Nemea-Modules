@@ -11,7 +11,9 @@ luamodule_SOURCES=luamodule.c \
 	template.h \
 	fields.c \
 	fields.h
-luamodule_LDFLAGS=-ltrap -lunirec -llua -ldl -lm
+luamodule_LDFLAGS=-ltrap -lunirec $(LUA_LIB) -ldl -lm
+luamodule_CPPFLAGS=$(LUA_INCLUDE)
+
 
 EXTRA_DIST=README.md example.lua
 include ../aminclude.am

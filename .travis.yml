@@ -36,6 +36,8 @@ addons:
       - python3
       - python3-setuptools
       - python3-dev
+      - lua5.3
+      - lua5.3-dev
       - libpcap-dev
       - libyaml-dev
       - libcurl4-openssl-dev
@@ -62,7 +64,7 @@ after_success:
   - bash <(curl -s https://codecov.io/bash)
 
 script:
-  - ./bootstrap.sh && ./configure && make check || { find . \( -name '*.sh.log' -o -name '*.test.log' -o -name '*.trs' \) -print -exec cat {} \;; exit 1; } && make distcheck
+  - ./bootstrap.sh && ./configure && make check || { find . \( -name 'test.sh.log' -o -name '*.trs' \) -print -exec cat {} \;; exit 1; } && make distcheck
   - mkdir dist-pkgs && cp *.spec *.tar.gz dist-pkgs && (cd dist-pkgs/"$d"; tar --strip-components=1 -xf *.tar.gz;)
   - ./configure -q --enable-debug CXXFLAGS=-coverage CFLAGS=-coverage LDFLAGS=-lgcov && make clean && make check
 
