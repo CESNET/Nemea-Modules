@@ -180,9 +180,10 @@ RPM_REQUIRES+=" libpcap"
 RPM_BUILDREQ+=" libpcap-devel"
 fi
 
-AX_PROG_LUA([], [], [], [])
+AX_PROG_LUA([], [], [
 AX_LUA_HEADERS([], [AC_MSG_WARN([lua.h not found. The luamodule module will not be compiled.])])
 AX_LUA_LIBS([liblua=yes], AC_MSG_WARN([liblua not found. The luamodule module will not be compiled.]))
+], [AC_MSG_WARN([lua not found. The luamodule module will not be compiled.])])
 
 AM_CONDITIONAL(HAVE_LIBLUA, test x${liblua} = xyes)
 
