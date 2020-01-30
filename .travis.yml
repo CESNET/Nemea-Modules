@@ -15,7 +15,7 @@ env:
    # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
    #   via the "travis encrypt" command using the project repo's public key
    - secure: "oUaboO/D5Q/tujtoGEzYFdT5xKD7VJfAqfiSLEoztv5xS2ycwmw/NFJ+3JFLYD6x23/0fjvCU/wKZ3Qyyd9VAxMyQDBkBK0aLcc6kC8fr8ECFyHazd86TCux3TOVGoAe/2IpTFE1VlqpjEKUhLAnsKHGgspLrYJ5SBUVAeWKnkpk5Kwt8Vyghz6Gir8LrVkqKEA7eGXqklDlwhExMnlyehLHMd4ZeFrCC1vI3g/ZoJJzhAvn1VSgPhMXamTi+EpHkEThpNsic7ZMmYb+tshLXjaQxIORpokcB/TIsaNFP/P5fIAtRkJXKNHapXC1lrgTRnNZHzJ6FzCrIAce/l3DChCAqTfu3WNrH885eqe6U4HbBeG7Gt2es86rTe9vPfYSuAIwQLqEFpkNfq4HtEu5CSAUXxwtGXeq3FAJrpJqsZ/8UX383ZVik0Gksw3XIdKbkjI5M1gWE/rLanK9+ZXECcBwsn7EW1lgE66LmZacX3q5WnybC1hKt+FffBfLYvubFV8X9XYolEJ6NwVvGdjTUhvNzPTYZdtWoP7WWyQwM/SBHQHkAqbqiyUQGZrkHpmsz4ohmrkLVCnOIuoEd8YeTvIIXGS0z400zbLqkHwDmATP3sRQA6pfPQfRpKz/9HaZf4kUk1MFtDHyWNo0t/XEDKKLnOzHsRbZD0LLqJHcKuQ="
-   - PYTHONPATH=/usr/lib/python2.7/site-packages
+   #- PYTHONPATH=/usr/lib/python2.7/site-packages
 
 addons:
   apt:
@@ -53,13 +53,13 @@ addons:
     branch_pattern: coverity
 
 before_install:
-   - pyenv global 3.4
-   - export PATH=$(pyenv prefix)/bin:$PATH
+   #- pyenv global 3.4
+   #- export PATH=$(pyenv prefix)/bin:$PATH
    - pip3 install ply
    - pip3 install PyYAML pynspect
-   - ( git clone --depth 2 -q https://github.com/CESNET/nemea-framework nf; cd nf; ./bootstrap.sh && ./configure -q --prefix=/usr --bindir=/usr/bin/nemea && make -j10 && sudo make install; (cd pytrap && $(pyenv which python) setup.py install;); (cd pycommon && $(pyenv which python) setup.py install;); )
+   - ( git clone --depth 2 -q https://github.com/CESNET/nemea-framework nf; cd nf; ./bootstrap.sh && ./configure -q --prefix=/usr --bindir=/usr/bin/nemea && make -j10 && sudo make install; (cd pytrap && python3 setup.py install;); (cd pycommon && python3 setup.py install;); )
    - sudo rm -rf nemea-framework
-   - python -c 'import pytrap'
+   - python3 -c 'import pytrap'
    - grep -e '\<22/tcp' -e '\<23/tcp' -e '\<2179/tcp' -e '\<5900/tcp' /etc/services
 
 after_success:
