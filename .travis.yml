@@ -36,8 +36,8 @@ addons:
       - python3
       - python3-setuptools
       - python3-dev
-      - lua5.3
-      - lua5.3-dev
+      - liblua5.2-0
+      - liblua5.2-dev
       - libpcap-dev
       - libyaml-dev
       - libcurl4-openssl-dev
