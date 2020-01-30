@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+/usr/bin/python3
 # -*- mode: python; coding: utf-8; -*-
 
 """Amend flow records with resolved fields.

@@ -1,3 +1,11 @@
+2019-11-24 (Tomáš Čejka): unirecfilter: fixed typo
+2019-09-30 (Jiri Havranek): luamodule: added restrictions to ur_id and ur_drop functions
+2019-09-30 (Jiri Havranek): luamodule: fixed tests
+2019-09-30 (Jiri Havranek): luamodule: added ur_drop() function to drop currently processed unirec message
+2019-09-30 (Jiri Havranek): luamodule: ur_type() now returns table with field name and field type pairs
+2019-09-30 (Jiri Havranek): luamodule: del() function now deletes all fields from template
+2019-09-30 (Jiri Havranek): luamodule: added description of allowed API calls in on_* functions
+
 2019-09-02 (Tomas Cejka): rpm: require lua dependency and update %files in spec
 2019-09-02 (Tomas Cejka): luamodule: changed dependency names
 2019-08-27 (Jiri Havranek): luamodule: updated README.md

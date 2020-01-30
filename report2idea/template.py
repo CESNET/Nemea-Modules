@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+/usr/bin/python
 
 # In case we are in nemea/modules/report2idea/ and we want to import from repo:
 import os, sys
