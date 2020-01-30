@@ -1,4 +1,4 @@
-/usr/bin/python
+#!/usr/bin/python2
 
 import sys, os.path
 from sys import argv

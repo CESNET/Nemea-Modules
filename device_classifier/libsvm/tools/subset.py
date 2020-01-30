@@ -1,4 +1,4 @@
-/usr/bin/python
+#!/usr/bin/python3
 
 import os, sys, math, random
 from collections import defaultdict

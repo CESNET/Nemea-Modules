@@ -1,7 +1,5 @@
-/usr/bin/python
+#!/usr/bin/python3
 # vim: shiftwidth=4:tabstop=4:expandtab:softtabstop=4
-from __future__ import absolute_import
-
 # In case we are in nemea/modules/report2idea/venom and we want to import from repo:
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "nemea-framework", "pycommon"))

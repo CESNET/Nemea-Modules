@@ -1,4 +1,4 @@
-/usr/bin/python
+#!/usr/bin/python3
 __all__ = ['find_parameters']
 
 import os, sys, traceback, getpass, time, re

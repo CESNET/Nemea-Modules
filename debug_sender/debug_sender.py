@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python2
 #
 # Copyright (C) 2013-2016 CESNET
 #
