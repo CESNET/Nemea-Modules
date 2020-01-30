@@ -53,10 +53,10 @@ addons:
     branch_pattern: coverity
 
 before_install:
-   - pyenv global 2.7
+   - pyenv global 3.4
    - export PATH=$(pyenv prefix)/bin:$PATH
-   - pip install ply
-   - pip install PyYAML pynspect
+   - pip3 install ply
+   - pip3 install PyYAML pynspect
    - ( git clone --depth 2 -q https://github.com/CESNET/nemea-framework nf; cd nf; ./bootstrap.sh && ./configure -q --prefix=/usr --bindir=/usr/bin/nemea && make -j10 && sudo make install; (cd pytrap && $(pyenv which python) setup.py install;); (cd pycommon && $(pyenv which python) setup.py install;); )
    - sudo rm -rf nemea-framework
    - python -c 'import pytrap'
