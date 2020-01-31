@@ -19,8 +19,8 @@ Requires: openssl
 Requires: libpcap
 Requires: libcurl
 Requires: python%{python3_pkgversion}-nemea-pytrap
+Requires: lua
 Provides: nemea-modules
-Provides: lua
 BuildRequires: gcc gcc-c++ make doxygen pkgconfig nemea-framework-devel bison flex
 BuildRequires: libpcap-devel openssl-devel libnf-devel bzip2-devel libcurl-devel
 BuildRequires: lua-devel

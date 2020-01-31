@@ -29,6 +29,9 @@ functionality/purposes are:
 
 * [resolver](resolver): amend flow records with resolved fields
 
+* [luamodule](luamodule): module to filter or modify input stream of
+  messages into one output stream of messages
+
 * [merger](merger): module for joining multiple input streams of
   messages into one output stream of messages
 
