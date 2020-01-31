@@ -1,3 +1,19 @@
+2020-01-31 (Tomáš Čejka): rpm: fixed spec - replace provides with requires
+2020-01-30 (Tomas Cejka): config: optional lua
+2020-01-30 (Tomas Cejka): travis: remove lua and add verbosity to configure
+2020-01-30 (Tomas Cejka): travis: add sudo to install py modules
+2020-01-30 (Tomas Cejka): travis: debug python3
+2020-01-30 (Tomáš Čejka): travis: move to py3 in before_install
+2020-01-30 (Tomáš Čejka): travis: debugging build
+2020-01-30 (Tomáš Čejka): travis: add missing python3-pip
+2020-01-30 (Tomáš Čejka): travis: debugging build
+2020-01-30 (Tomáš Čejka): travis: add lua interpreter package
+2020-01-30 (Tomáš Čejka): travis: lua: replace version to 5.2 trusty
+2020-01-30 (Tomáš Čejka): build: lua checking, report2idea print log on error
+2020-01-30 (Tomáš Čejka): travis: update python version
+2020-01-30 (Tomáš Čejka): report2idea: fix tests in py3 + fedora
+2020-01-30 (Tomáš Čejka): revert changes from 3d87d7036, fixed python files
+
 2019-11-24 (Tomáš Čejka): unirecfilter: fixed typo
 2019-09-30 (Jiri Havranek): luamodule: added restrictions to ur_id and ur_drop functions
 2019-09-30 (Jiri Havranek): luamodule: fixed tests
