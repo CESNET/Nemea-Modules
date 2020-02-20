@@ -13,8 +13,8 @@ TOP-n ports, through which most packets, bytes were transferred
 TOP-n flows, which transferred most packets, bytes
 
 ## Interfaces
-- Inputs: 0
-- Outputs: 1
+- Inputs: 1
+- Outputs: 0
 
 ## Parameters
 ### Module specific parameters
