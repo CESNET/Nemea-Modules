@@ -31,8 +31,9 @@ def receiveData():
     data = ""
     while True:
         tmp = sock.recv(4096)
-        data += tmp
-        if tmp == "":
+        s = tmp.decode("utf-8")
+        data += s
+        if s == "":
             break
     return data
 
@@ -97,8 +98,7 @@ def getValues():
     if len(head) != len(vals):
         sys.stderr.write("wrong number of columns!!!\n")
         sys.exit(1)
-    data = zip(head, vals)
-    data.sort()
+    data = sorted(zip(head, vals))
     for key, val in data:
         if key.endswith(suffix):
             print("{0}.value {1}".format(key.split("-")[0], val))
