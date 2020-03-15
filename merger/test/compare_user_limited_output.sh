@@ -8,7 +8,7 @@ if [ -z "${srcdir}" ]; then
 fi
 
 # run merger
-time ${builddir}/../merger -i f:${srcdir}/in0.trapcap,f:${srcdir}/in1.trapcap,f:out:w -u "ipaddr SRC_IP,ipaddr DST_IP2,uint64 BYTES,uint64 BYTES2,time TIME_FIRST"
+time ${builddir}/../merger -i f:${srcdir}/in0.trapcap,f:${srcdir}/in1.trapcap,f:ulout:w -u "ipaddr SRC_IP,ipaddr DST_IP2,uint64 BYTES,uint64 BYTES2,time TIME_FIRST"
 
 # prepare expected data using awk
 if [ ! -f expected_user_limited ]; then
@@ -22,11 +22,11 @@ fi
 
 echo Merger finished
 
-diff -u <(${builddir}/../../logger/logger -t -i f:out | sort | tee outputsorted ) expected_user_limited
+diff -u <(${builddir}/../../logger/logger -t -i f:ulout | sort | tee outputsorted ) expected_user_limited
 retval=$?
 
 # cleanup
-rm -f out expected_user_limited
+rm -f ulout expected_user_limited
 
 exit $retval
 
