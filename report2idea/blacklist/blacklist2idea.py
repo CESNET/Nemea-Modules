@@ -92,12 +92,14 @@ class IdeaTemplate(object):
         if self.rec["protocol"] in [6, 17] and self.rec["source_ports"]:
             self.src_addr["Port"] = self.rec["source_ports"]
 
-        self.src_addr["OutFlowCount"] = self.rec["src_sent_flows"]
-        self.src_addr["OutByteCount"] = self.rec["src_sent_bytes"]
-        self.src_addr["OutPacketsCount"] = self.rec["src_sent_packets"]
-        self.src_addr["InFlowCount"] = self.rec["tgt_sent_flows"]
-        self.src_addr["InByteCount"] = self.rec["tgt_sent_bytes"]
-        self.src_addr["InPacketsCount"] = self.rec["tgt_sent_packets"]
+        if self.rec["src_sent_flows"]:
+            self.src_addr["OutFlowCount"] = self.rec["src_sent_flows"]
+            self.src_addr["OutByteCount"] = self.rec["src_sent_bytes"]
+            self.src_addr["OutPacketsCount"] = self.rec["src_sent_packets"]
+        if self.rec["tgt_sent_flows"]:
+            self.src_addr["InFlowCount"] = self.rec["tgt_sent_flows"]
+            self.src_addr["InByteCount"] = self.rec["tgt_sent_bytes"]
+            self.src_addr["InPacketsCount"] = self.rec["tgt_sent_packets"]
 
         self.idea["Source"].append(self.src_addr)
         self.idea["Source"].append(self.tgt_addr)
