@@ -34,9 +34,6 @@ class IdeaTemplate(object):
     Idea template class generating all common fields of an IDEA message
     """
 
-    note_ip = "{0} (listed on {1} blacklist: {2}) communicated with {3}."
-    note_url = "URL '{0}' (listed on {1} blacklist: {2}) was requested by {3}."
-
     def __init__(self, rec, bl):
         self.rec = rec
         self.bl = bl
@@ -75,11 +72,6 @@ class IdeaTemplate(object):
 
     def set_common_ip_fields(self):
         self.idea["Description"] = "Suspicious communication with IP listed on {0} blacklist".format(self.bl["name"])
-        self.idea["Note"] = IdeaTemplate.note_ip.format(self.rec["source"],
-                                                        self.rec["type"].upper(),
-                                                        self.bl["name"],
-                                                        ip_list2description(self.rec["targets"]))
-
 
         self.idea["FlowCount"] = self.rec["src_sent_flows"] + self.rec["tgt_sent_flows"]
         self.idea["PacketCount"] = self.rec["src_sent_packets"] + self.rec["tgt_sent_packets"]
@@ -110,10 +102,6 @@ class IdeaTemplate(object):
         dsc = "Suspicious communication with {0} listed on {1} blacklist"
         self.idea["Description"] = dsc.format("domain name" if self.rec["is_only_fqdn"] else "URL",
                                               self.bl["name"])
-        self.idea["Note"] = IdeaTemplate.note_url.format(self.rec["source_url"],
-                                                         self.rec["type"].upper(),
-                                                         self.bl["name"],
-                                                         ip_list2description(self.rec["targets"]))
 
         setAddr(self.src_addr, pytrap.UnirecIPAddr(self.rec["source_ip"]))
 
@@ -303,28 +291,6 @@ def minutes_to_aggr_win(minutes):
         time = "0" + time.strip()
 
     return days.split(' ')[0] + "D" + time.strip()
-
-
-def ip_list2description(iplist):
-    """
-    Converts long lists of target IPs to shorter description
-
-    Args:
-        iplist: list of target IP addresses
-
-    Returns:
-        str: description string suffix
-    """
-
-    if type(iplist) == list:
-        if len(iplist) <= 2:
-            return ", ".join(iplist)
-        else:
-            return "{0}, {1}, and {2} more".format(iplist[0], iplist[1], len(iplist) - 2)
-    elif type(iplist) == str:
-        return iplist
-    else:
-        raise TypeError("ip_list2description() expects list or str argument.")
 
 
 # If conversion functionality needs to be parametrized, an ArgumentParser can be passed to Run function.
