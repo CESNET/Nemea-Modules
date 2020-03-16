@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import argparse
+import sys
 
 # The whole functionality of reporting is here:
 from report2idea import *
