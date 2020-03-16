@@ -85,6 +85,8 @@ class IdeaTemplate(object):
         if self.rec["protocol"] in [6, 17] and self.rec["source_ports"]:
             self.src_addr["Port"] = self.rec["source_ports"]
 
+        self.idea["Source"].append(self.src_addr)
+
         if self.rec["src_sent_flows"]:
             self.src_addr["OutFlowCount"] = self.rec["src_sent_flows"]
             self.src_addr["OutByteCount"] = self.rec["src_sent_bytes"]
@@ -93,9 +95,13 @@ class IdeaTemplate(object):
             self.src_addr["InFlowCount"] = self.rec["tgt_sent_flows"]
             self.src_addr["InByteCount"] = self.rec["tgt_sent_bytes"]
             self.src_addr["InPacketsCount"] = self.rec["tgt_sent_packets"]
+            self.idea["Source"].append(self.tgt_addr)
+        else:
+            self.idea["Description"] = "Blacklisted IP tried to communicate with host (with no response)"
+            if "Type" in self.tgt_addr:
+                del self.tgt_addr["Type"]
+            self.idea["Target"] = [self.tgt_addr]
 
-        self.idea["Source"].append(self.src_addr)
-        self.idea["Source"].append(self.tgt_addr)
 
     def set_common_url_fields(self):
 
@@ -117,14 +123,18 @@ class IdeaTemplate(object):
             self.src_addr["URL"] = [self.rec["source_url"]]
 
         self.src_addr["Type"] = ["OriginBlacklist"]
+        self.idea["Source"].append(self.src_addr)
 
         if self.rec["tgt_sent_flows"]:
             self.src_addr["InFlowCount"] = self.rec["tgt_sent_flows"]
             self.src_addr["InByteCount"] = self.rec["tgt_sent_bytes"]
             self.src_addr["InPacketsCount"] = self.rec["tgt_sent_packets"]
-
-        self.idea["Source"].append(self.src_addr)
-        self.idea["Source"].append(self.tgt_addr)
+            self.idea["Source"].append(self.tgt_addr)
+        else:
+            self.idea["Description"] = "Blacklisted IP tried to communicate with host (with no response)"
+            if "Type" in self.tgt_addr:
+                del self.tgt_addr["Type"]
+            self.idea["Target"] = [self.tgt_addr]
 
 
 class GeneralAlert(IdeaTemplate):
