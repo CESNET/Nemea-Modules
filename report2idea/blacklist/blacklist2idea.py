@@ -2,11 +2,11 @@
 
 import argparse
 import sys
+from datetime import timedelta
+import xml.etree.ElementTree as xml
 
 # The whole functionality of reporting is here:
 from report2idea import *
-from datetime import timedelta
-import xml.etree.ElementTree as xml
 
 
 # Moudle name, description and required input data format
