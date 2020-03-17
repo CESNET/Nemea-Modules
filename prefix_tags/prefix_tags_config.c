@@ -131,15 +131,6 @@ int parse_config(const char *config_file, struct tags_config *config)
          goto cleanup;
       }
 
-      networks[i].addr = ip_prefix;
-      networks[i].mask = ip_prefix_length;
-      networks[i].data = malloc(sizeof(id));
-      if (networks[i].data == NULL) {
-         fprintf(stderr, "ERROR in allocating memory for identifier\n");
-      }
-
-      networks[i].data_len = sizeof(id);
-      *((uint32_t *) networks[i].data) = id;
       // If limit is reached alloc new memory
       if (i >= struct_count) {
           struct_count += 10;
@@ -149,6 +140,16 @@ int parse_config(const char *config_file, struct tags_config *config)
               goto cleanup;
           }
       }
+
+      networks[i].addr = ip_prefix;
+      networks[i].mask = ip_prefix_length;
+      networks[i].data = malloc(sizeof(id));
+      if (networks[i].data == NULL) {
+         fprintf(stderr, "ERROR in allocating memory for identifier\n");
+      }
+
+      networks[i].data_len = sizeof(id);
+      *((uint32_t *) networks[i].data) = id;
    }
    netlist->networks = networks;
    netlist->net_count = json_array_size(j_root);
