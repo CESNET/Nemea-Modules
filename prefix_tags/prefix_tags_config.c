@@ -146,6 +146,7 @@ int parse_config(const char *config_file, struct tags_config *config)
       networks[i].data = malloc(sizeof(id));
       if (networks[i].data == NULL) {
          fprintf(stderr, "ERROR in allocating memory for identifier\n");
+         goto cleanup;
       }
 
       networks[i].data_len = sizeof(id);
