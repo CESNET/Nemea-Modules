@@ -7,6 +7,7 @@
 
 #include <unirec/unirec.h>
 
+#include "prefix_tags_config.h"
 
 int update_output_format(ur_template_t *template_in, const void *data_in, ur_template_t **template_out, void **data_out);
 

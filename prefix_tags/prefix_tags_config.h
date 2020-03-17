@@ -5,13 +5,11 @@
 #include <stdint.h>
 
 #include <unirec/unirec.h>
+#include <unirec/ip_prefix_search.h>
 
 
 struct tags_config {
-  size_t size;
-  uint32_t *id;
-  ip_addr_t *ip_prefix;
-  uint32_t *ip_prefix_length;
+  ipps_context_t *netlist_context;
 };
 
 void tags_config_init(struct tags_config *config);

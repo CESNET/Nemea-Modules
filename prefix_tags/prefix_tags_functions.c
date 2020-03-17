@@ -79,12 +79,15 @@ int is_from_prefix(ip_addr_t *ip, ip_addr_t *protected_prefix, int32_t protected
 }
 
 int is_from_configured_prefix(struct tags_config *config, ip_addr_t *ip, uint32_t *prefix_tag) {
-   for (int i = 0; i < config->size; i++) {
-      if (is_from_prefix(ip, &(config->ip_prefix[i]), config->ip_prefix_length[i])) {
-         *prefix_tag = config->id[i];
-         return 1;
-      }
-   }
+   uint32_t **data;
 
-   return 0;
+   int result = ipps_search(ip, config->netlist_context, (void ***) &data);
+
+   if (result > 0) {
+      *prefix_tag = *data[0];
+      return result;
+   } else {
+      return 0;
+   }
 }
+
