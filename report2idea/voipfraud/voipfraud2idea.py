@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 
 # In case we are in nemea/modules/report2idea/voipfraud and we want to import from repo:
 import os, sys
