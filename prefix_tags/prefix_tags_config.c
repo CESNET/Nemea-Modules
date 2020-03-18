@@ -8,50 +8,6 @@
 #include "prefix_tags_config.h"
 
 
-void tags_config_init(struct tags_config *config) {
-   config->size = 0;
-   config->id = NULL;
-   config->ip_prefix_length = NULL;
-   config->ip_prefix = NULL;
-}
-
-int tags_config_add_record(struct tags_config *config, uint32_t id, ip_addr_t ip_prefix, uint32_t ip_prefix_length)
-{
-   size_t new_size = config->size + 1;
-
-   config->id = realloc(config->id, sizeof(*(config->id)) * new_size);
-   config->ip_prefix = realloc(config->ip_prefix, sizeof(*(config->ip_prefix)) * new_size);
-   config->ip_prefix_length = realloc(config->ip_prefix_length, sizeof(*(config->ip_prefix_length)) * new_size);
-   if (!config->id || !config->ip_prefix || !config->ip_prefix_length) {
-      return -2;
-   }
-   config->size = new_size;
-
-
-   config->id[new_size-1] = id;
-   config->ip_prefix[new_size-1] = ip_prefix;
-   config->ip_prefix_length[new_size-1] = ip_prefix_length;
-
-   return 0;
-}
-
-void tags_config_free(struct tags_config *config)
-{
-   if (config->id) {
-      free(config->id);
-      config->id = NULL;
-   }
-   if (config->ip_prefix_length) {
-      free(config->ip_prefix_length);
-      config->ip_prefix_length = NULL;
-   }
-   if (config->ip_prefix) {
-      free(config->ip_prefix);
-      config->ip_prefix = NULL;
-   }
-   config->size = 0;
-}
-
 int tags_parse_ip_prefix(const char *ip_prefix, ip_addr_t *addr, uint32_t *prefix_length)
 {
    long prefix_length_l;
@@ -78,9 +34,40 @@ int tags_parse_ip_prefix(const char *ip_prefix, ip_addr_t *addr, uint32_t *prefi
    return 0;
 }
 
-int parse_config(const char *config_file, struct tags_config *config)
+/** Dealloc ipps_network_list_t
+ * Dealloc struct ipps_network_list_t
+ * @param[in] network_list Pointer to network_list structure
+ * @return void
+ */
+void destroy_networks(ipps_network_list_t *network_list)
+{
+   int index;
+   for (index = 0; index < network_list->net_count; index++) {
+      free(network_list->networks[index].data);
+   }
+
+   free(network_list->networks);
+   free(network_list);
+}
+
+int parse_config(const char *config_file, ipps_context_t **config)
 {
    int error = 0;
+   int struct_count = 50;
+
+   // Alloc memory for networks structs, if malloc fails return NULL
+   ipps_network_t *networks = malloc(struct_count * sizeof(ipps_network_t));
+   if (networks == NULL) {
+      fprintf(stderr, "ERROR allocating memory for network structures\n");
+      return -1;
+   }
+
+   ipps_network_list_t *netlist = malloc(sizeof(ipps_network_list_t));
+   if (netlist == NULL) {
+      fprintf(stderr, "ERROR allocating memory for network list\n");
+      free(networks);
+      return -1;
+   }
 
    // Parse JSON
    FILE* fp = fopen(config_file, "r");
@@ -136,14 +123,36 @@ int parse_config(const char *config_file, struct tags_config *config)
          goto cleanup;
       }
 
-      error = tags_config_add_record(config, id, ip_prefix, ip_prefix_length);
-      debug_print("tags_config_add_record ret %d\n", error);
-      if (error) {
+      // If limit is reached alloc new memory
+      if (i >= struct_count) {
+          struct_count += 10;
+          // If realloc fails return NULL
+          if ((networks = realloc(networks, struct_count * sizeof(ipps_network_t))) == NULL) {
+              fprintf(stderr, "ERROR in reallocating network structure\n");
+              error = 1;
+              goto cleanup;
+          }
+      }
+
+      networks[i].addr = ip_prefix;
+      networks[i].mask = ip_prefix_length;
+      networks[i].data = malloc(sizeof(id));
+      if (networks[i].data == NULL) {
+         fprintf(stderr, "ERROR in allocating memory for identifier\n");
+         error = 1;
          goto cleanup;
       }
-   }	
+
+      networks[i].data_len = sizeof(id);
+      *((uint32_t *) networks[i].data) = id;
+   }
+   netlist->networks = networks;
+   netlist->net_count = json_array_size(j_root);
+
+   (*config) = ipps_init(netlist);
 
 cleanup:
+   destroy_networks(netlist);
    fclose(fp);
    if (j_root) {
       json_decref(j_root); // decrement ref-count to free whole j_root
