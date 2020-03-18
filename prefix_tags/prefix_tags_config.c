@@ -8,15 +8,6 @@
 #include "prefix_tags_config.h"
 
 
-void tags_config_init(struct tags_config *config) {
-   config->netlist_context = NULL;
-}
-
-void tags_config_free(struct tags_config *config)
-{
-   ipps_destroy(config->netlist_context);
-}
-
 int tags_parse_ip_prefix(const char *ip_prefix, ip_addr_t *addr, uint32_t *prefix_length)
 {
    long prefix_length_l;
@@ -44,7 +35,7 @@ int tags_parse_ip_prefix(const char *ip_prefix, ip_addr_t *addr, uint32_t *prefi
 }
 
 /** Dealloc ipps_network_list_t
- * Dealloc struct ipps_network_list_t, opposite of load_network
+ * Dealloc struct ipps_network_list_t
  * @param[in] network_list Pointer to network_list structure
  * @return void
  */
@@ -59,7 +50,7 @@ void destroy_networks(ipps_network_list_t *network_list)
    free(network_list);
 }
 
-int parse_config(const char *config_file, struct tags_config *config)
+int parse_config(const char *config_file, ipps_context_t **config)
 {
    int error = 0;
    int struct_count = 50;
@@ -157,10 +148,10 @@ int parse_config(const char *config_file, struct tags_config *config)
    netlist->networks = networks;
    netlist->net_count = json_array_size(j_root);
 
-   config->netlist_context = ipps_init(netlist);
-   destroy_networks(netlist);
+   (*config) = ipps_init(netlist);
 
 cleanup:
+   destroy_networks(netlist);
    fclose(fp);
    if (j_root) {
       json_decref(j_root); // decrement ref-count to free whole j_root

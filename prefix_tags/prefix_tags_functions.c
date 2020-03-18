@@ -78,10 +78,10 @@ int is_from_prefix(ip_addr_t *ip, ip_addr_t *protected_prefix, int32_t protected
    return 0;
 }
 
-int is_from_configured_prefix(struct tags_config *config, ip_addr_t *ip, uint32_t *prefix_tag) {
+int is_from_configured_prefix(ipps_context_t *config, ip_addr_t *ip, uint32_t *prefix_tag) {
    uint32_t **data;
 
-   int result = ipps_search(ip, config->netlist_context, (void ***) &data);
+   int result = ipps_search(ip, config, (void ***) &data);
 
    if (result > 0) {
       *prefix_tag = *data[0];

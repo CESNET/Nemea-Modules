@@ -52,7 +52,7 @@ int CHECK_SRC_IP = 1;
 int CHECK_DST_IP = 1;
 
 
-int prefix_tags(struct tags_config *config) {
+int prefix_tags(ipps_context_t *config) {
    int error = 0;
    uint32_t prefix_tag;
    const void *data_in = NULL;
@@ -122,14 +122,12 @@ int main(int argc, char **argv)
    int error = 0;
    signed char opt;
 
-   struct tags_config config;
+   ipps_context_t *config = NULL;
 
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
    errno = 0; // FIXME For some reason, ^^^ sets errno=2 when there is no error causing issues down the line
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
-
-   tags_config_init(&config);
 
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
@@ -152,14 +150,14 @@ int main(int argc, char **argv)
       }
    }
 
-   error = prefix_tags(&config);
+   error = prefix_tags(config);
    debug_print("prefix_tags ret %d\n", error);
 
 cleanup:
    TRAP_DEFAULT_FINALIZATION();
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
-   tags_config_free(&config);
+   ipps_destroy(config);
 
    return error;
 }
