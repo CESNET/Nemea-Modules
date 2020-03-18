@@ -65,6 +65,7 @@ int parse_config(const char *config_file, ipps_context_t **config)
    ipps_network_list_t *netlist = malloc(sizeof(ipps_network_list_t));
    if (netlist == NULL) {
       fprintf(stderr, "ERROR allocating memory for network list\n");
+      free(networks);
       return -1;
    }
 

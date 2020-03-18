@@ -126,7 +126,7 @@ int main(int argc, char **argv)
 
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
    TRAP_DEFAULT_INITIALIZATION(argc, argv, *module_info);
-   errno = 0; // FIXME For some reason, ^^^ sets errno=2 when there is no error causing issues down the line
+   errno = 0; // reset errno before signal handler setup
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
