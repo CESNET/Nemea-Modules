@@ -137,6 +137,7 @@ int parse_config(const char *config_file, struct tags_config *config)
           // If realloc fails return NULL
           if ((networks = realloc(networks, struct_count * sizeof(ipps_network_t))) == NULL) {
               fprintf(stderr, "ERROR in reallocating network structure\n");
+              error = 1;
               goto cleanup;
           }
       }
@@ -146,6 +147,7 @@ int parse_config(const char *config_file, struct tags_config *config)
       networks[i].data = malloc(sizeof(id));
       if (networks[i].data == NULL) {
          fprintf(stderr, "ERROR in allocating memory for identifier\n");
+         error = 1;
          goto cleanup;
       }
 
