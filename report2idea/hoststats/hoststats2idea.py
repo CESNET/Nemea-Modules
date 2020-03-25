@@ -74,7 +74,6 @@ def convert_to_idea(rec, opts=None):
             idea['Source'][0]['Proto'] = [proto_conv[rec.PROTOCOL]]
         
         idea['FlowCount'] = rec.EVENT_SCALE  # number of outgoing SYNs minus outgoing ACKs
-        idea['ConnCount'] = rec.EVENT_SCALE  # number of outgoing SYNs minus outgoing ACKs
       
     # DNS Amplification
     elif rec.EVENT_TYPE == EVT_T_DNSAMP:
@@ -178,7 +177,6 @@ def convert_to_idea(rec, opts=None):
             idea['Source'] = [{}]
             setAddr(idea['Source'][0], rec.SRC_IP)
          
-        idea['FlowCount'] = 2 * rec.EVENT_SCALE  # number of flows (two flows per connection)
         idea['ConnCount'] = rec.EVENT_SCALE  # number of tries
       
     # Unknown event type
