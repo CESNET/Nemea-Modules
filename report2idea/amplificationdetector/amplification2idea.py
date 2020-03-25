@@ -45,11 +45,7 @@ def convert_to_idea(rec, opts=None):
             'OutPacketCount': rec.RSP_PACKETS,
             'OutByteCount': rec.RSP_BYTES,
         }],
-        "Target": [{
-            'InFlowCount': rec.RSP_FLOWS,
-            'InPacketCount': rec.RSP_PACKETS,
-            'InByteCount': rec.RSP_BYTES,
-        }],
+        "Target": [{}],
         "FlowCount": int(rec.RSP_FLOWS),
         "ByteCount": int(rec.RSP_BYTES),
         "PacketCount": int(rec.RSP_PACKETS),
