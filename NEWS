@@ -1,3 +1,21 @@
+2020-03-18 (Radko Krkos): Revert "report2idea: Use /usr/bin/env to find python"
+2020-03-18 (Tomáš Čejka): prefix_tags: minor changes, added missing free() on error
+2020-03-18 (Tomáš Čejka): prefix_tags: changes based on feedback by @fkrestan
+2020-03-18 (Jiri Havranek): prefix_tags: fixed return code when an error occurs during configuration loading
+2020-03-17 (Jiri Havranek): prefix_tags: fixed dereference of NULL pointer when malloc() fails
+2020-03-17 (Jiri Havranek): prefix_tags: fixed memory allocation after invalid write bug
+2020-03-17 (Jiri Havranek): prefix_tags: fixed example json config file
+2020-03-17 (Tomáš Čejka): prefix_tags: update to use ip_prefix_search
+2020-03-16 (Radko Krkos): blacklistfilter: Only report non-blacklisted as Source if it responded
+2020-03-16 (Radko Krkos): blacklistfilter: Reorganize imports
+2020-03-16 (Radko Krkos): blacklistfilter: Remove unnecessary Note
+2020-03-16 (Radko Krkos): blacklistfilter: Add missing import sys
+2020-03-16 (Radko Krkos): blacklistfilter: Only report flow,packet,bytes counts if not 0
+2020-03-15 (Radko Krkos): report2idea: Use /usr/bin/env to find python
+2020-03-15 (Radko Krkos): merger: Fix tests with parallel make
+2020-03-06 (Tomáš Čejka): link/proto_traffic: fixed python issues
+2020-02-20 (Jiri Havranek): topn: fixed info about interfaces in README.md
+
 2020-01-31 (Tomáš Čejka): rpm: fixed spec - replace provides with requires
 2020-01-30 (Tomas Cejka): config: optional lua
 2020-01-30 (Tomas Cejka): travis: remove lua and add verbosity to configure

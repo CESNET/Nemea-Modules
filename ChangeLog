@@ -1,3 +1,14 @@
+2020-04-01 nemea-modules-2.14.0
+	* prefix_tags:
+		New version based on ip_prefix_search feature in UniRec
+	* blacklistfilter:
+		Maintenance
+	* merger:
+		Improved tests
+	* link/proto_traffic:
+		Bugfixes - python3 issues
+	* topn:
+		Fixed info in documentation
 2020-01-31 nemea-modules-2.13.1
 	* Bugfixes in build configuration and tests
 
