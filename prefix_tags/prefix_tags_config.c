@@ -42,7 +42,7 @@ int tags_parse_ip_prefix(const char *ip_prefix, ip_addr_t *addr, uint32_t *prefi
  */
 void destroy_networks(ipps_network_list_t *network_list)
 {
-   int index;
+   uint32_t index;
    for (index = 0; index < network_list->net_count; index++) {
       free(network_list->networks[index].data);
    }
