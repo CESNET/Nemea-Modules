@@ -73,6 +73,8 @@ int parse_config(const char *config_file, ipps_context_t **config)
    FILE* fp = fopen(config_file, "r");
    if (fp == NULL) {
       fprintf(stderr, "Error: %s\n", strerror(errno));
+      free(netlist);
+      free(networks);
       return -1;
    }
    json_error_t* j_error = NULL;
