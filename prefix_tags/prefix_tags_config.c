@@ -54,7 +54,7 @@ void destroy_networks(ipps_network_list_t *network_list)
 int parse_config(const char *config_file, ipps_context_t **config)
 {
    int error = 0;
-   int struct_count = 50;
+   size_t struct_count = 50;
 
    // Alloc memory for networks structs, if malloc fails return NULL
    ipps_network_t *networks = malloc(struct_count * sizeof(ipps_network_t));
