@@ -3,6 +3,7 @@
 
 #include <libtrap/jansson.h>
 #include <unirec/unirec.h>
+#include <unirec/ip_prefix_search.h>
 
 #include "prefix_tags.h"
 #include "prefix_tags_config.h"
