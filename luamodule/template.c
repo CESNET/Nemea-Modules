@@ -92,27 +92,52 @@ int set_output_ifc(ur_template_t **tmplt, void **rec, const char *spec)
 void template_spec_trim(char *spec)
 {
    size_t spec_len = strlen(spec);
-   int i;
+   int i, j;
+   enum state_e {TYPE, NAME, SEP_TYPE, SEP_NAME} state = TYPE;
 
-   /* Remove commas from the beginning and the end of spec string. */
-   for (i = 0; i < spec_len && (spec[i] == ',' || isspace(spec[i])); i++) {
-      spec[i] = ' ';
-   }
-   for (i = spec_len - 1; i >= 0 && (spec[i] == ',' || isspace(spec[i])); i--) {
-      spec[i] = ' ';
+   if (!isalnum(spec[0])) {
+      state = SEP_TYPE;
    }
 
-   /* Remove sequences of commas (e.g. "uint32 FOO,, ,uint16 BAR,")
-    * from spec that may cause problems. */
-   int comma_found = 0;
-   for (i = 0; i < spec_len; i++) {
-      if (comma_found && spec[i] == ',') {
-         spec[i] = ' ';
-      } else if (spec[i] == ',') {
-         comma_found = 1;
-      } else if (!isspace(spec[i])) {
-         comma_found = 0;
+   /* go through all original characters and copy only cleaned template without
+    * multiple spaces or commas */
+   for (i = 0, j = 0; i < spec_len; i++) {
+      switch (state) {
+      case TYPE:
+         if (!isspace(spec[i]) && spec[i] != ',') {
+            spec[j++] = spec[i];
+         } else {
+            spec[j++] = ' ';
+            state = SEP_NAME;
+         }
+         break;
+      case NAME:
+         if (!isspace(spec[i]) && spec[i] != ',') {
+            spec[j++] = spec[i];
+         } else {
+            spec[j++] = ',';
+            state = SEP_TYPE;
+         }
+         break;
+      case SEP_TYPE:
+         if (!isspace(spec[i]) && spec[i] != ',') {
+            spec[j++] = spec[i];
+            state = TYPE;
+         }
+         break;
+      case SEP_NAME:
+         if (!isspace(spec[i]) && spec[i] != ',') {
+            spec[j++] = spec[i];
+            state = NAME;
+         }
       }
+   }
+
+   /* terminate string either when it ends with ',' or at the last char */
+   if (spec[j-1] == ',') {
+      spec[j-1] = 0;
+   } else {
+      spec[j] = 0;
    }
 }
 
