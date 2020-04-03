@@ -27,8 +27,8 @@ function on_template_recv()
    if ur_add("uint32 F", "int INT") then
       error("ur_add should have failed")
    end
-   if ur_add("uint32", "tmp") then
-      error("ur_add should have failed")
+   if ur_add("tmp", "tmp") then
+      error("ur_add should have failed - bad UniRec type 'tmp'")
    end
    if pcall(ur_add) then
       error("ur_add should have failed")
