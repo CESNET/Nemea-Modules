@@ -11,10 +11,14 @@ function on_template_recv()
 end
 
 function on_record_recv()
-   ip = ur_get(id_ip)
+   local ip = ur_get(id_ip)
+   local subnet
    if ur_ip4(ip) then
-      ur_set(id_sub, ip / 24)
+      subnet = ip / 24
    else
-      ur_set(id_sub, ip / 48)
+      subnet = ip / 48
    end
+
+   ur_set(id_sub, subnet)
+   print(tostring(subnet))
 end

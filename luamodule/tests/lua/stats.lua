@@ -15,16 +15,16 @@ function on_record_recv()
    if bytes ~= nil and packets ~= nil and first ~= nil and last ~= nil then
       local DURATION = last - first
       local BPP = bytes / packets
-      local PPS, BPS
+      local PPS = 0
+      local BPS = 0
 
       if DURATION ~= 0 then
          PPS = packets / DURATION
          BPS = bytes / DURATION
-      else
-         PPS = 0
-         BPS = 0
       end
 
       ur_set("DURATION", DURATION, "BPP", BPP, "PPS", PPS, "BPS", BPS)
+
+      print(DURATION, BPP, PPS, BPS)
    end
 end

@@ -12,12 +12,12 @@ ref_dir="${srcdir}/reference"
 in_dir="${srcdir}/unirec"
 out_dir="./output"
 
-# Usage: run_test <lua-script> <ur_in_file> <ur_out_file>
+# Usage: run_test <lua-script> <ur_in_file> <ref_file>
 run_test() {
    local lua_script="${lua_dir}/$1"
    local ur_in_file="${in_dir}/$2"
-   local ur_out_file="${out_dir}/$3"
-   local ur_ref_file="${ref_dir}/$3"
+   local out_file="${out_dir}/$3"
+   local ref_file="${ref_dir}/$3"
 
    if ! [ -f "${luamodule_bin}" ]; then
       echo "luamodule not compiled"
@@ -28,10 +28,10 @@ run_test() {
       mkdir "${out_dir}"
    fi
 
-   rm ${ur_out_file} 2>/dev/null
-   "${luamodule_bin}" -i "f:${ur_in_file},f:${ur_out_file}" -l "${lua_script}" >/dev/null
+   rm ${out_file} 2>/dev/null
+   "${luamodule_bin}" -i "f:${ur_in_file},b:" -l "${lua_script}" >"${out_file}"
 
-   if cmp "${ur_ref_file}" "${ur_out_file}"; then
+   if cmp "${ref_file}" "${out_file}"; then
       echo "$1 script test OK"
    else
       echo "$1 script test FAILED"

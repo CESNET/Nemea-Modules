@@ -32,8 +32,8 @@ EXTRA_DIST=add.sh \
 	lua/mask.lua \
 	lua/stats.lua \
 	unirec/mixed.ur \
-	reference/mask.ur \
-	reference/stats.ur
+	reference/mask.txt \
+	reference/stats.txt
 
 include ../../aminclude.am
 
