@@ -74,7 +74,7 @@ void max_ip(const void *src, void *dst)
 /* ================================================================= */
 /* ================== Nope/First function ========================== */
 /* ================================================================= */
-void nope(const void *src, void *dst)
+void nope(__attribute__((unused)) const void *src, __attribute__((unused)) void *dst)
 {
    // DO NOTHING
 }

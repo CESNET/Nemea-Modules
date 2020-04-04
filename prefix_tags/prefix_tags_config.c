@@ -3,6 +3,7 @@
 
 #include <libtrap/jansson.h>
 #include <unirec/unirec.h>
+#include <unirec/ip_prefix_search.h>
 
 #include "prefix_tags.h"
 #include "prefix_tags_config.h"
@@ -41,7 +42,7 @@ int tags_parse_ip_prefix(const char *ip_prefix, ip_addr_t *addr, uint32_t *prefi
  */
 void destroy_networks(ipps_network_list_t *network_list)
 {
-   int index;
+   uint32_t index;
    for (index = 0; index < network_list->net_count; index++) {
       free(network_list->networks[index].data);
    }
@@ -53,7 +54,7 @@ void destroy_networks(ipps_network_list_t *network_list)
 int parse_config(const char *config_file, ipps_context_t **config)
 {
    int error = 0;
-   int struct_count = 50;
+   size_t struct_count = 50;
 
    // Alloc memory for networks structs, if malloc fails return NULL
    ipps_network_t *networks = malloc(struct_count * sizeof(ipps_network_t));
@@ -73,6 +74,8 @@ int parse_config(const char *config_file, ipps_context_t **config)
    FILE* fp = fopen(config_file, "r");
    if (fp == NULL) {
       fprintf(stderr, "Error: %s\n", strerror(errno));
+      free(netlist);
+      free(networks);
       return -1;
    }
    json_error_t* j_error = NULL;
