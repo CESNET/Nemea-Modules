@@ -95,6 +95,8 @@ NEMEA_FRAMEWORK_LIBS=${LIBS}
 AC_SUBST(NEMEA_FRAMEWORK_LIBS)
 #LIBS=${backup_libs}
 
+PKG_CHECK_MODULES([cmocka], [cmocka], [have_cmocka="yes"], [have_cmocka="no"])
+AM_CONDITIONAL([HAVE_CMOCKA], [test x$have_cmocka = xyes])
 
 AC_ARG_WITH([openssl],
         [AS_HELP_STRING([--without-openssl], [Force to disable openssl])],

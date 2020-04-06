@@ -29,9 +29,11 @@ IPv6MASK      [0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8]
 
 DATETIME [0-9]{4}-[0-9]{1,2}-[0-9]{1,2}T[0-9]{2}:[0-9]{2}:[0-9]{2}|[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}
 
+ARRAY \[[, .0-9a-zA-Z]+\]
+
 %%
 
-">"|"<"|"=<"|"<="|">="|"=>"                              { yylval.string = copyString(yytext, yyleng); return CMP; }
+">"|"<"|"=<"|"<="|">="|"=>"|"IN"|"in"                    { yylval.string = copyString(yytext, yyleng); return CMP; }
 "="|"=="|"!="|"<>"                                       { yylval.string = copyString(yytext, yyleng); return EQ; }
 "=~"|"~="                                                { yylval.string = copyString(yytext, yyleng); return REGEX; }
 "!"|"NOT"                                                { return NOT; }
@@ -39,6 +41,7 @@ DATETIME [0-9]{4}-[0-9]{1,2}-[0-9]{1,2}T[0-9]{2}:[0-9]{2}:[0-9]{2}|[0-9]{4}-[0-9
 "&&"|"AND"                                               { return AND; }
 {DATETIME}                                               { yylval.string = copyString(yytext, yyleng); return DATETIME; }
 \"({DATETIME})\"                                         { yylval.string = cutString(yytext, yyleng); return DATETIME; }
+{ARRAY}                                                  { yylval.string = cutString(yytext, yyleng); return ARRAY; }
 -?[0-9]+\.[0-9]+                                         { sscanf(yytext, "%lf", &yylval.floating); return FLOAT; }
 -[0-9]+                                                  { sscanf(yytext, "%" SCNi64, &yylval.number); return SIGNED; }
 [0-9]+                                                   { sscanf(yytext, "%" SCNi64, &yylval.number); return UNSIGNED; }

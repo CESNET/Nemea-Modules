@@ -86,6 +86,8 @@ op_pair cmp_op_table[] = {
    { ">",  OP_GT },
    { ">=", OP_GE },
    { "=~", OP_RE },
+   { "IN", OP_IN },
+   { "in", OP_IN },
    { "~=", OP_RE }
 };
 
@@ -241,6 +243,56 @@ struct ast *newExpressionDateTime(char *column, char *cmp, char *datetime)
       newast->id = UR_INVALID_FIELD;
    }
    free(datetime);
+   return (struct ast *) newast;
+}
+
+static int compareUI64(const void *p1, const void *p2)
+{
+   return ((*(uint64_t *) p1) - (*(uint64_t *) p2));
+}
+
+struct ast *newExpressionArray(char *column, char *cmp, char *array)
+{
+   int i;
+   struct expression_array *newast = (struct expression_array *) malloc(sizeof(struct expression_array));
+
+   newast->type = NODE_T_EXPRESSION_ARRAY;
+   newast->column = column;
+
+   int id = ur_get_id_by_name(column);
+   newast->cmp = get_op_type(cmp);
+   free(cmp);
+
+   if (id == UR_E_INVALID_NAME) {
+      printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
+      newast->id = UR_INVALID_FIELD;
+   } else {
+      newast->id = id;
+   }
+
+   newast->array_size = 0;
+   newast->array_values = 0;
+
+   char *p = array;
+   int strsize = strlen(array);
+   for (i = 0; i < strsize; i++) {
+      if (array[i] == ',') {
+         newast->array_size++;
+         array[i] = 0;
+      }
+   }
+   if (i != 0) {
+      newast->array_size++;
+   }
+   newast->array_values = calloc(newast->array_size, sizeof(uint64_t));
+   for (int i=0; i < newast->array_size; i++) {
+      sscanf(p, "%"SCNu64, &newast->array_values[i]);
+      p += strlen(p) + 1;
+   }
+
+   qsort(newast->array_values, newast->array_size, sizeof(uint64_t *), compareUI64);
+
+   free(array);
    return (struct ast *) newast;
 }
 
@@ -496,6 +548,23 @@ void printAST(struct ast *ast)
       }
       break;
 
+   case NODE_T_EXPRESSION_ARRAY:
+      if (((struct expression_array*) ast)->id == UR_INVALID_FIELD) { // There was error with this expr., print it in red color
+         printf("%s", TTY_RED);
+      }
+      printf("%s", ((struct expression_array*) ast)->column);
+      if (((struct expression_array*) ast)->id == UR_INVALID_FIELD) {
+         printf("%s", TTY_RESET);
+      }
+
+      printf(" IN [");
+      for (int i=0; i < ((struct expression_array*) ast)->array_size; i++) {
+         printf("%"PRIu64", ", ((struct expression_array*) ast)->array_values[i]);
+      }
+      printf("]");
+
+      break;
+
    case NODE_T_PROTOCOL:
       printf("PROTOCOL %s %s",
             ((struct protocol*) ast)->cmp,
@@ -642,6 +711,10 @@ void freeAST(struct ast *ast)
    case NODE_T_EXPRESSION_DATETIME:
       free(((struct expression_datetime *) ast)->column);
       break;
+   case NODE_T_EXPRESSION_ARRAY:
+      free(((struct expression_array *) ast)->column);
+      free(((struct expression_array *) ast)->array_values);
+      break;
    case NODE_T_PROTOCOL:
       free(((struct protocol*) ast)->cmp);
       free(((struct protocol*) ast)->data);
@@ -733,6 +806,13 @@ int compareFloating(double a, double b, cmp_op op) {
    return 0;
 }
 
+int compareElemInArray(uint64_t val, struct expression_array *ast)
+{
+   void *res = bsearch(&val, ast->array_values, ast->array_size, sizeof(uint64_t), compareUI64);
+
+   return (res != NULL);
+}
+
 int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
 {
    size_t size;
@@ -787,8 +867,50 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
       if (((struct expression*) ast)->id == UR_INVALID_FIELD) {
          return 0;
       }
+
       return compareUnsigned(*(ur_time_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_datetime *) ast)->id)),
                              ((struct expression_datetime *) ast)->date, ((struct expression_datetime *) ast)->cmp);
+
+   case NODE_T_EXPRESSION_ARRAY:
+      {
+         if (((struct expression_array*) ast)->id == UR_INVALID_FIELD) {
+            return 0;
+         }
+         int type = ur_get_type(((struct expression_array*) ast)->id);
+         uint64_t field_val = 0;
+         switch (type) {
+         case UR_TYPE_UINT8:
+            field_val = *(uint8_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_array*) ast)->id));
+            break;
+         case UR_TYPE_INT8:
+            field_val = *(int8_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_array*) ast)->id));
+            break;
+         case UR_TYPE_INT16:
+            field_val = *(int16_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_array*) ast)->id));
+            break;
+         case UR_TYPE_UINT16:
+            field_val = *(uint16_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_array*) ast)->id));
+            break;
+         case UR_TYPE_INT32:
+            field_val = *(int32_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_array*) ast)->id));
+            break;
+         case UR_TYPE_UINT32:
+            field_val = *(uint32_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_array*) ast)->id));
+            break;
+         case UR_TYPE_INT64:
+            field_val = *(int64_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_array*) ast)->id));
+            break;
+         case UR_TYPE_UINT64:
+            field_val = *(uint64_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_array*) ast)->id));
+            break;
+         default:
+            printf("Unsupported type of UniRec field for \"IN Array operation\".\n");
+            return 0;
+         }
+
+         return compareElemInArray(field_val, (struct expression_array *) ast);
+      }
+
    case NODE_T_NET: {
       if (((struct ipnet *) ast)->id == UR_INVALID_FIELD) {
          return 0;
@@ -899,6 +1021,7 @@ void changeProtocol(struct ast **ast)
    case NODE_T_EXPRESSION:
    case NODE_T_EXPRESSION_FP:
    case NODE_T_EXPRESSION_DATETIME:
+   case NODE_T_EXPRESSION_ARRAY:
       return;
    case NODE_T_PROTOCOL:
       proto = getprotobyname(((struct protocol *) (*ast))->data);

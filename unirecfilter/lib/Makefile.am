@@ -1,7 +1,7 @@
 FLEX = flex
 BISON = bison
 include ../../aminclude.am
-EXTRA_DIST=parser.y scanner.l
+EXTRA_DIST=parser.y scanner.l test_liburfilter.c
 
 lib_LTLIBRARIES = liburfilter.la
 include_HEADERS = liburfilter.h
@@ -32,4 +32,10 @@ parser.tab.c: parser.y
 clean-local:
 	rm -f lex.yy.c parser.tab.c parser.tab.h parser fiedls.c fields.h
 
+if HAVE_CMOCKA
+check_PROGRAMS=test_liburfilter
+test_liburfilter_SOURCES=test_liburfilter.c
+test_liburfilter_LDADD=-lcmocka -lurfilter
+TESTS=test_liburfilter
+endif
 
