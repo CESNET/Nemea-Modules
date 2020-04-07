@@ -203,7 +203,7 @@ print_todo() {
    echo "Generated ${PLUGIN_LOWER}plugin.cpp and ${PLUGIN_LOWER}plugin.h files"
    echo
    echo "TODO:"
-   echo "1) Add '${PLUGIN}plugin.h' and '${PLUGIN}plugin.cpp' files to flow_meter_SOURCES variable in Makefile.am"
+   echo "1) Add '${PLUGIN}plugin.h' and '${PLUGIN}plugin.cpp' files to flow_meter_src variable in Makefile.am"
    echo "2) Add '${PLUGIN}' entry to the extTypeEnum in flowifc.h"
    echo "3) Add '#include <${PLUGIN}plugin.h>' line to flow_meter.cpp"
    echo "4) Add ${PLUGIN} to list of supported plugins for -p param in flow_meter.cpp (also update README.md)"
