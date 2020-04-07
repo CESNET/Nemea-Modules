@@ -167,7 +167,7 @@ int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, 
       }
 
       tmplt[ifc] = ur_create_output_template(ifc, template_str.c_str(), &error);
-      if (tmplt == NULL) {
+      if (tmplt[ifc] == NULL) {
          fprintf(stderr, "UnirecExporter: %s\n", error);
          free(error);
          free_unirec_resources();
