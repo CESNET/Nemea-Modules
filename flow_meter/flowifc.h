@@ -71,6 +71,7 @@ enum extTypeEnum {
    smtp,
    arp,
    passivedns,
+   pstats,
    /* Add extension header identifiers for your plugins here */
    EXTENSION_CNT
 };
