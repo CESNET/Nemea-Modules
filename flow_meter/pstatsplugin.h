@@ -74,15 +74,15 @@ struct RecordExtPSTATS : RecordExt {
 
    typedef enum eHdrFieldID
    {
-     PktSize = 44956,
-     PktDelays = 44957,
-     PktFlags = 44964,
-     PktDir = 44964,
-     PktTmstp = 44966
-   }eHdrSemantic;
+      PktSize = 44956,
+      PktDelays = 44957,
+      PktFlags = 44964,
+      PktDir = 44964,
+      PktTmstp = 44966
+   } eHdrSemantic;
 
 
-   struct IpfixBasicRecordListHdr{
+   struct IpfixBasicRecordListHdr {
      IpfixBasicRecordListHdr(uint8_t flag, uint16_t length, uint8_t hdrSemantic,
                           eHdrFieldID hdrFieldID, uint16_t hdrElementLength,
                           uint32_t hdrEnterpriseNum):flag(flag),
@@ -90,41 +90,39 @@ struct RecordExtPSTATS : RecordExt {
                           hdrFieldID(hdrFieldID),
                           hdrElementLength(hdrElementLength),
                           hdrEnterpriseNum(hdrEnterpriseNum){};
-    uint8_t flag;
-    uint16_t length;
-    uint8_t hdrSemantic;
-    uint16_t hdrFieldID;
-    uint16_t hdrElementLength;
-    uint32_t hdrEnterpriseNum;
+     uint8_t flag;
+     uint16_t length;
+     uint8_t hdrSemantic;
+     uint16_t hdrFieldID;
+     uint16_t hdrElementLength;
+     uint32_t hdrEnterpriseNum;
    };
 
    static const uint8_t IpfixBasicListRecordHdrSize = 12;
    static const uint8_t IpfixBasicListHdrSize = 9;
    static const uint32_t CesnetPem = 8057;
 
-
-
    int32_t FillBasicListBuffer(RecordExtPSTATS::IpfixBasicRecordListHdr& IpfixBasicListRecord, uint8_t * buffer, int size)
    {
      uint32_t bufferPtr = 0;
       //Copy flag
      buffer[bufferPtr] = IpfixBasicListRecord.flag;
-     bufferPtr+=sizeof(uint8_t);
+     bufferPtr += sizeof(uint8_t);
      //Copy length;
      *(reinterpret_cast<uint16_t*>(buffer + bufferPtr)) = htons(IpfixBasicListRecord.length);
-     bufferPtr+=sizeof(uint16_t);
+     bufferPtr += sizeof(uint16_t);
      //copy hdr_semantic
      buffer[bufferPtr] = IpfixBasicListRecord.hdrSemantic;
-     bufferPtr+=sizeof(uint8_t);
+     bufferPtr += sizeof(uint8_t);
      //copy hdr_field_id
      *(reinterpret_cast<uint16_t*>(buffer + bufferPtr)) = htons(IpfixBasicListRecord.hdrFieldID);
-     bufferPtr+=sizeof(uint16_t);
+     bufferPtr += sizeof(uint16_t);
 
      *(reinterpret_cast<uint16_t*>(buffer + bufferPtr)) = htons(IpfixBasicListRecord.hdrElementLength);
-     bufferPtr+=sizeof(uint16_t);
+     bufferPtr += sizeof(uint16_t);
 
      *(reinterpret_cast<uint32_t*>(buffer + bufferPtr)) = htonl(IpfixBasicListRecord.hdrEnterpriseNum);
-     bufferPtr+=sizeof(uint32_t);
+     bufferPtr += sizeof(uint32_t);
 
      return bufferPtr;
    }
@@ -159,58 +157,53 @@ struct RecordExtPSTATS : RecordExt {
    {
       int32_t bufferPtr;
       RecordExtPSTATS::IpfixBasicRecordListHdr hdr(255,//Maximum size see rfc631
-                                          IpfixBasicListHdrSize + pkt_count*(sizeof(uint16_t)),
-                                          3,
-                                          PktSize,
-                                          sizeof(uint16_t),
-                                          CesnetPem);
+            IpfixBasicListHdrSize + pkt_count * (sizeof(uint16_t)),
+            3,
+            PktSize,
+            sizeof(uint16_t),
+            CesnetPem);
       //Check sufficient size of buffer
-      if(3*IpfixBasicListRecordHdrSize + pkt_count*(sizeof(uint16_t)) + 3*pkt_count*(sizeof(uint32_t))  > size)
-        {
-          return -1;
-        }
+      if (3 * IpfixBasicListRecordHdrSize + pkt_count * (sizeof(uint16_t)) + 3 * pkt_count * (sizeof(uint32_t))  > size) {
+         return -1;
+      }
 
       //fill buffer with basic list header and packet sizes
       bufferPtr = FillBasicListBuffer(hdr, buffer, size);
-      for(int i = 0; i< pkt_count; i++)
-      {
-        (*reinterpret_cast<uint16_t *>(buffer + bufferPtr)) = htons(pkt_sizes[i]);
-        bufferPtr+=sizeof(uint16_t);
+      for (int i = 0; i < pkt_count; i++) {
+         (*reinterpret_cast<uint16_t *>(buffer + bufferPtr)) = htons(pkt_sizes[i]);
+         bufferPtr += sizeof(uint16_t);
       }
 
       //update information in hdr for next basic list with packet delays
-      hdr.length = IpfixBasicListHdrSize + pkt_count*(sizeof(uint32_t));
+      hdr.length = IpfixBasicListHdrSize + pkt_count * (sizeof(uint32_t));
       hdr.hdrFieldID = PktDelays;
       hdr.hdrElementLength = sizeof(uint32_t);
 
       bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
-      for(int i = 0; i< pkt_count; i++)
-      {
-        (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_delays[i]);
-        bufferPtr+=sizeof(uint32_t);
+      for (int i = 0; i < pkt_count; i++) {
+         (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_delays[i]);
+         bufferPtr += sizeof(uint32_t);
       }
 
       //update information in hdr for next basic list with packet timestamps
       //timestamps are in format [i] = sec, [i+1] = usec
-      hdr.length = IpfixBasicListHdrSize + pkt_count*2*(sizeof(uint32_t));
+      hdr.length = IpfixBasicListHdrSize + pkt_count * 2 * (sizeof(uint32_t));
       hdr.hdrFieldID = PktTmstp;
       bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
-      for(int i = 0; i<pkt_count; i++)
-      {
-        (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_timestamps[i].tv_sec);
-        bufferPtr+=sizeof(uint32_t);
-        (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_timestamps[i].tv_usec);
-        bufferPtr+=sizeof(uint32_t);
+      for (int i = 0; i < pkt_count; i++) {
+         (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_timestamps[i].tv_sec);
+         bufferPtr += sizeof(uint32_t);
+         (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_timestamps[i].tv_usec);
+         bufferPtr += sizeof(uint32_t);
       }
 
-      //
-      hdr.length = IpfixBasicListHdrSize + pkt_count*(sizeof(uint8_t));
+      hdr.length = IpfixBasicListHdrSize + pkt_count * (sizeof(uint8_t));
       hdr.hdrFieldID = PktFlags;
       hdr.hdrElementLength = sizeof(uint8_t);
 
       bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
       memcpy(buffer + bufferPtr, pkt_tcp_flgs, pkt_count);
-      bufferPtr+=pkt_count;
+      bufferPtr += pkt_count;
 
       return bufferPtr;
    }
