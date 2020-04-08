@@ -248,13 +248,46 @@ struct ast *newExpressionDateTime(char *column, char *cmp, char *datetime)
 
 static int compareUI64(const void *p1, const void *p2)
 {
-   return ((*(uint64_t *) p1) - (*(uint64_t *) p2));
+   if ((*(uint64_t *) p1) == (*(uint64_t *) p2)) {
+      return 0;
+   } else if ((*(uint64_t *) p1) > (*(uint64_t *) p2)) {
+      return 1;
+   } else {
+      return -1;
+   }
+}
+
+static int compareI64(const void *p1, const void *p2)
+{
+   return ((*(int64_t *) p1) - (*(int64_t *) p2));
+}
+
+static int compareDouble(const void *p1, const void *p2)
+{
+   double EPS = 1e-8;
+   double res = ((*(double *) p1) - (*(double *) p2));
+   if ((res < 0 ? -res : res) < EPS) {
+      return 0;
+   } else {
+      return res < 0 ? -1 : 1;
+   }
+}
+
+static int compareIPs(const void *p1, const void *p2)
+{
+   return ip_cmp((const ip_addr_t *) p1, (const ip_addr_t *) p2);
 }
 
 struct ast *newExpressionArray(char *column, char *cmp, char *array)
 {
    int i;
    struct expression_array *newast = (struct expression_array *) malloc(sizeof(struct expression_array));
+
+   /* init all arrays, one will be allocated: */
+   newast->array_values = 0;
+   newast->array_values_ip = 0;
+   newast->array_values_date = 0;
+   newast->array_values_double = 0;
 
    newast->type = NODE_T_EXPRESSION_ARRAY;
    newast->column = column;
@@ -269,6 +302,7 @@ struct ast *newExpressionArray(char *column, char *cmp, char *array)
    } else {
       newast->id = id;
    }
+   newast->field_type = ur_get_type(id);
 
    newast->array_size = 0;
    newast->array_values = 0;
@@ -284,13 +318,83 @@ struct ast *newExpressionArray(char *column, char *cmp, char *array)
    if (i != 0) {
       newast->array_size++;
    }
-   newast->array_values = calloc(newast->array_size, sizeof(uint64_t));
-   for (int i=0; i < newast->array_size; i++) {
-      sscanf(p, "%"SCNu64, &newast->array_values[i]);
-      p += strlen(p) + 1;
-   }
 
-   qsort(newast->array_values, newast->array_size, sizeof(uint64_t *), compareUI64);
+   char is_unsigned_int = 0;
+   switch (newast->field_type) {
+   case UR_TYPE_UINT8:
+   case UR_TYPE_UINT16:
+   case UR_TYPE_UINT32:
+   case UR_TYPE_UINT64:
+      is_unsigned_int = 1;
+   case UR_TYPE_INT8:
+   case UR_TYPE_INT16:
+   case UR_TYPE_INT32:
+   case UR_TYPE_INT64:
+      newast->array_values = calloc(newast->array_size, sizeof(uint64_t));
+      for (int i=0; i < newast->array_size; i++) {
+         if (is_unsigned_int == 1) {
+            if (sscanf(p, "%"SCNu64, &newast->array_values[i]) != 1) {
+               /* error */
+            }
+         } else {
+            if (sscanf(p, "%"SCNi64, &newast->array_values[i]) != 1) {
+               /* error */
+            }
+         }
+         p += strlen(p) + 1;
+      }
+      if (is_unsigned_int == 1) {
+         qsort(newast->array_values, newast->array_size, sizeof(uint64_t), compareUI64);
+      } else {
+         qsort(newast->array_values, newast->array_size, sizeof(uint64_t), compareI64);
+      }
+      break;
+   case UR_TYPE_IP:
+      newast->array_values_ip = calloc(newast->array_size, sizeof(ip_addr_t));
+      for (int i=0; i < newast->array_size; i++) {
+         while (*p == ' ') {
+            /* skip leading spaces */
+            p++;
+         }
+         if (ip_from_str(p, &newast->array_values_ip[i]) == 0) {
+            /* error */
+         }
+         p += strlen(p) + 1;
+      }
+      qsort(newast->array_values_ip, newast->array_size, sizeof(ip_addr_t), compareIPs);
+      break;
+   case UR_TYPE_TIME:
+      newast->array_values_date = calloc(newast->array_size, sizeof(ur_time_t));
+      for (int i=0; i < newast->array_size; i++) {
+         if (ur_time_from_string(&newast->array_values_date[i], p) != 0) {
+            /* error */
+            printf("Error: %s could not be loaded. Expected format: YYYY-mm-ddTHH:MM:SS.sss, (.sss is optional). Eg. 2018-06-27T19:44:41.123.\n", p);
+            newast->id = UR_INVALID_FIELD;
+         }
+         p += strlen(p) + 1;
+      }
+      qsort(newast->array_values_date, newast->array_size, sizeof(ur_time_t), compareUI64);
+      break;
+   case UR_TYPE_FLOAT:
+   case UR_TYPE_DOUBLE:
+      newast->array_values_double = calloc(newast->array_size, sizeof(double));
+      for (int i=0; i < newast->array_size; i++) {
+         if (sscanf(p, "%lf", &newast->array_values_double[i]) != 1) {
+            /* error */
+         }
+         p += strlen(p) + 1;
+      }
+
+      qsort(newast->array_values_double, newast->array_size, sizeof(double), compareDouble);
+      break;
+   default:
+      /* not supported */
+      free(column);
+      free(array);
+      newast->id = UR_INVALID_FIELD;
+      printf("Type %d is not supported.\n", newast->field_type);
+      return NULL;
+   }
 
    free(array);
    return (struct ast *) newast;
@@ -559,7 +663,43 @@ void printAST(struct ast *ast)
 
       printf(" IN [");
       for (int i=0; i < ((struct expression_array*) ast)->array_size; i++) {
-         printf("%"PRIu64", ", ((struct expression_array*) ast)->array_values[i]);
+         switch (((struct expression_array*) ast)->field_type) {
+         case UR_TYPE_UINT8:
+         case UR_TYPE_UINT16:
+         case UR_TYPE_UINT32:
+         case UR_TYPE_UINT64:
+            printf("%"PRIu64", ", ((struct expression_array*) ast)->array_values[i]);
+            break;
+         case UR_TYPE_INT8:
+         case UR_TYPE_INT16:
+         case UR_TYPE_INT32:
+         case UR_TYPE_INT64:
+            printf("%"PRIi64", ", ((struct expression_array*) ast)->array_values[i]);
+            break;
+         case UR_TYPE_IP:
+         {
+            char ipstr[INET6_ADDRSTRLEN];
+            ip_to_str(&((struct expression_array*) ast)->array_values_ip[i], ipstr);
+            printf("%s, ", ipstr);
+            break;
+         }
+         case UR_TYPE_TIME:
+         {
+            time_t sec = ur_time_get_sec(((struct expression_array*) ast)->array_values_date[i]);
+            int msec = ur_time_get_msec(((struct expression_array*) ast)->array_values_date[i]);
+            char str[32];
+            strftime(str, 31, "%FT%T", gmtime(&sec));
+            printf("%s.%03i, ", str, msec);
+            break;
+         }
+         case UR_TYPE_FLOAT:
+         case UR_TYPE_DOUBLE:
+            printf("%lf"", ", ((struct expression_array*) ast)->array_values_double[i]);
+            break;
+         default:
+            /* not supported yet */
+            printf("Type %d is not supported.\n", ((struct expression_array*) ast)->field_type);
+         }
       }
       printf("]");
 
@@ -714,6 +854,9 @@ void freeAST(struct ast *ast)
    case NODE_T_EXPRESSION_ARRAY:
       free(((struct expression_array *) ast)->column);
       free(((struct expression_array *) ast)->array_values);
+      free(((struct expression_array *) ast)->array_values_ip);
+      free(((struct expression_array *) ast)->array_values_date);
+      free(((struct expression_array *) ast)->array_values_double);
       break;
    case NODE_T_PROTOCOL:
       free(((struct protocol*) ast)->cmp);
@@ -806,9 +949,65 @@ int compareFloating(double a, double b, cmp_op op) {
    return 0;
 }
 
-int compareElemInArray(uint64_t val, struct expression_array *ast)
+int compareElemInArray(void *val, struct expression_array *ast)
 {
-   void *res = bsearch(&val, ast->array_values, ast->array_size, sizeof(uint64_t), compareUI64);
+   void *res = NULL;
+
+   uint64_t val_u;
+   int64_t val_i;
+   float val_f;
+
+   switch (ast->field_type) {
+   case UR_TYPE_UINT8:
+      val_u = *((uint8_t *) val);
+      res = bsearch(&val_u, ast->array_values, ast->array_size, sizeof(uint64_t), compareUI64);
+      break;
+   case UR_TYPE_UINT16:
+      val_u = *((uint16_t *) val);
+      res = bsearch(&val_u, ast->array_values, ast->array_size, sizeof(uint64_t), compareUI64);
+      break;
+   case UR_TYPE_UINT32:
+      val_u = *((uint32_t *) val);
+      res = bsearch(&val_u, ast->array_values, ast->array_size, sizeof(uint64_t), compareUI64);
+      break;
+   case UR_TYPE_UINT64:
+      val_u = *((uint64_t *) val);
+      res = bsearch(&val_u, ast->array_values, ast->array_size, sizeof(uint64_t), compareUI64);
+      break;
+   case UR_TYPE_INT8:
+      val_i = *((uint8_t *) val);
+      res = bsearch(&val_i, ast->array_values, ast->array_size, sizeof(int64_t), compareI64);
+      break;
+   case UR_TYPE_INT16:
+      val_i = *((uint16_t *) val);
+      res = bsearch(&val_i, ast->array_values, ast->array_size, sizeof(int64_t), compareI64);
+      break;
+   case UR_TYPE_INT32:
+      val_i = *((uint32_t *) val);
+      res = bsearch(&val_i, ast->array_values, ast->array_size, sizeof(int64_t), compareI64);
+      break;
+   case UR_TYPE_INT64:
+      val_i = *((uint64_t *) val);
+      res = bsearch(&val_i, ast->array_values, ast->array_size, sizeof(int64_t), compareI64);
+      break;
+   case UR_TYPE_IP:
+      res = bsearch(val, ast->array_values_ip, ast->array_size, sizeof(ip_addr_t), compareIPs);
+      break;
+   case UR_TYPE_TIME:
+      res = bsearch(val, ast->array_values_date, ast->array_size, sizeof(ur_time_t), compareUI64);
+      break;
+   case UR_TYPE_FLOAT:
+      val_f = *((float *) val);
+      res = bsearch(&val_f, ast->array_values_double, ast->array_size, sizeof(double), compareDouble);
+      break;
+   case UR_TYPE_DOUBLE:
+      res = bsearch(val, ast->array_values_double, ast->array_size, sizeof(double), compareDouble);
+      break;
+   default:
+      /* not supported yet */
+      printf("Type %d is not supported.\n", ast->field_type);
+      return 0;
+   }
 
    return (res != NULL);
 }
@@ -876,38 +1075,8 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
          if (((struct expression_array*) ast)->id == UR_INVALID_FIELD) {
             return 0;
          }
-         int type = ur_get_type(((struct expression_array*) ast)->id);
-         uint64_t field_val = 0;
-         switch (type) {
-         case UR_TYPE_UINT8:
-            field_val = *(uint8_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_array*) ast)->id));
-            break;
-         case UR_TYPE_INT8:
-            field_val = *(int8_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_array*) ast)->id));
-            break;
-         case UR_TYPE_INT16:
-            field_val = *(int16_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_array*) ast)->id));
-            break;
-         case UR_TYPE_UINT16:
-            field_val = *(uint16_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_array*) ast)->id));
-            break;
-         case UR_TYPE_INT32:
-            field_val = *(int32_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_array*) ast)->id));
-            break;
-         case UR_TYPE_UINT32:
-            field_val = *(uint32_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_array*) ast)->id));
-            break;
-         case UR_TYPE_INT64:
-            field_val = *(int64_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_array*) ast)->id));
-            break;
-         case UR_TYPE_UINT64:
-            field_val = *(uint64_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_array*) ast)->id));
-            break;
-         default:
-            printf("Unsupported type of UniRec field for \"IN Array operation\".\n");
-            return 0;
-         }
 
+         void *field_val = ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_array*) ast)->id);
          return compareElemInArray(field_val, (struct expression_array *) ast);
       }
 

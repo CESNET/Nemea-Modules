@@ -110,7 +110,11 @@ struct expression_array {
    char *column;
    uint32_t array_size;
    uint64_t *array_values;
+   ip_addr_t *array_values_ip;
+   ur_time_t *array_values_date;
+   double *array_values_double;
    ur_field_id_t id;
+   ur_field_type_t field_type;
 };
 
 struct protocol {
