@@ -59,20 +59,82 @@
 
 using namespace std;
 
+#define IPFIX_TLS_RECORD_LENGTHS 44956
+#define IPFIX_TLS_RECORD_TIMES 44957
+
 /**
  * \brief Flow record extension header for storing parsed PSTATS packets.
  */
 struct RecordExtPSTATS : RecordExt {
    uint16_t pkt_sizes[PSTATS_MAXELEMCOUNT];
    uint32_t pkt_delays[PSTATS_MAXELEMCOUNT];
+   uint8_t pkt_tcp_flgs[PSTATS_MAXELEMCOUNT];
    struct timeval pkt_timestamps[PSTATS_MAXELEMCOUNT];
    uint8_t pkt_count;
+
+   typedef enum eHdrFieldID
+   {
+     PktSize = 44956,
+     PktDelays = 44957,
+     PktFlags = 44964,
+     PktDir = 44964,
+     PktTmstp = 44966
+   }eHdrSemantic;
+
+
+   struct IpfixBasicRecordListHdr{
+     IpfixBasicRecordListHdr(uint8_t flag, uint16_t length, uint8_t hdrSemantic,
+                          eHdrFieldID hdrFieldID, uint16_t hdrElementLength,
+                          uint32_t hdrEnterpriseNum):flag(flag),
+                          length(length),hdrSemantic(hdrSemantic),
+                          hdrFieldID(hdrFieldID),
+                          hdrElementLength(hdrElementLength),
+                          hdrEnterpriseNum(hdrEnterpriseNum){};
+    uint8_t flag;
+    uint16_t length;
+    uint8_t hdrSemantic;
+    uint16_t hdrFieldID;
+    uint16_t hdrElementLength;
+    uint32_t hdrEnterpriseNum;
+   };
+
+   static const uint8_t IpfixBasicListRecordHdrSize = 12;
+   static const uint8_t IpfixBasicListHdrSize = 9;
+   static const uint32_t CesnetPem = 8057;
+
+
+
+   int32_t FillBasicListBuffer(RecordExtPSTATS::IpfixBasicRecordListHdr& IpfixBasicListRecord, uint8_t * buffer, int size)
+   {
+     uint32_t bufferPtr = 0;
+      //Copy flag
+     buffer[bufferPtr] = IpfixBasicListRecord.flag;
+     bufferPtr+=sizeof(uint8_t);
+     //Copy length;
+     *(reinterpret_cast<uint16_t*>(buffer + bufferPtr)) = htons(IpfixBasicListRecord.length);
+     bufferPtr+=sizeof(uint16_t);
+     //copy hdr_semantic
+     buffer[bufferPtr] = IpfixBasicListRecord.hdrSemantic;
+     bufferPtr+=sizeof(uint8_t);
+     //copy hdr_field_id
+     *(reinterpret_cast<uint16_t*>(buffer + bufferPtr)) = htons(IpfixBasicListRecord.hdrFieldID);
+     bufferPtr+=sizeof(uint16_t);
+
+     *(reinterpret_cast<uint16_t*>(buffer + bufferPtr)) = htons(IpfixBasicListRecord.hdrElementLength);
+     bufferPtr+=sizeof(uint16_t);
+
+     *(reinterpret_cast<uint32_t*>(buffer + bufferPtr)) = htonl(IpfixBasicListRecord.hdrEnterpriseNum);
+     bufferPtr+=sizeof(uint32_t);
+
+     return bufferPtr;
+   }
 
    RecordExtPSTATS() : RecordExt(pstats)
    {
       memset(pkt_sizes, 0, PSTATS_MAXELEMCOUNT * sizeof(pkt_sizes[0]));
       memset(pkt_delays, 0, PSTATS_MAXELEMCOUNT * sizeof(pkt_delays[0]));
       memset(pkt_timestamps, 0, PSTATS_MAXELEMCOUNT * sizeof(pkt_timestamps[0]));
+      memset(pkt_tcp_flgs, 0, PSTATS_MAXELEMCOUNT * sizeof(pkt_tcp_flgs[0]));
       pkt_count = 0;
    }
 
@@ -82,19 +144,75 @@ struct RecordExtPSTATS : RecordExt {
       ur_array_resize(tmplt, record, F_STATS_PCKT_TIMESTAMPS, pkt_count);
       ur_array_resize(tmplt, record, F_STATS_PCKT_DELAYS, pkt_count);
       ur_array_resize(tmplt, record, F_STATS_PCKT_SIZES, pkt_count);
+      ur_array_resize(tmplt, record, F_STATS_PCKT_TCPFLGS, pkt_count);
       for (uint8_t i = 0; i < pkt_count; i++) {
          ur_time_t ts = ur_time_from_sec_usec(pkt_timestamps[i].tv_sec, pkt_timestamps[i].tv_usec);
          ur_array_set(tmplt, record, F_STATS_PCKT_TIMESTAMPS, i, ts);
          ur_array_set(tmplt, record, F_STATS_PCKT_DELAYS, i, pkt_delays[i]);
          ur_array_set(tmplt, record, F_STATS_PCKT_SIZES, i, pkt_sizes[i]);
+         ur_array_set(tmplt, record, F_STATS_PCKT_TCPFLGS, i, pkt_tcp_flgs[i]);
       }
 #endif
    }
 
    virtual int fillIPFIX(uint8_t *buffer, int size)
    {
-      /* TODO */
-      return 0;
+      int32_t bufferPtr;
+      RecordExtPSTATS::IpfixBasicRecordListHdr hdr(255,//Maximum size see rfc631
+                                          IpfixBasicListHdrSize + pkt_count*(sizeof(uint16_t)),
+                                          3,
+                                          PktSize,
+                                          sizeof(uint16_t),
+                                          CesnetPem);
+      //Check sufficient size of buffer
+      if(3*IpfixBasicListRecordHdrSize + pkt_count*(sizeof(uint16_t)) + 3*pkt_count*(sizeof(uint32_t))  > size)
+        {
+          return -1;
+        }
+
+      //fill buffer with basic list header and packet sizes
+      bufferPtr = FillBasicListBuffer(hdr, buffer, size);
+      for(int i = 0; i< pkt_count; i++)
+      {
+        (*reinterpret_cast<uint16_t *>(buffer + bufferPtr)) = htons(pkt_sizes[i]);
+        bufferPtr+=sizeof(uint16_t);
+      }
+
+      //update information in hdr for next basic list with packet delays
+      hdr.length = IpfixBasicListHdrSize + pkt_count*(sizeof(uint32_t));
+      hdr.hdrFieldID = PktDelays;
+      hdr.hdrElementLength = sizeof(uint32_t);
+
+      bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
+      for(int i = 0; i< pkt_count; i++)
+      {
+        (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_delays[i]);
+        bufferPtr+=sizeof(uint32_t);
+      }
+
+      //update information in hdr for next basic list with packet timestamps
+      //timestamps are in format [i] = sec, [i+1] = usec
+      hdr.length = IpfixBasicListHdrSize + pkt_count*2*(sizeof(uint32_t));
+      hdr.hdrFieldID = PktTmstp;
+      bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
+      for(int i = 0; i<pkt_count; i++)
+      {
+        (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_timestamps[i].tv_sec);
+        bufferPtr+=sizeof(uint32_t);
+        (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_timestamps[i].tv_usec);
+        bufferPtr+=sizeof(uint32_t);
+      }
+
+      //
+      hdr.length = IpfixBasicListHdrSize + pkt_count*(sizeof(uint8_t));
+      hdr.hdrFieldID = PktFlags;
+      hdr.hdrElementLength = sizeof(uint8_t);
+
+      bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
+      memcpy(buffer + bufferPtr, pkt_tcp_flgs, pkt_count);
+      bufferPtr+=pkt_count;
+
+      return bufferPtr;
    }
 };
 
@@ -122,4 +240,3 @@ private:
 };
 
 #endif
-

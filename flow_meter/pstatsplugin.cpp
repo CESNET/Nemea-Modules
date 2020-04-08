@@ -51,7 +51,7 @@
 #include "flow_meter.h"
 #include "ipfix-elements.h"
 
-//#define DEBUG_PSTATS
+#define DEBUG_PSTATS
 
 // Print debug message if debugging is allowed.
 #ifdef DEBUG_PSTATS
@@ -62,12 +62,13 @@
 
 using namespace std;
 
-#define PSTATS_UNIREC_TEMPLATE "STATS_PCKT_TIMESTAMPS,STATS_PCKT_DELAYS,STATS_PCKT_SIZES"
+#define PSTATS_UNIREC_TEMPLATE "STATS_PCKT_SIZES,STATS_PCKT_DELAYS,STATS_PCKT_TIMESTAMPS,STATS_PCKT_TCPFLGS"
 
 UR_FIELDS (
-   time* STATS_PCKT_TIMESTAMPS,
+   uint16* STATS_PCKT_SIZES,
    uint32* STATS_PCKT_DELAYS,
-   uint16* STATS_PCKT_SIZES
+   time* STATS_PCKT_TIMESTAMPS,
+   uint8* STATS_PCKT_TCPFLGS
 )
 
 PSTATSPlugin::PSTATSPlugin(const options_t &module_options)
@@ -89,6 +90,7 @@ void PSTATSPlugin::update_record(RecordExtPSTATS *pstats_data, const Packet &pkt
 {
    if (pstats_data->pkt_count < PSTATS_MAXELEMCOUNT) {
       pstats_data->pkt_sizes[pstats_data->pkt_count] = pkt.ip_length;
+      pstats_data->pkt_tcp_flgs[pstats_data->pkt_count] = pkt.tcp_control_bits;
 
       /* TODO revision needed: */
       if (pstats_data->pkt_count > 0) {
@@ -168,4 +170,3 @@ bool PSTATSPlugin::include_basic_flow_fields()
 {
    return true;
 }
-

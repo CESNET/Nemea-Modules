@@ -166,9 +166,10 @@
 #define SMTP_CODE_5XX_COUNT(F)        F(8057,    819,   4,   NULL)
 #define SMTP_DOMAIN(F)                F(8057,    820,  -1,   NULL)
 
-#define STATS_PCKT_TIMESTAMPS(F)      F(8057,    821,  -1,   NULL)
-#define STATS_PCKT_DELAYS(F)          F(8057,    822,  -1,   NULL)
-#define STATS_PCKT_SIZES(F)           F(8057,    823,  -1,   NULL)
+#define STATS_PCKT_SIZES(F)           F(0,    291,  -1,   NULL)
+#define STATS_PCKT_DELAYS(F)          F(0,    291,  -1,   NULL)
+#define STATS_PCKT_TIMESTAMPS(F)      F(0,    291,  -1,   NULL)
+#define STATS_PCKT_TCPFLGS(F)         F(0,    291,  -1,   NULL)
 
 /**
  * IPFIX Templates - list of elements
@@ -302,9 +303,10 @@
    F(SIP_VIA)
 
 #define IPFIX_PSTATS_TEMPLATE(F) \
-   F(STATS_PCKT_TIMESTAMPS) \
+   F(STATS_PCKT_SIZES) \
    F(STATS_PCKT_DELAYS) \
-   F(STATS_PCKT_SIZES)
+   F(STATS_PCKT_TIMESTAMPS) \
+   F(STATS_PCKT_TCPFLGS)
 
 /**
  * List of all known templated.
