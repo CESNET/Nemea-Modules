@@ -92,7 +92,6 @@ void PSTATSPlugin::update_record(RecordExtPSTATS *pstats_data, const Packet &pkt
       pstats_data->pkt_sizes[pstats_data->pkt_count] = pkt.ip_length;
       pstats_data->pkt_tcp_flgs[pstats_data->pkt_count] = pkt.tcp_control_bits;
 
-      /* TODO revision needed: */
       if (pstats_data->pkt_count > 0) {
          if (pkt.timestamp.tv_usec < pstats_data->pkt_timestamps[pstats_data->pkt_count - 1].tv_usec) {
             pstats_data->pkt_delays[pstats_data->pkt_count] = pstats_data->pkt_timestamps[pstats_data->pkt_count - 1].tv_usec - pkt.timestamp.tv_usec;

@@ -139,10 +139,10 @@ struct RecordExtPSTATS : RecordExt {
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
 #ifndef DISABLE_UNIREC
-      ur_array_resize(tmplt, record, F_STATS_PCKT_TIMESTAMPS, pkt_count);
-      ur_array_resize(tmplt, record, F_STATS_PCKT_DELAYS, pkt_count);
-      ur_array_resize(tmplt, record, F_STATS_PCKT_SIZES, pkt_count);
-      ur_array_resize(tmplt, record, F_STATS_PCKT_TCPFLGS, pkt_count);
+      ur_array_allocate(tmplt, record, F_STATS_PCKT_TIMESTAMPS, pkt_count);
+      ur_array_allocate(tmplt, record, F_STATS_PCKT_DELAYS, pkt_count);
+      ur_array_allocate(tmplt, record, F_STATS_PCKT_SIZES, pkt_count);
+      ur_array_allocate(tmplt, record, F_STATS_PCKT_TCPFLGS, pkt_count);
       for (uint8_t i = 0; i < pkt_count; i++) {
          ur_time_t ts = ur_time_from_sec_usec(pkt_timestamps[i].tv_sec, pkt_timestamps[i].tv_usec);
          ur_array_set(tmplt, record, F_STATS_PCKT_TIMESTAMPS, i, ts);
