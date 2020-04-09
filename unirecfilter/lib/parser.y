@@ -71,9 +71,9 @@ exp:
     | COLUMN CMP FLOAT { $$ = newExpressionFP($1, $2, $3); }
     | COLUMN CMP DATETIME { $$ = newExpressionDateTime($1, $2, $3); }
     | COLUMN EQ DATETIME { $$ = newExpressionDateTime($1, $2, $3); }
-    | COLUMN CMP ARRAY { $$ = newExpressionArray($1, $2, $3); }
-    | PROTOCOL CMP UNSIGNED { $$ = newExpression("PROTOCOL", $2, $3, 0); }
-    | PROTOCOL EQ UNSIGNED { $$ = newExpression("PROTOCOL", $2, $3, 0); }
+    | COLUMN CMP ARRAY { $$ = newExpressionArray($1, $2, $3); if ($$ == NULL) {YYERROR;}}
+    | PROTOCOL CMP UNSIGNED { $$ = newExpression(strdup("PROTOCOL"), $2, $3, 0); }
+    | PROTOCOL EQ UNSIGNED { $$ = newExpression(strdup("PROTOCOL"), $2, $3, 0); }
     | PROTOCOL EQ PROTO_NAME { $$ = (struct ast *) newProtocol($2, $3); }
     | PROTOCOL EQ STRING { $$ = (struct ast *) newProtocol($2, $3); }
     | COLUMN EQ IP { $$ = (struct ast *) newIP($1, $2, $3); }

@@ -101,9 +101,6 @@ static void test_array_double(void **state)
 static void test_array_time(void **state)
 {
    int result;
-   // TODO - segfault:
-   //urfilter_t *urf = urfilter_create("SCALE in [2020-04-09T01:02:21, 2020-04-09T01:02:23, 2020-04-09T01:02:22]", "testifc0");
-   //
    urfilter_t *urf = urfilter_create("TIME in [2020-04-09T01:02:21, 2020-04-09T01:02:23, 2020-04-09T01:02:22]", "testifc0");
    assert_int_equal(urfilter_compile(urf), URFILTER_TRUE);
 
@@ -124,12 +121,56 @@ static void test_array_time(void **state)
    ur_free_template(tmplt);
 }
 
+static void test_array_missingfield(void **state)
+{
+   int result;
+
+   urfilter_t *urf = urfilter_create("SCALE in [2020-04-09T01:02:21, 2020-04-09T01:02:23, 2020-04-09T01:02:22]", "testifc0");
+   assert_int_equal(urfilter_compile(urf), URFILTER_TRUE);
+
+   ur_template_t *tmplt = ur_create_template("SRC_IP,DST_PORT,TIME", NULL);
+   void *rec = ur_create_record(tmplt, 0);
+   ur_time_t *fv = ur_get_ptr_by_id(tmplt, rec, ur_get_id_by_name("TIME"));
+   ur_time_from_string(fv, "2019-04-09T01:02:21");
+   result = urfilter_match(urf, tmplt, rec);
+   assert_int_equal(result, 0);
+
+   urfilter_destroy(urf);
+
+   ur_free_record(rec);
+   ur_free_template(tmplt);
+}
+
+static void test_array_badtypes(void **state)
+{
+   urfilter_t *urf;
+
+   urf = urfilter_create("TIME in [20204-09_01:02:21, 2020-04-09T01:02:22]", "testifc0");
+   assert_int_equal(urfilter_compile(urf), URFILTER_ERROR);
+   urfilter_destroy(urf);
+
+   urf = urfilter_create("SRC_IP in [127, 127.0.0.1]", "testifc0");
+   assert_int_equal(urfilter_compile(urf), URFILTER_ERROR);
+   urfilter_destroy(urf);
+}
+
+
+static void test_array_complexfree(void **state)
+{
+   urfilter_t *urf;
+
+   urf = urfilter_create("PROTOCOL == 6", "testifc0");
+   assert_int_equal(urfilter_compile(urf), URFILTER_TRUE);
+   urfilter_destroy(urf);
+}
+
 int main(void)
 {
    ur_define_field("SRC_IP", UR_TYPE_IP);
    ur_define_field("DST_PORT", UR_TYPE_UINT16);
    ur_define_field("SCALE", UR_TYPE_DOUBLE);
    ur_define_field("TIME", UR_TYPE_TIME);
+   ur_define_field("PROTOCOL", UR_TYPE_UINT8);
 
    const struct CMUnitTest tests[] = {
       cmocka_unit_test(test_create_destroy),
@@ -137,7 +178,10 @@ int main(void)
       cmocka_unit_test(test_array),
       cmocka_unit_test(test_array_ip4),
       cmocka_unit_test(test_array_double),
-      cmocka_unit_test(test_array_time)
+      cmocka_unit_test(test_array_time),
+      cmocka_unit_test(test_array_missingfield),
+      cmocka_unit_test(test_array_badtypes),
+      cmocka_unit_test(test_array_complexfree),
    };
    return cmocka_run_group_tests(tests, NULL, NULL);
 }
