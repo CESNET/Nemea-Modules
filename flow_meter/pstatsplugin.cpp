@@ -51,7 +51,7 @@
 #include "flow_meter.h"
 #include "ipfix-elements.h"
 
-#define DEBUG_PSTATS
+//#define DEBUG_PSTATS
 
 // Print debug message if debugging is allowed.
 #ifdef DEBUG_PSTATS

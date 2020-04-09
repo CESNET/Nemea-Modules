@@ -163,7 +163,7 @@ struct RecordExtPSTATS : RecordExt {
             sizeof(uint16_t),
             CesnetPem);
       //Check sufficient size of buffer
-      if (3 * IpfixBasicListRecordHdrSize + pkt_count * (sizeof(uint16_t)) + 3 * pkt_count * (sizeof(uint32_t))  > size) {
+      if ((int)(4 * IpfixBasicListRecordHdrSize + pkt_count * (sizeof(uint16_t)) + 3 * pkt_count * (sizeof(uint32_t)))  > size) {
          return -1;
       }
 
