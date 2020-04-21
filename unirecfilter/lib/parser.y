@@ -10,6 +10,7 @@
     struct ast *newExpression(char *column, char *cmp, int64_t number, int is_signed);
     struct ast *newExpressionFP(char *column, char *cmp, double number);
     struct ast *newExpressionDateTime(char *column, char *cmp, char *datetime);
+    struct ast *newExpressionArray(char *column, char *cmp, char *array);
     struct ast *newIP(char *column, char *cmp, char *ip);
     struct ast *newIPNET(char *column, char *cmp, char *ipAddr);
     struct ast *newString(char *column, char *cmp, char *s);
@@ -39,6 +40,7 @@
 %token <string> PROTO_NAME
 %token <string> IP
 %token <string> DATETIME
+%token <string> ARRAY
 %token <string> STRING
 %token <string> NET
 %token AND OR
@@ -69,8 +71,9 @@ exp:
     | COLUMN CMP FLOAT { $$ = newExpressionFP($1, $2, $3); }
     | COLUMN CMP DATETIME { $$ = newExpressionDateTime($1, $2, $3); }
     | COLUMN EQ DATETIME { $$ = newExpressionDateTime($1, $2, $3); }
-    | PROTOCOL CMP UNSIGNED { $$ = newExpression("PROTOCOL", $2, $3, 0); }
-    | PROTOCOL EQ UNSIGNED { $$ = newExpression("PROTOCOL", $2, $3, 0); }
+    | COLUMN CMP ARRAY { $$ = newExpressionArray($1, $2, $3); if ($$ == NULL) {YYERROR;}}
+    | PROTOCOL CMP UNSIGNED { $$ = newExpression(strdup("PROTOCOL"), $2, $3, 0); }
+    | PROTOCOL EQ UNSIGNED { $$ = newExpression(strdup("PROTOCOL"), $2, $3, 0); }
     | PROTOCOL EQ PROTO_NAME { $$ = (struct ast *) newProtocol($2, $3); }
     | PROTOCOL EQ STRING { $$ = (struct ast *) newProtocol($2, $3); }
     | COLUMN EQ IP { $$ = (struct ast *) newIP($1, $2, $3); }

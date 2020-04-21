@@ -60,11 +60,12 @@ memset(ur_get_ptr_by_id(tmpl, data, field_id), 0, ur_get_size(field_id));
 
 /* Used for types of expression nodes in abstract syntax tree */
 typedef enum { NODE_T_AST, NODE_T_EXPRESSION, NODE_T_EXPRESSION_FP,
-               NODE_T_EXPRESSION_DATETIME, NODE_T_PROTOCOL, NODE_T_IP, NODE_T_NET, NODE_T_STRING,
+               NODE_T_EXPRESSION_DATETIME, NODE_T_EXPRESSION_ARRAY,
+               NODE_T_PROTOCOL, NODE_T_IP, NODE_T_NET, NODE_T_STRING,
                NODE_T_BRACKET, NODE_T_NEGATION } node_type;
 
 /* Used for describing comparison operators */
-typedef enum { OP_EQ, OP_NE, OP_LT, OP_LE, OP_GT, OP_GE, OP_RE /* regex match */, OP_INVALID } cmp_op;
+typedef enum { OP_EQ, OP_NE, OP_LT, OP_LE, OP_GT, OP_GE, OP_RE /* regex match */, OP_IN, OP_INVALID } cmp_op;
 
 /* Used for describing logical operators */
 typedef enum { OP_AND, OP_OR, OP_NOP } log_op;
@@ -101,6 +102,19 @@ struct expression_datetime {
    char *column;
    ur_time_t date;
    ur_field_id_t id;
+};
+
+struct expression_array {
+   node_type type;
+   cmp_op cmp;
+   char *column;
+   uint32_t array_size;
+   uint64_t *array_values;
+   ip_addr_t *array_values_ip;
+   ur_time_t *array_values_date;
+   double *array_values_double;
+   ur_field_id_t id;
+   ur_field_type_t field_type;
 };
 
 struct protocol {
