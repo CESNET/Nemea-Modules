@@ -49,6 +49,7 @@ Available comparison operators are:
 - `=`, `==` equal/matches subnet
 - `!=`, `<>` not equal
 - `=~`, `~=` matches regular expression
+- `in`, `IN` In-Array function, see the "In Array" section below
 
 Available logical operators are:
 
@@ -100,6 +101,25 @@ IP address) because it is masked during the initiation of the filter
 
 Operator `==` returns true if and only if an `SRC_IP` belong to the
 given subnet.
+
+**In Array**
+
+It is possible to abbreviate (and optimize) filter when a field is match
+with a set values.
+For example, it is possible to rewrite this:
+
+`DST_PORT == 1 or DST_PORT == 234 or DST_PORT == 123 or DST_PORT == 80 or DST_PORT == 443`
+
+into more readable this:
+
+`DST_PORT in [1, 234, 123, 80, 443]`
+
+Internally, the array (which is specified in brackets `[` and `]`) is parsed, sorted,
+and the filter matching is done using binary search, i.e., it is faster
+according to measurement (mainly for longer arrays).
+
+These UniRec types are currently supported by this In Array feature:
+`int8`, `int16`, `int32`, `int64`, `uint8`, `uint16`, `uint32`, `uint64`, `ipaddr`, `time`, `float`, `double`
 
 ### Format
 
