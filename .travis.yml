@@ -57,7 +57,7 @@ before_install:
    #- export PATH=$(pyenv prefix)/bin:$PATH
    - sudo pip3 install ply
    - sudo pip3 install PyYAML pynspect
-   - ( git clone --depth 2 -q https://github.com/CESNET/nemea-framework nf; cd nf; ./bootstrap.sh && ./configure -q --prefix=/usr --bindir=/usr/bin/nemea && make -j10 && sudo make install; (cd pytrap && sudo python3 setup.py install;); (cd pycommon && sudo python3 setup.py install;); )
+   - ( git clone --depth 2 -q https://github.com/CESNET/nemea-framework nf; cd nf; ./bootstrap.sh && ./configure -q --prefix=/usr --bindir=/usr/bin/nemea && make -j10 && sudo make install; (cd pytrap && sudo python3 setup.py install;); (cd pycommon && sudo pip3 install --upgrade MarkupSafe; sudo python3 setup.py install;); )
    - sudo rm -rf nemea-framework
    - python3 -c 'import pytrap'
    - grep -e '\<22/tcp' -e '\<23/tcp' -e '\<2179/tcp' -e '\<5900/tcp' /etc/services
