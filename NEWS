@@ -1,3 +1,24 @@
+2020-04-21 (Tomáš Čejka): travis: fix issue with MarkupSafe dependency version
+2020-04-21 (Tomáš Čejka): travis: fix issue with MarkupSafe dependency version
+2020-04-21 (Tomáš Čejka): unirecfilter: doc: described In Array feature
+2020-04-09 (Tomáš Čejka): unirecfilter: added some error handling, bugfixes, improved tests
+2020-04-09 (Tomáš Čejka): unirecfilter: "In Array" feature - supporting multiple UR types
+2020-04-07 (Tomáš Čejka): flow_meter: bugfix: check return value of UR create template
+2020-04-07 (Tomáš Čejka): flow_meter: create_plugin - updated guide
+2020-04-06 (Tomáš Čejka): unirecfilter: "In Array" feature
+2020-04-04 (Jiri Havranek): luamodule: updated Makefile.am in tests
+2020-04-03 (Jiri Havranek): luamodule: changed mask and stats test from unirec file comparation to text file comparation
+2020-04-03 (Tomáš Čejka): luamodule: tests: fixed add.sh test
+2020-04-03 (Tomáš Čejka): luamodule: tests: update stats.ur (without spaces in template)
+2020-04-03 (Tomáš Čejka): luamodule: improve tempate_spec_trim() to trim multiple spaces
+2020-04-02 (Radko Krkos): prefix_tags: Use size_t for iterator in parse_config()
+2020-04-02 (Radko Krkos): prefix_tags: Fix signedness mismatch in destroy_networks()
+2020-04-02 (Radko Krkos): prefix_tags: Add explicit include of unirec/ip_prefix_search.h
+2020-04-02 (Radko Krkos): prefix_tags: Fix memory dealocation on config file open error
+2020-04-02 (Radko Krkos): agg: Mark unused parameters in nope() as such
+2020-04-02 (Radko Krkos): agg: Small formating fixes for output
+2020-03-31 (Radko Krkos): blacklist2idea: Simplify the nonvalid XML condition
+
 2020-03-18 (Radko Krkos): Revert "report2idea: Use /usr/bin/env to find python"
 2020-03-18 (Tomáš Čejka): prefix_tags: minor changes, added missing free() on error
 2020-03-18 (Tomáš Čejka): prefix_tags: changes based on feedback by @fkrestan

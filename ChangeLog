@@ -1,3 +1,16 @@
+2020-04-21 nemea-modules-2.15.0
+	* unirecfilter:
+		new In Array feature
+	* flow_meter:
+		minor bugfixes
+	* luamodule:
+		improved code for initialization of UniRec template
+		improved tests
+	* prefix_tags:
+		bugfixes
+	* agg:
+		bugfixes
+
 2020-04-01 nemea-modules-2.14.0
 	* prefix_tags:
 		New version based on ip_prefix_search feature in UniRec
