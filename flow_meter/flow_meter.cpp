@@ -256,7 +256,10 @@ int main(int argc, char *argv[])
    options.snaplen = 0;
    options.eof = true;
 
-   bool odid = false, export_unirec = false, export_ipfix = false, help = false, udp = false;
+#ifndef DISABLE_UNIREC
+   bool odid = false;
+#endif
+   bool export_unirec = false, export_ipfix = false, help = false, udp = false;
    int ifc_cnt = 0, verbose = -1;
    uint64_t link = 1;
    uint32_t pkt_limit = 0; /* Limit of packets for packet parser. 0 = no limit */
@@ -467,7 +470,9 @@ int main(int argc, char *argv[])
          filter = string(optarg);
          break;
       case 'O':
+#ifndef DISABLE_UNIREC
          odid = true;
+#endif
          break;
       case 'x':
          {
