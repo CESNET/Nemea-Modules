@@ -282,9 +282,9 @@ char *string_anonymize(void *field_ptr, uint32_t field_len, uint8_t mode, regex_
    }
 
    /* Copy string to allocated space */
-   strncpy(output, field, ip[0].rm_so);
-   strncpy(output + ip[0].rm_so, anon_ip_string, new_length);
-   strncpy(output + ip[0].rm_so + new_length, field + ip[0].rm_eo, field_len - ip[0].rm_eo);
+   memcpy(output, field, ip[0].rm_so);
+   memcpy(output + ip[0].rm_so, anon_ip_string, new_length);
+   memcpy(output + ip[0].rm_so + new_length, field + ip[0].rm_eo, field_len - ip[0].rm_eo);
 
    return output;
 }
