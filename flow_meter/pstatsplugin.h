@@ -67,7 +67,6 @@ using namespace std;
  */
 struct RecordExtPSTATS : RecordExt {
    uint16_t pkt_sizes[PSTATS_MAXELEMCOUNT];
-   uint32_t pkt_delays[PSTATS_MAXELEMCOUNT];
    uint8_t pkt_tcp_flgs[PSTATS_MAXELEMCOUNT];
    struct timeval pkt_timestamps[PSTATS_MAXELEMCOUNT];
    uint8_t pkt_count;
@@ -130,7 +129,6 @@ struct RecordExtPSTATS : RecordExt {
    RecordExtPSTATS() : RecordExt(pstats)
    {
       memset(pkt_sizes, 0, PSTATS_MAXELEMCOUNT * sizeof(pkt_sizes[0]));
-      memset(pkt_delays, 0, PSTATS_MAXELEMCOUNT * sizeof(pkt_delays[0]));
       memset(pkt_timestamps, 0, PSTATS_MAXELEMCOUNT * sizeof(pkt_timestamps[0]));
       memset(pkt_tcp_flgs, 0, PSTATS_MAXELEMCOUNT * sizeof(pkt_tcp_flgs[0]));
       pkt_count = 0;
@@ -140,13 +138,11 @@ struct RecordExtPSTATS : RecordExt {
    {
 #ifndef DISABLE_UNIREC
       ur_array_allocate(tmplt, record, F_STATS_PCKT_TIMESTAMPS, pkt_count);
-      ur_array_allocate(tmplt, record, F_STATS_PCKT_DELAYS, pkt_count);
       ur_array_allocate(tmplt, record, F_STATS_PCKT_SIZES, pkt_count);
       ur_array_allocate(tmplt, record, F_STATS_PCKT_TCPFLGS, pkt_count);
       for (uint8_t i = 0; i < pkt_count; i++) {
          ur_time_t ts = ur_time_from_sec_usec(pkt_timestamps[i].tv_sec, pkt_timestamps[i].tv_usec);
          ur_array_set(tmplt, record, F_STATS_PCKT_TIMESTAMPS, i, ts);
-         ur_array_set(tmplt, record, F_STATS_PCKT_DELAYS, i, pkt_delays[i]);
          ur_array_set(tmplt, record, F_STATS_PCKT_SIZES, i, pkt_sizes[i]);
          ur_array_set(tmplt, record, F_STATS_PCKT_TCPFLGS, i, pkt_tcp_flgs[i]);
       }
@@ -174,21 +170,12 @@ struct RecordExtPSTATS : RecordExt {
          bufferPtr += sizeof(uint16_t);
       }
 
-      //update information in hdr for next basic list with packet delays
-      hdr.length = IpfixBasicListHdrSize + pkt_count * (sizeof(uint32_t));
-      hdr.hdrFieldID = PktDelays;
-      hdr.hdrElementLength = sizeof(uint32_t);
-
-      bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
-      for (int i = 0; i < pkt_count; i++) {
-         (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_delays[i]);
-         bufferPtr += sizeof(uint32_t);
-      }
-
       //update information in hdr for next basic list with packet timestamps
       //timestamps are in format [i] = sec, [i+1] = usec
       hdr.length = IpfixBasicListHdrSize + pkt_count * 2 * (sizeof(uint32_t));
       hdr.hdrFieldID = PktTmstp;
+      hdr.hdrElementLength = sizeof(uint32_t);
+
       bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
       for (int i = 0; i < pkt_count; i++) {
          (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_timestamps[i].tv_sec);

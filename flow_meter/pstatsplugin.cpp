@@ -62,11 +62,10 @@
 
 using namespace std;
 
-#define PSTATS_UNIREC_TEMPLATE "STATS_PCKT_SIZES,STATS_PCKT_DELAYS,STATS_PCKT_TIMESTAMPS,STATS_PCKT_TCPFLGS"
+#define PSTATS_UNIREC_TEMPLATE "STATS_PCKT_SIZES,STATS_PCKT_TIMESTAMPS,STATS_PCKT_TCPFLGS"
 
 UR_FIELDS (
    uint16* STATS_PCKT_SIZES,
-   uint32* STATS_PCKT_DELAYS,
    time* STATS_PCKT_TIMESTAMPS,
    uint8* STATS_PCKT_TCPFLGS
 )
@@ -92,23 +91,10 @@ void PSTATSPlugin::update_record(RecordExtPSTATS *pstats_data, const Packet &pkt
       pstats_data->pkt_sizes[pstats_data->pkt_count] = pkt.ip_length;
       pstats_data->pkt_tcp_flgs[pstats_data->pkt_count] = pkt.tcp_control_bits;
 
-      if (pstats_data->pkt_count > 0) {
-         if (pkt.timestamp.tv_usec < pstats_data->pkt_timestamps[pstats_data->pkt_count - 1].tv_usec) {
-            pstats_data->pkt_delays[pstats_data->pkt_count] = pstats_data->pkt_timestamps[pstats_data->pkt_count - 1].tv_usec - pkt.timestamp.tv_usec;
-            pstats_data->pkt_delays[pstats_data->pkt_count] += 1000000 * (pkt.timestamp.tv_sec - pstats_data->pkt_timestamps[pstats_data->pkt_count - 1].tv_sec - 1);
-         } else {
-            pstats_data->pkt_delays[pstats_data->pkt_count] = pkt.timestamp.tv_usec - pstats_data->pkt_timestamps[pstats_data->pkt_count - 1].tv_usec;
-            pstats_data->pkt_delays[pstats_data->pkt_count] += 1000000 * (pkt.timestamp.tv_sec - pstats_data->pkt_timestamps[pstats_data->pkt_count - 1].tv_sec);
-         }
-      } else {
-         pstats_data->pkt_delays[pstats_data->pkt_count] = 0;
-      }
-
       pstats_data->pkt_timestamps[pstats_data->pkt_count] = pkt.timestamp;
 
-      DEBUG_MSG("PSTATS processed packet %d: Size: %d Delay: %d Timestamp: %ld.%ld\n", pstats_data->pkt_count,
+      DEBUG_MSG("PSTATS processed packet %d: Size: %d Timestamp: %ld.%ld\n", pstats_data->pkt_count,
             pstats_data->pkt_sizes[pstats_data->pkt_count],
-            pstats_data->pkt_delays[pstats_data->pkt_count],
             pstats_data->pkt_timestamps[pstats_data->pkt_count].tv_sec,
             pstats_data->pkt_timestamps[pstats_data->pkt_count].tv_usec);
 
