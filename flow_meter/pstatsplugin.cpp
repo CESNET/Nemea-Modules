@@ -62,13 +62,17 @@
 
 using namespace std;
 
-#define PSTATS_UNIREC_TEMPLATE "STATS_PCKT_SIZES,STATS_PCKT_DELAYS,STATS_PCKT_TIMESTAMPS,STATS_PCKT_TCPFLGS"
+#define PSTATS_UNIREC_TEMPLATE "STATS_PCKT_SIZES_SRC,STATS_PCKT_SIZES_DST,STATS_PCKT_DELAYS_SRC,STATS_PCKT_DELAYS_DST,STATS_PCKT_TIMESTAMPS_SRC,STATS_PCKT_TIMESTAMPS_DST,STATS_PCKT_TCPFLGS_SRC,STATS_PCKT_TCPFLGS_DST"
 
 UR_FIELDS (
-   uint16* STATS_PCKT_SIZES,
-   uint32* STATS_PCKT_DELAYS,
-   time* STATS_PCKT_TIMESTAMPS,
-   uint8* STATS_PCKT_TCPFLGS
+   uint16* STATS_PCKT_SIZES_SRC,
+   uint16* STATS_PCKT_SIZES_DST,
+   uint32* STATS_PCKT_DELAYS_SRC,
+   uint32* STATS_PCKT_DELAYS_DST,
+   time* STATS_PCKT_TIMESTAMPS_SRC,
+   time* STATS_PCKT_TIMESTAMPS_DST,
+   uint8* STATS_PCKT_TCPFLGS_SRC,
+   uint8* STATS_PCKT_TCPFLGS_DST
 )
 
 PSTATSPlugin::PSTATSPlugin(const options_t &module_options)
@@ -88,31 +92,33 @@ int PSTATSPlugin::pre_create(Packet &pkt)
 
 void PSTATSPlugin::update_record(RecordExtPSTATS *pstats_data, const Packet &pkt)
 {
-   if (pstats_data->pkt_count < PSTATS_MAXELEMCOUNT) {
-      pstats_data->pkt_sizes[pstats_data->pkt_count] = pkt.ip_length;
-      pstats_data->pkt_tcp_flgs[pstats_data->pkt_count] = pkt.tcp_control_bits;
+   uint8_t dir = pkt.source_pkt ? 0 : 1;
+   if (pstats_data->pkt_count[dir] < PSTATS_MAXELEMCOUNT) {
+      uint8_t pkt_cnt = pstats_data->pkt_count[dir];
+      pstats_data->pkt_sizes[dir][pkt_cnt] = pkt.ip_length;
+      pstats_data->pkt_tcp_flgs[dir][pkt_cnt] = pkt.tcp_control_bits;
 
-      if (pstats_data->pkt_count > 0) {
-         if (pkt.timestamp.tv_usec < pstats_data->pkt_timestamps[pstats_data->pkt_count - 1].tv_usec) {
-            pstats_data->pkt_delays[pstats_data->pkt_count] = pstats_data->pkt_timestamps[pstats_data->pkt_count - 1].tv_usec - pkt.timestamp.tv_usec;
-            pstats_data->pkt_delays[pstats_data->pkt_count] += 1000000 * (pkt.timestamp.tv_sec - pstats_data->pkt_timestamps[pstats_data->pkt_count - 1].tv_sec - 1);
+      if (pkt_cnt > 0) {
+         if (pkt.timestamp.tv_usec < pstats_data->pkt_timestamps[dir][pkt_cnt - 1].tv_usec) {
+            pstats_data->pkt_delays[dir][pkt_cnt] = pstats_data->pkt_timestamps[dir][pkt_cnt - 1].tv_usec - pkt.timestamp.tv_usec;
+            pstats_data->pkt_delays[dir][pkt_cnt] += 1000000 * (pkt.timestamp.tv_sec - pstats_data->pkt_timestamps[dir][pkt_cnt - 1].tv_sec - 1);
          } else {
-            pstats_data->pkt_delays[pstats_data->pkt_count] = pkt.timestamp.tv_usec - pstats_data->pkt_timestamps[pstats_data->pkt_count - 1].tv_usec;
-            pstats_data->pkt_delays[pstats_data->pkt_count] += 1000000 * (pkt.timestamp.tv_sec - pstats_data->pkt_timestamps[pstats_data->pkt_count - 1].tv_sec);
+            pstats_data->pkt_delays[dir][pkt_cnt] = pkt.timestamp.tv_usec - pstats_data->pkt_timestamps[dir][pkt_cnt - 1].tv_usec;
+            pstats_data->pkt_delays[dir][pkt_cnt] += 1000000 * (pkt.timestamp.tv_sec - pstats_data->pkt_timestamps[dir][pkt_cnt - 1].tv_sec);
          }
       } else {
-         pstats_data->pkt_delays[pstats_data->pkt_count] = 0;
+         pstats_data->pkt_delays[dir][pkt_cnt] = 0;
       }
 
-      pstats_data->pkt_timestamps[pstats_data->pkt_count] = pkt.timestamp;
+      pstats_data->pkt_timestamps[dir][pkt_cnt] = pkt.timestamp;
 
-      DEBUG_MSG("PSTATS processed packet %d: Size: %d Delay: %d Timestamp: %ld.%ld\n", pstats_data->pkt_count,
-            pstats_data->pkt_sizes[pstats_data->pkt_count],
-            pstats_data->pkt_delays[pstats_data->pkt_count],
-            pstats_data->pkt_timestamps[pstats_data->pkt_count].tv_sec,
-            pstats_data->pkt_timestamps[pstats_data->pkt_count].tv_usec);
+      DEBUG_MSG("PSTATS processed packet %d: Size: %d Delay: %d Timestamp: %ld.%ld\n", pkt_cnt[dir],
+            pstats_data->pkt_sizes[dir][pkt_cnt],
+            pstats_data->pkt_delays[dir][pkt_cnt],
+            pstats_data->pkt_timestamps[dir][pkt_cnt].tv_sec,
+            pstats_data->pkt_timestamps[dir][pkt_cnt].tv_usec);
 
-      pstats_data->pkt_count++;
+      pstats_data->pkt_count[dir]++;
    } else {
       /* Do not count more than PSTATS_MAXELEMCOUNT packets */
    }

@@ -250,6 +250,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       }
    }
 
+   pkt.source_pkt = source_flow;
    current_ts = pkt.timestamp;
    flow = flow_array[flow_index];
    if (flow->is_empty()) {

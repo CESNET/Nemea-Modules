@@ -87,6 +87,7 @@ struct Packet : public Record {
    char        *packet; /**< Array containing whole packet. */
    uint16_t    payload_length;
    char        *payload; /**< Pointer to packet payload section. */
+   bool        source_pkt;
 
    /**
     * \brief Constructor.
