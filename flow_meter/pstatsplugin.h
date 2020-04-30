@@ -67,7 +67,6 @@ using namespace std;
  */
 struct RecordExtPSTATS : RecordExt {
    uint16_t pkt_sizes[2][PSTATS_MAXELEMCOUNT];
-   uint32_t pkt_delays[2][PSTATS_MAXELEMCOUNT];
    uint8_t pkt_tcp_flgs[2][PSTATS_MAXELEMCOUNT];
    struct timeval pkt_timestamps[2][PSTATS_MAXELEMCOUNT];
    uint8_t pkt_count[2];
@@ -137,25 +136,21 @@ struct RecordExtPSTATS : RecordExt {
    {
 #ifndef DISABLE_UNIREC
       ur_array_allocate(tmplt, record, F_STATS_PCKT_TIMESTAMPS_SRC, pkt_count[0]);
-      ur_array_allocate(tmplt, record, F_STATS_PCKT_DELAYS_SRC, pkt_count[0]);
       ur_array_allocate(tmplt, record, F_STATS_PCKT_SIZES_SRC, pkt_count[0]);
       ur_array_allocate(tmplt, record, F_STATS_PCKT_TCPFLGS_SRC, pkt_count[0]);
       for (uint8_t i = 0; i < pkt_count[0]; i++) {
          ur_time_t ts = ur_time_from_sec_usec(pkt_timestamps[0][i].tv_sec, pkt_timestamps[0][i].tv_usec);
          ur_array_set(tmplt, record, F_STATS_PCKT_TIMESTAMPS_SRC, i, ts);
-         ur_array_set(tmplt, record, F_STATS_PCKT_DELAYS_SRC, i, pkt_delays[0][i]);
          ur_array_set(tmplt, record, F_STATS_PCKT_SIZES_SRC, i, pkt_sizes[0][i]);
          ur_array_set(tmplt, record, F_STATS_PCKT_TCPFLGS_SRC, i, pkt_tcp_flgs[0][i]);
       }
 
       ur_array_allocate(tmplt, record, F_STATS_PCKT_TIMESTAMPS_DST, pkt_count[1]);
-      ur_array_allocate(tmplt, record, F_STATS_PCKT_DELAYS_DST, pkt_count[1]);
       ur_array_allocate(tmplt, record, F_STATS_PCKT_SIZES_DST, pkt_count[1]);
       ur_array_allocate(tmplt, record, F_STATS_PCKT_TCPFLGS_DST, pkt_count[1]);
       for (uint8_t i = 0; i < pkt_count[1]; i++) {
          ur_time_t ts = ur_time_from_sec_usec(pkt_timestamps[1][i].tv_sec, pkt_timestamps[1][i].tv_usec);
          ur_array_set(tmplt, record, F_STATS_PCKT_TIMESTAMPS_DST, i, ts);
-         ur_array_set(tmplt, record, F_STATS_PCKT_DELAYS_DST, i, pkt_delays[1][i]);
          ur_array_set(tmplt, record, F_STATS_PCKT_SIZES_DST, i, pkt_sizes[1][i]);
          ur_array_set(tmplt, record, F_STATS_PCKT_TCPFLGS_DST, i, pkt_tcp_flgs[1][i]);
       }
@@ -173,9 +168,9 @@ struct RecordExtPSTATS : RecordExt {
             CesnetPem);
 
       //Check sufficient size of buffer
-      int req_size = 8 * IpfixBasicListRecordHdrSize +
+      int req_size = 6 * IpfixBasicListRecordHdrSize +
                        (pkt_count[0] + pkt_count[1]) * sizeof(uint16_t) +
-                       3 * (pkt_count[0] + pkt_count[1]) * sizeof(uint32_t) +
+                       2 * (pkt_count[0] + pkt_count[1]) * sizeof(uint32_t) +
                        (pkt_count[0] + pkt_count[1]);
       if (req_size > size) {
          return -1;
@@ -199,28 +194,6 @@ struct RecordExtPSTATS : RecordExt {
          bufferPtr += sizeof(uint16_t);
       }
 
-      // Fill SRC delays
-      //update information in hdr for next basic list with packet delays
-      hdr.length = IpfixBasicListHdrSize + pkt_count[0] * (sizeof(uint32_t));
-      hdr.hdrFieldID = PktDelays;
-      hdr.hdrElementLength = sizeof(uint32_t);
-      bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
-      for (int i = 0; i < pkt_count[0]; i++) {
-         (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_delays[0][i]);
-         bufferPtr += sizeof(uint32_t);
-      }
-
-      // Fill DST delays
-      hdr.length = IpfixBasicListHdrSize + pkt_count[1] * (sizeof(uint32_t));
-      hdr.hdrFieldID = PktDelays;
-      hdr.hdrElementLength = sizeof(uint32_t);
-      bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
-      for (int i = 0; i < pkt_count[1]; i++) {
-         (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_delays[1][i]);
-         bufferPtr += sizeof(uint32_t);
-      }
-
-      // Fill SRC timestamps
       //update information in hdr for next basic list with packet timestamps
       //timestamps are in format [i] = sec, [i+1] = usec
       hdr.length = IpfixBasicListHdrSize + pkt_count[0] * 2 * (sizeof(uint32_t));
@@ -236,6 +209,8 @@ struct RecordExtPSTATS : RecordExt {
       // Fill DST timestamps
       hdr.length = IpfixBasicListHdrSize + pkt_count[1] * 2 * (sizeof(uint32_t));
       hdr.hdrFieldID = PktTmstp;
+      hdr.hdrElementLength = sizeof(uint32_t);
+
       bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
       for (int i = 0; i < pkt_count[1]; i++) {
          (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_timestamps[1][i].tv_sec);

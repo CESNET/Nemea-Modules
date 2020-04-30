@@ -62,13 +62,11 @@
 
 using namespace std;
 
-#define PSTATS_UNIREC_TEMPLATE "STATS_PCKT_SIZES_SRC,STATS_PCKT_SIZES_DST,STATS_PCKT_DELAYS_SRC,STATS_PCKT_DELAYS_DST,STATS_PCKT_TIMESTAMPS_SRC,STATS_PCKT_TIMESTAMPS_DST,STATS_PCKT_TCPFLGS_SRC,STATS_PCKT_TCPFLGS_DST"
+#define PSTATS_UNIREC_TEMPLATE "STATS_PCKT_SIZES_SRC,STATS_PCKT_SIZES_DST,STATS_PCKT_TIMESTAMPS_SRC,STATS_PCKT_TIMESTAMPS_DST,STATS_PCKT_TCPFLGS_SRC,STATS_PCKT_TCPFLGS_DST"
 
 UR_FIELDS (
    uint16* STATS_PCKT_SIZES_SRC,
    uint16* STATS_PCKT_SIZES_DST,
-   uint32* STATS_PCKT_DELAYS_SRC,
-   uint32* STATS_PCKT_DELAYS_DST,
    time* STATS_PCKT_TIMESTAMPS_SRC,
    time* STATS_PCKT_TIMESTAMPS_DST,
    uint8* STATS_PCKT_TCPFLGS_SRC,
@@ -98,23 +96,10 @@ void PSTATSPlugin::update_record(RecordExtPSTATS *pstats_data, const Packet &pkt
       pstats_data->pkt_sizes[dir][pkt_cnt] = pkt.ip_length;
       pstats_data->pkt_tcp_flgs[dir][pkt_cnt] = pkt.tcp_control_bits;
 
-      if (pkt_cnt > 0) {
-         if (pkt.timestamp.tv_usec < pstats_data->pkt_timestamps[dir][pkt_cnt - 1].tv_usec) {
-            pstats_data->pkt_delays[dir][pkt_cnt] = pstats_data->pkt_timestamps[dir][pkt_cnt - 1].tv_usec - pkt.timestamp.tv_usec;
-            pstats_data->pkt_delays[dir][pkt_cnt] += 1000000 * (pkt.timestamp.tv_sec - pstats_data->pkt_timestamps[dir][pkt_cnt - 1].tv_sec - 1);
-         } else {
-            pstats_data->pkt_delays[dir][pkt_cnt] = pkt.timestamp.tv_usec - pstats_data->pkt_timestamps[dir][pkt_cnt - 1].tv_usec;
-            pstats_data->pkt_delays[dir][pkt_cnt] += 1000000 * (pkt.timestamp.tv_sec - pstats_data->pkt_timestamps[dir][pkt_cnt - 1].tv_sec);
-         }
-      } else {
-         pstats_data->pkt_delays[dir][pkt_cnt] = 0;
-      }
-
       pstats_data->pkt_timestamps[dir][pkt_cnt] = pkt.timestamp;
 
-      DEBUG_MSG("PSTATS processed packet %d: Size: %d Delay: %d Timestamp: %ld.%ld\n", pkt_cnt[dir],
+      DEBUG_MSG("PSTATS processed packet %d: Size: %d Timestamp: %ld.%ld\n", pkt_cnt[dir],
             pstats_data->pkt_sizes[dir][pkt_cnt],
-            pstats_data->pkt_delays[dir][pkt_cnt],
             pstats_data->pkt_timestamps[dir][pkt_cnt].tv_sec,
             pstats_data->pkt_timestamps[dir][pkt_cnt].tv_usec);
 
