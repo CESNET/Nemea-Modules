@@ -150,6 +150,23 @@ void NHTFlowCache::finish()
    }
 }
 
+void NHTFlowCache::flush(Packet &pkt, FlowRecord *flow, int ret, bool source_flow)
+{
+   exporter->export_flow(flow->flow);
+#ifdef FLOW_CACHE_STATS
+   flushed++;
+#endif /* FLOW_CACHE_STATS */
+
+   if (ret == FLOW_FLUSH_WITH_REINSERT) {
+      flow->soft_clean(); // Clean counters, set time first to last
+      flow->update(pkt, source_flow); // Set new counters from packet
+      ret = plugins_post_create(flow->flow, pkt);
+      flush(pkt, flow, ret, source_flow);
+   } else {
+      flow->erase();
+   }
+}
+
 int NHTFlowCache::put_pkt(Packet &pkt)
 {
    int ret = plugins_pre_create(pkt);
@@ -266,27 +283,16 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       }
    } else {
       ret = plugins_pre_update(flow->flow, pkt);
-
       if (ret & FLOW_FLUSH) {
-         exporter->export_flow(flow->flow);
-#ifdef FLOW_CACHE_STATS
-         flushed++;
-#endif /* FLOW_CACHE_STATS */
-         flow->erase();
-
-         return put_pkt(pkt);
+         flush(pkt, flow, ret, source_flow);
+         return 0;
       } else {
          flow->update(pkt, source_flow);
          ret = plugins_post_update(flow->flow, pkt);
 
          if (ret & FLOW_FLUSH) {
-            exporter->export_flow(flow->flow);
-#ifdef FLOW_CACHE_STATS
-            flushed++;
-#endif /* FLOW_CACHE_STATS */
-            flow->erase();
-
-            return put_pkt(pkt);
+            flush(pkt, flow, ret, source_flow);
+            return 0;
          }
       }
 

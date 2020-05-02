@@ -108,7 +108,7 @@ int SIPPlugin::pre_update(Flow &rec, Packet &pkt)
 
    msg_type = parse_msg_type(pkt);
    if (msg_type != SIP_MSG_TYPE_INVALID) {
-      return FLOW_FLUSH;
+      return FLOW_FLUSH_WITH_REINSERT;
    }
 
    return 0;

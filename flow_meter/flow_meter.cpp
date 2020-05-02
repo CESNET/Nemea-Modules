@@ -128,8 +128,7 @@ int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plu
          // New configuration support sending plugin output to specific libtrap interface (e.g. http to ifc 1, dns to ifc 2...)
          // so it is necessary store extension-header -> output interface mapping within plugin.
 
-         tmp.push_back(plugin_opt("http-req", http_request, ifc_num));
-         tmp.push_back(plugin_opt("http-resp", http_response, ifc_num++));
+         tmp.push_back(plugin_opt("http", http, ifc_num++));
 
          plugins.push_back(new HTTPPlugin(module_options, tmp));
       } else if (proto == "https") {

@@ -62,8 +62,7 @@ struct template_t;
  * \brief Extension header type enum.
  */
 enum extTypeEnum {
-   http_request = 0,
-   http_response,
+   http = 0,
    https,
    dns,
    sip,

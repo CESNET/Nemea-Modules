@@ -84,6 +84,17 @@ public:
       flow.src_tcp_control_bits = 0;
       flow.dst_tcp_control_bits = 0;
    }
+   void soft_clean()
+   {
+      flow.removeExtensions();
+      flow.time_first = flow.time_last;
+      flow.src_pkt_total_cnt = 0;
+      flow.dst_pkt_total_cnt = 0;
+      flow.src_octet_total_length = 0;
+      flow.dst_octet_total_length = 0;
+      flow.src_tcp_control_bits = 0;
+      flow.dst_tcp_control_bits = 0;
+   }
 
    FlowRecord()
    {
@@ -163,6 +174,7 @@ public:
    virtual void finish();
 
    void export_expired(time_t ts);
+   void flush(Packet &pkt, FlowRecord *flow, int ret, bool source_flow);
 
 protected:
    bool create_hash_key(Packet &pkt);

@@ -132,7 +132,7 @@ int DNSPlugin::post_create(Flow &rec, const Packet &pkt)
    return 0;
 }
 
-int DNSPlugin::pre_update(Flow &rec, Packet &pkt)
+int DNSPlugin::post_update(Flow &rec, const Packet &pkt)
 {
    if (pkt.dst_port == 53 || pkt.src_port == 53) {
       RecordExt *ext = rec.getExtension(dns);

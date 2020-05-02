@@ -60,23 +60,33 @@ using namespace std;
 /**
  * \brief Flow record extension header for storing HTTP requests.
  */
-struct RecordExtHTTPReq : RecordExt {
+struct RecordExtHTTP : RecordExt {
+   bool req;
+   bool resp;
+
    char method[10];
    char host[64];
    char uri[128];
    char user_agent[128];
    char referer[128];
 
+   uint16_t code;
+   char content_type[32];
+
    /**
     * \brief Constructor.
     */
-   RecordExtHTTPReq() : RecordExt(http_request)
+   RecordExtHTTP() : RecordExt(http)
    {
+      req = false;
+      resp = false;
       method[0] = 0;
       host[0] = 0;
       uri[0] = 0;
       user_agent[0] = 0;
       referer[0] = 0;
+      code = 0;
+      content_type[0] = 0;
    }
 
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
@@ -87,6 +97,8 @@ struct RecordExtHTTPReq : RecordExt {
       ur_set_string(tmplt, record, F_HTTP_REQUEST_URL, uri);
       ur_set_string(tmplt, record, F_HTTP_REQUEST_AGENT, user_agent);
       ur_set_string(tmplt, record, F_HTTP_REQUEST_REFERER, referer);
+      ur_set_string(tmplt, record, F_HTTP_RESPONSE_CONTENT_TYPE, content_type);
+      ur_set(tmplt, record, F_HTTP_RESPONSE_STATUS_CODE, code);
 #endif
    }
 
@@ -134,55 +146,18 @@ struct RecordExtHTTPReq : RecordExt {
       memcpy(buffer + total_length + 1, uri, length);
       total_length += length + 1;
 
-      buffer[total_length] = 0;
-      *(uint16_t *) (buffer + total_length + 1) = 0;
-      total_length += 3;
-
-      return total_length;
-   }
-};
-
-/**
- * \brief Flow record extension header for storing HTTP responses.
- */
-struct RecordExtHTTPResp : RecordExt {
-   uint16_t code;
-   char content_type[32];
-
-   /**
-    * \brief Constructor.
-    */
-   RecordExtHTTPResp() : RecordExt(http_response)
-   {
-      code = 0;
-      content_type[0] = 0;
-   }
-
-   virtual void fillUnirec(ur_template_t *tmplt, void *record)
-   {
-#ifndef DISABLE_UNIREC
-      ur_set(tmplt, record, F_HTTP_RESPONSE_STATUS_CODE, code);
-      ur_set_string(tmplt, record, F_HTTP_RESPONSE_CONTENT_TYPE, content_type);
-#endif
-   }
-   virtual int fillIPFIX(uint8_t *buffer, int size)
-   {
-      int length = strlen(content_type);
-      if (size - length - 8 < 0) {
+      length = strlen(content_type);
+      if (total_length + length + 3 > size) {
          return -1;
       }
+      buffer[total_length] = length;
 
-      buffer[0] = 0;
-      buffer[1] = 0;
-      buffer[2] = 0;
-      buffer[3] = 0;
-      buffer[4] = 0;
-      buffer[5] = length;
+      memcpy(buffer + total_length + 1, content_type, length);
+      total_length += length + 1;
+      *(uint16_t *) (buffer + total_length) = ntohs(code);
+      total_length += 2;
 
-      memcpy(buffer + 6, content_type, length);
-      *(uint16_t *) (buffer + length + 6) = ntohs(code);
-
-      return length + 8;
+      return total_length;
    }
 };
 
@@ -201,14 +176,13 @@ public:
    const char **get_ipfix_string();
 
 private:
-   bool parse_http_request(const char *data, int payload_len, RecordExtHTTPReq *rec, bool create);
-   bool parse_http_response(const char *data, int payload_len, RecordExtHTTPResp *rec, bool create);
-   void add_ext_http_request(const char *data, int payload_len, Flow &rec);
-   void add_ext_http_response(const char *data, int payload_len, Flow &rec);
+   bool parse_http_request(const char *data, int payload_len, RecordExtHTTP *rec);
+   bool parse_http_response(const char *data, int payload_len, RecordExtHTTP *rec);
+   void add_ext_http_request(const char *data, int payload_len, Flow &flow);
+   void add_ext_http_response(const char *data, int payload_len, Flow &flow);
    bool valid_http_method(const char *method) const;
 
-   RecordExtHTTPReq *req;     /**< Preallocated request extension. */
-   RecordExtHTTPResp *resp;   /**< Preallocated response extension. */
+   RecordExtHTTP *recPrealloc;/**< Preallocated extension. */
    bool print_stats;          /**< Print stats when flow cache is finishing. */
    bool flush_flow;           /**< Tell FlowCache to flush current Flow. */
    uint32_t requests;         /**< Total number of parsed HTTP requests. */

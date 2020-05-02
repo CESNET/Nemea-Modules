@@ -55,16 +55,22 @@
 
 /**
  * \brief Tell FlowCache to flush (immediately export) current flow.
- * Behavior when called from post_create: flush current Flow and erase FlowRecord.
- * Behavior when called from pre_update and post_update: flush current Flow, erase FlowRecord and call post_create
+ * Behavior when called from post_create, pre_update and post_update: flush current Flow and erase FlowRecord.
  */
-#define FLOW_FLUSH   (0x1 << 0)
+#define FLOW_FLUSH                  0x1
+
+/**
+ * \brief Tell FlowCache to flush (immediately export) current flow.
+ * Behavior when called from post_create: flush current Flow and erase FlowRecord.
+ * Behavior when called from pre_update and post_update: flush current Flow, erase FlowRecord and call post_create on packet.
+ */
+#define FLOW_FLUSH_WITH_REINSERT    0x3
 
 /**
  * \biref Tell FlowCache to export currently processed packet.
  * This return value has only effect when called from pre_create method.
  */
-#define EXPORT_PACKET   (0x1 << 1)
+#define EXPORT_PACKET               0x4
 
 #define MAX_PAYLOAD_LENGTH MAXPCKTSIZE
 

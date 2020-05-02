@@ -96,8 +96,7 @@ HTTPPlugin::HTTPPlugin(const options_t &module_options)
    responses = 0;
    total = 0;
    flush_flow = false;
-   req = NULL;
-   resp = NULL;
+   recPrealloc = NULL;
 }
 
 HTTPPlugin::HTTPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options) : FlowCachePlugin(plugin_options)
@@ -107,8 +106,7 @@ HTTPPlugin::HTTPPlugin(const options_t &module_options, vector<plugin_opt> plugi
    responses = 0;
    total = 0;
    flush_flow = false;
-   req = NULL;
-   resp = NULL;
+   recPrealloc = NULL;
 }
 
 int HTTPPlugin::post_create(Flow &rec, const Packet &pkt)
@@ -126,28 +124,28 @@ int HTTPPlugin::pre_update(Flow &rec, Packet &pkt)
 {
    RecordExt *ext = NULL;
    if (pkt.src_port == 80) {
-      ext = rec.getExtension(http_response);
+      ext = rec.getExtension(http);
       if (ext == NULL) { /* Check if header is present in flow. */
          add_ext_http_response(pkt.payload, pkt.payload_length, rec);
          return 0;
       }
 
-      parse_http_response(pkt.payload, pkt.payload_length, NULL, false);
+      parse_http_response(pkt.payload, pkt.payload_length, dynamic_cast<RecordExtHTTP *>(ext));
       if (flush_flow) {
          flush_flow = false;
-         return FLOW_FLUSH;
+         return FLOW_FLUSH_WITH_REINSERT;
       }
    } else if (pkt.dst_port == 80) {
-      ext = rec.getExtension(http_request);
+      ext = rec.getExtension(http);
       if (ext == NULL) { /* Check if header is present in flow. */
          add_ext_http_request(pkt.payload, pkt.payload_length, rec);
          return 0;
       }
 
-      parse_http_request(pkt.payload, pkt.payload_length, NULL, false);
+      parse_http_request(pkt.payload, pkt.payload_length, dynamic_cast<RecordExtHTTP *>(ext));
       if (flush_flow) {
          flush_flow = false;
-         return FLOW_FLUSH;
+         return FLOW_FLUSH_WITH_REINSERT;
       }
    }
 
@@ -211,10 +209,9 @@ static uint32_t s_requests = 0, s_responses = 0;
  * \param [in] data Packet payload data.
  * \param [in] payload_len Length of packet payload.
  * \param [out] rec Variable where http request will be stored.
- * \param [in] create Indicates if plugin is creating new http request or just updates old one.
  * \return True if request was parsed, false if error occured.
  */
-bool HTTPPlugin::parse_http_request(const char *data, int payload_len, RecordExtHTTPReq *rec, bool create)
+bool HTTPPlugin::parse_http_request(const char *data, int payload_len, RecordExtHTTP *rec)
 {
    char buffer[64];
    const char *begin, *end, *keyval_delimiter;
@@ -260,7 +257,7 @@ bool HTTPPlugin::parse_http_request(const char *data, int payload_len, RecordExt
       return false;
    }
 
-   if (!create) {
+   if (rec->req) {
       flush_flow = true;
       total--;
       DEBUG_MSG("Parser quits:\tflushing flow\n");
@@ -326,6 +323,7 @@ bool HTTPPlugin::parse_http_request(const char *data, int payload_len, RecordExt
    }
 
    DEBUG_MSG("Parser quits:\tend of header section\n");
+   rec->req = true;
    requests++;
    return true;
 }
@@ -335,10 +333,9 @@ bool HTTPPlugin::parse_http_request(const char *data, int payload_len, RecordExt
  * \param [in] data Packet payload data.
  * \param [in] payload_len Length of packet payload.
  * \param [out] rec Variable where http response will be stored.
- * \param [in] create Indicates if plugin is creating new http response or just updates old one.
  * \return True if request was parsed, false if error occured.
  */
-bool HTTPPlugin::parse_http_response(const char *data, int payload_len, RecordExtHTTPResp *rec, bool create)
+bool HTTPPlugin::parse_http_response(const char *data, int payload_len, RecordExtHTTP *rec)
 {
    char buffer[64];
    const char *begin, *end, *keyval_delimiter;
@@ -388,12 +385,12 @@ bool HTTPPlugin::parse_http_response(const char *data, int payload_len, RecordEx
    copy_str(buffer, sizeof(buffer), begin + 1, end);
    code = atoi(buffer);
    if (code <= 0) {
-      DEBUG_MSG("Parser quits:\twrong response code: %d\n", rec->code);
+      DEBUG_MSG("Parser quits:\twrong response code: %d\n", code);
       return false;
    }
 
-   DEBUG_MSG("\tCode: %d\n", rec->code);
-   if (!create) {
+   DEBUG_MSG("\tCode: %d\n", code);
+   if (rec->resp) {
       flush_flow = true;
       total--;
       DEBUG_MSG("Parser quits:\tflushing flow\n");
@@ -449,6 +446,7 @@ bool HTTPPlugin::parse_http_response(const char *data, int payload_len, RecordEx
    }
 
    DEBUG_MSG("Parser quits:\tend of header section\n");
+   rec->resp = true;
    responses++;
    return true;
 }
@@ -471,17 +469,17 @@ bool HTTPPlugin::valid_http_method(const char *method) const
  * \brief Add new extension http request header into flow record.
  * \param [in] data Packet payload data.
  * \param [in] payload_len Length of packet payload.
- * \param [out] rec Flow record where to store created extension header.
+ * \param [out] flow Flow record where to store created extension header.
  */
-void HTTPPlugin::add_ext_http_request(const char *data, int payload_len, Flow &rec)
+void HTTPPlugin::add_ext_http_request(const char *data, int payload_len, Flow &flow)
 {
-   if (req == NULL) {
-      req = new RecordExtHTTPReq();
+   if (recPrealloc == NULL) {
+      recPrealloc = new RecordExtHTTP();
    }
 
-   if (parse_http_request(data, payload_len, req, true)) {
-      rec.addExtension(req);
-      req = NULL;
+   if (parse_http_request(data, payload_len, recPrealloc)) {
+      flow.addExtension(recPrealloc);
+      recPrealloc = NULL;
    }
 }
 
@@ -489,17 +487,17 @@ void HTTPPlugin::add_ext_http_request(const char *data, int payload_len, Flow &r
  * \brief Add new extension http response header into flow record.
  * \param [in] data Packet payload data.
  * \param [in] payload_len Length of packet payload.
- * \param [out] rec Flow record where to store created extension header.
+ * \param [out] flow Flow record where to store created extension header.
  */
-void HTTPPlugin::add_ext_http_response(const char *data, int payload_len, Flow &rec)
+void HTTPPlugin::add_ext_http_response(const char *data, int payload_len, Flow &flow)
 {
-   if (resp == NULL) {
-      resp = new RecordExtHTTPResp();
+   if (recPrealloc == NULL) {
+      recPrealloc = new RecordExtHTTP();
    }
 
-   if (parse_http_response(data, payload_len, resp, true)) {
-      rec.addExtension(resp);
-      resp = NULL;
+   if (parse_http_response(data, payload_len, recPrealloc)) {
+      flow.addExtension(recPrealloc);
+      recPrealloc = NULL;
    }
 }
 
