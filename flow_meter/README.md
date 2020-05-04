@@ -1,7 +1,7 @@
 # flow_meter module - README
 
 ## Description
-This NEMEA module creates flows from input PCAP file / network interface and exports them to output interface.
+This NEMEA module creates biflows from input PCAP file / network interface and exports them to output interface.
 
 ## Requirements
 - To compile this module you will need [libpcap](http://www.tcpdump.org/) development library installed.
@@ -91,8 +91,8 @@ Basic unirec fields exported on interface with basic (pseudo) plugin. These fiel
 ### HTTP
 List of unirec fields exported together with basic flow fields on interface by HTTP plugin.
 
-| Unirec field        | Type   | Description                 |
-|:-------------------:|:------:|:---------------------------:|
+| Unirec field                 | Type   | Description                 |
+|:----------------------------:|:------:|:---------------------------:|
 | HTTP_REQUEST_METHOD          | string | HTTP request method         |
 | HTTP_REQUEST_HOST            | string | HTTP request host           |
 | HTTP_REQUEST_URL             | string | HTTP request url            |
@@ -265,6 +265,18 @@ The following table shows bit values of `SMTP\_STAT_CODE\_FLAGS` for each presen
 | UNKNOWN     | 0x80000000 |
 
 * Bit is set if answer contains SPAM keyword.
+
+### PSTATS
+List of unirec fields exported on interface by PSTATS plugin.
+
+| Unirec field               | Type     | Description                            |
+|:--------------------------:|:--------:|:--------------------------------------:|
+| STATS_PCKT_SIZES_SRC       | uint16\* | Source packet sizes in bytes           |
+| STATS_PCKT_SIZES_DST       | uint16\* | Destination packet sizes in bytes      |
+| STATS_PCKT_TIMESTAMPS_SRC  | time\*   | Source timestamps for each packet      |
+| STATS_PCKT_TIMESTAMPS_DST  | time\*   | Destination timestamps for each packet |
+| STATS_PCKT_TCPFLGS_SRC     | uint8\*  | Source TCP flags for each packet       |
+| STATS_PCKT_TCPFLGS_DST     | uint8\*  | Destination TCP flags for each packet  |
 
 ### ARP
 List of unirec fields exported on interface by ARP plugin.
