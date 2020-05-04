@@ -68,7 +68,7 @@ UR_FIELDS (
    uint16* STATS_PCKT_SIZES,
    time* STATS_PCKT_TIMESTAMPS,
    uint8* STATS_PCKT_TCPFLGS,
-   uint8* STATS_PCKT_DIRECTIONS,
+   int8* STATS_PCKT_DIRECTIONS,
 )
 
 PSTATSPlugin::PSTATSPlugin(const options_t &module_options)
