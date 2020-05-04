@@ -172,6 +172,7 @@
 #define STATS_PCKT_SIZES(F)           F(8057,    1013,  -1,   NULL)
 #define STATS_PCKT_TIMESTAMPS(F)      F(8057,    1014,  -1,   NULL)
 #define STATS_PCKT_TCPFLGS(F)         F(8057,    1015,  -1,   NULL)
+#define STATS_PCKT_DIRECTIONS(F)      F(8057,    1016,  -1,   NULL)
 
 /**
  * IPFIX Templates - list of elements
@@ -310,11 +311,9 @@
 
 #define IPFIX_PSTATS_TEMPLATE(F) \
    F(STATS_PCKT_SIZES) \
-   F(STATS_PCKT_SIZES) \
-   F(STATS_PCKT_TIMESTAMPS) \
    F(STATS_PCKT_TIMESTAMPS) \
    F(STATS_PCKT_TCPFLGS) \
-   F(STATS_PCKT_TCPFLGS)
+   F(STATS_PCKT_DIRECTIONS)
 
 /**
  * List of all known templated.

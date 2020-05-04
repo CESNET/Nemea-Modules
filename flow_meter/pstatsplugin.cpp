@@ -62,15 +62,13 @@
 
 using namespace std;
 
-#define PSTATS_UNIREC_TEMPLATE "STATS_PCKT_SIZES_SRC,STATS_PCKT_SIZES_DST,STATS_PCKT_TIMESTAMPS_SRC,STATS_PCKT_TIMESTAMPS_DST,STATS_PCKT_TCPFLGS_SRC,STATS_PCKT_TCPFLGS_DST"
+#define PSTATS_UNIREC_TEMPLATE "STATS_PCKT_SIZES,STATS_PCKT_TIMESTAMPS,STATS_PCKT_TCPFLGS,STATS_PCKT_DIRECTIONS"
 
 UR_FIELDS (
-   uint16* STATS_PCKT_SIZES_SRC,
-   uint16* STATS_PCKT_SIZES_DST,
-   time* STATS_PCKT_TIMESTAMPS_SRC,
-   time* STATS_PCKT_TIMESTAMPS_DST,
-   uint8* STATS_PCKT_TCPFLGS_SRC,
-   uint8* STATS_PCKT_TCPFLGS_DST
+   uint16* STATS_PCKT_SIZES,
+   time* STATS_PCKT_TIMESTAMPS,
+   uint8* STATS_PCKT_TCPFLGS,
+   uint8* STATS_PCKT_DIRECTIONS,
 )
 
 PSTATSPlugin::PSTATSPlugin(const options_t &module_options)
@@ -90,20 +88,25 @@ int PSTATSPlugin::pre_create(Packet &pkt)
 
 void PSTATSPlugin::update_record(RecordExtPSTATS *pstats_data, const Packet &pkt)
 {
-   uint8_t dir = pkt.source_pkt ? 0 : 1;
-   if (pstats_data->pkt_count[dir] < PSTATS_MAXELEMCOUNT) {
-      uint8_t pkt_cnt = pstats_data->pkt_count[dir];
-      pstats_data->pkt_sizes[dir][pkt_cnt] = pkt.ip_length;
-      pstats_data->pkt_tcp_flgs[dir][pkt_cnt] = pkt.tcp_control_bits;
+   /*
+    * dir =  1 iff client -> server
+    * dir = -1 iff server -> client
+    */
+   int8_t dir = pkt.source_pkt ? 1 : -1;
+   if (pstats_data->pkt_count < PSTATS_MAXELEMCOUNT) {
+      uint8_t pkt_cnt = pstats_data->pkt_count;
+      pstats_data->pkt_sizes[pkt_cnt] = pkt.ip_length;
+      pstats_data->pkt_tcp_flgs[pkt_cnt] = pkt.tcp_control_bits;
 
-      pstats_data->pkt_timestamps[dir][pkt_cnt] = pkt.timestamp;
+      pstats_data->pkt_timestamps[pkt_cnt] = pkt.timestamp;
 
-      DEBUG_MSG("PSTATS processed packet %d: Size: %d Timestamp: %ld.%ld\n", pkt_cnt[dir],
-            pstats_data->pkt_sizes[dir][pkt_cnt],
-            pstats_data->pkt_timestamps[dir][pkt_cnt].tv_sec,
-            pstats_data->pkt_timestamps[dir][pkt_cnt].tv_usec);
+      DEBUG_MSG("PSTATS processed packet %d: Size: %d Timestamp: %ld.%ld\n", pkt_cnt,
+            pstats_data->pkt_sizes[pkt_cnt],
+            pstats_data->pkt_timestamps[pkt_cnt].tv_sec,
+            pstats_data->pkt_timestamps[pkt_cnt].tv_usec);
 
-      pstats_data->pkt_count[dir]++;
+      pstats_data->pkt_dirs[pkt_cnt] = dir;
+      pstats_data->pkt_count++;
    } else {
       /* Do not count more than PSTATS_MAXELEMCOUNT packets */
    }

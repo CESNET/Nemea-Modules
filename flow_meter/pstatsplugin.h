@@ -54,7 +54,7 @@
 #include "flow_meter.h"
 
 #ifndef PSTATS_MAXELEMCOUNT
-#define PSTATS_MAXELEMCOUNT 20
+#define PSTATS_MAXELEMCOUNT 30
 #endif
 
 using namespace std;
@@ -66,10 +66,11 @@ using namespace std;
  * \brief Flow record extension header for storing parsed PSTATS packets.
  */
 struct RecordExtPSTATS : RecordExt {
-   uint16_t pkt_sizes[2][PSTATS_MAXELEMCOUNT];
-   uint8_t pkt_tcp_flgs[2][PSTATS_MAXELEMCOUNT];
-   struct timeval pkt_timestamps[2][PSTATS_MAXELEMCOUNT];
-   uint8_t pkt_count[2];
+   uint16_t pkt_sizes[PSTATS_MAXELEMCOUNT];
+   uint8_t pkt_tcp_flgs[PSTATS_MAXELEMCOUNT];
+   struct timeval pkt_timestamps[PSTATS_MAXELEMCOUNT];
+   int8_t pkt_dirs[PSTATS_MAXELEMCOUNT];
+   uint8_t pkt_count;
 
    typedef enum eHdrFieldID
    {
@@ -128,32 +129,25 @@ struct RecordExtPSTATS : RecordExt {
 
    RecordExtPSTATS() : RecordExt(pstats)
    {
-      pkt_count[0] = 0;
-      pkt_count[1] = 0;
+      pkt_count = 0;
    }
 
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
 #ifndef DISABLE_UNIREC
-      ur_array_allocate(tmplt, record, F_STATS_PCKT_TIMESTAMPS_SRC, pkt_count[0]);
-      ur_array_allocate(tmplt, record, F_STATS_PCKT_SIZES_SRC, pkt_count[0]);
-      ur_array_allocate(tmplt, record, F_STATS_PCKT_TCPFLGS_SRC, pkt_count[0]);
-      for (uint8_t i = 0; i < pkt_count[0]; i++) {
-         ur_time_t ts = ur_time_from_sec_usec(pkt_timestamps[0][i].tv_sec, pkt_timestamps[0][i].tv_usec);
-         ur_array_set(tmplt, record, F_STATS_PCKT_TIMESTAMPS_SRC, i, ts);
-         ur_array_set(tmplt, record, F_STATS_PCKT_SIZES_SRC, i, pkt_sizes[0][i]);
-         ur_array_set(tmplt, record, F_STATS_PCKT_TCPFLGS_SRC, i, pkt_tcp_flgs[0][i]);
+      ur_array_allocate(tmplt, record, F_STATS_PCKT_TIMESTAMPS, pkt_count);
+      ur_array_allocate(tmplt, record, F_STATS_PCKT_SIZES, pkt_count);
+      ur_array_allocate(tmplt, record, F_STATS_PCKT_TCPFLGS, pkt_count);
+      ur_array_allocate(tmplt, record, F_STATS_PCKT_DIRECTIONS, pkt_count);
+
+      for (uint8_t i = 0; i < pkt_count; i++) {
+         ur_time_t ts = ur_time_from_sec_usec(pkt_timestamps[i].tv_sec, pkt_timestamps[i].tv_usec);
+         ur_array_set(tmplt, record, F_STATS_PCKT_TIMESTAMPS, i, ts);
+         ur_array_set(tmplt, record, F_STATS_PCKT_SIZES, i, pkt_sizes[i]);
+         ur_array_set(tmplt, record, F_STATS_PCKT_TCPFLGS, i, pkt_tcp_flgs[i]);
+         ur_array_set(tmplt, record, F_STATS_PCKT_DIRECTIONS, i, pkt_dirs[i]);
       }
 
-      ur_array_allocate(tmplt, record, F_STATS_PCKT_TIMESTAMPS_DST, pkt_count[1]);
-      ur_array_allocate(tmplt, record, F_STATS_PCKT_SIZES_DST, pkt_count[1]);
-      ur_array_allocate(tmplt, record, F_STATS_PCKT_TCPFLGS_DST, pkt_count[1]);
-      for (uint8_t i = 0; i < pkt_count[1]; i++) {
-         ur_time_t ts = ur_time_from_sec_usec(pkt_timestamps[1][i].tv_sec, pkt_timestamps[1][i].tv_usec);
-         ur_array_set(tmplt, record, F_STATS_PCKT_TIMESTAMPS_DST, i, ts);
-         ur_array_set(tmplt, record, F_STATS_PCKT_SIZES_DST, i, pkt_sizes[1][i]);
-         ur_array_set(tmplt, record, F_STATS_PCKT_TCPFLGS_DST, i, pkt_tcp_flgs[1][i]);
-      }
 #endif
    }
 
@@ -161,79 +155,57 @@ struct RecordExtPSTATS : RecordExt {
    {
       int32_t bufferPtr;
       RecordExtPSTATS::IpfixBasicRecordListHdr hdr(255,//Maximum size see rfc631
-            IpfixBasicListHdrSize + pkt_count[0] * (sizeof(uint16_t)),
+            IpfixBasicListHdrSize + pkt_count * (sizeof(uint16_t)),
             3,
             PktSize,
             sizeof(uint16_t),
             CesnetPem);
 
       //Check sufficient size of buffer
-      int req_size = 6 * IpfixBasicListRecordHdrSize +
-                       (pkt_count[0] + pkt_count[1]) * sizeof(uint16_t) +
-                       2 * (pkt_count[0] + pkt_count[1]) * sizeof(uint32_t) +
-                       (pkt_count[0] + pkt_count[1]);
+      int req_size = 4 * IpfixBasicListRecordHdrSize /* sizes, times, flags, dirs */ +
+                       pkt_count * sizeof(uint16_t) /* sizes */ +
+                       2 * pkt_count * sizeof(uint32_t) /* times */ +
+                       pkt_count /* flags */ +
+                       pkt_count /* dirs */;
       if (req_size > size) {
          return -1;
       }
 
-      // Fill SRC sizes
+      // Fill sizes
       //fill buffer with basic list header and packet sizes
       bufferPtr = FillBasicListBuffer(hdr, buffer, size);
-      for (int i = 0; i < pkt_count[0]; i++) {
-         (*reinterpret_cast<uint16_t *>(buffer + bufferPtr)) = htons(pkt_sizes[0][i]);
-         bufferPtr += sizeof(uint16_t);
-      }
-
-      // Fill DST sizes
-      hdr.length = IpfixBasicListHdrSize + pkt_count[1] * (sizeof(uint16_t));
-      hdr.hdrFieldID = PktSize;
-      hdr.hdrElementLength = sizeof(uint16_t);
-      bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
-      for (int i = 0; i < pkt_count[1]; i++) {
-         (*reinterpret_cast<uint16_t *>(buffer + bufferPtr)) = htons(pkt_sizes[1][i]);
+      for (int i = 0; i < pkt_count; i++) {
+         (*reinterpret_cast<uint16_t *>(buffer + bufferPtr)) = htons(pkt_sizes[i]);
          bufferPtr += sizeof(uint16_t);
       }
 
       //update information in hdr for next basic list with packet timestamps
       //timestamps are in format [i] = sec, [i+1] = usec
-      hdr.length = IpfixBasicListHdrSize + pkt_count[0] * 2 * (sizeof(uint32_t));
+      hdr.length = IpfixBasicListHdrSize + pkt_count * 2 * (sizeof(uint32_t));
       hdr.hdrFieldID = PktTmstp;
       bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
-      for (int i = 0; i < pkt_count[0]; i++) {
-         (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_timestamps[0][i].tv_sec);
+      for (int i = 0; i < pkt_count; i++) {
+         (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_timestamps[i].tv_sec);
          bufferPtr += sizeof(uint32_t);
-         (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_timestamps[0][i].tv_usec);
+         (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_timestamps[i].tv_usec);
          bufferPtr += sizeof(uint32_t);
       }
 
-      // Fill DST timestamps
-      hdr.length = IpfixBasicListHdrSize + pkt_count[1] * 2 * (sizeof(uint32_t));
-      hdr.hdrFieldID = PktTmstp;
-      hdr.hdrElementLength = sizeof(uint32_t);
-
-      bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
-      for (int i = 0; i < pkt_count[1]; i++) {
-         (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_timestamps[1][i].tv_sec);
-         bufferPtr += sizeof(uint32_t);
-         (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_timestamps[1][i].tv_usec);
-         bufferPtr += sizeof(uint32_t);
-      }
-
-      // Fill SRC tcp flags
-      hdr.length = IpfixBasicListHdrSize + pkt_count[0] * (sizeof(uint8_t));
+      // Fill tcp flags
+      hdr.length = IpfixBasicListHdrSize + pkt_count * (sizeof(uint8_t));
       hdr.hdrFieldID = PktFlags;
       hdr.hdrElementLength = sizeof(uint8_t);
       bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
-      memcpy(buffer + bufferPtr, pkt_tcp_flgs[0], pkt_count[0]);
-      bufferPtr += pkt_count[0];
+      memcpy(buffer + bufferPtr, pkt_tcp_flgs, pkt_count);
+      bufferPtr += pkt_count;
 
-      // Fill SRC dst flags
-      hdr.length = IpfixBasicListHdrSize + pkt_count[1] * (sizeof(uint8_t));
-      hdr.hdrFieldID = PktFlags;
-      hdr.hdrElementLength = sizeof(uint8_t);
+      // Fill directions
+      hdr.length = IpfixBasicListHdrSize + pkt_count * (sizeof(int8_t));
+      hdr.hdrFieldID = PktDir;
+      hdr.hdrElementLength = sizeof(int8_t);
       bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
-      memcpy(buffer + bufferPtr, pkt_tcp_flgs[1], pkt_count[1]);
-      bufferPtr += pkt_count[1];
+      memcpy(buffer + bufferPtr, pkt_dirs, pkt_count);
+      bufferPtr += pkt_count;
 
       return bufferPtr;
    }
