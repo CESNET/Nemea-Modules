@@ -135,17 +135,17 @@ struct RecordExtPSTATS : RecordExt {
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
 #ifndef DISABLE_UNIREC
-      ur_array_allocate(tmplt, record, F_STATS_PCKT_TIMESTAMPS, pkt_count);
-      ur_array_allocate(tmplt, record, F_STATS_PCKT_SIZES, pkt_count);
-      ur_array_allocate(tmplt, record, F_STATS_PCKT_TCPFLGS, pkt_count);
-      ur_array_allocate(tmplt, record, F_STATS_PCKT_DIRECTIONS, pkt_count);
+      ur_array_allocate(tmplt, record, F_PPI_PKT_TIMES, pkt_count);
+      ur_array_allocate(tmplt, record, F_PPI_PKT_LENGTHS, pkt_count);
+      ur_array_allocate(tmplt, record, F_PPI_PKT_FLAGS, pkt_count);
+      ur_array_allocate(tmplt, record, F_PPI_PKT_DIRECTIONS, pkt_count);
 
       for (uint8_t i = 0; i < pkt_count; i++) {
          ur_time_t ts = ur_time_from_sec_usec(pkt_timestamps[i].tv_sec, pkt_timestamps[i].tv_usec);
-         ur_array_set(tmplt, record, F_STATS_PCKT_TIMESTAMPS, i, ts);
-         ur_array_set(tmplt, record, F_STATS_PCKT_SIZES, i, pkt_sizes[i]);
-         ur_array_set(tmplt, record, F_STATS_PCKT_TCPFLGS, i, pkt_tcp_flgs[i]);
-         ur_array_set(tmplt, record, F_STATS_PCKT_DIRECTIONS, i, pkt_dirs[i]);
+         ur_array_set(tmplt, record, F_PPI_PKT_TIMES, i, ts);
+         ur_array_set(tmplt, record, F_PPI_PKT_LENGTHS, i, pkt_sizes[i]);
+         ur_array_set(tmplt, record, F_PPI_PKT_FLAGS, i, pkt_tcp_flgs[i]);
+         ur_array_set(tmplt, record, F_PPI_PKT_DIRECTIONS, i, pkt_dirs[i]);
       }
 
 #endif
