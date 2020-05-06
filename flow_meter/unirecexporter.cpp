@@ -178,7 +178,7 @@ int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, 
 
    for (int i = 0; i < out_ifc_cnt; i++) { // Create unirec records.
       if (tmplt[i] != NULL) {
-         record[i] = ur_create_record(tmplt[i], (i == basic_ifc_num ? 0 : 2048));
+         record[i] = ur_create_record(tmplt[i], (i == basic_ifc_num ? 0 : UR_MAX_SIZE));
 
          if (record == NULL) {
             free_unirec_resources();

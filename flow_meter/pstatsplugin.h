@@ -147,7 +147,6 @@ struct RecordExtPSTATS : RecordExt {
          ur_array_set(tmplt, record, F_PPI_PKT_FLAGS, i, pkt_tcp_flgs[i]);
          ur_array_set(tmplt, record, F_PPI_PKT_DIRECTIONS, i, pkt_dirs[i]);
       }
-
 #endif
    }
 
