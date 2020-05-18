@@ -231,7 +231,6 @@ AM_CONDITIONAL(MAKE_DEB, test x$DEBUILD != x)
 
 # list of all *.in (and Makefile.am) files to process by configure script
 AC_CONFIG_FILES([Makefile
-                 aggregator/Makefile
                  anonymizer/Makefile
                  bloom_history/Makefile
                  debug_sender/Makefile

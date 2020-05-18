@@ -55,11 +55,11 @@
 using namespace std;
 
 #ifndef FLOW_CACHE_SIZE
-const unsigned int DEFAULT_FLOW_CACHE_SIZE = 131072;
+const unsigned int DEFAULT_FLOW_CACHE_SIZE = 524288;
 #else
-const unsigned int DEFAULT_FLOW_CACHE_SIZE = FLOW_CACHE_SIZE;
+const unsigned int DEFAULT_FLOW_CACHE_SIZE = 524288;
 #endif
-const unsigned int DEFAULT_FLOW_LINE_SIZE = 16;
+const unsigned int DEFAULT_FLOW_LINE_SIZE = 4;
 const double DEFAULT_INACTIVE_TIMEOUT = 30.0;
 const double DEFAULT_ACTIVE_TIMEOUT = 300.0;
 

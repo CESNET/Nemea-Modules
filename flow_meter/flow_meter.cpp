@@ -627,6 +627,8 @@ int main(int argc, char *argv[])
 
    packet.packet = new char[MAXPCKTSIZE + 1];
 
+   std::cout << "Loop started" << std::endl;
+
    /* Main packet capture loop. */
    while (!stop && (ret = packetloader.get_pkt(packet)) > 0) {
       if (ret == 3) { /* Process timeout. */
@@ -635,6 +637,7 @@ int main(int argc, char *argv[])
       }
 
       pkt_total++;
+
       if (ret == 2) {
          flowcache.put_pkt(packet);
          pkt_parsed++;
@@ -645,7 +648,13 @@ int main(int argc, char *argv[])
          }
       }
    }
+   std::cout << "Loop ended" << std::endl;
 
+   if (options.print_stats) {
+      packetloader.printStats();
+      std::cout << "Done" << std::endl;
+   }
+   
    if (ret < 0) {
       packetloader.close();
 #ifndef DISABLE_UNIREC
@@ -658,10 +667,6 @@ int main(int argc, char *argv[])
       return error("Error during reading: " + packetloader.error_msg);
    }
 
-   if (options.print_stats) {
-      cout << "Total packets captured: " << pkt_total << endl;
-      cout << "Packets parsed: " << pkt_parsed << endl;
-   }
 
    /* Cleanup. */
    flowcache.finish();

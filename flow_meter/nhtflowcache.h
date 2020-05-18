@@ -156,6 +156,7 @@ public:
       active = options.active_timeout;
       inactive = options.inactive_timeout;
 
+      std::cout << "Cache size lines: " << size << " line size: " << line_size << std::endl; 
       flow_array = new FlowRecord*[size];
       flow_records = new FlowRecord[size];
       for (unsigned int i = 0; i < size; i++) {
