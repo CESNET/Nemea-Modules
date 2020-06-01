@@ -1,8 +1,13 @@
-SUBDIRS=. tests
+if HAVE_NDP
+SUBDIRS=nfbCInterface
+else
+SUBDIRS=
+endif
+
+SUBDIRS+=. tests
 bin_PROGRAMS=flow_meter ipfixprobe
 
 if HAVE_NDP
-SUBDIRS+=nfbCInterface
 flow_meter_ldflags=-lnuma -lnfb -lndpRI
 else
 flow_meter_ldflags=-lpcap
