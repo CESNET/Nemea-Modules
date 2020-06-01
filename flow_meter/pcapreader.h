@@ -46,6 +46,7 @@
 #ifndef PCAPREADER_H
 #define PCAPREADER_H
 
+#include <config.h>
 #include <pcap/pcap.h>
 #ifdef HAVE_NDP
 #include <ndpreader.hpp>
