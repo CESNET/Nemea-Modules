@@ -47,9 +47,10 @@
 #define PCAPREADER_H
 
 #include <config.h>
-#include <pcap/pcap.h>
 #ifdef HAVE_NDP
 #include <ndpreader.hpp>
+#else
+#include <pcap/pcap.h>
 #endif /* HAVE_NDP */
 
 #include "flow_meter.h"

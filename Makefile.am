@@ -50,11 +50,12 @@ endif
 
 if HAVE_BISON
 SUBDIRS += unirecfilter
-if HAVE_OPENSSL
-endif
 endif
 
 if HAVE_LIBPCAP
+SUBDIRS += flow_meter
+endif
+if HAVE_NDP
 SUBDIRS += flow_meter
 endif
 
