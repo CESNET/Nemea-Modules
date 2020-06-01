@@ -47,7 +47,9 @@
 #define PCAPREADER_H
 
 #include <pcap/pcap.h>
+#ifdef HAVE_NDP
 #include <ndpreader.hpp>
+#endif /* HAVE_NDP */
 
 #include "flow_meter.h"
 #include "packet.h"
@@ -93,10 +95,14 @@ private:
    struct timeval last_ts;          /**< Last timestamp. */
    bpf_u_int32 netmask;             /**< Network mask. Used when setting filter. */
 
+#ifdef HAVE_NDP
    NdpReader ndpReader;
+#endif /* HAVE_NDP */
 };
 
+#ifdef HAVE_NDP
 void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data);
 void packet_ndp_handler(Packet *pkt, const struct ndp_packet *ndp_packet, const struct ndp_header *ndp_header);
+#endif /* HAVE_NDP */
 
 #endif

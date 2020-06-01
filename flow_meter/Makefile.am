@@ -1,9 +1,15 @@
 SUBDIRS=. tests
 bin_PROGRAMS=flow_meter ipfixprobe
 
+if HAVE_NDP
+SUBDIRS+=nfbCInterface
+flow_meter_ldflags=-lnuma -lnfb -lpcap -lndpRI
+else
+flow_meter_ldflags=-lpcap
+endif
 LIBS=$(NONNEMEA_LIBS)
 ipfixprobe_LIBS=-lpcap
-ipfixprobe_LDADD=-lnuma -lnfb -lpcap -lndpRI
+ipfixprobe_LDADD=$(flow_meter_ldflags)
 ipfixprobe_CXXFLAGS=-std=c++98 -Wno-write-strings
 ipfixprobe_CPPFLAGS=-DDISABLE_UNIREC
 flow_meter_src=flow_meter.cpp \
@@ -56,7 +62,7 @@ flow_meter_SOURCES=$(flow_meter_src) \
 		    fields.c \
 		    fields.h
 
-flow_meter_LDADD=$(NEMEA_FRAMEWORK_LIBS) -ltrap -lunirec -lpcap -lnuma -lnfb -lndpRI
+flow_meter_LDADD=$(NEMEA_FRAMEWORK_LIBS) -ltrap -lunirec $(flow_meter_ldflags)
 flow_meter_CXXFLAGS=-std=c++98 -Wno-write-strings
 
 pkgdocdir=${docdir}/flow_meter

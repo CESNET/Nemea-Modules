@@ -60,6 +60,7 @@ class PacketReceiver
 {
 public:
 
+   virtual ~PacketReceiver() {}
    virtual int open_file(const string &file, bool parse_every_pkt) = 0;
    virtual int init_interface(const string &interface, int snaplen, bool parse_every_pkt) = 0;
    virtual int set_filter(const string &filter_str) = 0;

@@ -556,8 +556,10 @@ int main(int argc, char *argv[])
    PacketReceiver *packetloader;
    packetloader = new PcapReader(options);
 
+#ifdef HAVE_NDP
    //Todo: Add runtime option argument to choose for pcap or ndp packet
    packetloader = new NdpPacketReader(options);
+#endif /* HAVE_NDP*/
 
    if (options.interface == "") {
       if (packetloader->open_file(options.pcap_file, parse_every_pkt) != 0) {
@@ -632,7 +634,9 @@ int main(int argc, char *argv[])
 
    packet.packet = new char[MAXPCKTSIZE + 1];
 
+#ifdef HAVE_NDP
    std::cout << "Loop started" << std::endl;
+#endif /* HAVE_NDP */
 
    /* Main packet capture loop. */
    while (!stop && (ret = packetloader->get_pkt(packet)) > 0) {
@@ -653,7 +657,10 @@ int main(int argc, char *argv[])
          }
       }
    }
+
+#ifdef HAVE_NDP
    std::cout << "Loop ended" << std::endl;
+#endif /* HAVE_NDP */
 
    if (options.print_stats) {
       packetloader->printStats();

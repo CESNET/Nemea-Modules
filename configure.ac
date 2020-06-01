@@ -140,6 +140,13 @@ AC_ARG_WITH([flowcachestats],
 	CPPFLAGS="$CPPFLAGS -DFLOW_CACHE_STATS"
 	]
 )
+AC_ARG_WITH([ndp],
+	AC_HELP_STRING([--with-ndp],[Compile flow_meter with ndp library.]),
+	[
+      AC_DEFINE([HAVE_NDP], [1], [Define to 1 if the ndp is available])
+	]
+)
+AM_CONDITIONAL([HAVE_NDP],  [test x$withndp = xyes])
 
 AC_ARG_WITH([nfreader],
 	AC_HELP_STRING([--without-nfreader], [Skip nfreader module.]),
@@ -246,6 +253,7 @@ AC_CONFIG_FILES([Makefile
                  flow_meter/Makefile
                  flow_meter/flow_meter.bash
                  flow_meter/tests/Makefile
+                 flow_meter/nfbCInterface/Makefile
                  ipv6stats/Makefile
                  json_dump/Makefile
                  json_replay/Makefile

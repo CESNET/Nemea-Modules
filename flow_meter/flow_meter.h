@@ -54,12 +54,21 @@
 
 using namespace std;
 
-#ifndef FLOW_CACHE_SIZE
+#ifdef FLOW_CACHE_SIZE
+const unsigned int DEFAULT_FLOW_CACHE_SIZE = FLOW_CACHE_SIZE;
+#else
+#ifdef HAVE_NDP
 const unsigned int DEFAULT_FLOW_CACHE_SIZE = 524288;
 #else
-const unsigned int DEFAULT_FLOW_CACHE_SIZE = 524288;
-#endif
+const unsigned int DEFAULT_FLOW_CACHE_SIZE = 131072;
+#endif /* HAVE_NDP */
+#endif /* FLOW_CACHE_SIZE */
+
+#ifdef HAVE_NDP
 const unsigned int DEFAULT_FLOW_LINE_SIZE = 4;
+#else
+const unsigned int DEFAULT_FLOW_LINE_SIZE = 16;
+#endif /* HAVE_NDP */
 const double DEFAULT_INACTIVE_TIMEOUT = 30.0;
 const double DEFAULT_ACTIVE_TIMEOUT = 300.0;
 
