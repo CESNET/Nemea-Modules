@@ -3,12 +3,11 @@ bin_PROGRAMS=flow_meter ipfixprobe
 
 if HAVE_NDP
 SUBDIRS+=nfbCInterface
-flow_meter_ldflags=-lnuma -lnfb -lpcap -lndpRI
+flow_meter_ldflags=-lnuma -lnfb -lndpRI
 else
 flow_meter_ldflags=-lpcap
 endif
 LIBS=$(NONNEMEA_LIBS)
-ipfixprobe_LIBS=-lpcap
 ipfixprobe_LDADD=$(flow_meter_ldflags)
 ipfixprobe_CXXFLAGS=-std=c++98 -Wno-write-strings
 ipfixprobe_CPPFLAGS=-DDISABLE_UNIREC

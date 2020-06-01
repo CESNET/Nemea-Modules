@@ -83,6 +83,7 @@ static int stop = 0;
 #define MODULE_BASIC_INFO(BASIC) \
   BASIC("flow_meter", "Convert packets from PCAP file or network interface into biflow records.", 0, -1)
 
+// TODO: remove parameters when using ndp
 #define MODULE_PARAMS(PARAM) \
   PARAM('p', "plugins", "Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. "\
   "For example: \'-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter"\
@@ -554,12 +555,12 @@ int main(int argc, char *argv[])
    }
 
    PacketReceiver *packetloader;
-   packetloader = new PcapReader(options);
 
 #ifdef HAVE_NDP
-   //Todo: Add runtime option argument to choose for pcap or ndp packet
    packetloader = new NdpPacketReader(options);
-#endif /* HAVE_NDP*/
+#else /* HAVE_NDP */
+   packetloader = new PcapReader(options);
+#endif /* HAVE_NDP */
 
    if (options.interface == "") {
       if (packetloader->open_file(options.pcap_file, parse_every_pkt) != 0) {

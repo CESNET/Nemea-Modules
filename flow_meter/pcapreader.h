@@ -72,6 +72,7 @@ using namespace std;
  */
 #define MAX_SNAPLEN  65535
 
+#ifndef HAVE_NDP
 /**
  * \brief Class for reading packets from file or network interface.
  */
@@ -96,12 +97,10 @@ private:
    struct timeval last_ts;          /**< Last timestamp. */
    bpf_u_int32 netmask;             /**< Network mask. Used when setting filter. */
 
-#ifdef HAVE_NDP
-   NdpReader ndpReader;
-#endif /* HAVE_NDP */
 };
 
-#ifdef HAVE_NDP
+#else /* HAVE_NDP */
+
 void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data);
 void packet_ndp_handler(Packet *pkt, const struct ndp_packet *ndp_packet, const struct ndp_header *ndp_header);
 #endif /* HAVE_NDP */

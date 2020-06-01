@@ -95,19 +95,6 @@ bool packet_valid = false;
 bool parse_all = false;
 
 
-static void print_libpcap_stats(pcap_t *handle) {
-    struct pcap_stat cap_stats;
-
-    memset(&cap_stats, 0x00, sizeof(struct pcap_stat));
-    if (pcap_stats(handle, &cap_stats) == 0) {
-       fprintf(stderr,"Libpcap Stats: Received %u, Mem Dropped %u, IF Dropped %u\n",
-            cap_stats.ps_recv, cap_stats.ps_drop, cap_stats.ps_ifdrop);
-    } else {
-        /* stats failed to be retrieved */
-       fprintf(stderr,"Libpcap Stats: -= unavailable =-\n");
-    }
-}
-
 /**
  * \brief Parse specific fields from ETHERNET frame header.
  * \param [in] data_ptr Pointer to begin of header.
@@ -450,6 +437,8 @@ inline uint16_t process_pppoe(const u_char *data_ptr, Packet *pkt)
    return length;
 }
 
+#ifndef HAVE_NDP
+
 /**
  * \brief Parsing callback function for pcap_dispatch() call. Parse packets up to transport layer.
  * \param [in,out] arg Serves for passing pointer to Packet structure into callback function.
@@ -517,6 +506,19 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
    DEBUG_MSG("Payload length:\t%u\n", pkt->payload_length);
    DEBUG_MSG("Packet parser exits: packet parsed\n");
    packet_valid = true;
+}
+
+static void print_libpcap_stats(pcap_t *handle) {
+    struct pcap_stat cap_stats;
+
+    memset(&cap_stats, 0x00, sizeof(struct pcap_stat));
+    if (pcap_stats(handle, &cap_stats) == 0) {
+       fprintf(stderr,"Libpcap Stats: Received %u, Mem Dropped %u, IF Dropped %u\n",
+            cap_stats.ps_recv, cap_stats.ps_drop, cap_stats.ps_ifdrop);
+    } else {
+        /* stats failed to be retrieved */
+       fprintf(stderr,"Libpcap Stats: -= unavailable =-\n");
+    }
 }
 
 /**
@@ -718,7 +720,7 @@ int PcapReader::get_pkt(Packet &packet)
    return ret;
  }
 
-#ifdef HAVE_NDP
+#else /* HAVE_NDP */
 void packet_ndp_handler(Packet *pkt, const struct ndp_packet *ndp_packet, const struct ndp_header *ndp_header)
 {
    uint16_t data_offset = 0;
