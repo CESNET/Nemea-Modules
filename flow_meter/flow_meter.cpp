@@ -553,9 +553,14 @@ int main(int argc, char *argv[])
       options.snaplen = max_snaplen;
    }
 
-   PcapReader packetloader(options);
+   PacketReceiver *packetloader;
+   packetloader = new PcapReader(options);
+
+   //Todo: Add runtime option argument to choose for pcap or ndp packet
+   packetloader = new NdpPacketReader(options);
+
    if (options.interface == "") {
-      if (packetloader.open_file(options.pcap_file, parse_every_pkt) != 0) {
+      if (packetloader->open_file(options.pcap_file, parse_every_pkt) != 0) {
 #ifndef DISABLE_UNIREC
          TRAP_DEFAULT_FINALIZATION();
 #endif
@@ -570,20 +575,20 @@ int main(int argc, char *argv[])
       }
 #endif
 
-      if (packetloader.init_interface(options.interface, options.snaplen, parse_every_pkt) != 0) {
+      if (packetloader->init_interface(options.interface, options.snaplen, parse_every_pkt) != 0) {
 #ifndef DISABLE_UNIREC
          TRAP_DEFAULT_FINALIZATION();
 #endif
-         return error("Unable to initialize libpcap: " + packetloader.error_msg);
+         return error("Unable to initialize libpcap: " + packetloader->error_msg);
       }
    }
 
    if (filter != "") {
-      if (packetloader.set_filter(filter) != 0) {
+      if (packetloader->set_filter(filter) != 0) {
 #ifndef DISABLE_UNIREC
          TRAP_DEFAULT_FINALIZATION();
 #endif
-         return error(packetloader.error_msg);
+         return error(packetloader->error_msg);
       }
    }
 
@@ -630,7 +635,7 @@ int main(int argc, char *argv[])
    std::cout << "Loop started" << std::endl;
 
    /* Main packet capture loop. */
-   while (!stop && (ret = packetloader.get_pkt(packet)) > 0) {
+   while (!stop && (ret = packetloader->get_pkt(packet)) > 0) {
       if (ret == 3) { /* Process timeout. */
          flowcache.export_expired(time(NULL));
          continue;
@@ -651,12 +656,12 @@ int main(int argc, char *argv[])
    std::cout << "Loop ended" << std::endl;
 
    if (options.print_stats) {
-      packetloader.printStats();
+      packetloader->printStats();
       std::cout << "Done" << std::endl;
    }
-   
+
    if (ret < 0) {
-      packetloader.close();
+      packetloader->close();
 #ifndef DISABLE_UNIREC
       flowwriter.close();
 #endif
@@ -664,7 +669,7 @@ int main(int argc, char *argv[])
 #ifndef DISABLE_UNIREC
       TRAP_DEFAULT_FINALIZATION();
 #endif
-      return error("Error during reading: " + packetloader.error_msg);
+      return error("Error during reading: " + packetloader->error_msg);
    }
 
 
@@ -673,8 +678,8 @@ int main(int argc, char *argv[])
 #ifndef DISABLE_UNIREC
    flowwriter.close();
 #endif
-   packetloader.close();
-
+   packetloader->close();
+   delete packetloader;
    delete [] packet.packet;
 #ifndef DISABLE_UNIREC
    TRAP_DEFAULT_FINALIZATION();

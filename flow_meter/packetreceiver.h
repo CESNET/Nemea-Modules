@@ -59,6 +59,13 @@ using namespace std;
 class PacketReceiver
 {
 public:
+
+   virtual int open_file(const string &file, bool parse_every_pkt) = 0;
+   virtual int init_interface(const string &interface, int snaplen, bool parse_every_pkt) = 0;
+   virtual int set_filter(const string &filter_str) = 0;
+   virtual void printStats() = 0;
+   virtual void close() = 0;
+
    string error_msg; /**< String to store an error messages. */
 
    /**

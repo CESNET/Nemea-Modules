@@ -519,6 +519,187 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
 }
 
 
+
+
+
+ /**
+  * \brief Open pcap file for reading.
+  * \param [in] file Input file name.
+  * \param [in] parse_every_pkt Try to parse every captured packet.
+  * \return 0 on success, non 0 on failure + error_msg is filled with error message
+  */
+ int PcapReader::open_file(const string &file, bool parse_every_pkt)
+ {
+    if (handle != NULL) {
+       error_msg = "Interface or pcap file is already opened.";
+       return 1;
+    }
+
+    char error_buffer[PCAP_ERRBUF_SIZE];
+    handle = pcap_open_offline(file.c_str(), error_buffer);
+    if (handle == NULL) {
+       error_msg = error_buffer;
+       return 2;
+    }
+
+    if (print_pcap_stats) {
+       printf("PcapReader: warning: printing pcap stats is only supported in live capture\n");
+    }
+
+    live_capture = false;
+    parse_all = parse_every_pkt;
+    error_msg = "";
+    return 0;
+ }
+
+ /**
+  * \brief Initialize network interface for reading.
+  * \param [in] interface Interface name.
+  * \param [in] snaplen Snapshot length to be set on pcap handle.
+  * \param [in] parse_every_pkt Try to parse every captured packet.
+  * \return 0 on success, non 0 on failure + error_msg is filled with error message
+  */
+ int PcapReader::init_interface(const string &interface, int snaplen, bool parse_every_pkt)
+ {
+    if (handle != NULL) {
+       error_msg = "Interface or pcap file is already opened.";
+       return 1;
+    }
+
+    char errbuf[PCAP_ERRBUF_SIZE];
+    errbuf[0] = 0;
+
+    handle = pcap_open_live(interface.c_str(), snaplen, 1, READ_TIMEOUT, errbuf);
+    if (handle == NULL) {
+       error_msg = errbuf;
+       return 2;
+    }
+    if (errbuf[0] != 0) {
+       fprintf(stderr, "%s\n", errbuf); // Print warning.
+    }
+
+    if (pcap_datalink(handle) != DLT_EN10MB) {
+       error_msg = "Unsupported data link type.";
+       close();
+       return 3;
+    }
+
+    bpf_u_int32 net;
+    if (pcap_lookupnet(interface.c_str(), &net, &netmask, errbuf) != 0) {
+       netmask = PCAP_NETMASK_UNKNOWN;
+    }
+
+    if (print_pcap_stats) {
+       /* Print stats header. */
+       printf("# recv   - number of packets received\n");
+       printf("# drop   - number  of  packets dropped because there was no room in the operating system's buffer when they arrived, because packets weren't being read fast enough\n");
+       printf("# ifdrop - number of packets dropped by the network interface or its driver\n\n");
+       printf("recv\tdrop\tifdrop\n");
+    }
+
+    live_capture = true;
+    parse_all = parse_every_pkt;
+    error_msg = "";
+    return 0;
+ }
+
+ /**
+  * \brief Install BPF filter to pcap handle.
+  * \param [in] filter_str String containing program.
+  * \return 0 on success, non 0 on failure.
+  */
+ int PcapReader::set_filter(const string &filter_str)
+ {
+    if (handle == NULL) {
+       error_msg = "No live capture or file opened.";
+       return 1;
+    }
+
+    struct bpf_program filter;
+    if (pcap_compile(handle, &filter, filter_str.c_str(), 0, netmask) == -1) {
+       error_msg = "Couldn't parse filter " + string(filter_str) + ": " + string(pcap_geterr(handle));
+       return 1;
+    }
+    if (pcap_setfilter(handle, &filter) == -1) {
+       pcap_freecode(&filter);
+       error_msg = "Couldn't install filter " + string(filter_str) + ": " + string(pcap_geterr(handle));
+       return 1;
+    }
+
+    pcap_freecode(&filter);
+    return 0;
+ }
+
+ void PcapReader::printStats()
+ {
+     print_libpcap_stats(handle);
+ }
+ /**
+  * \brief Close opened file or interface.
+  */
+ void PcapReader::close()
+ {
+    if (handle != NULL) {
+       pcap_close(handle);
+       handle = NULL;
+    }
+ }
+
+ void PcapReader::print_stats()
+ {
+    /* Only live capture stats are supported. */
+    if (live_capture) {
+       struct timeval tmp;
+
+       gettimeofday(&tmp, NULL);
+       if (tmp.tv_sec - last_ts.tv_sec >= STATS_PRINT_INTERVAL) {
+          struct pcap_stat stats;
+          if (pcap_stats(handle, &stats) == -1) {
+             printf("PcapReader: error: %s\n", pcap_geterr(handle));
+             print_pcap_stats = false; /* Turn off printing stats. */
+             return;
+          }
+          printf("%d\t%d\t%d\n", stats.ps_recv, stats.ps_drop, stats.ps_ifdrop);
+
+          last_ts = tmp;
+       }
+    }
+ }
+
+ int PcapReader::get_pkt(Packet &packet)
+ {
+    if (handle == NULL) {
+       error_msg = "No live capture or file opened.";
+       return -3;
+    }
+
+    int ret;
+    packet_valid = false;
+
+    if (print_pcap_stats) {
+       print_stats();
+    }
+
+    // Get pkt from network interface or file.
+    ret = pcap_dispatch(handle, 1, packet_handler, (u_char *) (&packet));
+    if (ret == 0) {
+       // Read timeout occured or no more packets in file...
+       return (live_capture ? 3 : 0);
+    }
+
+    if (ret == 1 && packet_valid) {
+       // Packet is valid and ready to process by flow_cache.
+       return 2;
+    }
+    if (ret < 0) {
+       // Error occured.
+       error_msg = pcap_geterr(handle);
+    }
+    return ret;
+ }
+
+
+
 void packet_ndp_handler(Packet *pkt, const struct ndp_packet *ndp_packet, const struct ndp_header *ndp_header)
 {
   uint16_t data_offset = 0;
@@ -590,7 +771,7 @@ void packet_ndp_handler(Packet *pkt, const struct ndp_packet *ndp_packet, const 
 /**
  * \brief Constructor.
  */
-PcapReader::PcapReader() : handle(NULL), print_pcap_stats(false), netmask(PCAP_NETMASK_UNKNOWN)
+NdpPacketReader::NdpPacketReader() : handle(NULL), print_pcap_stats(false), netmask(PCAP_NETMASK_UNKNOWN)
 {
 }
 
@@ -598,7 +779,7 @@ PcapReader::PcapReader() : handle(NULL), print_pcap_stats(false), netmask(PCAP_N
  * \brief Constructor.
  * \param [in] options Module options.
  */
-PcapReader::PcapReader(const options_t &options) : handle(NULL), netmask(PCAP_NETMASK_UNKNOWN)
+NdpPacketReader::NdpPacketReader(const options_t &options) : handle(NULL), netmask(PCAP_NETMASK_UNKNOWN)
 {
    print_pcap_stats = options.print_pcap_stats;
    last_ts.tv_sec = 0;
@@ -608,7 +789,7 @@ PcapReader::PcapReader(const options_t &options) : handle(NULL), netmask(PCAP_NE
 /**
  * \brief Destructor.
  */
-PcapReader::~PcapReader()
+NdpPacketReader::~NdpPacketReader()
 {
    this->close();
 }
@@ -619,7 +800,7 @@ PcapReader::~PcapReader()
  * \param [in] parse_every_pkt Try to parse every captured packet.
  * \return 0 on success, non 0 on failure + error_msg is filled with error message
  */
-int PcapReader::open_file(const string &file, bool parse_every_pkt)
+int NdpPacketReader::open_file(const string &file, bool parse_every_pkt)
 {
    error_msg = "Pcap Not suported in this mode";
    return 1;
@@ -632,7 +813,7 @@ int PcapReader::open_file(const string &file, bool parse_every_pkt)
  * \param [in] parse_every_pkt Try to parse every captured packet.
  * \return 0 on success, non 0 on failure + error_msg is filled with error message
  */
-int PcapReader::init_interface(const string &interface, int snaplen, bool parse_every_pkt)
+int NdpPacketReader::init_interface(const string &interface, int snaplen, bool parse_every_pkt)
 {
    int res;
    res = ndpReader.init_interface(interface);
@@ -648,30 +829,25 @@ int PcapReader::init_interface(const string &interface, int snaplen, bool parse_
  * \param [in] filter_str String containing program.
  * \return 0 on success, non 0 on failure.
  */
-int PcapReader::set_filter(const string &filter_str)
+int NdpPacketReader::set_filter(const string &filter_str)
 {
     error_msg = "Filters not supported";
     return 1;
 }
 
-void PcapReader::printStats()
+void NdpPacketReader::printStats()
 {
    ndpReader.print_stats();
 }
 /**
  * \brief Close opened file or interface.
  */
-void PcapReader::close()
+void NdpPacketReader::close()
 {
    ndpReader.close();
 }
 
-void PcapReader::print_stats()
-{
-   ndpReader.print_stats();
-}
-
-int PcapReader::get_pkt(Packet &packet)
+int NdpPacketReader::get_pkt(Packet &packet)
 {
    int ret;
    packet_valid = false;
@@ -700,183 +876,3 @@ int PcapReader::get_pkt(Packet &packet)
    }
    return ret;
 }
-
-
-
-
-//
-// /**
-//  * \brief Open pcap file for reading.
-//  * \param [in] file Input file name.
-//  * \param [in] parse_every_pkt Try to parse every captured packet.
-//  * \return 0 on success, non 0 on failure + error_msg is filled with error message
-//  */
-// int PcapReader::open_file(const string &file, bool parse_every_pkt)
-// {
-//    if (handle != NULL) {
-//       error_msg = "Interface or pcap file is already opened.";
-//       return 1;
-//    }
-//
-//    char error_buffer[PCAP_ERRBUF_SIZE];
-//    handle = pcap_open_offline(file.c_str(), error_buffer);
-//    if (handle == NULL) {
-//       error_msg = error_buffer;
-//       return 2;
-//    }
-//
-//    if (print_pcap_stats) {
-//       printf("PcapReader: warning: printing pcap stats is only supported in live capture\n");
-//    }
-//
-//    live_capture = false;
-//    parse_all = parse_every_pkt;
-//    error_msg = "";
-//    return 0;
-// }
-//
-// /**
-//  * \brief Initialize network interface for reading.
-//  * \param [in] interface Interface name.
-//  * \param [in] snaplen Snapshot length to be set on pcap handle.
-//  * \param [in] parse_every_pkt Try to parse every captured packet.
-//  * \return 0 on success, non 0 on failure + error_msg is filled with error message
-//  */
-// int PcapReader::init_interface(const string &interface, int snaplen, bool parse_every_pkt)
-// {
-//    if (handle != NULL) {
-//       error_msg = "Interface or pcap file is already opened.";
-//       return 1;
-//    }
-//
-//    char errbuf[PCAP_ERRBUF_SIZE];
-//    errbuf[0] = 0;
-//
-//    handle = pcap_open_live(interface.c_str(), snaplen, 1, READ_TIMEOUT, errbuf);
-//    if (handle == NULL) {
-//       error_msg = errbuf;
-//       return 2;
-//    }
-//    if (errbuf[0] != 0) {
-//       fprintf(stderr, "%s\n", errbuf); // Print warning.
-//    }
-//
-//    if (pcap_datalink(handle) != DLT_EN10MB) {
-//       error_msg = "Unsupported data link type.";
-//       close();
-//       return 3;
-//    }
-//
-//    bpf_u_int32 net;
-//    if (pcap_lookupnet(interface.c_str(), &net, &netmask, errbuf) != 0) {
-//       netmask = PCAP_NETMASK_UNKNOWN;
-//    }
-//
-//    if (print_pcap_stats) {
-//       /* Print stats header. */
-//       printf("# recv   - number of packets received\n");
-//       printf("# drop   - number  of  packets dropped because there was no room in the operating system's buffer when they arrived, because packets weren't being read fast enough\n");
-//       printf("# ifdrop - number of packets dropped by the network interface or its driver\n\n");
-//       printf("recv\tdrop\tifdrop\n");
-//    }
-//
-//    live_capture = true;
-//    parse_all = parse_every_pkt;
-//    error_msg = "";
-//    return 0;
-// }
-//
-// /**
-//  * \brief Install BPF filter to pcap handle.
-//  * \param [in] filter_str String containing program.
-//  * \return 0 on success, non 0 on failure.
-//  */
-// int PcapReader::set_filter(const string &filter_str)
-// {
-//    if (handle == NULL) {
-//       error_msg = "No live capture or file opened.";
-//       return 1;
-//    }
-//
-//    struct bpf_program filter;
-//    if (pcap_compile(handle, &filter, filter_str.c_str(), 0, netmask) == -1) {
-//       error_msg = "Couldn't parse filter " + string(filter_str) + ": " + string(pcap_geterr(handle));
-//       return 1;
-//    }
-//    if (pcap_setfilter(handle, &filter) == -1) {
-//       pcap_freecode(&filter);
-//       error_msg = "Couldn't install filter " + string(filter_str) + ": " + string(pcap_geterr(handle));
-//       return 1;
-//    }
-//
-//    pcap_freecode(&filter);
-//    return 0;
-// }
-//
-// void PcapReader::printStats()
-// {
-//     print_libpcap_stats(handle);
-// }
-// /**
-//  * \brief Close opened file or interface.
-//  */
-// void PcapReader::close()
-// {
-//    if (handle != NULL) {
-//       pcap_close(handle);
-//       handle = NULL;
-//    }
-// }
-//
-// void PcapReader::print_stats()
-// {
-//    /* Only live capture stats are supported. */
-//    if (live_capture) {
-//       struct timeval tmp;
-//
-//       gettimeofday(&tmp, NULL);
-//       if (tmp.tv_sec - last_ts.tv_sec >= STATS_PRINT_INTERVAL) {
-//          struct pcap_stat stats;
-//          if (pcap_stats(handle, &stats) == -1) {
-//             printf("PcapReader: error: %s\n", pcap_geterr(handle));
-//             print_pcap_stats = false; /* Turn off printing stats. */
-//             return;
-//          }
-//          printf("%d\t%d\t%d\n", stats.ps_recv, stats.ps_drop, stats.ps_ifdrop);
-//
-//          last_ts = tmp;
-//       }
-//    }
-// }
-//
-// int PcapReader::get_pkt(Packet &packet)
-// {
-//    if (handle == NULL) {
-//       error_msg = "No live capture or file opened.";
-//       return -3;
-//    }
-//
-//    int ret;
-//    packet_valid = false;
-//
-//    if (print_pcap_stats) {
-//       print_stats();
-//    }
-//
-//    // Get pkt from network interface or file.
-//    ret = pcap_dispatch(handle, 1, packet_handler, (u_char *) (&packet));
-//    if (ret == 0) {
-//       // Read timeout occured or no more packets in file...
-//       return (live_capture ? 3 : 0);
-//    }
-//
-//    if (ret == 1 && packet_valid) {
-//       // Packet is valid and ready to process by flow_cache.
-//       return 2;
-//    }
-//    if (ret < 0) {
-//       // Error occured.
-//       error_msg = pcap_geterr(handle);
-//    }
-//    return ret;
-// }
