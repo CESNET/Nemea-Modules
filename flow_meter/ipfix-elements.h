@@ -3,9 +3,10 @@
  * \brief List of IPFIX elements and templates
  * \author Tomas Cejka <cejkat@cesnet.cz>
  * \date 2017
+ * \date 2020
  */
 /*
- * Copyright (C) 2017 CESNET
+ * Copyright (C) 2020 CESNET
  *
  * LICENSE TERMS
  *
@@ -64,8 +65,10 @@
 #define FIELD(EN, ID, LEN, SRC) EN, ID, LEN, SRC
 
 /* The list of known IPFIX elements: */
-#define BYTES(F)                      F(0,        1,    8,   &flow.octet_total_length)
-#define PACKETS(F)                    F(0,        2,    8,   (temp = (uint64_t) flow.pkt_total_cnt, &temp))
+#define SRC_BYTES(F)                  F(0,        1,    8,   &flow.src_octet_total_length)
+#define DST_BYTES(F)                  F(0,        1,    8,   &flow.dst_octet_total_length)
+#define SRC_PACKETS(F)                F(0,        2,    8,   (temp = (uint64_t) flow.src_pkt_total_cnt, &temp))
+#define DST_PACKETS(F)                F(0,        2,    8,   (temp = (uint64_t) flow.dst_pkt_total_cnt, &temp))
 #define FLOW_START_MSEC(F)            F(0,      152,    8,   (temp = ((uint64_t) flow.time_first.tv_sec) * 1000 + (flow.time_first.tv_usec / 1000), &temp))
 #define FLOW_END_MSEC(F)              F(0,      153,    8,   (temp = ((uint64_t) flow.time_last.tv_sec) * 1000 + (flow.time_last.tv_usec / 1000), &temp))
 #define OBSERVATION_MSEC(F)           F(0,      323,    8,   NULL)
@@ -82,10 +85,11 @@
 #define L3_IPV6_ADDR_DST(F)           F(0,       28,   16,   &flow.dst_ip.v6)
 #define L3_IPV4_IDENTIFICATION(F)     F(0,       54,    2,   NULL)
 #define L3_IPV4_FRAGMENT(F)           F(0,       88,    2,   NULL)
-#define L3_IPV4_TTL(F)                F(0,      192,    1,   &flow.ip_ttl)
-#define L3_IPV6_TTL(F)                F(0,      192,    1,   &flow.ip_ttl)
+#define L3_IPV4_TTL(F)                F(0,      192,    1,   NULL)
+#define L3_IPV6_TTL(F)                F(0,      192,    1,   NULL)
 #define L4_PROTO(F)                   F(0,        4,    1,   &flow.ip_proto)
-#define L4_TCP_FLAGS(F)               F(0,        6,    1,   &flow.tcp_control_bits)
+#define L4_SRC_TCP_FLAGS(F)           F(0,        6,    1,   &flow.src_tcp_control_bits)
+#define L4_DST_TCP_FLAGS(F)           F(0,        6,    1,   &flow.dst_tcp_control_bits)
 #define L4_PORT_SRC(F)                F(0,        7,    2,   &flow.src_port)
 #define L4_PORT_DST(F)                F(0,       11,    2,   &flow.dst_port)
 #define L4_ICMP_TYPE_CODE(F)          F(0,       32,    2,   NULL)
@@ -165,6 +169,11 @@
 #define SMTP_CODE_5XX_COUNT(F)        F(8057,    819,   4,   NULL)
 #define SMTP_DOMAIN(F)                F(8057,    820,  -1,   NULL)
 
+#define STATS_PCKT_SIZES(F)           F(8057,    1013,  -1,   NULL)
+#define STATS_PCKT_TIMESTAMPS(F)      F(8057,    1014,  -1,   NULL)
+#define STATS_PCKT_TCPFLGS(F)         F(8057,    1015,  -1,   NULL)
+#define STATS_PCKT_DIRECTIONS(F)      F(8057,    1016,  -1,   NULL)
+
 /**
  * IPFIX Templates - list of elements
  *
@@ -183,16 +192,18 @@
    F(OBSERVATION_MSEC)
 
 #define BASIC_TMPLT_V4(F) \
-   F(BYTES) \
-   F(PACKETS) \
+   F(SRC_BYTES) \
+   F(DST_BYTES) \
+   F(SRC_PACKETS) \
+   F(DST_PACKETS) \
    F(FLOW_START_MSEC) \
    F(FLOW_END_MSEC) \
    F(L3_PROTO) \
    F(L4_PROTO) \
-   F(L4_TCP_FLAGS) \
+   F(L4_SRC_TCP_FLAGS) \
+   F(L4_DST_TCP_FLAGS) \
    F(L4_PORT_SRC) \
    F(L4_PORT_DST) \
-   F(L3_IPV4_TTL) \
    F(INPUT_INTERFACE) \
    F(L3_IPV4_ADDR_SRC) \
    F(L3_IPV4_ADDR_DST) \
@@ -200,16 +211,18 @@
    F(L2_DST_MAC)
 
 #define BASIC_TMPLT_V6(F) \
-   F(BYTES) \
-   F(PACKETS) \
+   F(SRC_BYTES) \
+   F(DST_BYTES) \
+   F(SRC_PACKETS) \
+   F(DST_PACKETS) \
    F(FLOW_START_MSEC) \
    F(FLOW_END_MSEC) \
    F(L3_PROTO) \
    F(L4_PROTO) \
-   F(L4_TCP_FLAGS) \
+   F(L4_SRC_TCP_FLAGS) \
+   F(L4_DST_TCP_FLAGS) \
    F(L4_PORT_SRC) \
    F(L4_PORT_DST) \
-   F(L3_IPV6_TTL) \
    F(INPUT_INTERFACE) \
    F(L3_IPV6_ADDR_SRC) \
    F(L3_IPV6_ADDR_DST) \
@@ -296,6 +309,12 @@
    F(SIP_REQUEST_URI) \
    F(SIP_VIA)
 
+#define IPFIX_PSTATS_TEMPLATE(F) \
+   F(STATS_PCKT_SIZES) \
+   F(STATS_PCKT_TIMESTAMPS) \
+   F(STATS_PCKT_TCPFLGS) \
+   F(STATS_PCKT_DIRECTIONS)
+
 /**
  * List of all known templated.
  *
@@ -313,6 +332,7 @@
    IPFIX_SIP_TEMPLATE(F) \
    IPFIX_DNS_TEMPLATE(F) \
    IPFIX_PASSIVEDNS_TEMPLATE(F) \
+   IPFIX_PSTATS_TEMPLATE(F) \
    IPFIX_SMTP_TEMPLATE(F)
 
 

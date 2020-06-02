@@ -58,26 +58,27 @@
 
 using namespace std;
 
-#define BASIC_FLOW_TEMPLATE "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,PACKETS,BYTES,TIME_FIRST,TIME_LAST,TCP_FLAGS,DIR_BIT_FIELD,TOS,TTL,SRC_MAC,DST_MAC" /* LINK_BIT_FIELD or ODID will be added at init. */
+#define BASIC_FLOW_TEMPLATE "SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,SRC_PACKETS,SRC_BYTES,DST_PACKETS,DST_BYTES,TIME_FIRST,TIME_LAST,SRC_TCP_FLAGS,DST_TCP_FLAGS,DIR_BIT_FIELD,SRC_MAC,DST_MAC" /* LINK_BIT_FIELD or ODID will be added at init. */
 
 #define PACKET_TEMPLATE "SRC_MAC,DST_MAC,ETHERTYPE,TIME"
 
 UR_FIELDS (
    ipaddr DST_IP,
    ipaddr SRC_IP,
-   uint64 BYTES,
+   uint64 SRC_BYTES,
+   uint64 DST_BYTES,
    uint64 LINK_BIT_FIELD,
    uint32 ODID,
    time TIME_FIRST,
    time TIME_LAST,
-   uint32 PACKETS,
+   uint32 SRC_PACKETS,
+   uint32 DST_PACKETS,
    uint16 DST_PORT,
    uint16 SRC_PORT,
    uint8 DIR_BIT_FIELD,
    uint8 PROTOCOL,
-   uint8 TCP_FLAGS,
-   uint8 TOS,
-   uint8 TTL,
+   uint8 SRC_TCP_FLAGS,
+   uint8 DST_TCP_FLAGS,
 
    macaddr SRC_MAC,
    macaddr DST_MAC,
@@ -177,7 +178,7 @@ int UnirecExporter::init(const vector<FlowCachePlugin *> &plugins, int ifc_cnt, 
 
    for (int i = 0; i < out_ifc_cnt; i++) { // Create unirec records.
       if (tmplt[i] != NULL) {
-         record[i] = ur_create_record(tmplt[i], (i == basic_ifc_num ? 0 : 2048));
+         record[i] = ur_create_record(tmplt[i], (i == basic_ifc_num ? 0 : UR_MAX_SIZE));
 
          if (record == NULL) {
             free_unirec_resources();
@@ -332,11 +333,12 @@ void UnirecExporter::fill_basic_flow(Flow &flow, ur_template_t *tmplt_ptr, void 
    ur_set(tmplt_ptr, record_ptr, F_PROTOCOL, flow.ip_proto);
    ur_set(tmplt_ptr, record_ptr, F_SRC_PORT, flow.src_port);
    ur_set(tmplt_ptr, record_ptr, F_DST_PORT, flow.dst_port);
-   ur_set(tmplt_ptr, record_ptr, F_PACKETS, flow.pkt_total_cnt);
-   ur_set(tmplt_ptr, record_ptr, F_BYTES, flow.octet_total_length);
-   ur_set(tmplt_ptr, record_ptr, F_TCP_FLAGS, flow.tcp_control_bits);
-   ur_set(tmplt_ptr, record_ptr, F_TOS, flow.ip_tos);
-   ur_set(tmplt_ptr, record_ptr, F_TTL, flow.ip_ttl);
+   ur_set(tmplt_ptr, record_ptr, F_SRC_PACKETS, flow.src_pkt_total_cnt);
+   ur_set(tmplt_ptr, record_ptr, F_SRC_BYTES, flow.src_octet_total_length);
+   ur_set(tmplt_ptr, record_ptr, F_SRC_TCP_FLAGS, flow.src_tcp_control_bits);
+   ur_set(tmplt_ptr, record_ptr, F_DST_PACKETS, flow.dst_pkt_total_cnt);
+   ur_set(tmplt_ptr, record_ptr, F_DST_BYTES, flow.dst_octet_total_length);
+   ur_set(tmplt_ptr, record_ptr, F_DST_TCP_FLAGS, flow.dst_tcp_control_bits);
 
    ur_set(tmplt_ptr, record_ptr, F_DST_MAC, mac_from_bytes(flow.dst_mac));
    ur_set(tmplt_ptr, record_ptr, F_SRC_MAC, mac_from_bytes(flow.src_mac));

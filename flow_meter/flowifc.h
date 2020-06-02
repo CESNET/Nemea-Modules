@@ -62,8 +62,7 @@ struct template_t;
  * \brief Extension header type enum.
  */
 enum extTypeEnum {
-   http_request = 0,
-   http_response,
+   http = 0,
    https,
    dns,
    sip,
@@ -71,6 +70,7 @@ enum extTypeEnum {
    smtp,
    arp,
    passivedns,
+   pstats,
    /* Add extension header identifiers for your plugins here */
    EXTENSION_CNT
 };
@@ -208,13 +208,14 @@ struct Record {
 struct Flow : public Record {
    struct timeval time_first;
    struct timeval time_last;
-   uint64_t octet_total_length;
-   uint32_t pkt_total_cnt;
-   uint8_t  tcp_control_bits;
+   uint64_t src_octet_total_length;
+   uint64_t dst_octet_total_length;
+   uint32_t src_pkt_total_cnt;
+   uint32_t dst_pkt_total_cnt;
+   uint8_t  src_tcp_control_bits;
+   uint8_t  dst_tcp_control_bits;
 
    uint8_t  ip_version;
-   uint8_t  ip_tos;
-   uint8_t  ip_ttl;
 
    uint8_t  ip_proto;
    uint16_t src_port;

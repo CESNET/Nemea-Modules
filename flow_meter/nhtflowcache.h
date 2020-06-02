@@ -73,15 +73,27 @@ public:
       memset(&flow.time_last, 0, sizeof(flow.time_last));
       flow.ip_version = 0;
       flow.ip_proto = 0;
-      flow.ip_tos = 0;
-      flow.ip_ttl = 0;
       memset(&flow.src_ip, 0, sizeof(flow.src_ip));
       memset(&flow.dst_ip, 0, sizeof(flow.dst_ip));
       flow.src_port = 0;
       flow.dst_port = 0;
-      flow.pkt_total_cnt = 0;
-      flow.octet_total_length = 0;
-      flow.tcp_control_bits = 0;
+      flow.src_pkt_total_cnt = 0;
+      flow.dst_pkt_total_cnt = 0;
+      flow.src_octet_total_length = 0;
+      flow.dst_octet_total_length = 0;
+      flow.src_tcp_control_bits = 0;
+      flow.dst_tcp_control_bits = 0;
+   }
+   void soft_clean()
+   {
+      flow.removeExtensions();
+      flow.time_first = flow.time_last;
+      flow.src_pkt_total_cnt = 0;
+      flow.dst_pkt_total_cnt = 0;
+      flow.src_octet_total_length = 0;
+      flow.dst_octet_total_length = 0;
+      flow.src_tcp_control_bits = 0;
+      flow.dst_tcp_control_bits = 0;
    }
 
    FlowRecord()
@@ -95,7 +107,7 @@ public:
    inline bool is_empty() const;
    inline bool belongs(uint64_t pkt_hash) const;
    void create(const Packet &pkt, uint64_t pkt_hash);
-   void update(const Packet &pkt);
+   void update(const Packet &pkt, bool src);
 };
 
 class NHTFlowCache : public FlowCache
@@ -119,6 +131,7 @@ class NHTFlowCache : public FlowCache
    struct timeval active;
    struct timeval inactive;
    char key[MAX_KEY_LENGTH];
+   char key_inv[MAX_KEY_LENGTH];
    FlowRecord **flow_array;
    FlowRecord *flow_records;
 
@@ -161,6 +174,7 @@ public:
    virtual void finish();
 
    void export_expired(time_t ts);
+   void flush(Packet &pkt, FlowRecord *flow, int ret, bool source_flow);
 
 protected:
    bool create_hash_key(Packet &pkt);

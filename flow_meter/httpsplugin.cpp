@@ -88,7 +88,7 @@ int HTTPSPlugin::pre_update(Flow &rec, Packet &pkt)
    if (rec.src_port == 443 || rec.dst_port == 443) {
       RecordExt *ext = rec.getExtension(https);
       if (ext != NULL) {
-         return FLOW_FLUSH;
+         return FLOW_FLUSH_WITH_REINSERT;
       }
       add_https_record(rec, pkt);
    }

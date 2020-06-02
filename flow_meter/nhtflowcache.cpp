@@ -67,7 +67,7 @@ inline __attribute__((always_inline)) bool FlowRecord::belongs(uint64_t pkt_hash
 
 void FlowRecord::create(const Packet &pkt, uint64_t pkt_hash)
 {
-   flow.pkt_total_cnt = 1;
+   flow.src_pkt_total_cnt = 1;
 
    hash = pkt_hash;
 
@@ -80,25 +80,21 @@ void FlowRecord::create(const Packet &pkt, uint64_t pkt_hash)
    if (pkt.ip_version == 4) {
       flow.ip_version = pkt.ip_version;
       flow.ip_proto = pkt.ip_proto;
-      flow.ip_tos = pkt.ip_tos;
-      flow.ip_ttl = pkt.ip_ttl;
       flow.src_ip.v4 = pkt.src_ip.v4;
       flow.dst_ip.v4 = pkt.dst_ip.v4;
-      flow.octet_total_length = pkt.ip_length;
+      flow.src_octet_total_length = pkt.ip_length;
    } else if (pkt.ip_version == 6) {
       flow.ip_version = pkt.ip_version;
       flow.ip_proto = pkt.ip_proto;
-      flow.ip_tos = pkt.ip_tos;
-      flow.ip_ttl = pkt.ip_ttl;
       memcpy(flow.src_ip.v6, pkt.src_ip.v6, 16);
       memcpy(flow.dst_ip.v6, pkt.dst_ip.v6, 16);
-      flow.octet_total_length = pkt.ip_length;
+      flow.src_octet_total_length = pkt.ip_length;
    }
 
    if (pkt.field_indicator & PCKT_TCP) {
       flow.src_port = pkt.src_port;
       flow.dst_port = pkt.dst_port;
-      flow.tcp_control_bits = pkt.tcp_control_bits;
+      flow.src_tcp_control_bits = pkt.tcp_control_bits;
    } else if (pkt.field_indicator & PCKT_UDP) {
       flow.src_port = pkt.src_port;
       flow.dst_port = pkt.dst_port;
@@ -108,14 +104,23 @@ void FlowRecord::create(const Packet &pkt, uint64_t pkt_hash)
    }
 }
 
-void FlowRecord::update(const Packet &pkt)
+void FlowRecord::update(const Packet &pkt, bool src)
 {
-   flow.pkt_total_cnt++;
    flow.time_last = pkt.timestamp;
-   flow.octet_total_length += pkt.ip_length;
+   if (src) {
+      flow.src_pkt_total_cnt++;
+      flow.src_octet_total_length += pkt.ip_length;
 
-   if (pkt.field_indicator & PCKT_TCP) {
-      flow.tcp_control_bits |= pkt.tcp_control_bits;
+      if (pkt.field_indicator & PCKT_TCP) {
+         flow.src_tcp_control_bits |= pkt.tcp_control_bits;
+      }
+   } else {
+      flow.dst_pkt_total_cnt++;
+      flow.dst_octet_total_length += pkt.ip_length;
+
+      if (pkt.field_indicator & PCKT_TCP) {
+         flow.dst_tcp_control_bits |= pkt.tcp_control_bits;
+      }
    }
 }
 
@@ -145,6 +150,23 @@ void NHTFlowCache::finish()
    }
 }
 
+void NHTFlowCache::flush(Packet &pkt, FlowRecord *flow, int ret, bool source_flow)
+{
+   exporter->export_flow(flow->flow);
+#ifdef FLOW_CACHE_STATS
+   flushed++;
+#endif /* FLOW_CACHE_STATS */
+
+   if (ret == FLOW_FLUSH_WITH_REINSERT) {
+      flow->soft_clean(); // Clean counters, set time first to last
+      flow->update(pkt, source_flow); // Set new counters from packet
+      ret = plugins_post_create(flow->flow, pkt);
+      flush(pkt, flow, ret, source_flow);
+   } else {
+      flow->erase();
+   }
+}
+
 int NHTFlowCache::put_pkt(Packet &pkt)
 {
    int ret = plugins_pre_create(pkt);
@@ -163,14 +185,32 @@ int NHTFlowCache::put_pkt(Packet &pkt)
 
    FlowRecord *flow; /* Pointer to flow we will be working with. */
    bool found = false;
+   bool source_flow = true;
    uint32_t line_index = hashval & line_size_mask; /* Get index of flow line. */
-   uint32_t flow_index = 0, next_line = line_index + line_size;
+   uint32_t flow_index = 0;
+   uint32_t next_line = line_index + line_size;
 
    /* Find existing flow record in flow cache. */
    for (flow_index = line_index; flow_index < next_line; flow_index++) {
       if (flow_array[flow_index]->belongs(hashval)) {
          found = true;
          break;
+      }
+   }
+
+   /* Find inversed flow. */
+   if (!found) {
+      uint64_t hashval_inv = XXH64(key_inv, key_len, 0);
+      uint64_t line_index_inv = hashval_inv & line_size_mask;
+      uint64_t next_line_inv = line_index_inv + line_size;
+      for (flow_index = line_index_inv; flow_index < next_line_inv; flow_index++) {
+         if (flow_array[flow_index]->belongs(hashval_inv)) {
+            found = true;
+            source_flow = false;
+            hashval = hashval_inv;
+            line_index = line_index_inv;
+            break;
+         }
       }
    }
 
@@ -227,6 +267,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       }
    }
 
+   pkt.source_pkt = source_flow;
    current_ts = pkt.timestamp;
    flow = flow_array[flow_index];
    if (flow->is_empty()) {
@@ -242,27 +283,16 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       }
    } else {
       ret = plugins_pre_update(flow->flow, pkt);
-
       if (ret & FLOW_FLUSH) {
-         exporter->export_flow(flow->flow);
-#ifdef FLOW_CACHE_STATS
-         flushed++;
-#endif /* FLOW_CACHE_STATS */
-         flow->erase();
-
-         return put_pkt(pkt);
+         flush(pkt, flow, ret, source_flow);
+         return 0;
       } else {
-         flow->update(pkt);
+         flow->update(pkt, source_flow);
          ret = plugins_post_update(flow->flow, pkt);
 
          if (ret & FLOW_FLUSH) {
-            exporter->export_flow(flow->flow);
-#ifdef FLOW_CACHE_STATS
-            flushed++;
-#endif /* FLOW_CACHE_STATS */
-            flow->erase();
-
-            return put_pkt(pkt);
+            flush(pkt, flow, ret, source_flow);
+            return 0;
          }
       }
 
@@ -307,27 +337,43 @@ bool NHTFlowCache::create_hash_key(Packet &pkt)
 {
    if (pkt.ip_version == 4) {
       struct flow_key_v4_t *key_v4 = (struct flow_key_v4_t *) key;
+      struct flow_key_v4_t *key_v4_inv = (struct flow_key_v4_t *) key_inv;
 
-      key_v4->src_port = pkt.src_port;
-      key_v4->dst_port = pkt.dst_port;
       key_v4->proto = pkt.ip_proto;
       key_v4->ip_version = 4;
+      key_v4->src_port = pkt.src_port;
+      key_v4->dst_port = pkt.dst_port;
       key_v4->src_ip = pkt.src_ip.v4;
       key_v4->dst_ip = pkt.dst_ip.v4;
 
-      key_len = 14;
+      key_v4_inv->proto = pkt.ip_proto;
+      key_v4_inv->ip_version = 4;
+      key_v4_inv->src_port = pkt.dst_port;
+      key_v4_inv->dst_port = pkt.src_port;
+      key_v4_inv->src_ip = pkt.dst_ip.v4;
+      key_v4_inv->dst_ip = pkt.src_ip.v4;
+
+      key_len = sizeof(flow_key_v4_t);
       return true;
    } else if (pkt.ip_version == 6) {
       struct flow_key_v6_t *key_v6 = (struct flow_key_v6_t *) key;
+      struct flow_key_v6_t *key_v6_inv = (struct flow_key_v6_t *) key_inv;
 
-      key_v6->src_port = pkt.src_port;
-      key_v6->dst_port = pkt.dst_port;
       key_v6->proto = pkt.ip_proto;
       key_v6->ip_version = 6;
+      key_v6->src_port = pkt.src_port;
+      key_v6->dst_port = pkt.dst_port;
       memcpy(key_v6->src_ip, pkt.src_ip.v6, sizeof(pkt.src_ip.v6));
       memcpy(key_v6->dst_ip, pkt.dst_ip.v6, sizeof(pkt.dst_ip.v6));
 
-      key_len = 38;
+      key_v6_inv->proto = pkt.ip_proto;
+      key_v6_inv->ip_version = 6;
+      key_v6_inv->src_port = pkt.dst_port;
+      key_v6_inv->dst_port = pkt.src_port;
+      memcpy(key_v6_inv->src_ip, pkt.dst_ip.v6, sizeof(pkt.dst_ip.v6));
+      memcpy(key_v6_inv->dst_ip, pkt.src_ip.v6, sizeof(pkt.src_ip.v6));
+
+      key_len = sizeof(flow_key_v6_t);
       return true;
    }
 

@@ -73,6 +73,7 @@
 #include "arpplugin.h"
 #include "passivednsplugin.h"
 #include "smtpplugin.h"
+#include <pstatsplugin.h>
 
 using namespace std;
 
@@ -80,12 +81,12 @@ trap_module_info_t *module_info = NULL;
 static int stop = 0;
 
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("flow_meter", "Convert packets from PCAP file or network interface into flow records.", 0, -1)
+  BASIC("flow_meter", "Convert packets from PCAP file or network interface into biflow records.", 0, -1)
 
 #define MODULE_PARAMS(PARAM) \
   PARAM('p', "plugins", "Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. "\
   "For example: \'-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter"\
-  " will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,https,dns,sip,ntp,smtp,basic,arp,passivedns", required_argument, "string")\
+  " will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,https,dns,sip,ntp,smtp,basic,arp,passivedns,pstats", required_argument, "string")\
   PARAM('c', "count", "Quit after number of packets are captured.", required_argument, "uint32")\
   PARAM('I', "interface", "Capture from given network interface. Parameter require interface name (eth0 for example).", required_argument, "string")\
   PARAM('r', "file", "Pcap file to read. - to read from stdin.", required_argument, "string") \
@@ -127,8 +128,7 @@ int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plu
          // New configuration support sending plugin output to specific libtrap interface (e.g. http to ifc 1, dns to ifc 2...)
          // so it is necessary store extension-header -> output interface mapping within plugin.
 
-         tmp.push_back(plugin_opt("http-req", http_request, ifc_num));
-         tmp.push_back(plugin_opt("http-resp", http_response, ifc_num++));
+         tmp.push_back(plugin_opt("http", http, ifc_num++));
 
          plugins.push_back(new HTTPPlugin(module_options, tmp));
       } else if (proto == "https") {
@@ -167,6 +167,11 @@ int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plu
          tmp.push_back(plugin_opt("passivedns", passivedns, ifc_num++));
 
          plugins.push_back(new PassiveDNSPlugin(module_options, tmp));
+      } else if (proto == "pstats"){
+         vector<plugin_opt> tmp;
+         tmp.push_back(plugin_opt("pstats", pstats, ifc_num++));
+
+         plugins.push_back(new PSTATSPlugin(module_options, tmp));
       } else {
          fprintf(stderr, "Unsupported plugin: \"%s\"\n", proto.c_str());
          return -1;
@@ -250,7 +255,10 @@ int main(int argc, char *argv[])
    options.snaplen = 0;
    options.eof = true;
 
-   bool odid = false, export_unirec = false, export_ipfix = false, help = false, udp = false;
+#ifndef DISABLE_UNIREC
+   bool odid = false;
+#endif
+   bool export_unirec = false, export_ipfix = false, help = false, udp = false;
    int ifc_cnt = 0, verbose = -1;
    uint64_t link = 1;
    uint32_t pkt_limit = 0; /* Limit of packets for packet parser. 0 = no limit */
@@ -461,7 +469,9 @@ int main(int argc, char *argv[])
          filter = string(optarg);
          break;
       case 'O':
+#ifndef DISABLE_UNIREC
          odid = true;
+#endif
          break;
       case 'x':
          {

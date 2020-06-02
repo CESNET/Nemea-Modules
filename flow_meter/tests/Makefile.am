@@ -6,10 +6,10 @@ TESTS=test_http_plugin.sh \
 	test_smtp_plugin.sh \
 	test_ntp_plugin.sh \
 	test_arp_plugin.sh \
+	test_pstats_plugin.sh \
 	test_basic_plugin.sh
 
 EXTRA_DIST=test_plugin.sh \
-	test_basic_plugin.sh \
 	test_http_plugin.sh \
 	test_https_plugin.sh \
 	test_dns_plugin.sh \
@@ -18,8 +18,11 @@ EXTRA_DIST=test_plugin.sh \
 	test_smtp_plugin.sh \
 	test_ntp_plugin.sh \
 	test_arp_plugin.sh \
+	test_pstats_plugin.sh \
+	test_basic_plugin.sh \
 	test_plugin.sh \
 	test_reference/basic \
+	test_reference/pstats \
 	test_reference/arp \
 	test_reference/dns \
 	test_reference/http \

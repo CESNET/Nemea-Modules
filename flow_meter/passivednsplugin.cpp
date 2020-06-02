@@ -131,7 +131,7 @@ int PassiveDNSPlugin::post_create(Flow &rec, const Packet &pkt)
    return 0;
 }
 
-int PassiveDNSPlugin::pre_update(Flow &rec, Packet &pkt)
+int PassiveDNSPlugin::post_update(Flow &rec, const Packet &pkt)
 {
    if (pkt.src_port == 53) {
       return add_ext_dns(pkt.payload, pkt.payload_length, pkt.ip_proto == IPPROTO_TCP, rec);
@@ -271,13 +271,13 @@ RecordExtPassiveDNS *PassiveDNSPlugin::parse_dns(const char *data, unsigned int 
       data_len = payload_len;
 
       struct dns_hdr *dns = (struct dns_hdr *) data;
-      //uint16_t flags = ntohs(dns->flags);
+      DEBUG_CODE(uint16_t flags = ntohs(dns->flags));
       uint16_t question_cnt = ntohs(dns->question_rec_cnt);
       uint16_t answer_rr_cnt = ntohs(dns->answer_rec_cnt);
 
       DEBUG_MSG("DNS message header\n");
       DEBUG_MSG("\tTransaction ID:\t\t%#06x\n",       ntohs(dns->id));
-      DEBUG_MSG("\tFlags:\t\t\t%#06x\n",              ntohs(dns->flags));
+      DEBUG_MSG("\tFlags:\t\t\t%#06x\n",              flags);
 
       DEBUG_MSG("\t\tQuestion/reply:\t\t%u\n",        DNS_HDR_GET_QR(flags));
       DEBUG_MSG("\t\tOP code:\t\t%u\n",               DNS_HDR_GET_OPCODE(flags));
@@ -292,8 +292,6 @@ RecordExtPassiveDNS *PassiveDNSPlugin::parse_dns(const char *data, unsigned int 
 
       DEBUG_MSG("\tQuestions:\t\t%u\n",               question_cnt);
       DEBUG_MSG("\tAnswer RRs:\t\t%u\n",              answer_rr_cnt);
-      DEBUG_MSG("\tAuthority RRs:\t\t%u\n",           authority_rr_cnt);
-      DEBUG_MSG("\tAdditional RRs:\t\t%u\n",          additional_rr_cnt);
 
       /********************************************************************
       *****                   DNS Question section                    *****
@@ -301,7 +299,6 @@ RecordExtPassiveDNS *PassiveDNSPlugin::parse_dns(const char *data, unsigned int 
       data += sizeof(struct dns_hdr);
       for (int i = 0; i < question_cnt; i++) {
          DEBUG_MSG("\nDNS question #%d\n",            i + 1);
-         DEBUG_MSG("\tName:\t\t\t%s\n",               name.c_str());
 
          data += get_name_length(data);
 
@@ -310,8 +307,6 @@ RecordExtPassiveDNS *PassiveDNSPlugin::parse_dns(const char *data, unsigned int 
             return NULL;
          }
 
-         DEBUG_MSG("\tType:\t\t\t%u\n",               ntohs(question->qtype));
-         DEBUG_MSG("\tClass:\t\t\t%u\n",              ntohs(question->qclass));
          data += sizeof(struct dns_question);
       }
 

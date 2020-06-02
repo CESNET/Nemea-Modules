@@ -44,7 +44,10 @@ flow_meter_src=flow_meter.cpp \
 		xxhash.h \
 		dns.h \
 		conversion.h \
-		conversion.cpp
+		conversion.cpp \
+		pstatsplugin.h \
+		pstatsplugin.cpp
+
 ipfixprobe_SOURCES=$(flow_meter_src)
 
 flow_meter_SOURCES=$(flow_meter_src) \
