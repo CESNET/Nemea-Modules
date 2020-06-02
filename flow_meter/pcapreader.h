@@ -46,7 +46,12 @@
 #ifndef PCAPREADER_H
 #define PCAPREADER_H
 
+#include <config.h>
+#ifdef HAVE_NDP
+#include <ndpreader.hpp>
+#else
 #include <pcap/pcap.h>
+#endif /* HAVE_NDP */
 
 #include "flow_meter.h"
 #include "packet.h"
@@ -68,6 +73,7 @@ using namespace std;
  */
 #define MAX_SNAPLEN  65535
 
+#ifndef HAVE_NDP
 /**
  * \brief Class for reading packets from file or network interface.
  */
@@ -82,6 +88,7 @@ public:
    int init_interface(const string &interface, int snaplen, bool parse_every_pkt);
    int set_filter(const string &filter_str);
    void print_stats();
+   void printStats();
    void close();
    int get_pkt(Packet &packet);
 private:
@@ -93,5 +100,29 @@ private:
 };
 
 void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data);
+
+#else /* HAVE_NDP */
+
+class NdpPacketReader : public PacketReceiver {
+public:
+   NdpPacketReader();
+   NdpPacketReader(const options_t &options);
+   ~NdpPacketReader();
+   int open_file(const string &file, bool parse_every_pkt);
+   int init_interface(const string &interface, int snaplen, bool parse_every_pkt);
+   int set_filter(const string &filter_str);
+   //void print_stats();
+   void printStats();
+   void close();
+   int get_pkt(Packet &packet);
+private:
+   bool live_capture;          /**< PcapReader is capturing from network interface. */
+   bool print_pcap_stats;      /**< Print stats. */
+
+   NdpReader ndpReader;
+};
+
+void packet_ndp_handler(Packet *pkt, const struct ndp_packet *ndp_packet, const struct ndp_header *ndp_header);
+#endif /* HAVE_NDP */
 
 #endif

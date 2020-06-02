@@ -83,6 +83,7 @@ static int stop = 0;
 #define MODULE_BASIC_INFO(BASIC) \
   BASIC("flow_meter", "Convert packets from PCAP file or network interface into biflow records.", 0, -1)
 
+// TODO: remove parameters when using ndp
 #define MODULE_PARAMS(PARAM) \
   PARAM('p', "plugins", "Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. "\
   "For example: \'-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter"\
@@ -553,9 +554,16 @@ int main(int argc, char *argv[])
       options.snaplen = max_snaplen;
    }
 
-   PcapReader packetloader(options);
+   PacketReceiver *packetloader;
+
+#ifdef HAVE_NDP
+   packetloader = new NdpPacketReader(options);
+#else /* HAVE_NDP */
+   packetloader = new PcapReader(options);
+#endif /* HAVE_NDP */
+
    if (options.interface == "") {
-      if (packetloader.open_file(options.pcap_file, parse_every_pkt) != 0) {
+      if (packetloader->open_file(options.pcap_file, parse_every_pkt) != 0) {
 #ifndef DISABLE_UNIREC
          TRAP_DEFAULT_FINALIZATION();
 #endif
@@ -570,20 +578,20 @@ int main(int argc, char *argv[])
       }
 #endif
 
-      if (packetloader.init_interface(options.interface, options.snaplen, parse_every_pkt) != 0) {
+      if (packetloader->init_interface(options.interface, options.snaplen, parse_every_pkt) != 0) {
 #ifndef DISABLE_UNIREC
          TRAP_DEFAULT_FINALIZATION();
 #endif
-         return error("Unable to initialize libpcap: " + packetloader.error_msg);
+         return error("Unable to initialize libpcap: " + packetloader->error_msg);
       }
    }
 
    if (filter != "") {
-      if (packetloader.set_filter(filter) != 0) {
+      if (packetloader->set_filter(filter) != 0) {
 #ifndef DISABLE_UNIREC
          TRAP_DEFAULT_FINALIZATION();
 #endif
-         return error(packetloader.error_msg);
+         return error(packetloader->error_msg);
       }
    }
 
@@ -627,14 +635,19 @@ int main(int argc, char *argv[])
 
    packet.packet = new char[MAXPCKTSIZE + 1];
 
+#ifdef HAVE_NDP
+   std::cout << "Loop started" << std::endl;
+#endif /* HAVE_NDP */
+
    /* Main packet capture loop. */
-   while (!stop && (ret = packetloader.get_pkt(packet)) > 0) {
+   while (!stop && (ret = packetloader->get_pkt(packet)) > 0) {
       if (ret == 3) { /* Process timeout. */
          flowcache.export_expired(time(NULL));
          continue;
       }
 
       pkt_total++;
+
       if (ret == 2) {
          flowcache.put_pkt(packet);
          pkt_parsed++;
@@ -646,8 +659,17 @@ int main(int argc, char *argv[])
       }
    }
 
+#ifdef HAVE_NDP
+   std::cout << "Loop ended" << std::endl;
+#endif /* HAVE_NDP */
+
+   if (options.print_stats) {
+      packetloader->printStats();
+      std::cout << "Done" << std::endl;
+   }
+
    if (ret < 0) {
-      packetloader.close();
+      packetloader->close();
 #ifndef DISABLE_UNIREC
       flowwriter.close();
 #endif
@@ -655,21 +677,17 @@ int main(int argc, char *argv[])
 #ifndef DISABLE_UNIREC
       TRAP_DEFAULT_FINALIZATION();
 #endif
-      return error("Error during reading: " + packetloader.error_msg);
+      return error("Error during reading: " + packetloader->error_msg);
    }
 
-   if (options.print_stats) {
-      cout << "Total packets captured: " << pkt_total << endl;
-      cout << "Packets parsed: " << pkt_parsed << endl;
-   }
 
    /* Cleanup. */
    flowcache.finish();
 #ifndef DISABLE_UNIREC
    flowwriter.close();
 #endif
-   packetloader.close();
-
+   packetloader->close();
+   delete packetloader;
    delete [] packet.packet;
 #ifndef DISABLE_UNIREC
    TRAP_DEFAULT_FINALIZATION();

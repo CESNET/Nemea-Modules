@@ -43,6 +43,7 @@
  *
  */
 
+#include <config.h>
 #include <cstdio>
 #include <cstring>
 #include <iostream>
@@ -55,7 +56,10 @@
 #include <netinet/udp.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp6.h>
+
+#ifndef HAVE_NDP
 #include <pcap/pcap.h>
+#endif /* HAVE_NDP */
 
 #include "pcapreader.h"
 
@@ -435,6 +439,8 @@ inline uint16_t process_pppoe(const u_char *data_ptr, Packet *pkt)
    return length;
 }
 
+#ifndef HAVE_NDP
+
 /**
  * \brief Parsing callback function for pcap_dispatch() call. Parse packets up to transport layer.
  * \param [in,out] arg Serves for passing pointer to Packet structure into callback function.
@@ -504,6 +510,19 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
    packet_valid = true;
 }
 
+static void print_libpcap_stats(pcap_t *handle) {
+    struct pcap_stat cap_stats;
+
+    memset(&cap_stats, 0x00, sizeof(struct pcap_stat));
+    if (pcap_stats(handle, &cap_stats) == 0) {
+       fprintf(stderr,"Libpcap Stats: Received %u, Mem Dropped %u, IF Dropped %u\n",
+            cap_stats.ps_recv, cap_stats.ps_drop, cap_stats.ps_ifdrop);
+    } else {
+        /* stats failed to be retrieved */
+       fprintf(stderr,"Libpcap Stats: -= unavailable =-\n");
+    }
+}
+
 /**
  * \brief Constructor.
  */
@@ -522,9 +541,6 @@ PcapReader::PcapReader(const options_t &options) : handle(NULL), netmask(PCAP_NE
    last_ts.tv_usec = 0;
 }
 
-/**
- * \brief Destructor.
- */
 PcapReader::~PcapReader()
 {
    this->close();
@@ -638,6 +654,10 @@ int PcapReader::set_filter(const string &filter_str)
    return 0;
 }
 
+void PcapReader::printStats()
+{
+   print_libpcap_stats(handle);
+}
 /**
  * \brief Close opened file or interface.
  */
@@ -681,7 +701,7 @@ int PcapReader::get_pkt(Packet &packet)
    packet_valid = false;
 
    if (print_pcap_stats) {
-      print_stats();
+      //print_stats();
    }
 
    // Get pkt from network interface or file.
@@ -700,4 +720,179 @@ int PcapReader::get_pkt(Packet &packet)
       error_msg = pcap_geterr(handle);
    }
    return ret;
+ }
+
+#else /* HAVE_NDP */
+void packet_ndp_handler(Packet *pkt, const struct ndp_packet *ndp_packet, const struct ndp_header *ndp_header)
+{
+   uint16_t data_offset = 0;
+
+   struct timeval ts;
+   ts.tv_sec = ndp_header->timestamp_sec;
+   ts.tv_usec = ndp_header->timestamp_nsec*1000;
+
+   DEBUG_MSG("---------- packet parser  #%u -------------\n", ++s_total_pkts);
+   DEBUG_CODE(
+         char timestamp[32];
+         time_t time = ts;
+         strftime(timestamp, sizeof(timestamp), "%FT%T", localtime(&time));
+         );
+   DEBUG_MSG("Time:\t\t\t%s.%06lu\n",     timestamp, h->ts.tv_usec);
+   DEBUG_MSG("Packet length:\t\tcaplen=%uB len=%uB\n\n", h->caplen, h->len);
+
+   pkt->timestamp = ts;
+   pkt->field_indicator = 0;
+   pkt->src_port = 0;
+   pkt->dst_port = 0;
+   pkt->ip_proto = 0;
+   pkt->ip_version = 0;
+   pkt->tcp_control_bits = 0;
+
+   uint8_t *data = ndp_packet->data;
+   data_offset = parse_eth_hdr(data, pkt);
+   if (pkt->ethertype == ETH_P_IP) {
+      data_offset += parse_ipv4_hdr(data + data_offset, pkt);
+   } else if (pkt->ethertype == ETH_P_IPV6) {
+      data_offset += parse_ipv6_hdr(data + data_offset, pkt);
+   } else if (pkt->ethertype == ETH_P_MPLS_UC || pkt->ethertype == ETH_P_MPLS_MC) {
+      data_offset += process_mpls(data + data_offset, pkt);
+   } else if (pkt->ethertype == ETH_P_PPP_SES) {
+      data_offset += process_pppoe(data + data_offset, pkt);
+   } else if (!parse_all) {
+      DEBUG_MSG("Unknown ethertype %x\n", pkt->ethertype);
+      return;
+   }
+
+   if (pkt->ip_proto == IPPROTO_TCP) {
+      data_offset += parse_tcp_hdr(data + data_offset, pkt);
+   } else if (pkt->ip_proto == IPPROTO_UDP) {
+      data_offset += parse_udp_hdr(data + data_offset, pkt);
+   } else if (pkt->ip_proto == IPPROTO_ICMP) {
+      data_offset += parse_icmp_hdr(data + data_offset, pkt);
+   } else if (pkt->ip_proto == IPPROTO_ICMPV6) {
+      data_offset += parse_icmpv6_hdr(data + data_offset, pkt);
+   }
+
+   uint32_t len = ndp_packet->data_length;
+   if (len > MAXPCKTSIZE) {
+      len = MAXPCKTSIZE;
+      DEBUG_MSG("Packet size too long, truncating to %u\n", len);
+   }
+   memcpy(pkt->packet, data, len);
+   pkt->packet[len] = 0;
+   pkt->total_length = len;
+
+   pkt->payload_length = len - data_offset;
+   pkt->payload = pkt->packet + data_offset;
+
+   DEBUG_MSG("Payload length:\t%u\n", pkt->payload_length);
+   DEBUG_MSG("Packet parser exits: packet parsed\n");
+   packet_valid = true;
 }
+
+/**
+ * \brief Constructor.
+ */
+NdpPacketReader::NdpPacketReader() : print_pcap_stats(false)
+{
+}
+
+/**
+ * \brief Constructor.
+ * \param [in] options Module options.
+ */
+NdpPacketReader::NdpPacketReader(const options_t &options)
+{
+   print_pcap_stats = options.print_pcap_stats;
+}
+
+/**
+ * \brief Destructor.
+ */
+NdpPacketReader::~NdpPacketReader()
+{
+   this->close();
+}
+
+/**
+ * \brief Open pcap file for reading.
+ * \param [in] file Input file name.
+ * \param [in] parse_every_pkt Try to parse every captured packet.
+ * \return 0 on success, non 0 on failure + error_msg is filled with error message
+ */
+int NdpPacketReader::open_file(const string &file, bool parse_every_pkt)
+{
+   error_msg = "Pcap Not suported in this mode";
+   return 1;
+}
+
+/**
+ * \brief Initialize network interface for reading.
+ * \param [in] interface Interface name.
+ * \param [in] snaplen Snapshot length to be set on pcap handle.
+ * \param [in] parse_every_pkt Try to parse every captured packet.
+ * \return 0 on success, non 0 on failure + error_msg is filled with error message
+ */
+int NdpPacketReader::init_interface(const string &interface, int snaplen, bool parse_every_pkt)
+{
+   int res;
+   res = ndpReader.init_interface(interface);
+   error_msg = ndpReader.error_msg;
+
+   live_capture = true;
+   parse_all = parse_every_pkt;
+   return res;
+}
+
+/**
+ * \brief Install BPF filter to pcap handle.
+ * \param [in] filter_str String containing program.
+ * \return 0 on success, non 0 on failure.
+ */
+int NdpPacketReader::set_filter(const string &filter_str)
+{
+   error_msg = "Filters not supported";
+   return 1;
+}
+
+void NdpPacketReader::printStats()
+{
+   ndpReader.print_stats();
+}
+/**
+ * \brief Close opened file or interface.
+ */
+void NdpPacketReader::close()
+{
+   ndpReader.close();
+}
+
+int NdpPacketReader::get_pkt(Packet &packet)
+{
+   int ret;
+   packet_valid = false;
+
+   if (print_pcap_stats) {
+      //print_stats();
+   }
+
+   struct ndp_packet *ndp_packet;
+   struct ndp_header *ndp_header;
+
+   ret = ndpReader.get_pkt(&ndp_packet, &ndp_header);
+   if (ret == 0) {
+	   return (live_capture ? 3 : 0);
+   }
+   packet_ndp_handler(&packet, ndp_packet, ndp_header);
+
+   if (ret == 1 && packet_valid) {
+      // Packet is valid and ready to process by flow_cache.
+      return 2;
+   }
+   if (ret < 0) {
+      // Error occured.
+      error_msg = ndpReader.error_msg;
+   }
+   return ret;
+}
+#endif /* HAVE_NDP */

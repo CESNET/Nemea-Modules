@@ -1,6 +1,7 @@
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS=aggregator \
+SUBDIRS= \
+aggregator \
 anonymizer \
 debug_sender \
 device_classifier \
@@ -55,7 +56,7 @@ SUBDIRS += scalar-aggregator
 endif
 endif
 
-if HAVE_LIBPCAP
+if COMPILE_FLOWMETER
 SUBDIRS += flow_meter
 endif
 
