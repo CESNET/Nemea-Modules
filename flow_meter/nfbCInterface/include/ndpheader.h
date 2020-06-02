@@ -2,7 +2,6 @@
 #define NDPHEADER_H
 
 #include <nfb/ndp.h>
-#include <pcap.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,8 +18,6 @@ struct ndp_header {
     uint32_t timestamp_nsec; //!< Nanoseconds part of capture timestamp.
     uint32_t timestamp_sec; //!< Seconds part of capture timestamp.
 } __attribute__((__packed__));
-
-extern struct pcap_pkthdr ndp_to_pcap_hdr(struct ndp_packet *ndp_packet, struct ndp_header *ndp_header);
 
 #ifdef __cplusplus
 }

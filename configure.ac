@@ -140,13 +140,6 @@ AC_ARG_WITH([flowcachestats],
 	CPPFLAGS="$CPPFLAGS -DFLOW_CACHE_STATS"
 	]
 )
-AC_ARG_WITH([ndp],
-	AC_HELP_STRING([--with-ndp],[Compile flow_meter with ndp library.]),
-	[
-      AC_DEFINE([HAVE_NDP], [1], [Define to 1 if the ndp is available])
-	]
-)
-AM_CONDITIONAL([HAVE_NDP],  [test x$withndp = xyes])
 
 AC_ARG_WITH([nfreader],
 	AC_HELP_STRING([--without-nfreader], [Skip nfreader module.]),
@@ -178,14 +171,44 @@ RPM_BUILDREQ+=" bison"
 RPM_BUILDREQ+=" flex"
 fi
 
-AC_CHECK_HEADER(pcap.h,
-        AC_CHECK_LIB(pcap, pcap_open_live, [libpcap=yes], AC_MSG_WARN([libpcap not found. The flow_meter module will not be compiled.])), AC_MSG_WARN([pcap.h not found. The flow_meter module will not be compiled.]))
+AC_ARG_WITH([ndp],
+	AC_HELP_STRING([--with-ndp],[Compile flow_meter with ndp library.]),
+	[
+      if test "$withval" = "yes"; then
+         withndp="yes"
+      else
+         withndp="no"
+      fi
+	], [withndp="no"]
+)
 
-AM_CONDITIONAL(HAVE_LIBPCAP, test x${libpcap} = xyes)
-if [[ -z "$HAVE_LIBPCAP_TRUE" ]]; then
-RPM_REQUIRES+=" libpcap"
-RPM_BUILDREQ+=" libpcap-devel"
+if test x${withndp} = xyes; then
+	AC_CHECK_HEADER(nfb/nfb.h, AC_CHECK_LIB(nfb, nfb_open, [libnfb=yes],
+	  [AC_MSG_WARN([libnfb not found. The flow_meter module will not be compiled.])]
+	), AC_MSG_WARN([nfb/nfb.h not found. The flow_meter module will not be compiled.]))
 fi
+
+AM_CONDITIONAL(HAVE_NDP,  test x${libnfb} = xyes && test x${withndp} = xyes)
+if [[ -z "$HAVE_NDP_TRUE" ]]; then
+AC_DEFINE([HAVE_NDP], [1], [Define to 1 if the ndp is available])
+RPM_REQUIRES+=" netcope-common"
+RPM_BUILDREQ+=" netcope-common-devel"
+fi
+
+if test x${withndp} = xno; then
+   AC_CHECK_HEADER(pcap.h,
+           AC_CHECK_LIB(pcap, pcap_open_live, [libpcap=yes], AC_MSG_WARN([libpcap not found. The flow_meter module will not be compiled.])), AC_MSG_WARN([pcap.h not found. The flow_meter module will not be compiled.]))
+
+   AM_CONDITIONAL(HAVE_LIBPCAP, test x${libpcap} = xyes)
+   if [[ -z "$HAVE_LIBPCAP_TRUE" ]]; then
+   RPM_REQUIRES+=" libpcap"
+   RPM_BUILDREQ+=" libpcap-devel"
+   fi
+else
+   AM_CONDITIONAL(HAVE_LIBPCAP, false)
+fi
+
+AM_CONDITIONAL(COMPILE_FLOWMETER,  test x${libpcap} = xyes || test x${libnfb} = xyes)
 
 AX_PROG_LUA([], [], [
 AX_LUA_HEADERS([], [AC_MSG_WARN([lua.h not found. The luamodule module will not be compiled.])])
@@ -238,6 +261,7 @@ AM_CONDITIONAL(MAKE_DEB, test x$DEBUILD != x)
 
 # list of all *.in (and Makefile.am) files to process by configure script
 AC_CONFIG_FILES([Makefile
+                 aggregator/Makefile
                  anonymizer/Makefile
                  bloom_history/Makefile
                  debug_sender/Makefile
@@ -331,4 +355,3 @@ echo
 echo "Installation...........: make install (as root if needed, with 'su' or 'sudo')"
 echo "  prefix...............: $prefix"
 echo
-

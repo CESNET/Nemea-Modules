@@ -56,7 +56,10 @@
 #include <netinet/udp.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp6.h>
+
+#ifndef HAVE_NDP
 #include <pcap/pcap.h>
+#endif /* HAVE_NDP */
 
 #include "pcapreader.h"
 
@@ -93,7 +96,6 @@ bool packet_valid = false;
  * \brief Parse every packet.
  */
 bool parse_all = false;
-
 
 /**
  * \brief Parse specific fields from ETHERNET frame header.
@@ -699,7 +701,7 @@ int PcapReader::get_pkt(Packet &packet)
    packet_valid = false;
 
    if (print_pcap_stats) {
-      print_stats();
+      //print_stats();
    }
 
    // Get pkt from network interface or file.
@@ -791,7 +793,7 @@ void packet_ndp_handler(Packet *pkt, const struct ndp_packet *ndp_packet, const 
 /**
  * \brief Constructor.
  */
-NdpPacketReader::NdpPacketReader() : handle(NULL), print_pcap_stats(false), netmask(PCAP_NETMASK_UNKNOWN)
+NdpPacketReader::NdpPacketReader() : print_pcap_stats(false)
 {
 }
 
@@ -799,11 +801,9 @@ NdpPacketReader::NdpPacketReader() : handle(NULL), print_pcap_stats(false), netm
  * \brief Constructor.
  * \param [in] options Module options.
  */
-NdpPacketReader::NdpPacketReader(const options_t &options) : handle(NULL), netmask(PCAP_NETMASK_UNKNOWN)
+NdpPacketReader::NdpPacketReader(const options_t &options)
 {
    print_pcap_stats = options.print_pcap_stats;
-   last_ts.tv_sec = 0;
-   last_ts.tv_usec = 0;
 }
 
 /**
@@ -873,7 +873,7 @@ int NdpPacketReader::get_pkt(Packet &packet)
    packet_valid = false;
 
    if (print_pcap_stats) {
-      print_stats();
+      //print_stats();
    }
 
    struct ndp_packet *ndp_packet;
