@@ -109,6 +109,13 @@ HTTPPlugin::HTTPPlugin(const options_t &module_options, vector<plugin_opt> plugi
    recPrealloc = NULL;
 }
 
+HTTPPlugin::~HTTPPlugin()
+{
+   if (recPrealloc == NULL) {
+      delete recPrealloc;
+   }
+}
+
 int HTTPPlugin::post_create(Flow &rec, const Packet &pkt)
 {
    if (pkt.src_port == 80) {
