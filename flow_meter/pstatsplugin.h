@@ -182,6 +182,7 @@ struct RecordExtPSTATS : RecordExt {
       //timestamps are in format [i] = sec, [i+1] = usec
       hdr.length = IpfixBasicListHdrSize + pkt_count * 2 * (sizeof(uint32_t));
       hdr.hdrFieldID = PktTmstp;
+      hdr.hdrElementLength = sizeof(uint32_t);
       bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
       for (int i = 0; i < pkt_count; i++) {
          (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_timestamps[i].tv_sec);
