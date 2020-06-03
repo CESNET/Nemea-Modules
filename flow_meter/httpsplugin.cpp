@@ -62,6 +62,7 @@ HTTPSPlugin::HTTPSPlugin(const options_t &module_options)
 {
    print_stats = module_options.print_stats;
    parsed_sni = 0;
+   total = 0;
    flow_flush = false;
    ext_ptr = NULL;
 }
@@ -70,8 +71,15 @@ HTTPSPlugin::HTTPSPlugin(const options_t &module_options, vector<plugin_opt> plu
 {
    print_stats = module_options.print_stats;
    parsed_sni = 0;
+   total = 0;
    flow_flush = false;
    ext_ptr = NULL;
+}
+HTTPSPlugin::~HTTPSPlugin()
+{
+   if (ext_ptr != NULL) {
+      delete ext_ptr;
+   }
 }
 
 int HTTPSPlugin::post_create(Flow &rec, const Packet &pkt)
