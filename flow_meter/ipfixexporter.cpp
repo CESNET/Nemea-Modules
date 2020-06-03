@@ -203,7 +203,7 @@ int IPFIXExporter::export_flow(Flow &flow)
       tmplt = templateArray[basic_ifc_num * 2 + ipv6_tmplt];
 
       int length = fill_basic_flow(flow, tmplt);
-      if (length == -1) {
+      while (length == -1) {
          send_templates();
          send_data();
 
@@ -218,7 +218,7 @@ int IPFIXExporter::export_flow(Flow &flow)
             tmplt = templateArray[tmplt_num * 2 + ipv6_tmplt];
 
             int length_basic = fill_basic_flow(flow, tmplt);
-            if (length_basic == -1) {
+            while (length_basic == -1) {
                send_templates();
                send_data();
 
@@ -227,7 +227,7 @@ int IPFIXExporter::export_flow(Flow &flow)
 
             int length_ext = ext->fillIPFIX(tmplt->buffer + tmplt->bufferSize + length_basic,
                               TEMPLATE_BUFFER_SIZE - tmplt->bufferSize - length_basic);
-            if (length_ext == -1) {
+            while (length_ext == -1) {
                send_templates();
                send_data();
 
