@@ -80,7 +80,7 @@ using namespace std;
 
 static inline uint64_t tv2ts(timeval input)
 {
-  return static_cast<uint64_t>(input.tv_sec) * 1000 + (input.tv_sec / 1000);
+  return static_cast<uint64_t>(input.tv_sec) * 1000 + (input.tv_usec / 1000);
 }
 
 
