@@ -63,6 +63,10 @@ using namespace std;
 #define ETH_P_8021AD	0x88A8          /* 802.1ad Service VLAN*/
 #endif
 
+#ifndef ETH_P_TRILL
+#define ETH_P_TRILL	0x22F3          /* TRILL protocol */
+#endif
+
 /*
  * \brief Minimum snapshot length of pcap handle.
  */

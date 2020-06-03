@@ -144,6 +144,50 @@ inline uint16_t parse_eth_hdr(const u_char *data_ptr, Packet *pkt)
    return hdr_len;
 }
 
+struct __attribute__((packed)) trill_hdr {
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+   uint8_t op_len1:3;
+   uint8_t m:1;
+   uint8_t res:2;
+   uint8_t version:2;
+   uint8_t hop_cnt:6;
+   uint8_t op_len2:2;
+#elif __BYTE_ORDER == __BIG_ENDIAN
+   uint8_t version:2;
+   uint8_t res:2;
+   uint8_t m:1;
+   uint8_t op_len:5;
+   uint8_t hop_cnt:6;
+#endif
+   uint16_t egress_nick;
+   uint16_t ingress_nick;
+};
+
+
+/**
+ * \brief Parse specific fields from TRILL.
+ * \param [in] data_ptr Pointer to begin of header.
+ * \param [out] pkt Pointer to Packet structure where parsed fields will be stored.
+ * \return Size of header in bytes.
+ */
+inline uint16_t parse_trill(const u_char *data_ptr, Packet *pkt)
+{
+   struct trill_hdr *trill = (struct trill_hdr *) data_ptr;
+   uint8_t op_len = ((trill->op_len1 << 2) | trill->op_len2);
+   uint8_t op_len_bytes = op_len * 4;
+
+   DEBUG_MSG("TRILL header:\n");
+   DEBUG_MSG("\tHDR version:\t%u\n",         trill->version);
+   DEBUG_MSG("\tRES:\t\t%u\n",               trill->res);
+   DEBUG_MSG("\tM:\t\t%u\n",                 trill->m);
+   DEBUG_MSG("\tOP length:\t%u (%u B)\n",    op_len, op_len_bytes);
+   DEBUG_MSG("\tHop cnt:\t%u\n",             trill->hop_cnt);
+   DEBUG_MSG("\tEgress nick:\t%u\n",         ntohs(trill->egress_nick));
+   DEBUG_MSG("\tIngress nick:\t%u\n",        ntohs(trill->ingress_nick));
+
+   return sizeof(trill_hdr) + op_len_bytes;
+}
+
 /**
  * \brief Parse specific fields from IPv4 header.
  * \param [in] data_ptr Pointer to begin of header.
@@ -439,29 +483,21 @@ inline uint16_t process_pppoe(const u_char *data_ptr, Packet *pkt)
    return length;
 }
 
-#ifndef HAVE_NDP
 
-/**
- * \brief Parsing callback function for pcap_dispatch() call. Parse packets up to transport layer.
- * \param [in,out] arg Serves for passing pointer to Packet structure into callback function.
- * \param [in] h Contains timestamp and packet size.
- * \param [in] data Pointer to the captured packet data.
- */
-void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data)
+void parse_packet(Packet *pkt, struct timeval ts, const uint8_t *data, uint16_t len, uint16_t caplen)
 {
-   Packet *pkt = (Packet *) arg;
    uint16_t data_offset = 0;
 
    DEBUG_MSG("---------- packet parser  #%u -------------\n", ++s_total_pkts);
    DEBUG_CODE(
       char timestamp[32];
-      time_t time = h->ts.tv_sec;
+      time_t time = ts.tv_sec;
       strftime(timestamp, sizeof(timestamp), "%FT%T", localtime(&time));
    );
-   DEBUG_MSG("Time:\t\t\t%s.%06lu\n",     timestamp, h->ts.tv_usec);
-   DEBUG_MSG("Packet length:\t\tcaplen=%uB len=%uB\n\n", h->caplen, h->len);
+   DEBUG_MSG("Time:\t\t\t%s.%06lu\n",     timestamp, ts.tv_usec);
+   DEBUG_MSG("Packet length:\t\tcaplen=%uB len=%uB\n\n", caplen, len);
 
-   pkt->timestamp = h->ts;
+   pkt->timestamp = ts;
    pkt->field_indicator = 0;
    pkt->src_port = 0;
    pkt->dst_port = 0;
@@ -470,6 +506,10 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
    pkt->tcp_control_bits = 0;
 
    data_offset = parse_eth_hdr(data, pkt);
+   if (pkt->ethertype == ETH_P_TRILL) {
+      data_offset += parse_trill(data + data_offset, pkt);
+      data_offset += parse_eth_hdr(data + data_offset, pkt);
+   }
    if (pkt->ethertype == ETH_P_IP) {
       data_offset += parse_ipv4_hdr(data + data_offset, pkt);
    } else if (pkt->ethertype == ETH_P_IPV6) {
@@ -493,21 +533,34 @@ void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data
       data_offset += parse_icmpv6_hdr(data + data_offset, pkt);
    }
 
-   uint32_t len = h->caplen;
-   if (len > MAXPCKTSIZE) {
-      len = MAXPCKTSIZE;
-      DEBUG_MSG("Packet size too long, truncating to %u\n", len);
+   uint32_t pkt_len = caplen;
+   if (pkt_len > MAXPCKTSIZE) {
+      pkt_len = MAXPCKTSIZE;
+      DEBUG_MSG("Packet size too long, truncating to %u\n", pkt_len);
    }
-   memcpy(pkt->packet, data, len);
-   pkt->packet[len] = 0;
-   pkt->total_length = len;
+   memcpy(pkt->packet, data, pkt_len);
+   pkt->packet[pkt_len] = 0;
+   pkt->total_length = pkt_len;
 
-   pkt->payload_length = len - data_offset;
+   pkt->payload_length = pkt_len - data_offset;
    pkt->payload = pkt->packet + data_offset;
 
    DEBUG_MSG("Payload length:\t%u\n", pkt->payload_length);
    DEBUG_MSG("Packet parser exits: packet parsed\n");
    packet_valid = true;
+}
+
+#ifndef HAVE_NDP
+
+/**
+ * \brief Parsing callback function for pcap_dispatch() call. Parse packets up to transport layer.
+ * \param [in,out] arg Serves for passing pointer to Packet structure into callback function.
+ * \param [in] h Contains timestamp and packet size.
+ * \param [in] data Pointer to the captured packet data.
+ */
+void packet_handler(u_char *arg, const struct pcap_pkthdr *h, const u_char *data)
+{
+   parse_packet((Packet *) arg, h->ts, data, h->len, h->caplen);
 }
 
 static void print_libpcap_stats(pcap_t *handle) {
@@ -725,69 +778,11 @@ int PcapReader::get_pkt(Packet &packet)
 #else /* HAVE_NDP */
 void packet_ndp_handler(Packet *pkt, const struct ndp_packet *ndp_packet, const struct ndp_header *ndp_header)
 {
-   uint16_t data_offset = 0;
-
    struct timeval ts;
    ts.tv_sec = ndp_header->timestamp_sec;
-   ts.tv_usec = ndp_header->timestamp_nsec*1000;
+   ts.tv_usec = ndp_header->timestamp_nsec * 1000;
 
-   DEBUG_MSG("---------- packet parser  #%u -------------\n", ++s_total_pkts);
-   DEBUG_CODE(
-         char timestamp[32];
-         time_t time = ts;
-         strftime(timestamp, sizeof(timestamp), "%FT%T", localtime(&time));
-         );
-   DEBUG_MSG("Time:\t\t\t%s.%06lu\n",     timestamp, h->ts.tv_usec);
-   DEBUG_MSG("Packet length:\t\tcaplen=%uB len=%uB\n\n", h->caplen, h->len);
-
-   pkt->timestamp = ts;
-   pkt->field_indicator = 0;
-   pkt->src_port = 0;
-   pkt->dst_port = 0;
-   pkt->ip_proto = 0;
-   pkt->ip_version = 0;
-   pkt->tcp_control_bits = 0;
-
-   uint8_t *data = ndp_packet->data;
-   data_offset = parse_eth_hdr(data, pkt);
-   if (pkt->ethertype == ETH_P_IP) {
-      data_offset += parse_ipv4_hdr(data + data_offset, pkt);
-   } else if (pkt->ethertype == ETH_P_IPV6) {
-      data_offset += parse_ipv6_hdr(data + data_offset, pkt);
-   } else if (pkt->ethertype == ETH_P_MPLS_UC || pkt->ethertype == ETH_P_MPLS_MC) {
-      data_offset += process_mpls(data + data_offset, pkt);
-   } else if (pkt->ethertype == ETH_P_PPP_SES) {
-      data_offset += process_pppoe(data + data_offset, pkt);
-   } else if (!parse_all) {
-      DEBUG_MSG("Unknown ethertype %x\n", pkt->ethertype);
-      return;
-   }
-
-   if (pkt->ip_proto == IPPROTO_TCP) {
-      data_offset += parse_tcp_hdr(data + data_offset, pkt);
-   } else if (pkt->ip_proto == IPPROTO_UDP) {
-      data_offset += parse_udp_hdr(data + data_offset, pkt);
-   } else if (pkt->ip_proto == IPPROTO_ICMP) {
-      data_offset += parse_icmp_hdr(data + data_offset, pkt);
-   } else if (pkt->ip_proto == IPPROTO_ICMPV6) {
-      data_offset += parse_icmpv6_hdr(data + data_offset, pkt);
-   }
-
-   uint32_t len = ndp_packet->data_length;
-   if (len > MAXPCKTSIZE) {
-      len = MAXPCKTSIZE;
-      DEBUG_MSG("Packet size too long, truncating to %u\n", len);
-   }
-   memcpy(pkt->packet, data, len);
-   pkt->packet[len] = 0;
-   pkt->total_length = len;
-
-   pkt->payload_length = len - data_offset;
-   pkt->payload = pkt->packet + data_offset;
-
-   DEBUG_MSG("Payload length:\t%u\n", pkt->payload_length);
-   DEBUG_MSG("Packet parser exits: packet parsed\n");
-   packet_valid = true;
+   parse_packet(pkt, ts, ndp_packet->data, ndp_packet->data_length, ndp_packet->data_length);
 }
 
 /**

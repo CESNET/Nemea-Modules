@@ -89,7 +89,7 @@ static int stop = 0;
   "For example: \'-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter"\
   " will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,https,dns,sip,ntp,smtp,basic,arp,passivedns,pstats", required_argument, "string")\
   PARAM('c', "count", "Quit after number of packets are captured.", required_argument, "uint32")\
-  PARAM('I', "interface", "Capture from given network interface. Parameter require interface name (eth0 for example).", required_argument, "string")\
+  PARAM('I', "interface", "Capture from given network interface. Parameter require interface name (eth0 for example). For nfb interface you can channel after interface delimited by : (/dev/nfb0:1) default is 0", required_argument, "string")\
   PARAM('r', "file", "Pcap file to read. - to read from stdin.", required_argument, "string") \
   PARAM('n', "no_eof", "Don't send NULL record message when flow_meter exits.", no_argument, "none") \
   PARAM('l', "snapshot_len", "Snapshot length when reading packets. Set value between 120-65535.", required_argument, "uint32") \
