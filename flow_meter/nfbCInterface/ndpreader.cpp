@@ -38,17 +38,25 @@ NdpReader::~NdpReader()
  */
 int NdpReader::init_interface(const string &interface)
 {
+   std::string p_interface = interface;
+   int channel = 0;
+   std::size_t del_found = interface.find_last_of(":");
+   if(del_found != string::npos) {
+       std::string channel_str = interface.substr(del_found+1);
+       p_interface = interface.substr(0, del_found);
+       channel = std::stoi(channel_str);
+   }
    //Open NFB
-   std::cout << "Opening device: " << interface << std::endl;
-   dev_handle = nfb_open(interface.c_str()); // path to NFB device
+   std::cout << "Opening device: " << p_interface.c_str() << " Channel: " << channel << std::endl;
+   dev_handle = nfb_open(p_interface.c_str()); // path to NFB device
    if(!dev_handle) {
-      error_msg = std::string() + "unable to open NFB device '" + interface + "'";
+      error_msg = std::string() + "unable to open NFB device '" + p_interface + "'";
       return 1;
    }
 
    struct bitmask *bits = NULL;
    int node_id;
-   rx_handle = ndp_open_rx_queue(dev_handle, 0);
+   rx_handle = ndp_open_rx_queue(dev_handle, channel);
    if(!rx_handle)
    {
       error_msg = std::string() + "error opening NDP queue of NFB device";
@@ -153,7 +161,7 @@ void ndp_reader_free(struct NdpReaderContext* context) {
 	delete ((NdpReader*)context->reader);
 }
 int  ndp_reader_init_interface(struct NdpReaderContext* context, const char *interface) {
-	((NdpReader*)context->reader)->init_interface(std::string(interface));
+	return ((NdpReader*)context->reader)->init_interface(std::string(interface));
 }
 void ndp_reader_print_stats(struct NdpReaderContext* context) {
 	((NdpReader*)context->reader)->print_stats();
