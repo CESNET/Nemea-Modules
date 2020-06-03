@@ -138,6 +138,7 @@ class HTTPSPlugin : public FlowCachePlugin
 public:
    HTTPSPlugin(const options_t &module_options);
    HTTPSPlugin(const options_t &module_options, vector<plugin_opt> plugin_options);
+   ~HTTPSPlugin();
    int post_create(Flow &rec, const Packet &pkt);
    int pre_update(Flow &rec, Packet &pkt);
    void finish();
