@@ -53,6 +53,7 @@
 #include "packet.h"
 #include "flow_meter.h"
 
+
 #ifndef PSTATS_MAXELEMCOUNT
 #define PSTATS_MAXELEMCOUNT 30
 #endif
@@ -61,6 +62,27 @@ using namespace std;
 
 #define IPFIX_TLS_RECORD_LENGTHS 44956
 #define IPFIX_TLS_RECORD_TIMES 44957
+
+/**
+ * \brief Swaps byte order of 8 B value.
+ * @param value Value to swap
+ * @return Swapped value
+ */
+ static inline uint64_t htonll(uint64_t n)
+ {
+ #if __BYTE_ORDER == __BIG_ENDIAN
+     return n;
+ #else
+     return (((uint64_t)htonl(n)) << 32) + htonl(n >> 32);
+ #endif
+ }
+
+
+static inline uint64_t tv2ts(timeval input)
+{
+  return static_cast<uint64_t>(input.tv_sec) * 1000 + (input.tv_sec / 1000);
+}
+
 
 /**
  * \brief Flow record extension header for storing parsed PSTATS packets.
@@ -180,15 +202,14 @@ struct RecordExtPSTATS : RecordExt {
 
       //update information in hdr for next basic list with packet timestamps
       //timestamps are in format [i] = sec, [i+1] = usec
-      hdr.length = IpfixBasicListHdrSize + pkt_count * 2 * (sizeof(uint32_t));
+      hdr.length = IpfixBasicListHdrSize + pkt_count * (sizeof(uint64_t));
       hdr.hdrFieldID = PktTmstp;
-      hdr.hdrElementLength = sizeof(uint32_t);
+      hdr.hdrElementLength = sizeof(uint64_t);
       bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
       for (int i = 0; i < pkt_count; i++) {
-         (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_timestamps[i].tv_sec);
-         bufferPtr += sizeof(uint32_t);
-         (*reinterpret_cast<uint32_t *>(buffer + bufferPtr)) = htonl(pkt_timestamps[i].tv_usec);
-         bufferPtr += sizeof(uint32_t);
+         (*reinterpret_cast<uint64_t *>(buffer + bufferPtr)) = htonll(tv2ts(pkt_timestamps[i]));
+         bufferPtr += sizeof(uint64_t);
+
       }
 
       // Fill tcp flags
