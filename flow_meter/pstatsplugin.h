@@ -52,6 +52,7 @@
 #include "flowcacheplugin.h"
 #include "packet.h"
 #include "flow_meter.h"
+#include "byte-utils.h"
 
 
 #ifndef PSTATS_MAXELEMCOUNT
@@ -59,24 +60,6 @@
 #endif
 
 using namespace std;
-
-#define IPFIX_TLS_RECORD_LENGTHS 44956
-#define IPFIX_TLS_RECORD_TIMES 44957
-
-/**
- * \brief Swaps byte order of 8 B value.
- * @param value Value to swap
- * @return Swapped value
- */
- static inline uint64_t htonll(uint64_t n)
- {
- #if __BYTE_ORDER == __BIG_ENDIAN
-     return n;
- #else
-     return (((uint64_t)htonl(n)) << 32) + htonl(n >> 32);
- #endif
- }
-
 
 static inline uint64_t tv2ts(timeval input)
 {
@@ -207,7 +190,7 @@ struct RecordExtPSTATS : RecordExt {
       hdr.hdrElementLength = sizeof(uint64_t);
       bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
       for (int i = 0; i < pkt_count; i++) {
-         (*reinterpret_cast<uint64_t *>(buffer + bufferPtr)) = htonll(tv2ts(pkt_timestamps[i]));
+         (*reinterpret_cast<uint64_t *>(buffer + bufferPtr)) = swap_uint64(tv2ts(pkt_timestamps[i]));
          bufferPtr += sizeof(uint64_t);
 
       }
