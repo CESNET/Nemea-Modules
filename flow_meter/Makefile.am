@@ -57,7 +57,8 @@ flow_meter_src=flow_meter.cpp \
 		conversion.h \
 		conversion.cpp \
 		pstatsplugin.h \
-		pstatsplugin.cpp
+		pstatsplugin.cpp \
+		byte-utils.h
 
 ipfixprobe_SOURCES=$(flow_meter_src)
 

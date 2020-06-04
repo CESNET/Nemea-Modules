@@ -57,6 +57,7 @@
 #include "ipfixexporter.h"
 #include "flowifc.h"
 #include "ipfix-elements.h"
+#include "byte-utils.h"
 
 #define GCC_CHECK_PRAGMA ((__GNUC__ == 4 && 6 <= __GNUC_MINOR__) || 4 < __GNUC__)
 
@@ -994,25 +995,6 @@ int IPFIXExporter::reconnect()
 }
 
 /**
- * \brief Swaps byte order of 8 B value.
- * @param value Value to swap
- * @return Swapped value
- */
-#if BYTEORDER == 4321 /* Big endian */
-static inline uint64_t swap_uint64(uint64_t value)
-{
-   return value;
-}
-#else
-static inline uint64_t swap_uint64(uint64_t value)
-{
-   value = ((value << 8) & 0xFF00FF00FF00FF00ULL ) | ((value >> 8) & 0x00FF00FF00FF00FFULL );
-   value = ((value << 16) & 0xFFFF0000FFFF0000ULL ) | ((value >> 16) & 0x0000FFFF0000FFFFULL );
-   return (value << 32) | (value >> 32);
-}
-#endif
-
-/**
  * \brief Fill template buffer with packet fields.
  * @param pkt Packet
  * @param tmplt Template containing buffer
@@ -1106,4 +1088,3 @@ int IPFIXExporter::fill_basic_flow(Flow &flow, template_t *tmplt)
 
    return length;
 }
-
