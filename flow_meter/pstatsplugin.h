@@ -204,7 +204,7 @@ struct RecordExtPSTATS : RecordExt {
 
       // Fill directions
       hdr.length = IpfixBasicListHdrSize + pkt_count * (sizeof(int8_t));
-      hdr.hdrFieldID = ((1<<15)|(uint16_t)PktDir);
+      hdr.hdrFieldID = ((1 << 15) | (uint16_t) PktDir);
       hdr.hdrElementLength = sizeof(int8_t);
       bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
       memcpy(buffer + bufferPtr, pkt_dirs, pkt_count);
