@@ -65,10 +65,10 @@
 #define FIELD(EN, ID, LEN, SRC) EN, ID, LEN, SRC
 
 /* The list of known IPFIX elements: */
-#define SRC_BYTES(F)                  F(0,        1,    8,   &flow.src_octet_total_length)
-#define DST_BYTES(F)                  F(0,        1,    8,   &flow.dst_octet_total_length)
-#define SRC_PACKETS(F)                F(0,        2,    8,   (temp = (uint64_t) flow.src_pkt_total_cnt, &temp))
-#define DST_PACKETS(F)                F(0,        2,    8,   (temp = (uint64_t) flow.dst_pkt_total_cnt, &temp))
+#define BYTES(F)                      F(0,        1,    8,   &flow.src_octet_total_length)
+#define BYTES_REV(F)                  F(29305,    1,    8,   &flow.dst_octet_total_length)
+#define PACKETS(F)                    F(0,        2,    8,   (temp = (uint64_t) flow.src_pkt_total_cnt, &temp))
+#define PACKETS_REV(F)                F(29305,    2,    8,   (temp = (uint64_t) flow.dst_pkt_total_cnt, &temp))
 #define FLOW_START_MSEC(F)            F(0,      152,    8,   (temp = ((uint64_t) flow.time_first.tv_sec) * 1000 + (flow.time_first.tv_usec / 1000), &temp))
 #define FLOW_END_MSEC(F)              F(0,      153,    8,   (temp = ((uint64_t) flow.time_last.tv_sec) * 1000 + (flow.time_last.tv_usec / 1000), &temp))
 #define OBSERVATION_MSEC(F)           F(0,      323,    8,   NULL)
@@ -88,8 +88,8 @@
 #define L3_IPV4_TTL(F)                F(0,      192,    1,   NULL)
 #define L3_IPV6_TTL(F)                F(0,      192,    1,   NULL)
 #define L4_PROTO(F)                   F(0,        4,    1,   &flow.ip_proto)
-#define L4_SRC_TCP_FLAGS(F)           F(0,        6,    1,   &flow.src_tcp_control_bits)
-#define L4_DST_TCP_FLAGS(F)           F(0,        6,    1,   &flow.dst_tcp_control_bits)
+#define L4_TCP_FLAGS(F)               F(0,        6,    1,   &flow.src_tcp_control_bits)
+#define L4_TCP_FLAGS_REV(F)           F(29305,    6,    1,   &flow.dst_tcp_control_bits)
 #define L4_PORT_SRC(F)                F(0,        7,    2,   &flow.src_port)
 #define L4_PORT_DST(F)                F(0,       11,    2,   &flow.dst_port)
 #define L4_ICMP_TYPE_CODE(F)          F(0,       32,    2,   NULL)
@@ -192,16 +192,16 @@
    F(OBSERVATION_MSEC)
 
 #define BASIC_TMPLT_V4(F) \
-   F(SRC_BYTES) \
-   F(DST_BYTES) \
-   F(SRC_PACKETS) \
-   F(DST_PACKETS) \
+   F(BYTES) \
+   F(BYTES_REV) \
+   F(PACKETS) \
+   F(PACKETS_REV) \
    F(FLOW_START_MSEC) \
    F(FLOW_END_MSEC) \
    F(L3_PROTO) \
    F(L4_PROTO) \
-   F(L4_SRC_TCP_FLAGS) \
-   F(L4_DST_TCP_FLAGS) \
+   F(L4_TCP_FLAGS) \
+   F(L4_TCP_FLAGS_REV) \
    F(L4_PORT_SRC) \
    F(L4_PORT_DST) \
    F(INPUT_INTERFACE) \
@@ -211,16 +211,16 @@
    F(L2_DST_MAC)
 
 #define BASIC_TMPLT_V6(F) \
-   F(SRC_BYTES) \
-   F(DST_BYTES) \
-   F(SRC_PACKETS) \
-   F(DST_PACKETS) \
+   F(BYTES) \
+   F(BYTES_REV) \
+   F(PACKETS) \
+   F(PACKETS_REV) \
    F(FLOW_START_MSEC) \
    F(FLOW_END_MSEC) \
    F(L3_PROTO) \
    F(L4_PROTO) \
-   F(L4_SRC_TCP_FLAGS) \
-   F(L4_DST_TCP_FLAGS) \
+   F(L4_TCP_FLAGS) \
+   F(L4_TCP_FLAGS_REV) \
    F(L4_PORT_SRC) \
    F(L4_PORT_DST) \
    F(INPUT_INTERFACE) \
