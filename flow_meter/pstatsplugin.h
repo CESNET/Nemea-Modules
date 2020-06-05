@@ -160,7 +160,7 @@ struct RecordExtPSTATS : RecordExt {
       RecordExtPSTATS::IpfixBasicRecordListHdr hdr(255,//Maximum size see rfc631
             IpfixBasicListHdrSize + pkt_count * (sizeof(uint16_t)),
             3,
-            ((1<<15)|(uint16_t)PktSize),
+            ((1 << 15) | (uint16_t) PktSize),
             sizeof(uint16_t),
             CesnetPem);
 
