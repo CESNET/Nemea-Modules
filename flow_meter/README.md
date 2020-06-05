@@ -86,7 +86,7 @@ Basic unirec fields exported on interface with basic (pseudo) plugin. These fiel
 | SRC_PORT               | uint16           | transport layer source port                         |
 | DIR_BIT_FIELD          | uint8            | bit field for determining outgoing/incoming traffic |
 | PROTOCOL               | uint8            | transport protocol                                  |
-| TCP_FLAGS              | uint8            | TCP protocol flags                                  |
+| TCP_FLAGS              | uint8            | TCP protocol flags (src to dst)                     |
 | TCP_FLAGS_REV          | uint8            | TCP protocol flags (dst to src)                     |
 | TOS                    | uint8            | IP type of service                                  |
 | TTL                    | uint8            | IP time to live                                     |
