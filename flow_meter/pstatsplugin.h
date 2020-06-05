@@ -79,17 +79,16 @@ struct RecordExtPSTATS : RecordExt {
 
    typedef enum eHdrFieldID
    {
-      PktSize = 44956,
-      PktDelays = 44957,
-      PktFlags = 44964,
-      PktDir = 44964,
-      PktTmstp = 44966
+      PktSize = 1013,
+      PktFlags = 1015,
+      PktDir = 1016,
+      PktTmstp = 1014
    } eHdrSemantic;
 
 
    struct IpfixBasicRecordListHdr {
      IpfixBasicRecordListHdr(uint8_t flag, uint16_t length, uint8_t hdrSemantic,
-                          eHdrFieldID hdrFieldID, uint16_t hdrElementLength,
+                          uint16_t hdrFieldID, uint16_t hdrElementLength,
                           uint32_t hdrEnterpriseNum):flag(flag),
                           length(length),hdrSemantic(hdrSemantic),
                           hdrFieldID(hdrFieldID),
@@ -161,7 +160,7 @@ struct RecordExtPSTATS : RecordExt {
       RecordExtPSTATS::IpfixBasicRecordListHdr hdr(255,//Maximum size see rfc631
             IpfixBasicListHdrSize + pkt_count * (sizeof(uint16_t)),
             3,
-            PktSize,
+            ((1<<15)|(uint16_t)PktSize),
             sizeof(uint16_t),
             CesnetPem);
 
@@ -186,7 +185,7 @@ struct RecordExtPSTATS : RecordExt {
       //update information in hdr for next basic list with packet timestamps
       //timestamps are in format [i] = sec, [i+1] = usec
       hdr.length = IpfixBasicListHdrSize + pkt_count * (sizeof(uint64_t));
-      hdr.hdrFieldID = PktTmstp;
+      hdr.hdrFieldID = ((1<<15)|(uint16_t)PktTmstp);
       hdr.hdrElementLength = sizeof(uint64_t);
       bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
       for (int i = 0; i < pkt_count; i++) {
@@ -197,7 +196,7 @@ struct RecordExtPSTATS : RecordExt {
 
       // Fill tcp flags
       hdr.length = IpfixBasicListHdrSize + pkt_count * (sizeof(uint8_t));
-      hdr.hdrFieldID = PktFlags;
+      hdr.hdrFieldID = ((1<<15)|(uint16_t)PktFlags);
       hdr.hdrElementLength = sizeof(uint8_t);
       bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
       memcpy(buffer + bufferPtr, pkt_tcp_flgs, pkt_count);
@@ -205,7 +204,7 @@ struct RecordExtPSTATS : RecordExt {
 
       // Fill directions
       hdr.length = IpfixBasicListHdrSize + pkt_count * (sizeof(int8_t));
-      hdr.hdrFieldID = PktDir;
+      hdr.hdrFieldID = ((1<<15)|(uint16_t)PktDir);
       hdr.hdrElementLength = sizeof(int8_t);
       bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
       memcpy(buffer + bufferPtr, pkt_dirs, pkt_count);
