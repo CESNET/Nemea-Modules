@@ -185,7 +185,7 @@ struct RecordExtPSTATS : RecordExt {
       //update information in hdr for next basic list with packet timestamps
       //timestamps are in format [i] = sec, [i+1] = usec
       hdr.length = IpfixBasicListHdrSize + pkt_count * (sizeof(uint64_t));
-      hdr.hdrFieldID = ((1<<15)|(uint16_t)PktTmstp);
+      hdr.hdrFieldID = ((1 << 15) | (uint16_t) PktTmstp);
       hdr.hdrElementLength = sizeof(uint64_t);
       bufferPtr += FillBasicListBuffer(hdr, buffer + bufferPtr, size);
       for (int i = 0; i < pkt_count; i++) {
