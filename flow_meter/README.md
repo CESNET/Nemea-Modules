@@ -75,12 +75,12 @@ Basic unirec fields exported on interface with basic (pseudo) plugin. These fiel
 | SRC_MAC                | macaddr          | source MAC address                                  |
 | DST_IP                 | ipaddr           | destination IP address                              |
 | SRC_IP                 | ipaddr           | source IP address                                   |
-| BYTES                  | uint64           | number of bytes in data flow                        |
+| BYTES                  | uint64           | number of bytes in data flow (src to dst)           |
 | BYTES_REV              | uint64           | number of bytes in data flow (dst to src)           |
 | LINK_BIT_FIELD or ODID | uint64 or uint32 | exporter identification                             |
 | TIME_FIRST             | time             | first time stamp                                    |
 | TIME_LAST              | time             | last time stamp                                     |
-| PACKETS                | uint32           | number of packets in data flow                      |
+| PACKETS                | uint32           | number of packets in data flow (src to dst)         |
 | PACKETS_REV            | uint32           | number of packets in data flow (dst to src)         |
 | DST_PORT               | uint16           | transport layer destination port                    |
 | SRC_PORT               | uint16           | transport layer source port                         |
