@@ -10,6 +10,7 @@ SUBDIRS=hoststats \
 		bruteforce \
 		haddrscan \
 		sipbruteforce \
+		sshbruteforceml \
 		amplificationdetector \
 		warden_filer \
 		minerdetector

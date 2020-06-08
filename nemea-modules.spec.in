@@ -100,6 +100,7 @@ ldconfig
 %{_bindir}/nemea/resolver.py
 %{_bindir}/nemea/scalar_agg
 %{_bindir}/nemea/sipbf2idea.py
+%{_bindir}/nemea/sshbruteforceml2idea.py
 %{_bindir}/nemea/svm-tools
 %{_bindir}/nemea/topn
 %{_bindir}/nemea/traffic_repeater
@@ -125,6 +126,7 @@ ldconfig
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/blacklist2idea.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/miner2idea.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/sipbf2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/sshbruteforceml2idea.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/venom2idea.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/voipfraud2idea.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/vportscan2idea.sup
