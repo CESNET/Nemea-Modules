@@ -270,16 +270,15 @@ The following table shows bit values of `SMTP\_STAT_CODE\_FLAGS` for each presen
 * Bit is set if answer contains SPAM keyword.
 
 ### PSTATS
-List of unirec fields exported on interface by PSTATS plugin.
+List of unirec fields exported on interface by PSTATS plugin.  The plugin is compiled to gather statistics for the first `PSTATS_MAXELEMCOUNT` (30 by default) packets in the biflow record.
+Note: the following fields are UniRec arrays.
 
 | Unirec field               | Type     | Description                            |
 |:--------------------------:|:--------:|:--------------------------------------:|
-| STATS_PCKT_SIZES_SRC       | uint16\* | Source packet sizes in bytes           |
-| STATS_PCKT_SIZES_DST       | uint16\* | Destination packet sizes in bytes      |
-| STATS_PCKT_TIMESTAMPS_SRC  | time\*   | Source timestamps for each packet      |
-| STATS_PCKT_TIMESTAMPS_DST  | time\*   | Destination timestamps for each packet |
-| STATS_PCKT_TCPFLGS_SRC     | uint8\*  | Source TCP flags for each packet       |
-| STATS_PCKT_TCPFLGS_DST     | uint8\*  | Destination TCP flags for each packet  |
+| PPI_PKT_LENGTHS            | uint16\* | Sizes of the first packets             |
+| PPI_PKT_TIMES              | time\*   | Timestamps of the first packets        |
+| PPI_PKT_DIRECTIONS         | int8\*   | Directions of the first packets        |
+| PPI_PKT_FLAGS              | uint8\*  | TCP flags for each packet              |
 
 ### ARP
 List of unirec fields exported on interface by ARP plugin.
