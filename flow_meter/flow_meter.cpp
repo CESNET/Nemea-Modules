@@ -635,10 +635,6 @@ int main(int argc, char *argv[])
 
    packet.packet = new char[MAXPCKTSIZE + 1];
 
-#ifdef HAVE_NDP
-   std::cout << "Loop started" << std::endl;
-#endif /* HAVE_NDP */
-
    /* Main packet capture loop. */
    while (!stop && (ret = packetloader->get_pkt(packet)) > 0) {
       if (ret == 3) { /* Process timeout. */
@@ -659,13 +655,8 @@ int main(int argc, char *argv[])
       }
    }
 
-#ifdef HAVE_NDP
-   std::cout << "Loop ended" << std::endl;
-#endif /* HAVE_NDP */
-
    if (options.print_stats) {
       packetloader->printStats();
-      std::cout << "Done" << std::endl;
    }
 
    if (ret < 0) {
@@ -679,7 +670,6 @@ int main(int argc, char *argv[])
 #endif
       return error("Error during reading: " + packetloader->error_msg);
    }
-
 
    /* Cleanup. */
    flowcache.finish();
