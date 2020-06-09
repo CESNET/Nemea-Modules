@@ -251,7 +251,7 @@ int NHTFlowCache::put_pkt(Packet &pkt)
 #ifdef FLOW_CACHE_STATS
          expired++;
 #endif /* FLOW_CACHE_STATS */
-         uint32_t flow_new_index = line_index + 8;
+         uint32_t flow_new_index = line_index + line_new_index;
          flow = flow_array[flow_index];
          flow->erase();
          for (uint32_t j = flow_index; j > flow_new_index; j--) {

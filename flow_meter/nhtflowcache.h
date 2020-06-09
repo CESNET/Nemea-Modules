@@ -114,9 +114,10 @@ class NHTFlowCache : public FlowCache
 {
    bool print_stats;
    uint8_t key_len;
-   uint32_t line_size;
    uint32_t size;
+   uint32_t line_size;
    uint32_t line_size_mask;
+   uint32_t line_new_index;
 #ifdef FLOW_CACHE_STATS
    uint64_t empty;
    uint64_t not_empty;
@@ -138,11 +139,11 @@ class NHTFlowCache : public FlowCache
 public:
    NHTFlowCache(const options_t &options)
    {
-      line_size = options.flow_line_size;
       size = options.flow_cache_size;
-      last_ts.tv_sec = 0;
+      line_size = options.flow_line_size;
       /* Mask for getting flow cache line index. */
       line_size_mask = (size - 1) & ~(line_size - 1);
+      line_new_index = line_size / 2;
 #ifdef FLOW_CACHE_STATS
       empty = 0;
       not_empty = 0;
@@ -152,6 +153,7 @@ public:
       lookups = 0;
       lookups2 = 0;
 #endif /* FLOW_CACHE_STATS */
+      last_ts.tv_sec = 0;
       print_stats = options.print_stats;
       active = options.active_timeout;
       inactive = options.inactive_timeout;

@@ -65,6 +65,7 @@ const unsigned int DEFAULT_FLOW_CACHE_SIZE = 131072;
 #endif /* HAVE_NDP */
 #endif /* FLOW_CACHE_SIZE */
 
+/* Flow line size should be at least 2. */
 #ifdef HAVE_NDP
 const unsigned int DEFAULT_FLOW_LINE_SIZE = 4;
 #else
