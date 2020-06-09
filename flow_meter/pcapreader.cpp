@@ -780,7 +780,7 @@ void packet_ndp_handler(Packet *pkt, const struct ndp_packet *ndp_packet, const 
 {
    struct timeval ts;
    ts.tv_sec = ndp_header->timestamp_sec;
-   ts.tv_usec = ndp_header->timestamp_nsec * 1000;
+   ts.tv_usec = ndp_header->timestamp_nsec / 1000;
 
    parse_packet(pkt, ts, ndp_packet->data, ndp_packet->data_length, ndp_packet->data_length);
 }
