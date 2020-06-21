@@ -16,7 +16,7 @@ MODULE_NAME = "sshbruteforceml"
 MODULE_DESC = "Converts output of SSH bruteforce detector based on ML to IDEA."
 
 REQ_TYPE = pytrap.FMT_UNIREC
-REQ_FORMAT = "ipaddr SRC_IP,ipaddr DST_IP,uint16 DST_PORT,uint16 SRC_PORT,time EVENT_TIME"
+REQ_FORMAT = "ipaddr SRC_IP,ipaddr DST_IP,uint16 DST_PORT,uint16 SRC_PORT,uint16 ATTEMPTS,time EVENT_TIME"
 
 # Main conversion function
 def convert_to_idea(rec, opts=None):
@@ -29,22 +29,18 @@ def convert_to_idea(rec, opts=None):
 
     Return report in IDEA format (as Python dict). If None is returned, the alert is skipped.
     """
-    if rec.WARDEN_TYPE != 2:
-        # this alert is not bruteforce
-        return None
-    service = getServiceName(rec.DST_PORT, proto_conv[rec.PROTOCOL])
     source = rec.SRC_IP
     target = rec.DST_IP
-    failcount = 1
+    failcount = rec.ATTEMPTS
 
     idea = {
         "Format": "IDEA0",
         "ID": getRandomId(),
-        "DetectTime": getIDEAtime(rec.DETECTION_TIME),
+        "DetectTime": getIDEAtime(rec.EVENT_TIME),
         "CreateTime": getIDEAtime(),
         "Category": [ "Attempt.Login" ],
         "Description": "Multiple unsuccessful SSH login attempts",
-        "Note": f"Machine Learning model recognized {failcount} unsuccessful login attempts from {source} against SSH server {target}",
+        "Note": f"Machine Learning model recognized cca {failcount} unsuccessful login attempts from {source} against SSH server {target}",
         "Source": [{
             "Proto": [ "tcp", "ssh" ]
          }],

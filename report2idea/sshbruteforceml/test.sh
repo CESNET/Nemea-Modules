@@ -2,29 +2,26 @@
 
 # input data:
 in='
-H4sIAPD8jFcAA2NiAIPCzILElJQiheAg53jPAJ2SzNxUBRfXEFfnEE9/v/gQT19XndLMvBJjIwXX
-MFe/kPhgZ0cfiJChmYJLcEh8gH9QCJhvoRAQ5B/i7+zvA+WGOwa5uALNiAxw1SkuKcrMS1fw8w9x
-ZWBgNGYIYIACRiZmtv9A8PnvlR1RfvlhckAxMQY2JgYGHQZPK0MTcz0jU0M9Yz1DQyMdZJ4xEs9Y
-x98Kv4ni5JjoAjORjZGJHWTiXRW2xKDlhWFVQLFmDpCJCkgmWuoZWhoA9aHy8ZvCI06kKYwMAFPH
-08ewAQAA
+H4sIAAAAAAAAA2NiAIPozILElJQiBZfgkHjPAB0oLzjIGcQrycxNVXANc/ULiQ/x9HXVKc3MKzE0
+U3AMCXH1DQgJhvFBegP8g0JgfJBuEB9ofDKDHgMUcDEwMP4HAhifkYmZDcT//PfKjii//DAuBjGG
+Syy41bMxMrGD+HdV2BKDlheGvfgLVs8IlgcAPUddmM4AAAA=
 '
 
 # output data:
 out='
-H4sIAG4KM14AA92RXWvbMBiF7/crjK4no09/3ZUkZYE2hMV0sFGKJL/ODI5lbHmjC/3vs5SLtRA2
-ttCL9U7ovO+RznmOaAkOjCubA6AiQoxQiSnDVJSMFzQrJPmM3kdooRzs7fA4z3xBV87BoXfxjd03
-Hbqf5VINe3BePKKtHcKJMa9sB+ts2HKm907j+BXdP3np2g4H5UfRerm6Il7c2ApOLrtPYWkDB1Be
-0cPk4KG2g4GHKnzZDqenH/uwgq5b+91P7pxyzegao9owsFGnaOZHbGDswMWdN42DYzBE4Ts7O/lz
-eH29FcGTxizmcYL+lGR+emGnzofhxNc1wFzYs1JzTBgmsqSikLJgp1LXS6+qTHGemAxTrQkWjGc4
-Y2Awz6nRdZaSGio/vYTRDE3vGtv5tdupdU3fQjR142TmZGM9tVHrkUTqBGiMbBftdh/Q07vjK3Lm
-Z9tx0M5dvxHUL8NcQhsUaMPqDMsUUixykWHNFMPzleFK80QxcwHtcnWzWZW/A56UM23CCpn9M3Ca
-5mdb+nYYqv7/IZ7Ennl6nviLLM+AU8b+krgUJiUUJBZC1ljUwLGWIsdM5pIwYYSp5AXE724/Lrev
-C1zmhJwvqTNvBfevJBfBpjUXKac1zgXXWCRQYV2pCss8SSteC60TegnszWJG/RMPghmitQcAAA==
+H4sIALsa714AA92SS2vdMBCF9/0VwuvKyLItP3ahaWgguQSuodCQhSyPHYEtGUluSS7575XkG0oW
+fSy6afFG1pz5zgw6p+RKm4W7pEXJ9eXHC5K8D4fwS2uWQ9NnuGEDwUVWAa4Ja3DT81rkrB9yAUF9
+CQ6E6+QCsYtkJc4ozoqO5m1WtyX5ElQfDHAHP1SUYMIwzTpSt5S2NN9VXjNp8+Q198mFc7CsLr3R
+k1TJQ7SywsjVSa0C5XabnVxnQJuymxBg7bjN6Hj8hObQgvgOsIF80C4633LxKBWgG+BGSTWhRQ8w
+IwNCT0o+w4CE4Cgjb5lveWg0ekFZStM8ZYhPXCrroq8F8xWMb0/DlwXjo96MCNb3p+TOaKfjbk6s
+oWjtY1zs+q6I12dm8vASbjtuJnDnVm3iidJQ+T3odYKddPBL7pwD319APKd+OQUuVbAATz2gN5uD
+UftplzlO/jmiDqF+9ujHIb62z8wc/bqnNYKTq1l/i02OO2mdFHwO3i/vTj9PmKhGGOqG4aocClzU
+FfUJ4wLnnPBhhLzqC/6LhLHOx4vQtqz/wYSxkpA/CBlLQySqvxqyM/N/Ctl30+jQNccEAAA=
 '
 
 test -z "$srcdir" && export srcdir=.
 
 . $srcdir/../test.sh
 
-test_conversion "bruteforce" "cz.cesnet.nemea.brute_force_detector" "$in" "$out"
+test_conversion "sshbruteforceml" "cz.cesnet.nemea.sshbruteforceml" "$in" "$out"
 
