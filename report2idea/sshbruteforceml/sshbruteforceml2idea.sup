@@ -1,0 +1,13 @@
+<module>
+  <name>sshbruteforceml2idea</name>
+  <enabled>true</enabled>
+  <path>/usr/bin/nemea/sshbruteforceml2idea.py</path>
+  <params>-c /etc/nemea/reporters-config.yml</params>
+  <trapinterfaces>
+    <interface>
+      <type>UNIXSOCKET</type>
+      <direction>IN</direction>
+      <params>alerts-sshbfml</params>
+    </interface>
+  </trapinterfaces>
+</module>
