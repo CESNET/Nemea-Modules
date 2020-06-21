@@ -40,7 +40,7 @@ def convert_to_idea(rec, opts=None):
         "CreateTime": getIDEAtime(),
         "Category": [ "Attempt.Login" ],
         "Description": "Multiple unsuccessful SSH login attempts",
-        "Note": f"Machine Learning model recognized cca {failcount} unsuccessful login attempts from {source} against SSH server {target}",
+        "Note": f"Machine Learning model recognized approx. {failcount} unsuccessful login attempts from {source} against SSH server {target}",
         "Source": [{
             "Proto": [ "tcp", "ssh" ]
          }],
@@ -51,7 +51,7 @@ def convert_to_idea(rec, opts=None):
         'Node': [{
             'Name': 'undefined',
             'SW': [ 'Nemea', 'sshbfdetectorml' ],
-            'Type': [ 'Flow', 'Statistical' ]
+            'Type': [ 'Flow', 'Statistical', 'MachineLearning' ]
         }],
     }
     setAddr(idea['Source'][0], source)
