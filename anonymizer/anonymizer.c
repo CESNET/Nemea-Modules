@@ -282,9 +282,9 @@ char *string_anonymize(void *field_ptr, uint32_t field_len, uint8_t mode, regex_
    }
 
    /* Copy string to allocated space */
-   strncpy(output, field, ip[0].rm_so);
-   strncpy(output + ip[0].rm_so, anon_ip_string, new_length);
-   strncpy(output + ip[0].rm_so + new_length, field + ip[0].rm_eo, field_len - ip[0].rm_eo);
+   memcpy(output, field, ip[0].rm_so);
+   memcpy(output + ip[0].rm_so, anon_ip_string, new_length);
+   memcpy(output + ip[0].rm_so + new_length, field + ip[0].rm_eo, field_len - ip[0].rm_eo);
 
    return output;
 }
@@ -326,7 +326,8 @@ void anon_present_fields(ur_template_t *tmplt, void *data, uint8_t mode, regex_t
 */
 int set_fields_present(ur_template_t *tmplt)
 {
-   int i, j = 0;
+   size_t i;
+   int j = 0;
 
    for (i = 0; i < ANON_FIELDS_COUNT; i++) {
       anon_fields[j] = ur_get_id_by_name(anon_field_names[i]);
@@ -344,7 +345,8 @@ int set_fields_present(ur_template_t *tmplt)
 int main(int argc, char **argv)
 {
 //    NMCM_PROGRESS_DEF
-   int ret, reti, i;
+   int ret, reti;
+   size_t i;
    uint8_t init_key[32] = {0};
    char *secret_key = "01234567890123450123456789012345";
    char *secret_file = NULL;
