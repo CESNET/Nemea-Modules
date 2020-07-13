@@ -124,7 +124,12 @@ public:
    bool include_basic_flow_fields();
 
 private:
+   int parse_loc_port(char **data, uint8_t ip_version);
+   bool get_header_val(char **data, const char* header, const int len);
+   void get_headers(char **data, int n, const char *headers[], uint8_t ip_version);
    void parse_ssdp_message(Flow &rec, const Packet &pkt);
+   const char *parse_notify(const char *data, Flow &rec, RecordExtSSDP *ext);
+   void append_value(char *curr_entry, char *value);
 
    bool print_stats;       /**< Indicator whether to print stats when flow cache is finishing or not. */
    RecordExtSSDP *record;

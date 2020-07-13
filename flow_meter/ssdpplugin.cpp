@@ -69,6 +69,21 @@ UR_FIELDS (
    string SSDP_USER_AGENT
 )
 
+enum header_types {
+   LOCATION,
+   NT,
+   ST,
+   SERVER,
+   NONE
+};
+
+const char *headers[]= {
+   "location",
+   "nt",
+   "st",
+   "server"
+};
+
 SSDPPlugin::SSDPPlugin(const options_t &module_options)
 {
    record = NULL;
@@ -91,7 +106,6 @@ int SSDPPlugin::post_create(Flow &rec, const Packet &pkt)
    if (pkt.dst_port == 1900){
       record = new RecordExtSSDP();
       rec.addExtension(record);
-      SSDP_DEBUG_MSG("SSDP post create\n");
       record = NULL;
       
       parse_ssdp_message(rec, pkt);
@@ -123,13 +137,128 @@ void SSDPPlugin::finish()
    }
 }
 
+/**
+ * \brief Parses port from location header message string
+ */
+int SSDPPlugin::parse_loc_port(char **data, uint8_t ip_version){
+   int port;
+   char *end_ptr = NULL;
+   if(ip_version == 6){
+      while(**data){
+         if(*(*data)++ == ']'){
+            (*data)++;
+            break;
+         }
+      }
+   }
+   else {
+      while (**data){
+         if(*(*data)++ == '.'){
+            break;
+         }
+      }
+      while(**data){
+         if(*(*data)++ == ':'){
+            break;     
+         }
+      }
+   }
+   port = strtol(*data, &end_ptr, 0);
+   if(*data != end_ptr){
+      return port;
+   }
+   else {
+      return -1;
+   }
+}
+
+/**
+ * \brief Checks for given header string in data
+ */
+bool SSDPPlugin::get_header_val(char **data, const char* header, const int len){
+   if(strncasecmp(*data, header, len) == 0 &&
+      (*data)[len] == ':'){
+      (*data) += len + 1;
+      while(isspace(**data)){
+         (*data)++;
+      };
+      return true;
+   }
+   return false;
+}
+
+/**
+ * \brief Parses one line of SSDP payload
+ */
+void SSDPPlugin::get_headers(char **data, int n, const char *headers[], uint8_t ip_version){
+   for(int i = 0; i < n; i++){
+      if (get_header_val(data, headers[i], strlen(headers[i]))){
+         int port = 0;
+         switch ((header_types) i)
+         {
+            case NT:
+            case ST:
+               if(get_header_val(data, "urn", strlen("urn"))){
+                  SSDP_DEBUG_MSG("%s\n", *data);
+               }
+               break;
+            case LOCATION:
+               port = parse_loc_port(data, ip_version);
+               if (port > 0){
+                  SSDP_DEBUG_MSG("%d\n", port);
+               }
+               break;
+            case SERVER:
+               SSDP_DEBUG_MSG("%s\n", *data);
+               break;
+            default:
+               break;         
+         }
+         break;
+      }
+   }
+   return;
+}
+
+/**
+ * \brief Appends a value to the existing csv entry.
+ */
+void SSDPPlugin::append_value(char *curr_entry, char *value){
+   // TODO
+}
+
+/**
+ * \brief Parses SSDP notify payload.
+ */
+const char *SSDPPlugin::parse_notify(const char *data, Flow &rec, RecordExtSSDP *ext){
+   char *tmp_old = (char *)data;
+   char *tmp = tmp_old;
+   while (*tmp != '\0'){
+      if (*tmp == '\n'){
+         *tmp = '\0';
+         get_headers(&tmp_old, 4, headers, rec.ip_version);
+         tmp_old = tmp + 1;
+      }
+      tmp++;
+   }
+   return data;
+}
+
+/**
+ * \brief Parses SSDP payload.
+ */
 void SSDPPlugin::parse_ssdp_message(Flow &rec, const Packet &pkt){
    const char* data = (const char*) pkt.payload;
-   SSDP_DEBUG_MSG("%s", data);
-   const char *i = strcasestr(data, "NOTIFY");
-   if(i){
-      SSDP_DEBUG_MSG("Found notify\n");
+   RecordExtSSDP *ext = NULL;
+   ext = dynamic_cast<RecordExtSSDP *>(rec.getExtension(ssdp));
+   if(data[0] == 'N'){
+      SSDP_DEBUG_MSG("Notify\n");
+      parse_notify(data, rec, ext);
    }
+   else if (data[0] == 'M'){
+      SSDP_DEBUG_MSG("M-search\n");
+   }
+   SSDP_DEBUG_MSG("\n");
 }
 
 const char *ipfix_ssdp_template[] = {
