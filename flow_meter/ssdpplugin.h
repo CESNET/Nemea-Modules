@@ -58,12 +58,14 @@ using namespace std;
  * \brief Flow record extension header for storing parsed SSDP packets.
  */
 struct RecordExtSSDP : RecordExt {
+   int port;
    char urn[511];
    char server[255];
    char user_agent[255];
 
    RecordExtSSDP() : RecordExt(ssdp)
    {
+      port = 0;
       urn[0] = 0;
       server[0] = 0;
       user_agent[0]= 0;
@@ -129,6 +131,7 @@ private:
    void get_headers(char **data, int n, const char *headers[], uint8_t ip_version);
    void parse_ssdp_message(Flow &rec, const Packet &pkt);
    const char *parse_notify(const char *data, Flow &rec, RecordExtSSDP *ext);
+   void parse_search(const char *data, Flow &rec);
    void append_value(char *curr_entry, char *value);
 
    bool print_stats;       /**< Indicator whether to print stats when flow cache is finishing or not. */

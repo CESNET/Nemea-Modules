@@ -74,6 +74,7 @@ enum header_types {
    NT,
    ST,
    SERVER,
+   USER_AGENT,
    NONE
 };
 
@@ -81,7 +82,8 @@ const char *headers[]= {
    "location",
    "nt",
    "st",
-   "server"
+   "server",
+   "user-agent"
 };
 
 SSDPPlugin::SSDPPlugin(const options_t &module_options)
@@ -197,7 +199,6 @@ void SSDPPlugin::get_headers(char **data, int n, const char *headers[], uint8_t 
          switch ((header_types) i)
          {
             case NT:
-            case ST:
                if(get_header_val(data, "urn", strlen("urn"))){
                   SSDP_DEBUG_MSG("%s\n", *data);
                }
@@ -244,6 +245,28 @@ const char *SSDPPlugin::parse_notify(const char *data, Flow &rec, RecordExtSSDP 
    return data;
 }
 
+void SSDPPlugin::parse_search(const char *data, Flow &rec){
+   char *ptr = (char *)data;
+   char *old_ptr = ptr;
+   while (*ptr != '\0'){
+      if(*ptr == '\n'){
+         *ptr = '\0';
+         if(get_header_val(&old_ptr, headers[USER_AGENT], strlen(headers[USER_AGENT]))){
+            SSDP_DEBUG_MSG("%s\n", old_ptr);
+         }
+         else if(get_header_val(&old_ptr, headers[ST], strlen(headers[ST])))
+         {
+            if(get_header_val(&old_ptr, "urn", strlen("urn"))){
+                  SSDP_DEBUG_MSG("%s\n", old_ptr);
+            }
+         }
+         old_ptr = ptr + 1;
+      }
+      ptr++;
+   }
+   return;
+}
+
 /**
  * \brief Parses SSDP payload.
  */
@@ -257,6 +280,7 @@ void SSDPPlugin::parse_ssdp_message(Flow &rec, const Packet &pkt){
    }
    else if (data[0] == 'M'){
       SSDP_DEBUG_MSG("M-search\n");
+      parse_search(data, rec);
    }
    SSDP_DEBUG_MSG("\n");
 }
