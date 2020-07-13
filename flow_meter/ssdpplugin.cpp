@@ -232,12 +232,39 @@ void SSDPPlugin::append_value(char *curr_entry, char *value){
  * \brief Parses SSDP notify payload.
  */
 const char *SSDPPlugin::parse_notify(const char *data, Flow &rec, RecordExtSSDP *ext){
+   int notify_headers[] = { NT, LOCATION, SERVER };
+   unsigned int nt_head_len = sizeof(notify_headers)/sizeof(notify_headers[0]);
    char *tmp_old = (char *)data;
    char *tmp = tmp_old;
    while (*tmp != '\0'){
       if (*tmp == '\n'){
          *tmp = '\0';
-         get_headers(&tmp_old, 4, headers, rec.ip_version);
+         for(unsigned int j = 0, i = 0; j < nt_head_len; j++){
+            i = notify_headers[j];
+            if (get_header_val(&tmp_old, headers[i], strlen(headers[i]))){
+               int port = 0;
+               switch ((header_types) i)
+               {
+                  case NT:
+                     if(get_header_val(&tmp_old, "urn", strlen("urn"))){
+                        SSDP_DEBUG_MSG("%s\n", tmp_old);
+                     }
+                     break;
+                  case LOCATION:
+                     port = parse_loc_port(&tmp_old, rec.ip_version);
+                     if (port > 0){
+                        SSDP_DEBUG_MSG("%d\n", port);
+                     }
+                     break;
+                  case SERVER:
+                     SSDP_DEBUG_MSG("%s\n", tmp_old);
+                     break;
+                  default:
+                     break;         
+               }
+               break;
+            }
+         }
          tmp_old = tmp + 1;
       }
       tmp++;
@@ -246,18 +273,30 @@ const char *SSDPPlugin::parse_notify(const char *data, Flow &rec, RecordExtSSDP 
 }
 
 void SSDPPlugin::parse_search(const char *data, Flow &rec){
+   int search_headers[] = { ST, USER_AGENT };
+   unsigned int sr_head_len = sizeof(search_headers)/sizeof(search_headers[0]);
    char *ptr = (char *)data;
    char *old_ptr = ptr;
    while (*ptr != '\0'){
       if(*ptr == '\n'){
          *ptr = '\0';
-         if(get_header_val(&old_ptr, headers[USER_AGENT], strlen(headers[USER_AGENT]))){
-            SSDP_DEBUG_MSG("%s\n", old_ptr);
-         }
-         else if(get_header_val(&old_ptr, headers[ST], strlen(headers[ST])))
-         {
-            if(get_header_val(&old_ptr, "urn", strlen("urn"))){
-                  SSDP_DEBUG_MSG("%s\n", old_ptr);
+         for(unsigned int j = 0, i = 0; j < sr_head_len; j++){
+            i = search_headers[j];
+            if (get_header_val(&old_ptr, headers[i], strlen(headers[i]))){
+               switch ((header_types) i)
+               {
+                  case ST:
+                     if(get_header_val(&old_ptr, "urn", strlen("urn"))){
+                        SSDP_DEBUG_MSG("%s\n", old_ptr);
+                     }
+                     break;
+                  case USER_AGENT:
+                     SSDP_DEBUG_MSG("%s\n", old_ptr);
+                     break;
+                  default:
+                     break;         
+               }
+               break;
             }
          }
          old_ptr = ptr + 1;
