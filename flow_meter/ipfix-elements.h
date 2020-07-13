@@ -168,6 +168,9 @@
 #define SMTP_CODE_4XX_COUNT(F)        F(8057,    818,   4,   NULL)
 #define SMTP_CODE_5XX_COUNT(F)        F(8057,    819,   4,   NULL)
 #define SMTP_DOMAIN(F)                F(8057,    820,  -1,   NULL)
+#define SSDP_URN(F)                   F(8057,    821,  -1,   NULL)
+#define SSDP_SERVER(F)                F(8057,    822,  -1,   NULL)
+#define SSDP_USER_AGENT(F)            F(8057,    823,  -1,   NULL)
 
 #define STATS_PCKT_SIZES(F)           F(0,    291,  -1,   NULL)
 #define STATS_PCKT_TIMESTAMPS(F)      F(0,    291,  -1,   NULL)
@@ -316,6 +319,12 @@
    F(STATS_PCKT_TCPFLGS) \
    F(STATS_PCKT_DIRECTIONS)
 
+#define IPFIX_SSDP_TEMPLATE(F) \
+   F(SSDP_URN) \
+   F(SSDP_SERVER) \
+   F(SSDP_USER_AGENT)
+
+
 /**
  * List of all known templated.
  *
@@ -334,7 +343,8 @@
    IPFIX_DNS_TEMPLATE(F) \
    IPFIX_PASSIVEDNS_TEMPLATE(F) \
    IPFIX_PSTATS_TEMPLATE(F) \
-   IPFIX_SMTP_TEMPLATE(F)
+   IPFIX_SMTP_TEMPLATE(F) \
+   IPFIX_SSDP_TEMPLATE(F)
 
 
 /**
