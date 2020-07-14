@@ -61,11 +61,13 @@ using namespace std;
 #define SSDP_DEBUG_MSG(format, ...)
 #endif
 
-#define SSDP_UNIREC_TEMPLATE "SSDP_URN,SSDP_SERVER,SSDP_USER_AGENT"
+#define SSDP_UNIREC_TEMPLATE "SSDP_LOCATION_PORT,SSDP_NT,SSDP_SERVER,SSDP_ST,SSDP_USER_AGENT"
 
 UR_FIELDS (
-   string SSDP_URN,
+   uint16 SSDP_LOCATION_PORT,
+   string SSDP_NT,
    string SSDP_SERVER,
+   string SSDP_ST,
    string SSDP_USER_AGENT
 )
 
@@ -206,26 +208,31 @@ void SSDPPlugin::parse_headers(char *data, header_parser_conf conf){
                   case ST:
                      if(get_header_val(&old_ptr, "urn", strlen("urn"))){
                         SSDP_DEBUG_MSG("%s\n", old_ptr);
+                        append_value(conf.ext->st, SSDP_URN_LEN, old_ptr);
                      }
                      break;
                   case NT:
                      if(get_header_val(&old_ptr, "urn", strlen("urn"))){
                         SSDP_DEBUG_MSG("%s\n", old_ptr);
+                        append_value(conf.ext->nt, SSDP_URN_LEN, old_ptr);
                      }
                      break;
                   case LOCATION:
                   {
-                     int port = parse_loc_port(&old_ptr, conf.ip_version);
+                     uint16_t port = parse_loc_port(&old_ptr, conf.ip_version);
                      if (port > 0){
-                        SSDP_DEBUG_MSG("%d\n", port);
+                        SSDP_DEBUG_MSG("%d <- %d\n", conf.ext->port, port);
+                        conf.ext->port = port;
                      }
                      break;
                   }
                   case USER_AGENT:
                      SSDP_DEBUG_MSG("%s\n", old_ptr);
+                     append_value(conf.ext->user_agent, SSDP_USER_AGENT_LEN, old_ptr);
                      break;
                   case SERVER:
                      SSDP_DEBUG_MSG("%s\n", old_ptr);
+                     append_value(conf.ext->server, SSDP_SERVER_LEN, old_ptr);
                      break;
                   default:
                      break;         
@@ -243,8 +250,14 @@ void SSDPPlugin::parse_headers(char *data, header_parser_conf conf){
 /**
  * \brief Appends a value to the existing csv entry.
  */
-void SSDPPlugin::append_value(char *curr_entry, char *value){
-   // TODO
+void SSDPPlugin::append_value(char *curr_entry, unsigned entry_max, char *value){
+   if(strlen(curr_entry) + strlen(value) + 1 < entry_max){
+      if(strstr(curr_entry, value) == NULL){
+         SSDP_DEBUG_MSG("New entry\n");
+         strcat(curr_entry, value);
+         strcat(curr_entry, ";");
+      }
+   }
 }
 
 /**

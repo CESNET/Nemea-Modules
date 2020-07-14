@@ -54,19 +54,25 @@
 
 using namespace std;
 
+#define SSDP_URN_LEN 511
+#define SSDP_SERVER_LEN 255
+#define SSDP_USER_AGENT_LEN 255
+
 /**
  * \brief Flow record extension header for storing parsed SSDP packets.
  */
 struct RecordExtSSDP : RecordExt {
-   int port;
-   char urn[511];
-   char server[255];
-   char user_agent[255];
+   uint16_t port;
+   char nt[SSDP_URN_LEN];
+   char st[SSDP_URN_LEN];
+   char server[SSDP_SERVER_LEN];
+   char user_agent[SSDP_USER_AGENT_LEN];
 
    RecordExtSSDP() : RecordExt(ssdp)
    {
       port = 0;
-      urn[0] = 0;
+      nt[0] = 0;
+      st[0] = 0;
       server[0] = 0;
       user_agent[0]= 0;
    }
@@ -74,30 +80,40 @@ struct RecordExtSSDP : RecordExt {
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
 #ifndef DISABLE_UNIREC
-      ur_set_string(tmplt, record, F_SSDP_URN, urn);
+      ur_set(tmplt, record, F_SSDP_LOCATION_PORT, port);
+      ur_set_string(tmplt, record, F_SSDP_NT, nt);
       ur_set_string(tmplt, record, F_SSDP_SERVER, server);
+      ur_set_string(tmplt, record, F_SSDP_ST, st);
       ur_set_string(tmplt, record, F_SSDP_USER_AGENT, user_agent);
 #endif
    }
 
    virtual int fillIPFIX(uint8_t *buffer, int size)
    {
-      int length = 0;
-      int urn_len = strlen(urn);
+      int length = 2;
+      
+      int nt_len = strlen(nt);
       int server_len = strlen(server);
+      int st_len = strlen(st);
       int user_agent_len = strlen(user_agent);
 
-      if (urn_len + server_len + user_agent_len > size){
+      if (length + nt_len + server_len + st_len + user_agent_len + 4 > size){
          return -1;
       }
 
-      buffer[length++] = urn_len;
-      memcpy(buffer + length, urn, urn_len);
-      length += urn_len;
+      *(uint16_t *) (buffer) = ntohs(port);
+
+      buffer[length++] = nt_len;
+      memcpy(buffer + length, nt, nt_len);
+      length += nt_len;
 
       buffer[length++] = server_len;
       memcpy(buffer + length, server, server_len);
       length += server_len;
+
+      buffer[length++] = st_len;
+      memcpy(buffer + length, st, st_len);
+      length += st_len;
 
       buffer[length++] = user_agent_len;
       memcpy(buffer + length, user_agent, user_agent_len);
