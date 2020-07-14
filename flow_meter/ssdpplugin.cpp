@@ -52,7 +52,7 @@
 
 using namespace std;
 
-#define DEBUG_SSDP
+// #define DEBUG_SSDP
 
 // Print debug message if debugging is allowed.
 #ifdef DEBUG_SSDP
