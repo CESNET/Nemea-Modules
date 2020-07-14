@@ -13,13 +13,16 @@ The expected input:
         "targets": ["18.191.86.84"]}
 
 The example output:
-
+    TODO!
 """
 
 import argparse
 from datetime import timedelta
+import sys
+import traceback
 import json
 import pytrap
+
 
 # The whole functionality of reporting is here:
 from report2idea import getIDEAtime, getRandomId, Run, setAddr
@@ -51,9 +54,12 @@ def load_prefixes(filepath):
     """
     prefixes = None
 
-    with open(filepath, "r") as f:
-        j = json.load(f)
+    try:
+        with open(filepath, "r") as f:
+            j = json.load(f)
         prefixes = [pytrap.UnirecIPAddrRange(pref["ip_prefix"]) for pref in j]
+    except Exception as e:
+        print("ERROR: Can't load prefixes from file '{0}': {1}.".format(filepath, traceback.print_exc()), file=sys.stderr)
 
     return prefixes
 
@@ -93,7 +99,6 @@ def convert_to_idea(rec, opts=None):
             "AggrWin": minutes_to_aggr_win(int(rec["agg_win_minutes"])),
             "Type": ["Flow", "Blacklist"]
         }],
-
         "Ref": ["http://smashed.fit.vutbr.cz:8080/miningProp/json"]
     }
 
@@ -111,7 +116,7 @@ def convert_to_idea(rec, opts=None):
 
     # look up pool IP in guarded prefixes
     if GUARDED_PREFIXES and any([pool in p for p in GUARDED_PREFIXES]):
-        # own guarded resource was detected as a pool
+        # own guarded resource was detected as a pool - add as Source
         idea['Source'].append({"Proto": [proto]})
         setAddr(idea['Source'][1], pool)
         idea['Source'][1]["Type"] = "MiningPool"
@@ -119,6 +124,7 @@ def convert_to_idea(rec, opts=None):
         del idea['Target']
     else:
         # pool is just an external IP and our resource is a potential miner
+        # - add pool as Target
         setAddr(idea['Target'][0], pool)
         idea['Target'][0]["Type"] = "MiningPool"
         idea['Note'] = 'Detected possible CryptoCurrency mining by IP {0}, because of observed communication with {1}:{2} listed as a mining pool server (by sMaSheD list of cryptocurrency mining pools).'.format(", ".join([str(m) for m in miners]), str(pool), ", ".join([str(p) for p in rec["source_ports"]]))
@@ -155,11 +161,11 @@ def minutes_to_aggr_win(minutes):
 PARSER = argparse.ArgumentParser()
 PARSER.add_argument('--blacklist-config', help="Set path to config file of blacklist downloader. Default: /etc/nemea/blacklistfilter/bl_downloader_config.xml",
                     default="/etc/nemea/blacklistfilter/bl_downloader_config.xml")
-PARSER.add_argument("--prefixes", type=str, help="""JSON file with guarded IP prefixes, it must be an
-                    array of objects with "ip_prefix" key, e.g., [{...
-                    "ip_prefix":"10.0.10.0/24" ...}]. If the file is not given,
-                    report miner as a Source only.""",
-                    metavar="FILE", default=None)
+PARSER.add_argument("--prefixes", type=str, metavar="FILE", help="""
+    JSON file with guarded IP prefixes, it must be an array of objects with "ip_prefix" key,
+    e.g., [{... "ip_prefix":"10.0.10.0/24" ...}].
+    When a pool server is found in one of the prefixes, it is reported as Source,
+    otherwise (or when no prefixes are specified) it is reported as Target.""")
 
 # Run the module
 if __name__ == "__main__":
