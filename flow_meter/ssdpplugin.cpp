@@ -190,99 +190,17 @@ bool SSDPPlugin::get_header_val(char **data, const char* header, const int len){
 }
 
 /**
- * \brief Parses one line of SSDP payload
+ * \brief Parses SSDP payload based on configuration in conf struct.
  */
-void SSDPPlugin::get_headers(char **data, int n, const char *headers[], uint8_t ip_version){
-   for(int i = 0; i < n; i++){
-      if (get_header_val(data, headers[i], strlen(headers[i]))){
-         int port = 0;
-         switch ((header_types) i)
-         {
-            case NT:
-               if(get_header_val(data, "urn", strlen("urn"))){
-                  SSDP_DEBUG_MSG("%s\n", *data);
-               }
-               break;
-            case LOCATION:
-               port = parse_loc_port(data, ip_version);
-               if (port > 0){
-                  SSDP_DEBUG_MSG("%d\n", port);
-               }
-               break;
-            case SERVER:
-               SSDP_DEBUG_MSG("%s\n", *data);
-               break;
-            default:
-               break;         
-         }
-         break;
-      }
-   }
-   return;
-}
-
-/**
- * \brief Appends a value to the existing csv entry.
- */
-void SSDPPlugin::append_value(char *curr_entry, char *value){
-   // TODO
-}
-
-/**
- * \brief Parses SSDP notify payload.
- */
-const char *SSDPPlugin::parse_notify(const char *data, Flow &rec, RecordExtSSDP *ext){
-   int notify_headers[] = { NT, LOCATION, SERVER };
-   unsigned int nt_head_len = sizeof(notify_headers)/sizeof(notify_headers[0]);
-   char *tmp_old = (char *)data;
-   char *tmp = tmp_old;
-   while (*tmp != '\0'){
-      if (*tmp == '\n'){
-         *tmp = '\0';
-         for(unsigned int j = 0, i = 0; j < nt_head_len; j++){
-            i = notify_headers[j];
-            if (get_header_val(&tmp_old, headers[i], strlen(headers[i]))){
-               int port = 0;
-               switch ((header_types) i)
-               {
-                  case NT:
-                     if(get_header_val(&tmp_old, "urn", strlen("urn"))){
-                        SSDP_DEBUG_MSG("%s\n", tmp_old);
-                     }
-                     break;
-                  case LOCATION:
-                     port = parse_loc_port(&tmp_old, rec.ip_version);
-                     if (port > 0){
-                        SSDP_DEBUG_MSG("%d\n", port);
-                     }
-                     break;
-                  case SERVER:
-                     SSDP_DEBUG_MSG("%s\n", tmp_old);
-                     break;
-                  default:
-                     break;         
-               }
-               break;
-            }
-         }
-         tmp_old = tmp + 1;
-      }
-      tmp++;
-   }
-   return data;
-}
-
-void SSDPPlugin::parse_search(const char *data, Flow &rec){
-   int search_headers[] = { ST, USER_AGENT };
-   unsigned int sr_head_len = sizeof(search_headers)/sizeof(search_headers[0]);
-   char *ptr = (char *)data;
+void SSDPPlugin::parse_headers(char *data, header_parser_conf conf){
+   char *ptr = data;
    char *old_ptr = ptr;
    while (*ptr != '\0'){
       if(*ptr == '\n'){
          *ptr = '\0';
-         for(unsigned int j = 0, i = 0; j < sr_head_len; j++){
-            i = search_headers[j];
-            if (get_header_val(&old_ptr, headers[i], strlen(headers[i]))){
+         for(unsigned j = 0, i = 0; j < conf.select_cnt; j++){
+            i = conf.select[j];
+            if (get_header_val(&old_ptr, conf.headers[i], strlen(conf.headers[i]))){
                switch ((header_types) i)
                {
                   case ST:
@@ -290,7 +208,23 @@ void SSDPPlugin::parse_search(const char *data, Flow &rec){
                         SSDP_DEBUG_MSG("%s\n", old_ptr);
                      }
                      break;
+                  case NT:
+                     if(get_header_val(&old_ptr, "urn", strlen("urn"))){
+                        SSDP_DEBUG_MSG("%s\n", old_ptr);
+                     }
+                     break;
+                  case LOCATION:
+                  {
+                     int port = parse_loc_port(&old_ptr, conf.ip_version);
+                     if (port > 0){
+                        SSDP_DEBUG_MSG("%d\n", port);
+                     }
+                     break;
+                  }
                   case USER_AGENT:
+                     SSDP_DEBUG_MSG("%s\n", old_ptr);
+                     break;
+                  case SERVER:
                      SSDP_DEBUG_MSG("%s\n", old_ptr);
                      break;
                   default:
@@ -307,19 +241,37 @@ void SSDPPlugin::parse_search(const char *data, Flow &rec){
 }
 
 /**
+ * \brief Appends a value to the existing csv entry.
+ */
+void SSDPPlugin::append_value(char *curr_entry, char *value){
+   // TODO
+}
+
+/**
  * \brief Parses SSDP payload.
+ * 
+ * Detects type of message and configures the parser accordingly.
  */
 void SSDPPlugin::parse_ssdp_message(Flow &rec, const Packet &pkt){
-   const char* data = (const char*) pkt.payload;
-   RecordExtSSDP *ext = NULL;
-   ext = dynamic_cast<RecordExtSSDP *>(rec.getExtension(ssdp));
+   header_parser_conf parse_conf = {
+      headers,
+      rec.ip_version,
+      dynamic_cast<RecordExtSSDP *>(rec.getExtension(ssdp))
+   };
+   char* data = (char*) pkt.payload;
    if(data[0] == 'N'){
       SSDP_DEBUG_MSG("Notify\n");
-      parse_notify(data, rec, ext);
+      int notify_headers[] = { NT, LOCATION, SERVER };
+      parse_conf.select = notify_headers;
+      parse_conf.select_cnt = sizeof(notify_headers)/sizeof(notify_headers[0]);
+      parse_headers(data, parse_conf);
    }
    else if (data[0] == 'M'){
       SSDP_DEBUG_MSG("M-search\n");
-      parse_search(data, rec);
+      int search_headers[] = { ST, USER_AGENT };
+      parse_conf.select = search_headers;
+      parse_conf.select_cnt = sizeof(search_headers)/sizeof(search_headers[0]);
+      parse_headers(data, parse_conf);
    }
    SSDP_DEBUG_MSG("\n");
 }

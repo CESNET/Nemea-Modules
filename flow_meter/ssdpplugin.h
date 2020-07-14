@@ -125,14 +125,20 @@ public:
    string get_unirec_field_string();
    bool include_basic_flow_fields();
 
+   struct header_parser_conf {
+      const char **headers;
+      uint8_t ip_version;
+      RecordExtSSDP *ext;
+      unsigned select_cnt;
+      int *select;
+   } ;
+
 private:
    int parse_loc_port(char **data, uint8_t ip_version);
    bool get_header_val(char **data, const char* header, const int len);
-   void get_headers(char **data, int n, const char *headers[], uint8_t ip_version);
+   void parse_headers(char *data, header_parser_conf conf);
    void parse_ssdp_message(Flow &rec, const Packet &pkt);
-   const char *parse_notify(const char *data, Flow &rec, RecordExtSSDP *ext);
-   void parse_search(const char *data, Flow &rec);
-   void append_value(char *curr_entry, char *value);
+   void append_value(char *curr_entry, unsigned entry_max, char *value);
 
    bool print_stats;       /**< Indicator whether to print stats when flow cache is finishing or not. */
    RecordExtSSDP *record;
