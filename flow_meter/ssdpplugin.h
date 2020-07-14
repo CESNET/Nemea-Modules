@@ -131,15 +131,11 @@ class SSDPPlugin : public FlowCachePlugin
 public:
    SSDPPlugin(const options_t &module_options);
    SSDPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options);
-   int pre_create(Packet &pkt);
    int post_create(Flow &rec, const Packet &pkt);
    int pre_update(Flow &rec, Packet &pkt);
-   int post_update(Flow &rec, const Packet &pkt);
-   void pre_export(Flow &rec);
    void finish();
    const char **get_ipfix_string();
    string get_unirec_field_string();
-   bool include_basic_flow_fields();
 
    struct header_parser_conf {
       const char **headers;
@@ -157,7 +153,7 @@ private:
    void append_value(char *curr_entry, unsigned entry_max, char *value);
 
    bool print_stats;       /**< Indicator whether to print stats when flow cache is finishing or not. */
-   RecordExtSSDP *record;
+   RecordExtSSDP *record;  /**< Pointer to allocated record extension */
 };
 
 #endif

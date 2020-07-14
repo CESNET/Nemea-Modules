@@ -100,11 +100,6 @@ SSDPPlugin::SSDPPlugin(const options_t &module_options, vector<plugin_opt> plugi
    print_stats = module_options.print_stats;
 }
 
-int SSDPPlugin::pre_create(Packet &pkt)
-{
-   return 0;
-}
-
 int SSDPPlugin::post_create(Flow &rec, const Packet &pkt)
 {
    if (pkt.dst_port == 1900){
@@ -123,15 +118,6 @@ int SSDPPlugin::pre_update(Flow &rec, Packet &pkt)
       parse_ssdp_message(rec, pkt);
    }
    return 0;
-}
-
-int SSDPPlugin::post_update(Flow &rec, const Packet &pkt)
-{
-   return 0;
-}
-
-void SSDPPlugin::pre_export(Flow &rec)
-{
 }
 
 void SSDPPlugin::finish()
@@ -303,9 +289,3 @@ string SSDPPlugin::get_unirec_field_string()
 {
    return SSDP_UNIREC_TEMPLATE;
 }
-
-bool SSDPPlugin::include_basic_flow_fields()
-{
-   return true;
-}
-
