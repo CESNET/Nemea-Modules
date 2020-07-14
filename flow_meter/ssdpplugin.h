@@ -68,6 +68,9 @@ struct RecordExtSSDP : RecordExt {
    char server[SSDP_SERVER_LEN];
    char user_agent[SSDP_USER_AGENT_LEN];
 
+   /**
+    * \brief Constructor.
+    */
    RecordExtSSDP() : RecordExt(ssdp)
    {
       port = 0;
@@ -137,12 +140,15 @@ public:
    const char **get_ipfix_string();
    string get_unirec_field_string();
 
+   /**
+    * \brief Struct passed to parse_headers function.
+    */
    struct header_parser_conf {
-      const char **headers;
-      uint8_t ip_version;
-      RecordExtSSDP *ext;
-      unsigned select_cnt;
-      int *select;
+      const char **headers;   /**< Pointer to array of header strings. */
+      uint8_t ip_version;     /**< IP version of source IP address. */
+      RecordExtSSDP *ext;     /**< Pointer to allocated record exitension. */
+      unsigned select_cnt;    /**< Number of selected headers. */
+      int *select;            /**< Array of selected header indices. */
    } ;
 
 private:

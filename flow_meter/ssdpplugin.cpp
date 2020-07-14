@@ -128,7 +128,11 @@ void SSDPPlugin::finish()
 }
 
 /**
- * \brief Parses port from location header message string
+ * \brief Parses port from location header message string.
+ * 
+ * \param [in, out] data Pointer to pointer to SSDP data.
+ * \param [in] ip_version IP version of the Location url being parsed.
+ * \return Parsed port number on success, -1 otherwise.
  */
 int SSDPPlugin::parse_loc_port(char **data, uint8_t ip_version){
    int port;
@@ -164,6 +168,11 @@ int SSDPPlugin::parse_loc_port(char **data, uint8_t ip_version){
 
 /**
  * \brief Checks for given header string in data
+ * 
+ * \param [in, out] data Pointer to pointer to SSDP data.
+ * \param [in] header String containing the desired header.
+ * \param [in] len Lenght of the desired header.
+ * \return True if the header is found, otherwise false.
  */
 bool SSDPPlugin::get_header_val(char **data, const char* header, const int len){
    if(strncasecmp(*data, header, len) == 0 &&
@@ -179,6 +188,9 @@ bool SSDPPlugin::get_header_val(char **data, const char* header, const int len){
 
 /**
  * \brief Parses SSDP payload based on configuration in conf struct.
+ * 
+ * \param [in] data Pointer to pointer to SSDP data.
+ * \param [in] conf Struct containing parser configuration.
  */
 void SSDPPlugin::parse_headers(char *data, header_parser_conf conf){
    char *ptr = data;
@@ -234,7 +246,13 @@ void SSDPPlugin::parse_headers(char *data, header_parser_conf conf){
 }
 
 /**
- * \brief Appends a value to the existing csv entry.
+ * \brief Appends a value to the existing semicolon separated entry.
+ * 
+ * Appends only values that are not already included in the current entry.
+ * 
+ * \param [in,out] curr_entry String containing the current entry.
+ * \param [in] entry_max Maximum length if the entry.
+ * \param [in] value String containing the new entry.
  */
 void SSDPPlugin::append_value(char *curr_entry, unsigned entry_max, char *value){
    if(strlen(curr_entry) + strlen(value) + 1 < entry_max){
@@ -250,6 +268,9 @@ void SSDPPlugin::append_value(char *curr_entry, unsigned entry_max, char *value)
  * \brief Parses SSDP payload.
  * 
  * Detects type of message and configures the parser accordingly.
+ * 
+ * \param [in, out] rec Flow record containing basic flow data.
+ * \param [in] pkt Packet struct containing packet data.
  */
 void SSDPPlugin::parse_ssdp_message(Flow &rec, const Packet &pkt){
    header_parser_conf parse_conf = {
