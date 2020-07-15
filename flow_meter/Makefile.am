@@ -58,7 +58,9 @@ flow_meter_src=flow_meter.cpp \
 		conversion.cpp \
 		pstatsplugin.h \
 		pstatsplugin.cpp \
-		byte-utils.h
+		byte-utils.h \
+		ssdpplugin.h \
+		ssdpplugin.cpp
 
 ipfixprobe_SOURCES=$(flow_meter_src)
 
@@ -82,6 +84,7 @@ EXTRA_DIST=README.md \
 	traffic-samples/https-sample.pcap \
 	traffic-samples/ntp-sample.pcap \
 	traffic-samples/sip-sample.pcap \
+	traffic-samples/ssdp-sample.pcap \
 	traffic-samples/smtp-sample.pcap
 
 bashcompl_DATA=flow_meter.bash
