@@ -60,7 +60,9 @@ flow_meter_src=flow_meter.cpp \
 		pstatsplugin.cpp \
 		byte-utils.h \
 		ssdpplugin.h \
-		ssdpplugin.cpp
+		ssdpplugin.cpp \
+		dnssdplugin.h \
+		dnssdplugin.cpp
 
 ipfixprobe_SOURCES=$(flow_meter_src)
 

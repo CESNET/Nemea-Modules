@@ -173,6 +173,7 @@
 #define SSDP_USER_AGENT(F)            F(8057,    823,  -1,   NULL)
 #define SSDP_NT(F)                    F(8057,    824,  -1,   NULL)
 #define SSDP_ST(F)                    F(8057,    825,  -1,   NULL)
+#define DNSSD_PLACEHOLDER(F)          F(8057,    826,  -1,   NULL)
 
 #define STATS_PCKT_SIZES(F)           F(0,    291,  -1,   NULL)
 #define STATS_PCKT_TIMESTAMPS(F)      F(0,    291,  -1,   NULL)
@@ -328,6 +329,8 @@
    F(SSDP_ST) \
    F(SSDP_SERVER)
 
+#define IPFIX_DNSSD_TEMPLATE(F) \
+   F(DNSSD_PLACEHOLDER)
 
 /**
  * List of all known templated.
@@ -348,7 +351,8 @@
    IPFIX_PASSIVEDNS_TEMPLATE(F) \
    IPFIX_PSTATS_TEMPLATE(F) \
    IPFIX_SMTP_TEMPLATE(F) \
-   IPFIX_SSDP_TEMPLATE(F)
+   IPFIX_SSDP_TEMPLATE(F) \
+   IPFIX_DNSSD_TEMPLATE(F)
 
 
 /**

@@ -75,6 +75,7 @@
 #include "smtpplugin.h"
 #include <pstatsplugin.h>
 #include <ssdpplugin.h>
+#include <dnssdplugin.h>
 
 using namespace std;
 
@@ -88,7 +89,7 @@ static int stop = 0;
 #define MODULE_PARAMS(PARAM) \
   PARAM('p', "plugins", "Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. "\
   "For example: \'-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter"\
-  " will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,https,dns,sip,ntp,smtp,basic,arp,passivedns,pstats,ssdp", required_argument, "string")\
+  " will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,https,dns,sip,ntp,smtp,basic,arp,passivedns,pstats,ssdp,dnssd", required_argument, "string")\
   PARAM('c', "count", "Quit after number of packets are captured.", required_argument, "uint32")\
   PARAM('I', "interface", "Capture from given network interface. Parameter require interface name (eth0 for example). For nfb interface you can channel after interface delimited by : (/dev/nfb0:1) default is 0", required_argument, "string")\
   PARAM('r', "file", "Pcap file to read. - to read from stdin.", required_argument, "string") \
@@ -179,6 +180,11 @@ int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plu
          tmp.push_back(plugin_opt("ssdp", ssdp, ifc_num++));
 
          plugins.push_back(new SSDPPlugin(module_options, tmp));
+      } else if (proto == "dnssd"){
+         vector<plugin_opt> tmp;
+         tmp.push_back(plugin_opt("dnssd", dnssd, ifc_num++));
+
+         plugins.push_back(new DNSSDPlugin(module_options, tmp));
       } else {
          fprintf(stderr, "Unsupported plugin: \"%s\"\n", proto.c_str());
          return -1;
