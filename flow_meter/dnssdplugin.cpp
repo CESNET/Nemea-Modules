@@ -234,35 +234,6 @@ string DNSSDPlugin::get_name(const char *data) const
 }
 
 /**
- * \brief Process SRV strings.
- * \param [in,out] str Raw SRV string.
- */
-void DNSSDPlugin::process_srv(string &str) const
-{
-   bool underline_found = false;
-
-   for (int i = 0; str[i]; i++) {
-      if (str[i] == '_') {
-         str.erase(i--, 1);
-         if (underline_found) {
-            break;
-         }
-         underline_found = true;
-      }
-   }
-   size_t pos = str.find('.');
-
-   if (pos != string::npos) {
-      str[pos] = ' ';
-
-      pos = str.find('.', pos);
-      if (pos != string::npos) {
-         str[pos] = ' ';
-      }
-   }
-}
-
-/**
  * \brief Process RDATA section.
  * \param [in] record_begin Pointer to start of current resource record.
  * \param [in] data Pointer to RDATA section.
@@ -278,19 +249,25 @@ void DNSSDPlugin::process_rdata(const char *record_begin, const char *data, ostr
    switch (type) {
    case DNS_TYPE_SRV:
       {
-         string tmp = get_name(record_begin);
-         process_srv(tmp);
          struct dns_srv *srv = (struct dns_srv *) data;
 
-         rdata << tmp << " ";
-         tmp = get_name(data + 6);
+         string tmp = get_name(data + 6);
+
          DEBUG_MSG("%16s\t%8u    %s\n", "SRV", ntohs(srv->port), tmp.c_str());
-         rdata << tmp << " " << ntohs(srv->priority) << " " << ntohs(srv->weight) << " " 
-               << ntohs(srv->port);
+         rdata << ntohs(srv->priority) << ':' << ntohs(srv->weight) << ':'
+            << ntohs(srv->port) << ':' << tmp;
+      }
+      break;
+   case DNS_TYPE_HINFO:
+      {
+         rdata << string(data + 1, (uint8_t) data[0]);
+         data += ((uint8_t) data[0] + 1);
+         rdata << ':' + string(data + 1, (uint8_t) data[0]);
+         data += ((uint8_t) data[0] + 1);
+         DEBUG_MSG("%16s\t\t    %s\n", "HINFO", rdata.str().c_str());
       }
       break;
    default:
-      rdata << "(not_impl)";
       break;
    }
 }
@@ -382,6 +359,7 @@ bool DNSSDPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp
             rec->qclass = ntohs(question->qclass);
 
             size_t length = name.length();
+
             if (length >= sizeof(rec->qname)) {
                DEBUG_MSG("Truncating qname (length = %lu) to %lu.\n", length,
                          sizeof(rec->qname) - 1);
@@ -402,6 +380,7 @@ bool DNSSDPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp
       const char *record_begin;
       size_t rdlength;
       ostringstream rdata;
+
       for (int i = 0; i < answer_rr_cnt; i++) { // Process answers section.
          if (i == 0) {
             DEBUG_MSG("DNS answers section\n");
@@ -423,26 +402,13 @@ bool DNSSDPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp
          }
          DEBUG_MSG("#%7d%8u%8u%12s%s\n", i + 1, ntohs(answer->atype), ntohl(answer->ttl), "",
                    name.c_str());
-         filtered_append(rec, name, "A", ntohs(answer->atype));
 
          data += sizeof(struct dns_answer);
          rdlength = ntohs(answer->rdlength);
 
-         if (1) {               // Copy all answers.
-            process_rdata(record_begin, data, rdata, ntohs(answer->atype), rdlength);
-            rec->rr_ttl = ntohl(answer->ttl);
+         process_rdata(record_begin, data, rdata, ntohs(answer->atype), rdlength);
+         filtered_append(rec, name, "A", ntohs(answer->atype), rdata.str());
 
-            size_t length = rdata.str().length();
-
-            if (length >= sizeof(rec->data)) {
-               DEBUG_MSG("Truncating rdata (length = %lu) to %lu.\n", length,
-                         sizeof(rec->data) - 1);
-               length = sizeof(rec->data) - 1;
-            }
-            memcpy(rec->data, rdata.str().c_str(), length);     // Copy processed rdata.
-            rec->data[length] = 0;      // Add terminating '\0' char.
-            rec->rlength = length;      // Report length.
-         }
          data += rdlength;
       }
 
@@ -472,12 +438,13 @@ bool DNSSDPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp
 
          DEBUG_MSG("#%7d%8u%8u%12s%s\n", i + 1, ntohs(answer->atype), ntohl(answer->ttl), "",
                    name.c_str());
-         filtered_append(rec, name, "Auth", ntohs(answer->atype));
 
 
          data += sizeof(struct dns_answer);
          rdlength = ntohs(answer->rdlength);
-         DEBUG_CODE(process_rdata(record_begin, data, rdata, ntohs(answer->atype), rdlength));
+
+         process_rdata(record_begin, data, rdata, ntohs(answer->atype), rdlength);
+         filtered_append(rec, name, "Auth", ntohs(answer->atype), rdata.str());
 
          data += rdlength;
       }
@@ -500,6 +467,7 @@ bool DNSSDPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp
          struct dns_answer *answer = (struct dns_answer *) data;
 
          uint32_t tmp = (data - data_begin) + sizeof(dns_answer);
+
          if (tmp > payload_len || tmp + ntohs(answer->rdlength) > payload_len) {
             DEBUG_MSG("DNS parser quits: overflow\n\n");
             return 1;
@@ -507,27 +475,15 @@ bool DNSSDPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp
 
          DEBUG_MSG("#%7d%8u%8u%12s%s\n", i + 1, ntohs(answer->atype), ntohl(answer->ttl), "",
                    name.c_str());
-         filtered_append(rec, name, "Add", ntohs(answer->atype));
 
+         rdlength = ntohs(answer->rdlength);
 
          if (ntohs(answer->atype) != DNS_TYPE_OPT) {
 
             data += sizeof(struct dns_answer);
-            rdlength = ntohs(answer->rdlength);
-            DEBUG_CODE(process_rdata(record_begin, data, rdata, ntohs(answer->atype), rdlength));
-         } else {               // Process OPT record.
-            DEBUG_MSG("\tReq UDP payload:\t%u\n",     ntohs(answer->aclass));
-            DEBUG_CODE(uint32_t ttl = ntohl(answer->ttl));
-            DEBUG_MSG("\tExtended RCODE:\t\t%#x\n",   (ttl & 0xFF000000) >> 24);
-            DEBUG_MSG("\tVersion:\t\t%#x\n",          (ttl & 0x00FF0000) >> 16);
-            DEBUG_MSG("\tDO bit:\t\t\t%u\n",          ((ttl & 0x8000) >> 15));
-            DEBUG_MSG("\tReserved:\t\t%u\n",          (ttl & 0x7FFF));
-            DEBUG_MSG("\tRD length:\t\t%u\n",         ntohs(answer->rdlength));
 
-            data += sizeof(struct dns_answer);
-            rdlength = ntohs(answer->rdlength);
-            rec->psize = ntohs(answer->aclass); // Copy requested UDP payload size. RFC 6891
-            rec->dns_do = ((ntohl(answer->ttl) & 0x8000) >> 15);        // Copy DO bit.
+            process_rdata(record_begin, data, rdata, ntohs(answer->atype), rdlength);
+            filtered_append(rec, name, "Add", ntohs(answer->atype), rdata.str());
          }
 
          data += rdlength;
@@ -549,19 +505,31 @@ bool DNSSDPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp
    return true;
 }
 
-void DNSSDPlugin::filtered_append(RecordExtDNSSD *rec, string name, string head, int type)
+/**
+ * \brief Append new unique entry to DNSSD extension record.
+ * \param [in,out] rec Pointer to DNSSD extension record
+ * \param [in] name Domain name of the DNS record.
+ * \param [in] rr_type_str Type of DNS record, shlould be one of: "Q", "A", "Add", "Auth"
+ * \param [in] type DNS type id of the DNS record.
+ * \param [in] rdata RDATA of the DNS record, optional.
+ */
+void DNSSDPlugin::filtered_append(RecordExtDNSSD *rec, string name, string rr_type_str, int type, string rdata)
 {
    stringstream entry;
 
-   if (type == 12 || type == 255) {
-      if (name.rfind("arpa") == string::npos) {
-         entry << head << ':' << type << ':' << name << ';';
-         if (rec->ph.find(entry.str()) == string::npos) {
-            rec->ph += entry.str();
-         }
+   if (type == 16 || type == 33 || type == 13
+       || ((type == 12 || type == 255) && name.rfind("arpa") == string::npos)) {
+
+      if (type == 255 && name == "_services._dns-sd._udp.local") {
+         name.clear();          // empty name implies no query specification
       }
-   } else if (type == 16 || type == 33 || type == 13) {
-      entry << head << ':' << type << ':' << name << ';';
+
+      if (!rdata.empty()) {
+         entry << rr_type_str << ':' << type << ':' << name << ':' << rdata << ';';
+      } else {
+         entry << rr_type_str << ':' << type << ':' << name << ';';
+      }
+
       if (rec->ph.find(entry.str()) == string::npos) {
          rec->ph += entry.str();
       }

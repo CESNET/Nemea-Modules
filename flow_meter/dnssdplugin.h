@@ -133,9 +133,8 @@ public:
 private:
    bool parse_dns(const char *data, unsigned int payload_len, bool tcp, RecordExtDNSSD *rec);
    int  add_ext_dnssd(const char *data, unsigned int payload_len, bool tcp, Flow &rec);
-   void process_srv(string &str) const;
    void process_rdata(const char *record_begin, const char *data, ostringstream &rdata, uint16_t type, size_t length) const;
-   void filtered_append(RecordExtDNSSD *rec, string name, string head, int type);
+   void filtered_append(RecordExtDNSSD *rec, string name, string rr_type_str, int type, string rdata = "");
 
    string get_name(const char *data) const;
    size_t get_name_length(const char *data) const;
