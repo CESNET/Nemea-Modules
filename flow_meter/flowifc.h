@@ -71,6 +71,7 @@ enum extTypeEnum {
    arp,
    passivedns,
    pstats,
+   vpndetector,
    /* Add extension header identifiers for your plugins here */
    EXTENSION_CNT
 };

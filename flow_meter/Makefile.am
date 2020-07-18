@@ -58,7 +58,9 @@ flow_meter_src=flow_meter.cpp \
 		conversion.cpp \
 		pstatsplugin.h \
 		pstatsplugin.cpp \
-		byte-utils.h
+		vpndetectorplugin.h \
+		vpndetectorplugin.cpp \
+		byte-utils.h 
 
 ipfixprobe_SOURCES=$(flow_meter_src)
 

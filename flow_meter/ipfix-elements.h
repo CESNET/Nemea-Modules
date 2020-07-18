@@ -174,6 +174,7 @@
 #define STATS_PCKT_TCPFLGS(F)         F(0,    291,  -1,   NULL)
 #define STATS_PCKT_DIRECTIONS(F)      F(0,    291,  -1,   NULL)
 
+#define VPN_CONF_LEVEL(F)             F(8057,    821,   1,   NULL)
 
 /**
  * IPFIX Templates - list of elements
@@ -316,6 +317,10 @@
    F(STATS_PCKT_TCPFLGS) \
    F(STATS_PCKT_DIRECTIONS)
 
+#define IPFIX_VPNDETECTOR_TEMPLATE(F) \
+   F(VPN_CONF_LEVEL)
+
+
 /**
  * List of all known templated.
  *
@@ -334,6 +339,7 @@
    IPFIX_DNS_TEMPLATE(F) \
    IPFIX_PASSIVEDNS_TEMPLATE(F) \
    IPFIX_PSTATS_TEMPLATE(F) \
+   IPFIX_VPNDETECTOR_TEMPLATE(F) \
    IPFIX_SMTP_TEMPLATE(F)
 
 
