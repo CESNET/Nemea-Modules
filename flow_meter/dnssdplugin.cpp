@@ -320,10 +320,6 @@ bool DNSSDPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp
       uint16_t authority_rr_cnt = ntohs(dns->name_server_rec_cnt);
       uint16_t additional_rr_cnt = ntohs(dns->additional_rec_cnt);
 
-      rec->answers = answer_rr_cnt;
-      rec->id = ntohs(dns->id);
-      rec->rcode = DNS_HDR_GET_RESPCODE(flags);
-
       DEBUG_MSG("%s number: %u\n",                    DNS_HDR_GET_QR(flags) ? "Response" : "Query",
                                                       DNS_HDR_GET_QR(flags) ? s_queries++ : s_responses++);
       DEBUG_MSG("DNS message header\n");
@@ -343,10 +339,10 @@ bool DNSSDPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp
       ********************************************************************/
       data += sizeof(struct dns_hdr);
       for (int i = 0; i < question_cnt; i++) {
-         if (i == 0) {
+         DEBUG_CODE(if (i == 0) {
             DEBUG_MSG("\nDNS questions section\n");
             DEBUG_MSG("%8s%8s%8s%8s%8s\n", "num", "type", "ttl", "port", "name");
-         }
+         });
          string name = get_name(data);
 
          data += get_name_length(data);
@@ -357,21 +353,7 @@ bool DNSSDPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp
             return 1;
          }
 
-         if (1) {               // Copy all questions.
-            rec->qtype = ntohs(question->qtype);
-            rec->qclass = ntohs(question->qclass);
-
-            size_t length = name.length();
-
-            if (length >= sizeof(rec->qname)) {
-               DEBUG_MSG("Truncating qname (length = %lu) to %lu.\n", length,
-                         sizeof(rec->qname) - 1);
-               length = sizeof(rec->qname) - 1;
-            }
-            memcpy(rec->qname, name.c_str(), length);
-            rec->qname[length] = 0;
-            filtered_append(rec, name);
-         }
+         filtered_append(rec, name);
 
          DEBUG_MSG("#%7d%8u%20s%s\n", i + 1, ntohs(question->qtype), "", name.c_str());
          data += sizeof(struct dns_question);
@@ -420,11 +402,11 @@ bool DNSSDPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp
       *****                 DNS Authority RRs section                 *****
       ********************************************************************/
 
-      for (int i = 0; i < authority_rr_cnt; i++) {      // Will be used soon.
-         if (i == 0) {
+      for (int i = 0; i < authority_rr_cnt; i++) {
+         DEBUG_CODE(if (i == 0) {
             DEBUG_MSG("DNS authority RRs section\n");
             DEBUG_MSG("%8s%8s%8s%8s%8s\n", "num", "type", "ttl", "port", "name");
-         }
+         });
 
          record_begin = data;
          string name = get_name(data);
@@ -456,11 +438,11 @@ bool DNSSDPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp
       /********************************************************************
       *****                 DNS Additional RRs section                *****
       ********************************************************************/
-      for (int i = 0; i < additional_rr_cnt; i++) {     // Will be used soon.
-         if (i == 0) {
+      for (int i = 0; i < additional_rr_cnt; i++) {
+         DEBUG_CODE(if (i == 0) {
             DEBUG_MSG("DNS additional RRs section\n");
             DEBUG_MSG("%8s%8s%8s%8s%8s\n", "num", "type", "ttl", "port", "name");
-         }
+         });
 
          record_begin = data;
 

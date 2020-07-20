@@ -82,17 +82,6 @@ struct RecordExtDNSSD : RecordExt {
    string ph;
    list<string> queries;
    list<DnsSdRr> responses;
-   uint16_t id;
-   uint16_t answers;
-   uint8_t rcode;
-   char qname[128];
-   uint16_t qtype;
-   uint16_t qclass;
-   uint32_t rr_ttl;
-   uint16_t rlength;
-   char data[160];
-   uint16_t psize;
-   uint8_t dns_do;
 
    /**
     * \brief Constructor.
@@ -100,17 +89,6 @@ struct RecordExtDNSSD : RecordExt {
    RecordExtDNSSD() : RecordExt(dnssd)
    {
       ph = "";
-      id = 0;
-      answers = 0;
-      rcode = 0;
-      qname[0] = 0;
-      qtype = 0;
-      qclass = 0;
-      rr_ttl = 0;
-      rlength = 0;
-      data[0] = 0;
-      psize = 0;
-      dns_do = 0;
    }
 
 
