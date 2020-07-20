@@ -79,7 +79,6 @@ struct DnsSdRr {
  * \brief Flow record extension header for storing parsed DNSSD packets.
  */
 struct RecordExtDNSSD : RecordExt {
-   string ph;
    list<string> queries;
    list<DnsSdRr> responses;
 
@@ -88,7 +87,6 @@ struct RecordExtDNSSD : RecordExt {
     */
    RecordExtDNSSD() : RecordExt(dnssd)
    {
-      ph = "";
    }
 
 
@@ -122,27 +120,31 @@ struct RecordExtDNSSD : RecordExt {
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
 #ifndef DISABLE_UNIREC
-      ph += queries_to_string();
-      ph += responses_to_string();
-      ur_set_string(tmplt, record, F_DNSSD_PLACEHOLDER, ph.c_str());
+      ur_set_string(tmplt, record, F_DNSSD_QUERIES, queries_to_string().c_str());
+      ur_set_string(tmplt, record, F_DNSSD_RESPONSES, responses_to_string().c_str());
 #endif
    }
 
    virtual int fillIPFIX(uint8_t *buffer, int size)
    {
-      ph += queries_to_string();
-      ph += responses_to_string();
+      string queries = queries_to_string();
+      string responses = responses_to_string();
 
       int length = 0;
-      int ph_len = ph.length();
+      int qry_len = queries.length();
+      int resp_len = responses.length();
 
-      if (ph_len + 1 > size) {
+      if (qry_len + resp_len + 2 > size) {
          return -1;
       }
 
-      buffer[length++] = ph_len;
-      memcpy(buffer + length, ph.c_str(), ph_len);
-      length += ph_len;
+      buffer[length++] = qry_len;
+      memcpy(buffer + length, queries.c_str(), qry_len);
+      length += qry_len;
+      
+      buffer[length++] = resp_len;
+      memcpy(buffer + length, responses.c_str(), resp_len);
+      length += resp_len;
 
       return length;
    }

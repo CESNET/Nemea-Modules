@@ -86,10 +86,11 @@ using namespace std;
  */
 #define GET_OFFSET(half1, half2) ((((uint8_t)(half1) & 0x3F) << 8) | (uint8_t)(half2))
 
-#define DNSSD_UNIREC_TEMPLATE "DNSSD_PLACEHOLDER"
+#define DNSSD_UNIREC_TEMPLATE "DNSSD_QUERIES,DNSSD_RESPONSES"
 
 UR_FIELDS (
-   string DNSSD_PLACEHOLDER
+   string DNSSD_QUERIES
+   string DNSSD_RESPONSES
 )
 
 /**
