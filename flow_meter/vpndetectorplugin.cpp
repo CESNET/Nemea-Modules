@@ -205,7 +205,9 @@ void VPNDetectorPlugin::pre_export(Flow &rec)
 {
   RecordExtVPNDetector *vpn_data = (RecordExtVPNDetector *) rec.getExtension(vpndetector);
   if(vpn_data->pkt_cnt > min_pckt_treshold && vpn_data->status == status_data)
-     vpn_data->possible_vpn = true;
+     vpn_data->possible_vpn = 100;
+  else if(vpn_data->pkt_cnt > min_pckt_treshold && vpn_data->data_pkt_cnt/vpn_data->pkt_cnt >= data_pckt_treshold)
+     vpn_data->possible_vpn = vpn_data->data_pkt_cnt/vpn_data->pkt_cnt;
     return;
 }
 

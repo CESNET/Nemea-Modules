@@ -60,7 +60,7 @@ using namespace std;
  */
 struct RecordExtVPNDetector : RecordExt 
 {
-   bool possible_vpn;
+   uint8_t possible_vpn;
    uint32_t pkt_cnt;
    uint32_t data_pkt_cnt;
    int32_t invalid_pkt_cnt;
@@ -68,7 +68,7 @@ struct RecordExtVPNDetector : RecordExt
    ipaddr_t client_ip;
    RecordExtVPNDetector() : RecordExt(vpndetector)
    {
-     possible_vpn = false;
+     possible_vpn = 0;
      pkt_cnt = 0;
      data_pkt_cnt = 0;
      invalid_pkt_cnt = 0;
@@ -78,7 +78,7 @@ struct RecordExtVPNDetector : RecordExt
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
      #ifndef DISABLE_UNIREC
-     ur_set(tmplt, record, F_VPN_CONF_LEVEL, (uint8_t)possible_vpn);
+     ur_set(tmplt, record, F_VPN_CONF_LEVEL, possible_vpn);
      #endif
    }
 
@@ -117,9 +117,9 @@ public:
 
    static const uint32_t c_udp_opcode_index = 0;
    static const uint32_t c_tcp_opcode_index = 2;
-   static const uint32_t min_pckt_treshold = 10;
+   static const uint32_t min_pckt_treshold = 20;
+   static const float data_pckt_treshold = 0.6;
    static const int32_t invalid_pckt_treshold = 4;
-   static const uint32_t data_pckt_treshold = 10;
    static const uint32_t min_opcode = 1;
    static const uint32_t max_opcode = 10;
    static const uint32_t p_control_hard_reset_client_v1 = 1;    /* initial key from client, forget previous state */
