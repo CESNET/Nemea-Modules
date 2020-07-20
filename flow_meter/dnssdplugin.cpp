@@ -241,12 +241,14 @@ string DNSSDPlugin::get_name(const char *data) const
  * \param [in] type Type of RDATA section.
  * \param [in] length Length of RDATA section.
  */
-void DNSSDPlugin::process_rdata(const char *record_begin, const char *data, ostringstream &rdata, uint16_t type, size_t length) const
+void DNSSDPlugin::process_rdata(const char *record_begin, const char *data, DnsSdRr &rdata, uint16_t type, size_t length) const
 {
-   rdata.str("");
-   rdata.clear();
+   rdata = DnsSdRr();
 
    switch (type) {
+   case DNS_TYPE_PTR:
+      DEBUG_MSG("%16s\t\t    %s\n", "PTR", get_name(data).c_str());
+      break;
    case DNS_TYPE_SRV:
       {
          struct dns_srv *srv = (struct dns_srv *) data;
@@ -254,17 +256,18 @@ void DNSSDPlugin::process_rdata(const char *record_begin, const char *data, ostr
          string tmp = get_name(data + 6);
 
          DEBUG_MSG("%16s\t%8u    %s\n", "SRV", ntohs(srv->port), tmp.c_str());
-         rdata << ntohs(srv->priority) << ':' << ntohs(srv->weight) << ':'
-            << ntohs(srv->port) << ':' << tmp;
+
+         rdata.srv_port = ntohs(srv->port);
+         rdata.srv_target = tmp;
       }
       break;
    case DNS_TYPE_HINFO:
       {
-         rdata << string(data + 1, (uint8_t) data[0]);
+         rdata.hinfo[0] = string(data + 1, (uint8_t) data[0]);
          data += ((uint8_t) data[0] + 1);
-         rdata << ':' + string(data + 1, (uint8_t) data[0]);
+         rdata.hinfo[1] = string(data + 1, (uint8_t) data[0]);
          data += ((uint8_t) data[0] + 1);
-         DEBUG_MSG("%16s\t\t    %s\n", "HINFO", rdata.str().c_str());
+         DEBUG_MSG("%16s\t\t    %s, %s\n", "HINFO", rdata.hinfo[0].c_str(), rdata.hinfo[1].c_str());
       }
       break;
    default:
@@ -367,7 +370,7 @@ bool DNSSDPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp
             }
             memcpy(rec->qname, name.c_str(), length);
             rec->qname[length] = 0;
-            filtered_append(rec, name, "Q", ntohs(question->qtype));
+            filtered_append(rec, name);
          }
 
          DEBUG_MSG("#%7d%8u%20s%s\n", i + 1, ntohs(question->qtype), "", name.c_str());
@@ -379,7 +382,7 @@ bool DNSSDPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp
       ********************************************************************/
       const char *record_begin;
       size_t rdlength;
-      ostringstream rdata;
+      DnsSdRr rdata;
 
       for (int i = 0; i < answer_rr_cnt; i++) { // Process answers section.
          if (i == 0) {
@@ -407,8 +410,9 @@ bool DNSSDPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp
          rdlength = ntohs(answer->rdlength);
 
          process_rdata(record_begin, data, rdata, ntohs(answer->atype), rdlength);
-         filtered_append(rec, name, "A", ntohs(answer->atype), rdata.str());
-
+         if (DNS_HDR_GET_QR(flags)) {   // Ignore the known answers in a query.
+            filtered_append(rec, name, ntohs(answer->atype), rdata);
+         }
          data += rdlength;
       }
 
@@ -444,7 +448,7 @@ bool DNSSDPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp
          rdlength = ntohs(answer->rdlength);
 
          process_rdata(record_begin, data, rdata, ntohs(answer->atype), rdlength);
-         filtered_append(rec, name, "Auth", ntohs(answer->atype), rdata.str());
+         filtered_append(rec, name, ntohs(answer->atype), rdata);
 
          data += rdlength;
       }
@@ -483,7 +487,9 @@ bool DNSSDPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp
             data += sizeof(struct dns_answer);
 
             process_rdata(record_begin, data, rdata, ntohs(answer->atype), rdlength);
-            filtered_append(rec, name, "Add", ntohs(answer->atype), rdata.str());
+            if (DNS_HDR_GET_QR(flags)) {
+               filtered_append(rec, name, ntohs(answer->atype), rdata);
+            }
          }
 
          data += rdlength;
@@ -506,34 +512,66 @@ bool DNSSDPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp
 }
 
 /**
- * \brief Append new unique entry to DNSSD extension record.
+ * \brief Append new unique query to DNSSD extension record.
  * \param [in,out] rec Pointer to DNSSD extension record
  * \param [in] name Domain name of the DNS record.
- * \param [in] rr_type_str Type of DNS record, shlould be one of: "Q", "A", "Add", "Auth"
- * \param [in] type DNS type id of the DNS record.
- * \param [in] rdata RDATA of the DNS record, optional.
  */
-void DNSSDPlugin::filtered_append(RecordExtDNSSD *rec, string name, string rr_type_str, int type, string rdata)
+void DNSSDPlugin::filtered_append(RecordExtDNSSD *rec, string name)
 {
-   stringstream entry;
+   if (name.rfind("arpa") == string::npos
+       && std::find(rec->queries.begin(), rec->queries.end(), name) == rec->queries.end()) {
+      rec->queries.push_back(name);
+   }
+}
 
-   if (type == 16 || type == 33 || type == 13
-       || ((type == 12 || type == 255) && name.rfind("arpa") == string::npos)) {
+/**
+ * \brief Append new unique response to DNSSD extension record.
+ * \param [in,out] rec Pointer to DNSSD extension record
+ * \param [in] name Domain name of the DNS record.
+ * \param [in] type DNS type id of the DNS record.
+ * \param [in] rdata RDATA of the DNS record.
+ */
+void DNSSDPlugin::filtered_append(RecordExtDNSSD *rec, string name, uint16_t type, DnsSdRr &rdata)
+{
+   if ((type != DNS_TYPE_SRV && type != DNS_TYPE_HINFO && type)
+       || name.rfind("arpa") != string::npos) {
+      return;
+   }
+   list<DnsSdRr>::iterator it;
 
-      if (type == 255 && name == "_services._dns-sd._udp.local") {
-         name.clear();          // empty name implies no query specification
-      }
-
-      if (!rdata.empty()) {
-         entry << rr_type_str << ':' << type << ':' << name << ':' << rdata << ';';
-      } else {
-         entry << rr_type_str << ':' << type << ':' << name << ';';
-      }
-
-      if (rec->ph.find(entry.str()) == string::npos) {
-         rec->ph += entry.str();
+   for (it = rec->responses.begin(); it != rec->responses.end(); it++) {
+      if (it->name == name) {
+         switch (type) {
+         case DNS_TYPE_SRV:
+            it->srv_port = rdata.srv_port;
+            it->srv_target = rdata.srv_target;
+            return;
+         case DNS_TYPE_HINFO:
+            it->hinfo[0] = rdata.hinfo[0];
+            it->hinfo[1] = rdata.hinfo[1];
+            return;
+         default:
+            return;
+         }
       }
    }
+
+   DnsSdRr rr;
+
+   rr.name = name;
+   switch (type) {
+   case DNS_TYPE_SRV:
+      rr.srv_port = rdata.srv_port;
+      rr.srv_target = rdata.srv_target;
+      break;
+   case DNS_TYPE_HINFO:
+      rr.hinfo[0] = rdata.hinfo[0];
+      rr.hinfo[1] = rdata.hinfo[1];
+      break;
+   default:
+      return;
+   }
+   rec->responses.push_back(rr);
 }
 
 /**

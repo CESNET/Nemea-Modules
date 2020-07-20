@@ -46,6 +46,8 @@
 
 #include <string>
 #include <sstream>
+#include <list>
+#include <algorithm>
 
 #include "fields.h"
 #include "flowifc.h"
@@ -56,11 +58,30 @@
 
 using namespace std;
 
+struct DnsSdRr {
+   string name;
+   int32_t srv_port;
+   string srv_target;
+   string hinfo[2];
+
+   /**
+    * \brief Constructor.
+    */
+   DnsSdRr() {
+      name = string();
+      srv_port = -1;
+      srv_target = string();
+      hinfo[0] = string();
+   }
+};
+
 /**
  * \brief Flow record extension header for storing parsed DNSSD packets.
  */
 struct RecordExtDNSSD : RecordExt {
    string ph;
+   list<string> queries;
+   list<DnsSdRr> responses;
    uint16_t id;
    uint16_t answers;
    uint8_t rcode;
@@ -92,15 +113,48 @@ struct RecordExtDNSSD : RecordExt {
       dns_do = 0;
    }
 
+
+   string queries_to_string() {
+      list<string>::iterator it;
+      string ret;
+
+      for (it = queries.begin(); it != queries.end(); it++) {
+         ret += *it + ";";
+      }
+      return ret;
+   }
+
+   string responses_to_string() {
+      list<DnsSdRr>::iterator it;
+      stringstream ret;
+
+      for (it = responses.begin(); it != responses.end(); it++) {
+         ret << it->name + ";";
+         ret << it->srv_port << ";";
+         ret << it->srv_target + ";";
+         if (!(it->hinfo[0].empty() && it->hinfo[1].empty())) {
+            ret << it->hinfo[0] << ":" << it->hinfo[1] + ";";
+         } else {
+            ret << ";";
+         }
+      }
+      return ret.str();
+   }
+
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
 #ifndef DISABLE_UNIREC
+      ph += queries_to_string();
+      ph += responses_to_string();
       ur_set_string(tmplt, record, F_DNSSD_PLACEHOLDER, ph.c_str());
 #endif
    }
 
    virtual int fillIPFIX(uint8_t *buffer, int size)
    {
+      ph += queries_to_string();
+      ph += responses_to_string();
+
       int length = 0;
       int ph_len = ph.length();
 
@@ -133,8 +187,9 @@ public:
 private:
    bool parse_dns(const char *data, unsigned int payload_len, bool tcp, RecordExtDNSSD *rec);
    int  add_ext_dnssd(const char *data, unsigned int payload_len, bool tcp, Flow &rec);
-   void process_rdata(const char *record_begin, const char *data, ostringstream &rdata, uint16_t type, size_t length) const;
-   void filtered_append(RecordExtDNSSD *rec, string name, string rr_type_str, int type, string rdata = "");
+   void process_rdata(const char *record_begin, const char *data, DnsSdRr &rdata, uint16_t type, size_t length) const;
+   void filtered_append(RecordExtDNSSD *rec, string name);
+   void filtered_append(RecordExtDNSSD *rec, string name, uint16_t type, DnsSdRr &rdata);
 
    string get_name(const char *data) const;
    size_t get_name_length(const char *data) const;
