@@ -82,6 +82,7 @@ EXTRA_DIST=README.md \
 	traffic-samples/arp-sample.pcap \
 	traffic-samples/mixed-sample.pcap \
 	traffic-samples/dns-sample.pcap \
+	traffic-samples/dnssd-sample.pcap \
 	traffic-samples/http-sample.pcap \
 	traffic-samples/https-sample.pcap \
 	traffic-samples/ntp-sample.pcap \
