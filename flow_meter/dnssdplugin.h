@@ -46,6 +46,7 @@
 
 #include <string>
 #include <sstream>
+#include <fstream>
 #include <list>
 #include <algorithm>
 
@@ -63,6 +64,7 @@ struct DnsSdRr {
    int32_t srv_port;
    string srv_target;
    string hinfo[2];
+   string txt;
 
    /**
     * \brief Constructor.
@@ -72,6 +74,7 @@ struct DnsSdRr {
       srv_port = -1;
       srv_target = string();
       hinfo[0] = string();
+      txt = string();
    }
 };
 
@@ -113,6 +116,7 @@ struct RecordExtDNSSD : RecordExt {
          } else {
             ret << ";";
          }
+         ret << it->txt + ";";
       }
       return ret.str();
    }
@@ -173,6 +177,12 @@ private:
 
    string get_name(const char *data) const;
    size_t get_name_length(const char *data) const;
+   const string get_service_str(string &name) const;
+
+   void load_txtconfig(void);
+   bool matches_service(list<pair<string, list<string> > >::const_iterator &it, string &name) const;
+
+   list<pair<string, list<string> > > txt_config;   /**< Configuration for TXT record filter. */
 
    bool print_stats;       /**< Indicator whether to print stats when flow cache is finishing or not. */
    uint32_t queries;       /**< Total number of parsed DNS queries. */

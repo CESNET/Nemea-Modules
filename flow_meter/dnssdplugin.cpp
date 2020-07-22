@@ -103,6 +103,7 @@ DNSSDPlugin::DNSSDPlugin(const options_t &module_options)
    queries = 0;
    responses = 0;
    total = 0;
+   load_txtconfig();
 }
 
 DNSSDPlugin::DNSSDPlugin(const options_t &module_options, vector<plugin_opt> plugin_options) : FlowCachePlugin(plugin_options)
@@ -111,6 +112,7 @@ DNSSDPlugin::DNSSDPlugin(const options_t &module_options, vector<plugin_opt> plu
    queries = 0;
    responses = 0;
    total = 0;
+   load_txtconfig();
 }
 
 int DNSSDPlugin::post_create(Flow &rec, const Packet &pkt)
@@ -162,6 +164,48 @@ const char *ipfix_dnssd_template[] = {
 const char **DNSSDPlugin::get_ipfix_string()
 {
    return ipfix_dnssd_template;
+}
+
+/**
+ * \brief Load configuration for TXT filtering.
+ * 
+ * Takes path to file from enviroment variable DNSSD_TXTCONFIG_PATH.
+ */
+void DNSSDPlugin::load_txtconfig()
+{
+   char *config_path = getenv("DNSSD_TXTCONFIG_PATH");
+
+   if (!config_path) {
+      return;
+   }
+   ifstream in_file;
+
+   in_file.open(config_path);
+   if (!in_file) {
+      cerr << "flow_meter: dnssd plugin: Error: Unable to open " << config_path
+         << ", loaded from DNSSD_TXTCONFIG_PATH" << endl;
+      return;
+   }
+   string line, part;
+   size_t begin = 0, end = 0;
+
+   while (getline(in_file, line)) {
+      begin = end = 0;
+      std::pair<string, list<string> > conf;
+      end = line.find(",", begin);
+      conf.first = line.substr(begin, (end == string::npos ? (line.length() - begin)
+                                                           : (end - begin)));
+      cout << conf.first << endl;
+      begin = end + 1;
+      while (end != string::npos) {
+         end = line.find(",", begin);
+         conf.second.push_back(line.substr(begin, (end == string::npos ? (line.length() - begin)
+                                                                       : (end - begin))));
+         begin = end + 1;
+      }
+      txt_config.push_back(conf);
+   }
+   in_file.close();
 }
 
 /**
@@ -235,6 +279,44 @@ string DNSSDPlugin::get_name(const char *data) const
 }
 
 /**
+ * \brief Returns a DNS Service Instance Name without the <Instance> part.
+ * \param [in] name DNS Service Instance Name.
+ * 
+ * Service Instance Name = <Instance> . <Service> . <Domain>
+ * As an example, given input "My MacBook Air._device-info._tcp.local"
+ * returns "_device-info._tcp.local".
+ */
+const string DNSSDPlugin::get_service_str(string &name) const
+{
+   size_t begin = name.length();
+   int8_t underscore_counter = 0;
+
+   while (underscore_counter < 2 && begin != string::npos) {
+      begin = name.rfind("_", begin - 1);
+      if (begin != string::npos) {
+         underscore_counter++;
+      }
+   }
+   return name.substr((begin == string::npos ? 0 : begin), name.length());
+}
+
+/**
+ * \brief Checks if Service Instance Name is allowed for TXT processing by checking txt_config.
+ * \return True if allowed, otherwise false.
+ */
+bool DNSSDPlugin::matches_service(list<pair<string, list<string> > >::const_iterator &it, string &name) const
+{
+   string service = get_service_str(name);
+
+   for (it = txt_config.begin(); it != txt_config.end(); it++) {
+      if (it->first == service) {
+         return true;
+      }
+   }
+   return false;
+}
+
+/**
  * \brief Process RDATA section.
  * \param [in] record_begin Pointer to start of current resource record.
  * \param [in] data Pointer to RDATA section.
@@ -244,6 +326,7 @@ string DNSSDPlugin::get_name(const char *data) const
  */
 void DNSSDPlugin::process_rdata(const char *record_begin, const char *data, DnsSdRr &rdata, uint16_t type, size_t length) const
 {
+   string name = rdata.name;
    rdata = DnsSdRr();
 
    switch (type) {
@@ -269,6 +352,33 @@ void DNSSDPlugin::process_rdata(const char *record_begin, const char *data, DnsS
          rdata.hinfo[1] = string(data + 1, (uint8_t) data[0]);
          data += ((uint8_t) data[0] + 1);
          DEBUG_MSG("%16s\t\t    %s, %s\n", "HINFO", rdata.hinfo[0].c_str(), rdata.hinfo[1].c_str());
+      }
+      break;
+   case DNS_TYPE_TXT:
+      {
+         list<pair<string, list<string> > >::const_iterator it;
+         if (!matches_service(it, name)) {
+            break;
+         }
+         size_t len = (uint8_t) *(data++);
+         size_t total_len = len + 1;
+         list<string>::const_iterator sit;
+         string txt;
+
+         while (length != 0 && total_len <= length) {
+            txt = string(data, len);
+            for (sit = it->second.begin(); sit != it->second.end(); sit++) {
+               if (*sit == txt.substr(0, txt.find("="))) {
+                  DEBUG_MSG("%16s\t\t    %s\n", "TXT", txt.c_str());
+                  rdata.txt += txt + ":";
+                  break;
+               }
+            }
+
+            data += len;
+            len = (uint8_t) *(data++);
+            total_len += len + 1;
+         }
       }
       break;
    default:
@@ -391,6 +501,7 @@ bool DNSSDPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp
 
          data += sizeof(struct dns_answer);
          rdlength = ntohs(answer->rdlength);
+         rdata.name = name;
 
          process_rdata(record_begin, data, rdata, ntohs(answer->atype), rdlength);
          if (DNS_HDR_GET_QR(flags)) {   // Ignore the known answers in a query.
@@ -429,6 +540,7 @@ bool DNSSDPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp
 
          data += sizeof(struct dns_answer);
          rdlength = ntohs(answer->rdlength);
+         rdata.name = name;
 
          process_rdata(record_begin, data, rdata, ntohs(answer->atype), rdlength);
          filtered_append(rec, name, ntohs(answer->atype), rdata);
@@ -468,6 +580,7 @@ bool DNSSDPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp
          if (ntohs(answer->atype) != DNS_TYPE_OPT) {
 
             data += sizeof(struct dns_answer);
+            rdata.name = name;
 
             process_rdata(record_begin, data, rdata, ntohs(answer->atype), rdlength);
             if (DNS_HDR_GET_QR(flags)) {
@@ -516,7 +629,7 @@ void DNSSDPlugin::filtered_append(RecordExtDNSSD *rec, string name)
  */
 void DNSSDPlugin::filtered_append(RecordExtDNSSD *rec, string name, uint16_t type, DnsSdRr &rdata)
 {
-   if ((type != DNS_TYPE_SRV && type != DNS_TYPE_HINFO && type)
+   if ((type != DNS_TYPE_SRV && type != DNS_TYPE_HINFO && type != DNS_TYPE_TXT)
        || name.rfind("arpa") != string::npos) {
       return;
    }
@@ -532,6 +645,11 @@ void DNSSDPlugin::filtered_append(RecordExtDNSSD *rec, string name, uint16_t typ
          case DNS_TYPE_HINFO:
             it->hinfo[0] = rdata.hinfo[0];
             it->hinfo[1] = rdata.hinfo[1];
+            return;
+         case DNS_TYPE_TXT:
+            if (!rdata.txt.empty() && it->txt.find(rdata.txt) == string::npos) {
+               it->txt += rdata.txt + ":";
+            }
             return;
          default:
             return;
@@ -550,6 +668,9 @@ void DNSSDPlugin::filtered_append(RecordExtDNSSD *rec, string name, uint16_t typ
    case DNS_TYPE_HINFO:
       rr.hinfo[0] = rdata.hinfo[0];
       rr.hinfo[1] = rdata.hinfo[1];
+      break;
+   case DNS_TYPE_TXT:
+      rr.txt = rdata.txt;
       break;
    default:
       return;
