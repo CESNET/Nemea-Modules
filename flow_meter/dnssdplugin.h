@@ -184,6 +184,7 @@ private:
    bool matches_service(list<pair<string, list<string> > >::const_iterator &it, string &name) const;
 
    list<pair<string, list<string> > > txt_config;   /**< Configuration for TXT record filter. */
+   bool txt_all_records;   /**< Indicator whether to process all TXT recods. */ 
 
    bool print_stats;       /**< Indicator whether to print stats when flow cache is finishing or not. */
    uint32_t queries;       /**< Total number of parsed DNS queries. */

@@ -325,8 +325,10 @@ Format of DNSSD_QUERIES: [service_instance_name;][...]
 Format of DNSSD_RESPONSES: [service_instance_name;service_port;service_target;hinfo;txt;][...]
 
 #### Plugin parameters:
-- txt - Allows to pass a filepath to .csv file with filter allowing aggregation of txt records.
+- txt - Activates processing of txt records.
+    - Allows to pass a filepath to .csv file with whitelist filter of txt records.
    - File line format: service.domain,txt_key1,txt_key2,...
+   - If no filepath is provided, all txt records will be aggregated. 
 
 ## Simplified function diagram
 Diagram below shows how `flow_meter` works.

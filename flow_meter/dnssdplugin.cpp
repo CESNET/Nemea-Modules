@@ -103,6 +103,7 @@ DNSSDPlugin::DNSSDPlugin(const options_t &module_options)
    queries = 0;
    responses = 0;
    total = 0;
+   txt_all_records = false;
 }
 
 DNSSDPlugin::DNSSDPlugin(const options_t &module_options, vector<plugin_opt> plugin_options) : FlowCachePlugin(plugin_options)
@@ -111,6 +112,7 @@ DNSSDPlugin::DNSSDPlugin(const options_t &module_options, vector<plugin_opt> plu
    queries = 0;
    responses = 0;
    total = 0;
+   txt_all_records = false;
    string config_file;
    if (parse_params(plugin_options[0].params, config_file)) {
       load_txtconfig(config_file.c_str());
@@ -135,7 +137,9 @@ bool DNSSDPlugin::parse_params(const string &params, string &config_file)
             config_file = val;
             return true;
          } else {
-            cerr << "flow_meter: dnssd: Warning - txt parameter with empty value" << endl;
+            txt_all_records = true;
+            DEBUG_MSG("Enabled processing of all TXT records.\n");
+            return false;
          }
       } else {
          cerr << "flow_meter: dnssd: Warning - ignoring parameter with key: " << key << endl;
@@ -389,7 +393,7 @@ void DNSSDPlugin::process_rdata(const char *record_begin, const char *data, DnsS
    case DNS_TYPE_TXT:
       {
          list<pair<string, list<string> > >::const_iterator it;
-         if (!matches_service(it, name)) {
+         if (!(txt_all_records || matches_service(it, name))) {  // all_records overrides filter
             break;
          }
          size_t len = (uint8_t) *(data++);
@@ -399,11 +403,17 @@ void DNSSDPlugin::process_rdata(const char *record_begin, const char *data, DnsS
 
          while (length != 0 && total_len <= length) {
             txt = string(data, len);
-            for (sit = it->second.begin(); sit != it->second.end(); sit++) {
-               if (*sit == txt.substr(0, txt.find("="))) {
-                  DEBUG_MSG("%16s\t\t    %s\n", "TXT", txt.c_str());
-                  rdata.txt += txt + ":";
-                  break;
+
+            if (txt_all_records) {
+               DEBUG_MSG("%16s\t\t    %s\n", "TXT", txt.c_str());
+               rdata.txt += txt + ":";
+            } else {
+                  for (sit = it->second.begin(); sit != it->second.end(); sit++) {
+                  if (*sit == txt.substr(0, txt.find("="))) {
+                     DEBUG_MSG("%16s\t\t    %s\n", "TXT", txt.c_str());
+                     rdata.txt += txt + ":";
+                     break;
+                  }
                }
             }
 
