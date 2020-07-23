@@ -48,6 +48,7 @@
 #include <sstream>
 #include <arpa/inet.h>
 #include <unirec/unirec.h>
+#include <errno.h>
 
 #include "dnssdplugin.h"
 #include "flowifc.h"
