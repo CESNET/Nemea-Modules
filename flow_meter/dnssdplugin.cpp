@@ -103,7 +103,6 @@ DNSSDPlugin::DNSSDPlugin(const options_t &module_options)
    queries = 0;
    responses = 0;
    total = 0;
-   load_txtconfig();
 }
 
 DNSSDPlugin::DNSSDPlugin(const options_t &module_options, vector<plugin_opt> plugin_options) : FlowCachePlugin(plugin_options)
@@ -112,7 +111,38 @@ DNSSDPlugin::DNSSDPlugin(const options_t &module_options, vector<plugin_opt> plu
    queries = 0;
    responses = 0;
    total = 0;
-   load_txtconfig();
+   string config_file;
+   if (parse_params(plugin_options[0].params, config_file)) {
+      load_txtconfig(config_file.c_str());
+   }
+}
+
+bool DNSSDPlugin::parse_params(const string &params, string &config_file)
+{
+   DEBUG_MSG("Recieved parameters: %s\n", params.c_str());
+   size_t begin = 0, end = 0, sep = 0;
+   string key, val;
+
+   while (end != string::npos) {
+      sep = params.find("=", begin);
+      end = params.find(":", begin);
+      key = params.substr(begin, (sep == string::npos ? (params.length() - sep) : (sep - begin)));
+      if (sep++ != string::npos) {
+         val = params.substr(sep, (end == string::npos ? (params.length() - sep) : (end - sep)));
+      }
+      if (key == "txt") {
+         if (!val.empty()) {
+            config_file = val;
+            return true;
+         } else {
+            cerr << "flow_meter: dnssd: Warning - txt parameter with empty value" << endl;
+         }
+      } else {
+         cerr << "flow_meter: dnssd: Warning - ignoring parameter with key: " << key << endl;
+      }
+      begin = end + 1;
+   }
+   return false;
 }
 
 int DNSSDPlugin::post_create(Flow &rec, const Packet &pkt)
@@ -171,19 +201,16 @@ const char **DNSSDPlugin::get_ipfix_string()
  * 
  * Takes path to file from enviroment variable DNSSD_TXTCONFIG_PATH.
  */
-void DNSSDPlugin::load_txtconfig()
+void DNSSDPlugin::load_txtconfig(const char *config_file)
 {
-   char *config_path = getenv("DNSSD_TXTCONFIG_PATH");
-
-   if (!config_path) {
+   if (!config_file) {
       return;
    }
    ifstream in_file;
 
-   in_file.open(config_path);
+   in_file.open(config_file);
    if (!in_file) {
-      cerr << "flow_meter: dnssd plugin: Error: Unable to open " << config_path
-         << ", loaded from DNSSD_TXTCONFIG_PATH" << endl;
+      cerr << "flow_meter: dnssd plugin: " << strerror(errno) << " '" << config_file << "'\n";
       return;
    }
    string line, part;
@@ -195,14 +222,19 @@ void DNSSDPlugin::load_txtconfig()
       end = line.find(",", begin);
       conf.first = line.substr(begin, (end == string::npos ? (line.length() - begin)
                                                            : (end - begin)));
-      cout << conf.first << endl;
+      DEBUG_MSG("TXT filter service loaded: %s\n", conf.first.c_str());
+
       begin = end + 1;
+      DEBUG_MSG("TXT filter keys loaded: ");
       while (end != string::npos) {
          end = line.find(",", begin);
-         conf.second.push_back(line.substr(begin, (end == string::npos ? (line.length() - begin)
-                                                                       : (end - begin))));
+         part = line.substr(begin, (end == string::npos ? (line.length() - begin) 
+                                                        : (end - begin)));
+         conf.second.push_back(part);
+         DEBUG_MSG("%s ", part.c_str());
          begin = end + 1;
       }
+      DEBUG_MSG("\n");
       txt_config.push_back(conf);
    }
    in_file.close();

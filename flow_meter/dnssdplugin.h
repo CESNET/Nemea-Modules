@@ -179,7 +179,8 @@ private:
    size_t get_name_length(const char *data) const;
    const string get_service_str(string &name) const;
 
-   void load_txtconfig(void);
+   bool parse_params(const string &params, string &config_file);
+   void load_txtconfig(const char *config_file);
    bool matches_service(list<pair<string, list<string> > >::const_iterator &it, string &name) const;
 
    list<pair<string, list<string> > > txt_config;   /**< Configuration for TXT record filter. */
