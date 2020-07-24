@@ -92,47 +92,88 @@ struct RecordExtDNSSD : RecordExt {
    {
    }
 
-
-   string queries_to_string() {
+   /**
+    * \brief Concatenates all collected queries to a single string.
+    * \param [in] max_length Size limit for the output string.
+    * \return String of semicolon separated queries.
+    * 
+    * The string will allways contain complete entries.
+    */
+   string queries_to_string(size_t max_length) {
       list<string>::iterator it;
       string ret;
 
       for (it = queries.begin(); it != queries.end(); it++) {
-         ret += *it + ";";
+         if (max_length == string::npos) {
+            ret += *it + ";";
+         } else {
+            if (ret.length() + (*it).length() + 1 <= max_length) {
+               ret += *it + ";";
+            } else {
+               break;
+            }
+         }
       }
       return ret;
    }
 
-   string responses_to_string() {
-      list<DnsSdRr>::iterator it;
+   /**
+    * \brief Converts a response to semicolon separated string.
+    * \param [in] response Iterator pointing at the response.
+    */
+   string response_to_string(list<DnsSdRr>::iterator response){
       stringstream ret;
 
-      for (it = responses.begin(); it != responses.end(); it++) {
-         ret << it->name + ";";
-         ret << it->srv_port << ";";
-         ret << it->srv_target + ";";
-         if (!(it->hinfo[0].empty() && it->hinfo[1].empty())) {
-            ret << it->hinfo[0] << ":" << it->hinfo[1] + ";";
-         } else {
-            ret << ";";
-         }
-         ret << it->txt + ";";
+      ret << response->name + ";";
+      ret << response->srv_port << ";";
+      ret << response->srv_target + ";";
+      if (!(response->hinfo[0].empty() && response->hinfo[1].empty())) {
+         ret << response->hinfo[0] << ":" << response->hinfo[1] + ";";
+      } else {
+         ret << ";";
       }
+      ret << response->txt + ";";
       return ret.str();
+   }
+
+   /**
+    * \brief Concatenates all collected responses to single string.
+    * \param [in] max_length Size limit for the output string.
+    * \return String of semicolon separated responses.
+    * 
+    * The string will allways contain complete entries.
+    */
+   string responses_to_string(size_t max_length) {
+      list<DnsSdRr>::iterator it;
+      string ret, part;
+
+      for (it = responses.begin(); it != responses.end(); it++) {
+         if (max_length == string::npos) {
+            ret += response_to_string(it);
+         } else {
+            part = response_to_string(it);
+            if (ret.length() + part.length() + 1 <= max_length) {
+               ret += part;
+            } else {
+               break;
+            }
+         }
+      }
+      return ret;
    }
 
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
 #ifndef DISABLE_UNIREC
-      ur_set_string(tmplt, record, F_DNSSD_QUERIES, queries_to_string().c_str());
-      ur_set_string(tmplt, record, F_DNSSD_RESPONSES, responses_to_string().c_str());
+      ur_set_string(tmplt, record, F_DNSSD_QUERIES, queries_to_string(string::npos).c_str());
+      ur_set_string(tmplt, record, F_DNSSD_RESPONSES, responses_to_string(string::npos).c_str());
 #endif
    }
 
    virtual int fillIPFIX(uint8_t *buffer, int size)
    {
-      string queries = queries_to_string();
-      string responses = responses_to_string();
+      string queries = queries_to_string(510);
+      string responses = responses_to_string(510);
 
       int length = 0;
       int qry_len = queries.length();
@@ -142,11 +183,23 @@ struct RecordExtDNSSD : RecordExt {
          return -1;
       }
 
-      buffer[length++] = qry_len;
+      if (qry_len >= 255) {
+         buffer[length++] = 255;
+         *(uint16_t *)(buffer + length) = ntohs(qry_len);
+         length += sizeof(uint16_t);
+      } else {
+         buffer[length++] = qry_len;
+      }
       memcpy(buffer + length, queries.c_str(), qry_len);
       length += qry_len;
       
-      buffer[length++] = resp_len;
+      if (resp_len >= 255) {
+         buffer[length++] = 255;
+         *(uint16_t *)(buffer + length) = ntohs(resp_len);
+         length += sizeof(uint16_t);
+      } else {
+         buffer[length++] = resp_len;
+      }
       memcpy(buffer + length, responses.c_str(), resp_len);
       length += resp_len;
 

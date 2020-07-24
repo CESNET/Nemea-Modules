@@ -129,21 +129,29 @@ bool DNSSDPlugin::parse_params(const string &params, string &config_file)
    while (end != string::npos) {
       sep = params.find("=", begin);
       end = params.find(":", begin);
-      key = params.substr(begin, (sep == string::npos ? (params.length() - sep) : (sep - begin)));
-      if (sep++ != string::npos) {
-         val = params.substr(sep, (end == string::npos ? (params.length() - sep) : (end - sep)));
+      if (end < sep) {
+         sep = string::npos;
       }
-      if (key == "txt") {
-         if (!val.empty()) {
-            config_file = val;
-            return true;
-         } else {
-            txt_all_records = true;
-            DEBUG_MSG("Enabled processing of all TXT records.\n");
-            return false;
+      key = params.substr(begin, (sep == string::npos ? (end == string::npos ? (params.length() - end)
+                                                                             : (end))
+                                                      : (sep - begin)));
+      key.erase(remove_if(key.begin(), key.end(), ::isspace), key.end());
+      if (!key.empty()) {
+         if (sep++ != string::npos) {
+            val = params.substr(sep, (end == string::npos ? (params.length() - end) : (end - sep)));
          }
-      } else {
-         cerr << "flow_meter: dnssd: Warning - ignoring parameter with key: " << key << endl;
+         if (key == "txt") {
+            if (!val.empty()) {
+               config_file = val;
+               return true;
+            } else {
+               txt_all_records = true;
+               DEBUG_MSG("Enabled processing of all TXT records.\n");
+               return false;
+            }
+         } else {
+            cerr << "flow_meter: dnssd: Warning - ignoring parameter with key: " << key << endl;
+         }
       }
       begin = end + 1;
    }
@@ -500,7 +508,7 @@ bool DNSSDPlugin::parse_dns(const char *data, unsigned int payload_len, bool tcp
          string name = get_name(data);
 
          data += get_name_length(data);
-         struct dns_question *question = (struct dns_question *) data;
+         DEBUG_CODE(struct dns_question *question = (struct dns_question *) data);
 
          if ((data - data_begin) + sizeof(struct dns_question) > payload_len) {
             DEBUG_MSG("DNS parser quits: overflow\n\n");
