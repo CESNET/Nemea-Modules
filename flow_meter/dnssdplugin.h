@@ -179,7 +179,7 @@ struct RecordExtDNSSD : RecordExt {
       int qry_len = queries.length();
       int resp_len = responses.length();
 
-      if (qry_len + resp_len + 2 > size) {
+      if (qry_len + resp_len + 6 > size) {
          return -1;
       }
 
