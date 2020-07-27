@@ -118,10 +118,10 @@ HTTPPlugin::~HTTPPlugin()
 
 int HTTPPlugin::post_create(Flow &rec, const Packet &pkt)
 {
-   if (pkt.src_port == 80) {
-      add_ext_http_response(pkt.payload, pkt.payload_length, rec);
-   } else if (pkt.dst_port == 80) {
+   if (is_request(pkt.payload, pkt.payload_length)) {
       add_ext_http_request(pkt.payload, pkt.payload_length, rec);
+   } else if (is_response(pkt.payload, pkt.payload_length)) {
+      add_ext_http_response(pkt.payload, pkt.payload_length, rec);
    }
 
    return 0;
@@ -130,19 +130,7 @@ int HTTPPlugin::post_create(Flow &rec, const Packet &pkt)
 int HTTPPlugin::pre_update(Flow &rec, Packet &pkt)
 {
    RecordExt *ext = NULL;
-   if (pkt.src_port == 80) {
-      ext = rec.getExtension(http);
-      if (ext == NULL) { /* Check if header is present in flow. */
-         add_ext_http_response(pkt.payload, pkt.payload_length, rec);
-         return 0;
-      }
-
-      parse_http_response(pkt.payload, pkt.payload_length, dynamic_cast<RecordExtHTTP *>(ext));
-      if (flush_flow) {
-         flush_flow = false;
-         return FLOW_FLUSH_WITH_REINSERT;
-      }
-   } else if (pkt.dst_port == 80) {
+   if (is_request(pkt.payload, pkt.payload_length)) {
       ext = rec.getExtension(http);
       if (ext == NULL) { /* Check if header is present in flow. */
          add_ext_http_request(pkt.payload, pkt.payload_length, rec);
@@ -150,6 +138,18 @@ int HTTPPlugin::pre_update(Flow &rec, Packet &pkt)
       }
 
       parse_http_request(pkt.payload, pkt.payload_length, dynamic_cast<RecordExtHTTP *>(ext));
+      if (flush_flow) {
+         flush_flow = false;
+         return FLOW_FLUSH_WITH_REINSERT;
+      }
+   } else if (is_response(pkt.payload, pkt.payload_length)) {
+      ext = rec.getExtension(http);
+      if (ext == NULL) { /* Check if header is present in flow. */
+         add_ext_http_response(pkt.payload, pkt.payload_length, rec);
+         return 0;
+      }
+
+      parse_http_response(pkt.payload, pkt.payload_length, dynamic_cast<RecordExtHTTP *>(ext));
       if (flush_flow) {
          flush_flow = false;
          return FLOW_FLUSH_WITH_REINSERT;
@@ -207,6 +207,30 @@ void copy_str(char *dst, ssize_t size, const char *begin, const char *end)
    dst[len] = 0;
 }
 
+bool HTTPPlugin::is_request(const char *data, int payload_len)
+{
+   char chars[5];
+
+   if (payload_len < 4) {
+      return false;
+   }
+   memcpy(chars, data, 4);
+   chars[4] = 0;
+   return valid_http_method(chars);
+}
+
+bool HTTPPlugin::is_response(const char *data, int payload_len)
+{
+   char chars[5];
+
+   if (payload_len < 4) {
+      return false;
+   }
+   memcpy(chars, data, 4);
+   chars[4] = 0;
+   return !strcmp(chars, "HTTP");
+}
+
 #ifdef DEBUG_HTTP
 static uint32_t s_requests = 0, s_responses = 0;
 #endif /* DEBUG_HTTP */
@@ -259,10 +283,6 @@ bool HTTPPlugin::parse_http_request(const char *data, int payload_len, RecordExt
 
    /* Copy and check HTTP method */
    copy_str(buffer, sizeof(buffer), data, begin);
-   if (!valid_http_method(buffer)) {
-      DEBUG_MSG("Parser quits:\tundefined http method: %s\n", buffer);
-      return false;
-   }
 
    if (rec->req) {
       flush_flow = true;
@@ -465,11 +485,11 @@ bool HTTPPlugin::parse_http_response(const char *data, int payload_len, RecordEx
  */
 bool HTTPPlugin::valid_http_method(const char *method) const
 {
-   return (!strcmp(method, "GET")   || !strcmp(method, "POST")    ||
-         !strcmp(method, "PUT")     || !strcmp(method, "HEAD")    ||
-         !strcmp(method, "DELETE")  || !strcmp(method, "TRACE")   ||
-         !strcmp(method, "OPTIONS") || !strcmp(method, "CONNECT") ||
-         !strcmp(method, "PATCH"));
+   return (!strcmp(method, "GET ") || !strcmp(method, "POST") ||
+           !strcmp(method, "PUT ") || !strcmp(method, "HEAD") ||
+           !strcmp(method, "DELE") || !strcmp(method, "TRAC") ||
+           !strcmp(method, "OPTI") || !strcmp(method, "CONN") ||
+           !strcmp(method, "PATC"));
 }
 
 /**

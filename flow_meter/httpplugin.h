@@ -177,6 +177,8 @@ public:
    const char **get_ipfix_string();
 
 private:
+   bool is_response(const char *data, int payload_len);
+   bool is_request(const char *data, int payload_len);
    bool parse_http_request(const char *data, int payload_len, RecordExtHTTP *rec);
    bool parse_http_response(const char *data, int payload_len, RecordExtHTTP *rec);
    void add_ext_http_request(const char *data, int payload_len, Flow &flow);
