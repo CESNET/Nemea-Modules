@@ -49,7 +49,7 @@ This package contains header file for liburfilter.
 %setup
 
 %build
-./configure -q --enable-silent-rules --disable-repobuild --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir} --docdir=%{_docdir}/nemea-modules --mandir=%{_mandir} --datadir=%{_datadir} --with-ndp=%{compile_ndp};
+./configure -q --enable-silent-rules --disable-repobuild --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir} --docdir=%{_docdir}/nemea-modules --mandir=%{_mandir} --datadir=%{_datadir} --with-ndp=%{compile_ndp} CFLAGS=-fcommon;
 make -j5
 
 %install
