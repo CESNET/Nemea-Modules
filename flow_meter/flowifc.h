@@ -72,6 +72,7 @@ enum extTypeEnum {
    passivedns,
    pstats,
    ssdp,
+   dnssd,
    /* Add extension header identifiers for your plugins here */
    EXTENSION_CNT
 };

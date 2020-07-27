@@ -60,7 +60,9 @@ flow_meter_src=flow_meter.cpp \
 		pstatsplugin.cpp \
 		byte-utils.h \
 		ssdpplugin.h \
-		ssdpplugin.cpp
+		ssdpplugin.cpp \
+		dnssdplugin.h \
+		dnssdplugin.cpp
 
 ipfixprobe_SOURCES=$(flow_meter_src)
 
@@ -80,6 +82,7 @@ EXTRA_DIST=README.md \
 	traffic-samples/arp-sample.pcap \
 	traffic-samples/mixed-sample.pcap \
 	traffic-samples/dns-sample.pcap \
+	traffic-samples/dnssd-sample.pcap \
 	traffic-samples/http-sample.pcap \
 	traffic-samples/https-sample.pcap \
 	traffic-samples/ntp-sample.pcap \

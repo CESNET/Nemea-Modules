@@ -18,7 +18,8 @@ This NEMEA module creates biflows from input PCAP file / network interface and e
 
 ## Parameters
 ### Module specific parameters
-- `-p STRING`        Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. For example: '-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,https,dns,sip,ntp,smtp,basic,arp,passivedns,pstats,ssdp
+- `-p STRING`        Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. For example: '-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,https,dns,sip,ntp,smtp,basic,arp,passivedns,pstats,ssdp,dnssd 
+  - Some plugins have features activated with additional parameters. Format: plugin_name[:plugin_param=value[:...]][,...] If plugin does not support parameters, any parameters given will be ignored. Supported plugin parameters are listed bellow with output data.
 - `-c NUMBER`        Quit after `NUMBER` of packets are captured.
 - `-I STRING`        Capture from given network interface. Parameter require interface name (eth0 for example). For nfb interface you can channel after interface delimited by : (/dev/nfb0:1) default is 0.
 - `-r STRING`        Pcap file to read. `-` to read from stdin.
@@ -297,6 +298,37 @@ List of unirec fields exported on interface by ARP plugin.
 | ARP_DST_HA      | bytes    | destination hardware address       |
 | ARP_DST_PA      | bytes    | destination protocol address       |
 
+
+### SSDP
+List of unirec fields exported together with basic flow fields on interface by SSDP plugin.
+
+| Unirec field       | Type   | Description                     |
+|:------------------:|:------:|:-------------------------------:|
+| SSDP_LOCATION_PORT | uint16 | service port                    |
+| SSDP_NT            | string | list of advertised service urns |
+| SSDP_SERVER        | string | server info                     |
+| SSDP_ST            | string | list of queried service urns    |
+| SSDP_USER_AGENT    | string | list of user agents             |
+
+All lists are semicolon separated.
+
+### DNS-SD
+List of unirec fields exported together with basic flow fields on interface by DNS-SD plugin.
+
+| Unirec field    | Type   | Description                     |
+|:---------------:|:------:|:-------------------------------:|
+| DNSSD_QUERIES   | string | list of queries for services    |
+| DNSSD_RESPONSES | string | list of advertised services     |
+
+Format of DNSSD_QUERIES: [service_instance_name;][...]
+
+Format of DNSSD_RESPONSES: [service_instance_name;service_port;service_target;hinfo;txt;][...]
+
+#### Plugin parameters:
+- txt - Activates processing of txt records.
+    - Allows to pass a filepath to .csv file with whitelist filter of txt records.
+   - File line format: service.domain,txt_key1,txt_key2,...
+   - If no filepath is provided, all txt records will be aggregated. 
 
 ## Simplified function diagram
 Diagram below shows how `flow_meter` works.

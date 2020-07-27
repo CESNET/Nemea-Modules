@@ -2,6 +2,7 @@ TESTS=test_http_plugin.sh \
 	test_https_plugin.sh \
 	test_dns_plugin.sh \
 	test_passivedns_plugin.sh \
+	test_dnssd_plugin.sh \
 	test_sip_plugin.sh \
 	test_smtp_plugin.sh \
 	test_ntp_plugin.sh \
@@ -15,6 +16,7 @@ EXTRA_DIST=test_plugin.sh \
 	test_https_plugin.sh \
 	test_dns_plugin.sh \
 	test_passivedns_plugin.sh \
+	test_dnssd_plugin.sh \
 	test_sip_plugin.sh \
 	test_smtp_plugin.sh \
 	test_ntp_plugin.sh \
@@ -28,6 +30,7 @@ EXTRA_DIST=test_plugin.sh \
 	test_reference/ssdp \
 	test_reference/arp \
 	test_reference/dns \
+	test_reference/dnssd \
 	test_reference/http \
 	test_reference/https \
 	test_reference/ntp \
