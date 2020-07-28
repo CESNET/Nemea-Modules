@@ -89,8 +89,6 @@ Basic unirec fields exported on interface with basic (pseudo) plugin. These fiel
 | PROTOCOL               | uint8            | transport protocol                                  |
 | TCP_FLAGS              | uint8            | TCP protocol flags (src to dst)                     |
 | TCP_FLAGS_REV          | uint8            | TCP protocol flags (dst to src)                     |
-| TOS                    | uint8            | IP type of service                                  |
-| TTL                    | uint8            | IP time to live                                     |
 
 ### HTTP
 List of unirec fields exported together with basic flow fields on interface by HTTP plugin.
