@@ -130,39 +130,31 @@ void SSDPPlugin::finish()
 /**
  * \brief Parses port from location header message string.
  * 
- * \param [in, out] data Pointer to pointer to SSDP data.
+ * \param [in, out] data Pointer to SSDP data.
  * \param [in] ip_version IP version of the Location url being parsed.
- * \return Parsed port number on success, -1 otherwise.
+ * \return Parsed port number on success, 0 otherwise.
  */
-int SSDPPlugin::parse_loc_port(char **data, uint8_t ip_version){
-   int port;
+uint16_t SSDPPlugin::parse_loc_port(char *data, uint8_t ip_version)
+{
+   uint16_t port;
    char *end_ptr = NULL;
-   if(ip_version == 6){
-      while(**data){
-         if(*(*data)++ == ']'){
-            (*data)++;
-            break;
-         }
-      }
+
+   if (ip_version == 6) {
+      data = strchr(data, ']');
+   } else {
+      data = strchr(data, '.');
    }
-   else {
-      while (**data){
-         if(*(*data)++ == '.'){
-            break;
-         }
-      }
-      while(**data){
-         if(*(*data)++ == ':'){
-            break;     
-         }
-      }
+   data = strchr(data, ':');
+
+   if (data) {
+      data++;
    }
-   port = strtol(*data, &end_ptr, 0);
-   if(*data != end_ptr){
+
+   port = strtol(data, &end_ptr, 0);
+   if (data != end_ptr) {
       return port;
-   }
-   else {
-      return -1;
+   } else {
+      return 0;
    }
 }
 
@@ -217,7 +209,7 @@ void SSDPPlugin::parse_headers(char *data, header_parser_conf conf){
                      break;
                   case LOCATION:
                   {
-                     uint16_t port = parse_loc_port(&old_ptr, conf.ip_version);
+                     uint16_t port = parse_loc_port(old_ptr, conf.ip_version);
                      if (port > 0){
                         SSDP_DEBUG_MSG("%d <- %d\n", conf.ext->port, port);
                         conf.ext->port = port;
