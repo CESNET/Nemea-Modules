@@ -66,6 +66,7 @@
 #include "conversion.h"
 
 #include "httpplugin.h"
+#include "rtspplugin.h"
 #include "httpsplugin.h"
 #include "dnsplugin.h"
 #include "sipplugin.h"
@@ -85,7 +86,7 @@ static int stop = 0;
 #define MODULE_BASIC_INFO(BASIC) \
   BASIC("flow_meter", "Convert packets from PCAP file or network interface into biflow records.", 0, -1)
 
-#define SUPPORTED_PLUGINS_LIST "http,https,dns,sip,ntp,smtp,basic,arp,passivedns,pstats,ssdp,dnssd"
+#define SUPPORTED_PLUGINS_LIST "http,rtsp,https,dns,sip,ntp,smtp,basic,arp,passivedns,pstats,ssdp,dnssd"
 
 // TODO: remove parameters when using ndp
 #define MODULE_PARAMS(PARAM) \
@@ -142,6 +143,12 @@ int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plu
          tmp.push_back(plugin_opt("http", http, ifc_num++));
 
          plugins.push_back(new HTTPPlugin(module_options, tmp));
+      } else if (proto == "rtsp") {
+         vector<plugin_opt> tmp;
+
+         tmp.push_back(plugin_opt("rtsp", rtsp, ifc_num++));
+
+         plugins.push_back(new RTSPPlugin(module_options, tmp));
       } else if (proto == "https") {
          vector<plugin_opt> tmp;
 

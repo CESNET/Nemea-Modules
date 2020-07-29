@@ -1,4 +1,5 @@
 TESTS=test_http_plugin.sh \
+	test_rtsp_plugin.sh \
 	test_https_plugin.sh \
 	test_dns_plugin.sh \
 	test_passivedns_plugin.sh \
@@ -13,6 +14,7 @@ TESTS=test_http_plugin.sh \
 
 EXTRA_DIST=test_plugin.sh \
 	test_http_plugin.sh \
+	test_rtsp_plugin.sh \
 	test_https_plugin.sh \
 	test_dns_plugin.sh \
 	test_passivedns_plugin.sh \
@@ -32,6 +34,7 @@ EXTRA_DIST=test_plugin.sh \
 	test_reference/dns \
 	test_reference/dnssd \
 	test_reference/http \
+	test_reference/rtsp \
 	test_reference/https \
 	test_reference/ntp \
 	test_reference/sip \

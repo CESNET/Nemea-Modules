@@ -33,6 +33,8 @@ flow_meter_src=flow_meter.cpp \
 		flowcacheplugin.h \
 		httpplugin.cpp \
 		httpplugin.h \
+		rtspplugin.cpp \
+		rtspplugin.h \
 		sipplugin.cpp \
 		sipplugin.h \
 		httpsplugin.cpp \
@@ -84,6 +86,7 @@ EXTRA_DIST=README.md \
 	traffic-samples/dns-sample.pcap \
 	traffic-samples/dnssd-sample.pcap \
 	traffic-samples/http-sample.pcap \
+	traffic-samples/rtsp-sample.pcap \
 	traffic-samples/https-sample.pcap \
 	traffic-samples/ntp-sample.pcap \
 	traffic-samples/sip-sample.pcap \

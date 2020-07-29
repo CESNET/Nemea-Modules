@@ -98,9 +98,15 @@
 #define HTTP_DOMAIN(F)                F(16982,  102,   -1,   NULL)
 #define HTTP_REFERER(F)               F(16982,  103,   -1,   NULL)
 #define HTTP_CONTENT_TYPE(F)          F(16982,  104,   -1,   NULL)
-#define HTTP_URL(F)                   F(16982,  105,   -1,   NULL)
+#define HTTP_URI(F)                   F(16982,  105,   -1,   NULL)
 #define HTTP_STATUS(F)                F(16982,  106,    2,   NULL)
 #define HTTP_HEADER_COUNT(F)          F(16982,  107,    2,   NULL)
+#define RTSP_METHOD(F)                F(16982,  600,   -1,   NULL)
+#define RTSP_USERAGENT(F)             F(16982,  601,   -1,   NULL)
+#define RTSP_URI(F)                   F(16982,  602,   -1,   NULL)
+#define RTSP_STATUS(F)                F(16982,  603,    2,   NULL)
+#define RTSP_CONTENT_TYPE(F)          F(16982,  604,   -1,   NULL)
+#define RTSP_SERVER(F)                F(16982,  605,   -1,   NULL)
 #define SRC_COUNTRY(F)                F(16982,  412,    4,   NULL)
 #define DST_COUNTRY(F)                F(16982,  413,    4,   NULL)
 #define TUN_HOP(F)                    F(16982,  414,    1,   NULL)
@@ -242,9 +248,17 @@
    F(HTTP_METHOD) \
    F(HTTP_DOMAIN) \
    F(HTTP_REFERER) \
-   F(HTTP_URL) \
+   F(HTTP_URI) \
    F(HTTP_CONTENT_TYPE) \
    F(HTTP_STATUS)
+
+#define IPFIX_RTSP_TEMPLATE(F) \
+   F(RTSP_METHOD) \
+   F(RTSP_USERAGENT) \
+   F(RTSP_URI) \
+   F(RTSP_STATUS)\
+   F(RTSP_SERVER) \
+   F(RTSP_CONTENT_TYPE)
 
 #define IPFIX_HTTPS_TEMPLATE(F) \
    F(HTTPS_SNI)
@@ -345,6 +359,7 @@
    BASIC_TMPLT_V4(F) \
    BASIC_TMPLT_V6(F) \
    IPFIX_HTTP_TEMPLATE(F) \
+   IPFIX_RTSP_TEMPLATE(F) \
    IPFIX_HTTPS_TEMPLATE(F) \
    IPFIX_NTP_TEMPLATE(F) \
    IPFIX_ARP_TEMPLATE(F) \
