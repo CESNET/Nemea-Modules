@@ -85,11 +85,13 @@ static int stop = 0;
 #define MODULE_BASIC_INFO(BASIC) \
   BASIC("flow_meter", "Convert packets from PCAP file or network interface into biflow records.", 0, -1)
 
+#define SUPPORTED_PLUGINS_LIST "http,https,dns,sip,ntp,smtp,basic,arp,passivedns,pstats,ssdp,dnssd"
+
 // TODO: remove parameters when using ndp
 #define MODULE_PARAMS(PARAM) \
   PARAM('p', "plugins", "Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. "\
   "For example: \'-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter"\
-  " will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,https,dns,sip,ntp,smtp,basic,arp,passivedns,pstats,ssdp,dnssd"\
+  " will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: " SUPPORTED_PLUGINS_LIST \
   " Some plugins have features activated with additional parameters. Format: plugin_name[:plugin_param=value[:...]][,...] If plugin does not support parameters, any parameters given will be ignored."\
   " Supported plugin parameters are listed in README", required_argument, "string")\
   PARAM('c', "count", "Quit after number of packets are captured.", required_argument, "uint32")\
@@ -316,7 +318,7 @@ int main(int argc, char *argv[])
       puts("ipfixprobe version " VERSION);
       puts("ipfixprobe is a simplified flow exporter (flow_meter) without libtrap&UniRec support.");
       puts("");
-      puts("Usage: ipfixprobe [-I interface] -x host:port [-u] [-p http,https,dns,sip,ntp,smtp,basic,arp,passivedns] [-r file]");
+      puts("Usage: ipfixprobe [-I interface] -x host:port [-u] [-p " SUPPORTED_PLUGINS_LIST "] [-r file]");
       puts("");
 #endif
    } else if (verbose >= 0) {
