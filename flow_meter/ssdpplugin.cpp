@@ -197,8 +197,8 @@ void SSDPPlugin::parse_headers(char *data, header_parser_conf conf){
    char *ptr = data;
    char *old_ptr = ptr;
    while (*ptr != '\0'){
-      if(*ptr == '\n'){
-         *ptr = '\0';
+      if (*ptr == '\n' && *(ptr-1) == '\r') {
+         *(ptr-1) = '\0';
          for(unsigned j = 0, i = 0; j < conf.select_cnt; j++){
             i = conf.select[j];
             if (get_header_val(&old_ptr, conf.headers[i], strlen(conf.headers[i]))){
