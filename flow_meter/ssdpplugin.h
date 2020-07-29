@@ -100,13 +100,19 @@ struct RecordExtSSDP : RecordExt {
       int st_len = strlen(st);
       int user_agent_len = strlen(user_agent);
 
-      if (length + nt_len + server_len + st_len + user_agent_len + 4 > size){
+      if (length + nt_len + server_len + st_len + user_agent_len + 8 > size){
          return -1;
       }
 
       *(uint16_t *) (buffer) = ntohs(port);
 
-      buffer[length++] = nt_len;
+      if (nt_len >= 255) {
+         buffer[length++] = 255;
+         *(uint16_t *)(buffer + length) = ntohs(nt_len);
+         length += sizeof(uint16_t);
+      } else {
+         buffer[length++] = nt_len;
+      }
       memcpy(buffer + length, nt, nt_len);
       length += nt_len;
 
@@ -114,7 +120,13 @@ struct RecordExtSSDP : RecordExt {
       memcpy(buffer + length, server, server_len);
       length += server_len;
 
-      buffer[length++] = st_len;
+      if (st_len >= 255) {
+         buffer[length++] = 255;
+         *(uint16_t *)(buffer + length) = ntohs(st_len);
+         length += sizeof(uint16_t);
+      } else {
+         buffer[length++] = st_len;
+      }
       memcpy(buffer + length, st, st_len);
       length += st_len;
 
