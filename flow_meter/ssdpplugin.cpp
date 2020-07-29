@@ -92,12 +92,18 @@ SSDPPlugin::SSDPPlugin(const options_t &module_options)
 {
    record = NULL;
    print_stats = module_options.print_stats;
+   notifies = 0;
+   searches = 0;
+   total = 0;
 }
 
 SSDPPlugin::SSDPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options) : FlowCachePlugin(plugin_options)
 {
    record = NULL;
    print_stats = module_options.print_stats;
+   notifies = 0;
+   searches = 0;
+   total = 0;
 }
 
 int SSDPPlugin::post_create(Flow &rec, const Packet &pkt)
@@ -124,6 +130,9 @@ void SSDPPlugin::finish()
 {
    if (print_stats) {
       cout << "SSDP plugin stats:" << endl;
+      cout << "   Parsed SSDP M-Searches: " << searches << endl;
+      cout << "   Parsed SSDP Notifies: " << notifies << endl;
+      cout << "   Total SSDP packets processed: " << total << endl;
    }
 }
 
@@ -271,15 +280,18 @@ void SSDPPlugin::parse_ssdp_message(Flow &rec, const Packet &pkt){
       dynamic_cast<RecordExtSSDP *>(rec.getExtension(ssdp))
    };
    char* data = (char*) pkt.payload;
+   total++;
    if(data[0] == 'N'){
-      SSDP_DEBUG_MSG("Notify\n");
+      notifies++;
+      SSDP_DEBUG_MSG("Notify #%d\n", notifies);
       int notify_headers[] = { NT, LOCATION, SERVER };
       parse_conf.select = notify_headers;
       parse_conf.select_cnt = sizeof(notify_headers)/sizeof(notify_headers[0]);
       parse_headers(data, parse_conf);
    }
    else if (data[0] == 'M'){
-      SSDP_DEBUG_MSG("M-search\n");
+      searches++;
+      SSDP_DEBUG_MSG("M-search #%d\n", searches);
       int search_headers[] = { ST, USER_AGENT };
       parse_conf.select = search_headers;
       parse_conf.select_cnt = sizeof(search_headers)/sizeof(search_headers[0]);

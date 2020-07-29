@@ -159,6 +159,9 @@ private:
    void append_value(char *curr_entry, unsigned entry_max, char *value);
 
    bool print_stats;       /**< Indicator whether to print stats when flow cache is finishing or not. */
+   uint32_t notifies;      /**< Total number of parsed SSDP notifies. */
+   uint32_t searches;      /**< Total number of parsed SSDP m-searches. */
+   uint32_t total;         /**< Total number of parsed SSDP packets. */
    RecordExtSSDP *record;  /**< Pointer to allocated record extension */
 };
 
