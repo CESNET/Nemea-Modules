@@ -314,7 +314,7 @@ inline uint16_t parse_tcp_hdr(const u_char *data_ptr, Packet *pkt)
    pkt->field_indicator |= (PCKT_TCP | PCKT_PAYLOAD);
    pkt->src_port = ntohs(tcp->source);
    pkt->dst_port = ntohs(tcp->dest);
-   pkt->tcp_control_bits = (uint8_t) *(data_ptr + 13) & 0x3F;
+   pkt->tcp_control_bits = (uint8_t) *(data_ptr + 13) & 0xFF;
 
    DEBUG_MSG("TCP header:\n");
    DEBUG_MSG("\tSrc port:\t%u\n",   ntohs(tcp->source));

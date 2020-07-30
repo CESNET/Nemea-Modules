@@ -66,6 +66,7 @@
 #include "conversion.h"
 
 #include "httpplugin.h"
+#include "rtspplugin.h"
 #include "httpsplugin.h"
 #include "dnsplugin.h"
 #include "sipplugin.h"
@@ -75,6 +76,8 @@
 #include "smtpplugin.h"
 #include "pstatsplugin.h"
 #include "vpndetectorplugin.h"
+#include "ssdpplugin.h"
+#include "dnssdplugin.h"
 
 using namespace std;
 
@@ -84,11 +87,15 @@ static int stop = 0;
 #define MODULE_BASIC_INFO(BASIC) \
   BASIC("flow_meter", "Convert packets from PCAP file or network interface into biflow records.", 0, -1)
 
+#define SUPPORTED_PLUGINS_LIST "http,rtsp,https,dns,sip,ntp,smtp,basic,arp,passivedns,pstats,ssdp,dnssd"
+
 // TODO: remove parameters when using ndp
 #define MODULE_PARAMS(PARAM) \
   PARAM('p', "plugins", "Activate specified parsing plugins. Output interface for each plugin correspond the order which you specify items in -i and -p param. "\
   "For example: \'-i u:a,u:b,u:c -p http,basic,dns\' http traffic will be send to interface u:a, basic flow to u:b etc. If you don't specify -p parameter, flow meter"\
-  " will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: http,https,dns,sip,ntp,smtp,basic,arp,passivedns,pstats,vpndetector", required_argument, "string")\
+  " will require one output interface for basic flow by default. Format: plugin_name[,...] Supported plugins: " SUPPORTED_PLUGINS_LIST \
+  " Some plugins have features activated with additional parameters. Format: plugin_name[:plugin_param=value[:...]][,...] If plugin does not support parameters, any parameters given will be ignored."\
+  " Supported plugin parameters are listed in README", required_argument, "string")\
   PARAM('c', "count", "Quit after number of packets are captured.", required_argument, "uint32")\
   PARAM('I', "interface", "Capture from given network interface. Parameter require interface name (eth0 for example). For nfb interface you can channel after interface delimited by : (/dev/nfb0:1) default is 0", required_argument, "string")\
   PARAM('r', "file", "Pcap file to read. - to read from stdin.", required_argument, "string") \
@@ -114,13 +121,17 @@ static int stop = 0;
  */
 int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plugins, options_t &module_options)
 {
-   string proto;
-   size_t begin = 0, end = 0;
+   string proto, params;
+   size_t begin = 0, end = 0, begin_params = 0;
 
    int ifc_num = 0;
    while (end != string::npos) { // Iterate through user specified settings.
       end = settings.find(",", begin);
       proto = settings.substr(begin, (end == string::npos ? (settings.length() - begin) : (end - begin)));
+
+      begin_params = proto.find(":");
+      params = proto.substr((begin_params == string::npos ? (proto.length()) : (begin_params + 1)), proto.length());
+      proto = (begin_params == string::npos ? (proto) : (proto.substr(0, begin_params)));
 
       if (proto == "basic") {
          module_options.basic_ifc_num = ifc_num++; // Enable parsing basic flow (flow without any plugin output).
@@ -133,6 +144,12 @@ int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plu
          tmp.push_back(plugin_opt("http", http, ifc_num++));
 
          plugins.push_back(new HTTPPlugin(module_options, tmp));
+      } else if (proto == "rtsp") {
+         vector<plugin_opt> tmp;
+
+         tmp.push_back(plugin_opt("rtsp", rtsp, ifc_num++));
+
+         plugins.push_back(new RTSPPlugin(module_options, tmp));
       } else if (proto == "https") {
          vector<plugin_opt> tmp;
 
@@ -179,6 +196,16 @@ int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plu
           tmp.push_back(plugin_opt("vpndetector", vpndetector, ifc_num++));
 
           plugins.push_back(new VPNDetectorPlugin(module_options, tmp));
+      } else if (proto == "ssdp"){
+         vector<plugin_opt> tmp;
+         tmp.push_back(plugin_opt("ssdp", ssdp, ifc_num++));
+
+         plugins.push_back(new SSDPPlugin(module_options, tmp));
+      } else if (proto == "dnssd"){
+         vector<plugin_opt> tmp;
+         tmp.push_back(plugin_opt("dnssd", dnssd, ifc_num++, params));
+
+         plugins.push_back(new DNSSDPlugin(module_options, tmp));
       } else {
          fprintf(stderr, "Unsupported plugin: \"%s\"\n", proto.c_str());
          return -1;
@@ -304,7 +331,7 @@ int main(int argc, char *argv[])
       puts("ipfixprobe version " VERSION);
       puts("ipfixprobe is a simplified flow exporter (flow_meter) without libtrap&UniRec support.");
       puts("");
-      puts("Usage: ipfixprobe [-I interface] -x host:port [-u] [-p http,https,dns,sip,ntp,smtp,basic,arp,passivedns] [-r file]");
+      puts("Usage: ipfixprobe [-I interface] -x host:port [-u] [-p " SUPPORTED_PLUGINS_LIST "] [-r file]");
       puts("");
 #endif
    } else if (verbose >= 0) {
