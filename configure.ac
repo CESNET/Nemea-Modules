@@ -60,7 +60,7 @@ AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
-AC_CHECK_PROG(PYTHON, python, python, [""])
+AC_CHECK_PROG(PYTHON, python3, python3, [""])
 AC_SUBST(PYTHON)
 # Check for rpmbuild
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild, [""])
