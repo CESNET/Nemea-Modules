@@ -41,7 +41,8 @@ EXTRA_DIST=test_plugin.sh \
 	test_reference/ntp \
 	test_reference/sip \
 	test_reference/smtp \
-	test_reference/passivedns
+	test_reference/passivedns \
+	test_reference/vpndetector
 
 clean-local:
 	rm -rf test_output

@@ -69,11 +69,6 @@ VPNDetectorPlugin::VPNDetectorPlugin(const options_t &module_options, vector<plu
    print_stats = module_options.print_stats;
 }
 
-int VPNDetectorPlugin::pre_create(Packet &pkt)
-{
-   return 0;
-}
-
 void VPNDetectorPlugin::update_record(RecordExtVPNDetector* vpn_data, const Packet &pkt)
 {
   uint8_t opcode = 0;
@@ -81,13 +76,13 @@ void VPNDetectorPlugin::update_record(RecordExtVPNDetector* vpn_data, const Pack
   switch(static_cast<e_ip_proto_nbr>(pkt.ip_proto))
   {
     case udp:
-      if(pkt.payload_length == 0)
+      if (pkt.payload_length == 0)
         return;
       opcodeindex = c_udp_opcode_index;
       opcode = (pkt.payload[opcodeindex] >> 3);
     break;
     case tcp:
-      if(pkt.payload_length < c_tcp_opcode_index)
+      if (pkt.payload_length < c_tcp_opcode_index)
         return;
       opcodeindex = c_tcp_opcode_index;
       opcode = (pkt.payload[opcodeindex] >> 3);
@@ -108,11 +103,11 @@ void VPNDetectorPlugin::update_record(RecordExtVPNDetector* vpn_data, const Pack
     //p_control_hard_reset_server
     case p_control_hard_reset_server_v1:
     case p_control_hard_reset_server_v2:
-      if (vpn_data->status == status_reset_client && compare_ip(vpn_data->client_ip, pkt.dst_ip, pkt.ip_version)){ //server to client
+      if (vpn_data->status == status_reset_client && compare_ip(vpn_data->client_ip, pkt.dst_ip, pkt.ip_version)) { //server to client
         vpn_data->status = status_reset_server;
         vpn_data->invalid_pkt_cnt = -1;
       }
-      else{
+      else {
         vpn_data->invalid_pkt_cnt++;
         if (vpn_data->invalid_pkt_cnt == invalid_pckt_treshold) vpn_data->status = status_null;
       }
@@ -124,19 +119,16 @@ void VPNDetectorPlugin::update_record(RecordExtVPNDetector* vpn_data, const Pack
 
     //p_control
     case p_control_v1:
-      if (vpn_data->status == status_ack && compare_ip(vpn_data->client_ip, pkt.src_ip, pkt.ip_version) && check_ssl_client_hello(pkt, opcodeindex)){ //client to server
+      if (vpn_data->status == status_ack && compare_ip(vpn_data->client_ip, pkt.src_ip, pkt.ip_version) && check_ssl_client_hello(pkt, opcodeindex)) { //client to server
         vpn_data->status = status_client_hello;
         vpn_data->invalid_pkt_cnt = -1;
-      }
-      else if (vpn_data->status == status_client_hello && compare_ip(vpn_data->client_ip, pkt.dst_ip, pkt.ip_version) && check_ssl_server_hello(pkt, opcodeindex)){ //server to client
+      } else if (vpn_data->status == status_client_hello && compare_ip(vpn_data->client_ip, pkt.dst_ip, pkt.ip_version) && check_ssl_server_hello(pkt, opcodeindex)) { //server to client
         vpn_data->status = status_server_hello;
         vpn_data->invalid_pkt_cnt = -1;
-      }
-      else if (vpn_data->status == status_server_hello || vpn_data->status == status_control_ack){
+      } else if (vpn_data->status == status_server_hello || vpn_data->status == status_control_ack) {
         vpn_data->status = status_control_ack;
         vpn_data->invalid_pkt_cnt = -1;
-      }
-      else{
+      } else {
         vpn_data->invalid_pkt_cnt++;
         if (vpn_data->invalid_pkt_cnt == invalid_pckt_treshold) vpn_data->status = status_null;
       }
@@ -144,11 +136,11 @@ void VPNDetectorPlugin::update_record(RecordExtVPNDetector* vpn_data, const Pack
 
     //p_ack
     case p_ack_v1:
-      if (vpn_data->status == status_reset_server && compare_ip(vpn_data->client_ip, pkt.src_ip, pkt.ip_version)){ //client to server
+      if (vpn_data->status == status_reset_server && compare_ip(vpn_data->client_ip, pkt.src_ip, pkt.ip_version)) { //client to server
         vpn_data->status = status_ack;
         vpn_data->invalid_pkt_cnt = -1;
       }
-      else if (vpn_data->status == status_server_hello || vpn_data->status == status_control_ack){
+      else if (vpn_data->status == status_server_hello || vpn_data->status == status_control_ack) {
         vpn_data->status = status_control_ack;
         vpn_data->invalid_pkt_cnt = -1;
       }
@@ -157,7 +149,7 @@ void VPNDetectorPlugin::update_record(RecordExtVPNDetector* vpn_data, const Pack
     //p_data
     case p_data_v1:
     case p_data_v2:
-      if (vpn_data->status == status_control_ack || vpn_data->status == status_data){
+      if (vpn_data->status == status_control_ack || vpn_data->status == status_data) {
         vpn_data->status = status_data;
         vpn_data->invalid_pkt_cnt = -1;
       }
@@ -172,10 +164,10 @@ void VPNDetectorPlugin::update_record(RecordExtVPNDetector* vpn_data, const Pack
   vpn_data->pkt_cnt++;
 
   //packets that did not make a valid transition
-  if (vpn_data->invalid_pkt_cnt >= invalid_pckt_treshold){
+  if (vpn_data->invalid_pkt_cnt >= invalid_pckt_treshold) {
     vpn_data->status = status_null;
     vpn_data->invalid_pkt_cnt = -1;
-  } 
+  }
   vpn_data->invalid_pkt_cnt++;
   return;
 }
@@ -196,46 +188,29 @@ int VPNDetectorPlugin::pre_update(Flow &rec, Packet &pkt)
    return 0;
 }
 
-int VPNDetectorPlugin::post_update(Flow &rec, const Packet &pkt)
-{
-   return 0;
-}
-
 void VPNDetectorPlugin::pre_export(Flow &rec)
 {
   RecordExtVPNDetector *vpn_data = (RecordExtVPNDetector *) rec.getExtension(vpndetector);
-  if(vpn_data->pkt_cnt > min_pckt_treshold && vpn_data->status == status_data)
+  if (vpn_data->pkt_cnt > min_pckt_treshold && vpn_data->status == status_data)
      vpn_data->possible_vpn = 100;
-  else if(vpn_data->pkt_cnt > min_pckt_treshold && vpn_data->data_pkt_cnt/vpn_data->pkt_cnt >= data_pckt_treshold)
-     vpn_data->possible_vpn = vpn_data->data_pkt_cnt/vpn_data->pkt_cnt;
+  else if (vpn_data->pkt_cnt > min_pckt_treshold && (vpn_data->data_pkt_cnt / vpn_data->pkt_cnt) >= data_pckt_treshold)
+     vpn_data->possible_vpn = vpn_data->data_pkt_cnt / vpn_data->pkt_cnt;
     return;
 }
 
-void VPNDetectorPlugin::finish()
-{
-   if (print_stats) {
-      //cout << "VPNDETECTOR plugin stats:" << endl;
-   }
-}
-
-const char *ipfix__template[] = {
+const char *ipfix_template[] = {
    IPFIX_VPNDETECTOR_TEMPLATE(IPFIX_FIELD_NAMES)
    NULL
 };
 
 const char **VPNDetectorPlugin::get_ipfix_string()
 {
-   return ipfix__template;
+   return ipfix_template;
 }
 
 string VPNDetectorPlugin::get_unirec_field_string()
 {
    return VPNDETECTOR_UNIREC_TEMPLATE;
-}
-
-bool VPNDetectorPlugin::include_basic_flow_fields()
-{
-   return true;
 }
 
 bool VPNDetectorPlugin::compare_ip(ipaddr_t ip_1, ipaddr_t ip_2, uint8_t ip_version)
@@ -249,18 +224,18 @@ bool VPNDetectorPlugin::compare_ip(ipaddr_t ip_1, ipaddr_t ip_2, uint8_t ip_vers
 
 bool VPNDetectorPlugin::check_ssl_client_hello(const Packet &pkt, uint8_t opcodeindex)
 {
-  if (pkt.payload_length > opcodeindex+19 && pkt.payload[opcodeindex+14] == 0x16 && pkt.payload[opcodeindex+19] == 0x01)
+  if (pkt.payload_length > opcodeindex + 19 && pkt.payload[opcodeindex + 14] == 0x16 && pkt.payload[opcodeindex + 19] == 0x01)
     return 1;
-  if (pkt.payload_length > opcodeindex+47 && pkt.payload[opcodeindex+42] == 0x16 && pkt.payload[opcodeindex+47] == 0x01)
+  if (pkt.payload_length > opcodeindex + 47 && pkt.payload[opcodeindex + 42] == 0x16 && pkt.payload[opcodeindex + 47] == 0x01)
     return 1;
   return 0;
 }
 
 bool VPNDetectorPlugin::check_ssl_server_hello(const Packet &pkt, uint8_t opcodeindex)
 {
-  if (pkt.payload_length > opcodeindex+31 && pkt.payload[opcodeindex+26] == 0x16 && pkt.payload[opcodeindex+31] == 0x02)
+  if (pkt.payload_length > opcodeindex + 31 && pkt.payload[opcodeindex + 26] == 0x16 && pkt.payload[opcodeindex + 31] == 0x02)
     return 1;
-  if (pkt.payload_length > opcodeindex+59 && pkt.payload[opcodeindex+54] == 0x16 && pkt.payload[opcodeindex+59] == 0x02)
+  if (pkt.payload_length > opcodeindex + 59 && pkt.payload[opcodeindex + 54] == 0x16 && pkt.payload[opcodeindex + 59] == 0x02)
     return 1;
   return 0;
 }

@@ -58,7 +58,7 @@ using namespace std;
 /**
  * \brief Flow record extension header for storing parsed VPNDETECTOR packets.
  */
-struct RecordExtVPNDetector : RecordExt 
+struct RecordExtVPNDetector : RecordExt
 {
    uint8_t possible_vpn;
    uint32_t pkt_cnt;
@@ -99,21 +99,17 @@ class VPNDetectorPlugin : public FlowCachePlugin
 public:
    VPNDetectorPlugin(const options_t &module_options);
    VPNDetectorPlugin(const options_t &module_options, vector<plugin_opt> plugin_options);
-   int pre_create(Packet &pkt);
    int post_create(Flow &rec, const Packet &pkt);
    int pre_update(Flow &rec, Packet &pkt);
    void update_record(RecordExtVPNDetector* vpn_data, const Packet &pkt );
-   int post_update(Flow &rec, const Packet &pkt);
    void pre_export(Flow &rec);
-   void finish();
    const char **get_ipfix_string();
    string get_unirec_field_string();
-   bool include_basic_flow_fields();
 
    typedef enum e_ip_proto_nbr{
      tcp = 6,
      udp = 17
-   }e_ip_proto_nbr;
+   } e_ip_proto_nbr;
 
    static const uint32_t c_udp_opcode_index = 0;
    static const uint32_t c_tcp_opcode_index = 2;
