@@ -66,6 +66,7 @@ struct RecordExtVPNDetector : RecordExt
    int32_t invalid_pkt_cnt;
    uint32_t status;
    ipaddr_t client_ip;
+
    RecordExtVPNDetector() : RecordExt(vpndetector)
    {
      possible_vpn = 0;
@@ -84,8 +85,9 @@ struct RecordExtVPNDetector : RecordExt
 
    virtual int fillIPFIX(uint8_t *buffer, int size)
    {
-      if(size < 1)
+      if (size < 1) {
         return -1;
+      }
       buffer[0] = (uint8_t) possible_vpn;
       return 1;
    }
@@ -106,7 +108,7 @@ public:
    const char **get_ipfix_string();
    string get_unirec_field_string();
 
-   typedef enum e_ip_proto_nbr{
+   typedef enum e_ip_proto_nbr {
      tcp = 6,
      udp = 17
    } e_ip_proto_nbr;
