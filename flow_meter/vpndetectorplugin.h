@@ -103,7 +103,7 @@ public:
    VPNDetectorPlugin(const options_t &module_options, vector<plugin_opt> plugin_options);
    int post_create(Flow &rec, const Packet &pkt);
    int pre_update(Flow &rec, Packet &pkt);
-   void update_record(RecordExtVPNDetector* vpn_data, const Packet &pkt );
+   void update_record(RecordExtVPNDetector* vpn_data, const Packet &pkt);
    void pre_export(Flow &rec);
    const char **get_ipfix_string();
    string get_unirec_field_string();
