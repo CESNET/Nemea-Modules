@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 
 import sys, os.path
 from sys import argv
@@ -6,7 +6,7 @@ from os import system
 from string import *
 
 if len(argv) < 2:
-	print "Usage: %s training_file [testing_file]" % (argv[0])
+	print("Usage: %s training_file [testing_file]" % (argv[0]))
 	sys.exit(1)
 
 train = argv[1]
@@ -43,12 +43,12 @@ def build_new_file(file, file_name):
 
 def main():
 	build_new_file(train,"tmp_train")
-	print "Number of training classes (sets of labels) is %s" % len(new_class)
+	print("Number of training classes (sets of labels) is %s" % len(new_class))
 	sys.stdout.flush()
 
 	out_class = open("tmp_class","w")	
 	for cl in new_class:
-		out_class.write("%s\n" % join(map(lambda(num):("%s"%num),cl),","))
+		out_class.write("%s\n" % join([("%s"%num) for num in cl],","))
 	out_class.close()
 
 	if (do_test == 1):
