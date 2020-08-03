@@ -1,6 +1,6 @@
 /**
- * \file VPNDetectorPlugin.h
- * \brief Plugin for parsing vpndetector traffic.
+ * \file ovpnplugin.h
+ * \brief Plugin for parsing ovpn traffic.
  * \author Karel Hynek <hynekkar@fit.cvut.cz>
  * \author Martin Ctrnacty <ctrnama2@fit.cvut.cz>
  * \date 2020
@@ -42,8 +42,8 @@
  *
  */
 
-#ifndef VPNDETECORPLUGIN_H
-#define VPNDETECORPLUGIN_H
+#ifndef OVPNDETECORPLUGIN_H
+#define OVPNDETECORPLUGIN_H
 
 #include <string>
 
@@ -58,7 +58,7 @@ using namespace std;
 /**
  * \brief Flow record extension header for storing parsed VPNDETECTOR packets.
  */
-struct RecordExtVPNDetector : RecordExt
+struct RecordExtOVPN : RecordExt
 {
    uint8_t possible_vpn;
    uint32_t pkt_cnt;
@@ -67,7 +67,7 @@ struct RecordExtVPNDetector : RecordExt
    uint32_t status;
    ipaddr_t client_ip;
 
-   RecordExtVPNDetector() : RecordExt(vpndetector)
+   RecordExtOVPN() : RecordExt(ovpn)
    {
       possible_vpn = 0;
       pkt_cnt = 0;
@@ -79,7 +79,7 @@ struct RecordExtVPNDetector : RecordExt
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
       #ifndef DISABLE_UNIREC
-      ur_set(tmplt, record, F_VPN_CONF_LEVEL, possible_vpn);
+      ur_set(tmplt, record, F_OVPN_CONF_LEVEL, possible_vpn);
       #endif
    }
 
@@ -96,14 +96,14 @@ struct RecordExtVPNDetector : RecordExt
 /**
  * \brief Flow cache plugin for parsing VPNDETECTOR packets.
  */
-class VPNDetectorPlugin : public FlowCachePlugin
+class OVPNPlugin : public FlowCachePlugin
 {
 public:
-   VPNDetectorPlugin(const options_t &module_options);
-   VPNDetectorPlugin(const options_t &module_options, vector<plugin_opt> plugin_options);
+   OVPNPlugin(const options_t &module_options);
+   OVPNPlugin(const options_t &module_options, vector<plugin_opt> plugin_options);
    int post_create(Flow &rec, const Packet &pkt);
    int pre_update(Flow &rec, Packet &pkt);
-   void update_record(RecordExtVPNDetector* vpn_data, const Packet &pkt);
+   void update_record(RecordExtOVPN* vpn_data, const Packet &pkt);
    void pre_export(Flow &rec);
    const char **get_ipfix_string();
    string get_unirec_field_string();

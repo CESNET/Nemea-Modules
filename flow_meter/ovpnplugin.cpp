@@ -1,6 +1,6 @@
 /**
- * \file VPNDetectorPlugin.cpp
- * \brief Plugin for parsing vpndetector traffic.
+ * \file ovpnplugin.cpp
+ * \brief Plugin for parsing ovpn traffic.
  * \author Karel Hynek <hynekkar@fit.cvut.cz>
  * \author Martin Ctrnacty <ctrnama2@fit.cvut.cz>
  * \date 2020
@@ -44,7 +44,7 @@
 
 #include <iostream>
 
-#include "vpndetectorplugin.h"
+#include "ovpnplugin.h"
 #include "flowifc.h"
 #include "flowcacheplugin.h"
 #include "packet.h"
@@ -53,23 +53,23 @@
 
 using namespace std;
 
-#define VPNDETECTOR_UNIREC_TEMPLATE "VPN_CONF_LEVEL"
+#define OVPN_UNIREC_TEMPLATE "OVPN_CONF_LEVEL"
 
 UR_FIELDS (
-   uint8 VPN_CONF_LEVEL
+   uint8 OVPN_CONF_LEVEL
 )
 
-VPNDetectorPlugin::VPNDetectorPlugin(const options_t &module_options)
+OVPNPlugin::OVPNPlugin(const options_t &module_options)
 {
    print_stats = module_options.print_stats;
 }
 
-VPNDetectorPlugin::VPNDetectorPlugin(const options_t &module_options, vector<plugin_opt> plugin_options) : FlowCachePlugin(plugin_options)
+OVPNPlugin::OVPNPlugin(const options_t &module_options, vector<plugin_opt> plugin_options) : FlowCachePlugin(plugin_options)
 {
    print_stats = module_options.print_stats;
 }
 
-void VPNDetectorPlugin::update_record(RecordExtVPNDetector* vpn_data, const Packet &pkt)
+void OVPNPlugin::update_record(RecordExtOVPN* vpn_data, const Packet &pkt)
 {
    uint8_t opcode = 0;
    uint8_t opcodeindex = 0;
@@ -174,25 +174,25 @@ void VPNDetectorPlugin::update_record(RecordExtVPNDetector* vpn_data, const Pack
    return;
 }
 
-int VPNDetectorPlugin::post_create(Flow &rec, const Packet &pkt)
+int OVPNPlugin::post_create(Flow &rec, const Packet &pkt)
 {
-   RecordExtVPNDetector *vpn_data = new RecordExtVPNDetector();
+   RecordExtOVPN *vpn_data = new RecordExtOVPN();
    rec.addExtension(vpn_data);
 
    update_record(vpn_data, pkt);
    return 0;
 }
 
-int VPNDetectorPlugin::pre_update(Flow &rec, Packet &pkt)
+int OVPNPlugin::pre_update(Flow &rec, Packet &pkt)
 {
-   RecordExtVPNDetector *vpn_data = (RecordExtVPNDetector *) rec.getExtension(vpndetector);
+   RecordExtOVPN *vpn_data = (RecordExtOVPN *) rec.getExtension(ovpn);
    update_record(vpn_data, pkt);
    return 0;
 }
 
-void VPNDetectorPlugin::pre_export(Flow &rec)
+void OVPNPlugin::pre_export(Flow &rec)
 {
-   RecordExtVPNDetector *vpn_data = (RecordExtVPNDetector *) rec.getExtension(vpndetector);
+   RecordExtOVPN *vpn_data = (RecordExtOVPN *) rec.getExtension(ovpn);
    if (vpn_data->pkt_cnt > min_pckt_treshold && vpn_data->status == status_data) {
       vpn_data->possible_vpn = 100;
    } else if (vpn_data->pkt_cnt > min_pckt_treshold && (vpn_data->data_pkt_cnt / vpn_data->pkt_cnt) >= data_pckt_treshold) {
@@ -201,22 +201,22 @@ void VPNDetectorPlugin::pre_export(Flow &rec)
    return;
 }
 
-const char *ipfix_vpndetector_template[] = {
-   IPFIX_VPNDETECTOR_TEMPLATE(IPFIX_FIELD_NAMES)
+const char *ipfix_ovpn_template[] = {
+   IPFIX_OVPN_TEMPLATE(IPFIX_FIELD_NAMES)
    NULL
 };
 
-const char **VPNDetectorPlugin::get_ipfix_string()
+const char **OVPNPlugin::get_ipfix_string()
 {
-   return ipfix_vpndetector_template;
+   return ipfix_ovpn_template;
 }
 
-string VPNDetectorPlugin::get_unirec_field_string()
+string OVPNPlugin::get_unirec_field_string()
 {
-   return VPNDETECTOR_UNIREC_TEMPLATE;
+   return OVPN_UNIREC_TEMPLATE;
 }
 
-bool VPNDetectorPlugin::compare_ip(ipaddr_t ip_1, ipaddr_t ip_2, uint8_t ip_version)
+bool OVPNPlugin::compare_ip(ipaddr_t ip_1, ipaddr_t ip_2, uint8_t ip_version)
 {
    if (ip_version == 4 && !memcmp(&ip_1, &ip_2, 4)) {
       return 1;
@@ -226,7 +226,7 @@ bool VPNDetectorPlugin::compare_ip(ipaddr_t ip_1, ipaddr_t ip_2, uint8_t ip_vers
    return 0;
 }
 
-bool VPNDetectorPlugin::check_ssl_client_hello(const Packet &pkt, uint8_t opcodeindex)
+bool OVPNPlugin::check_ssl_client_hello(const Packet &pkt, uint8_t opcodeindex)
 {
    if (pkt.payload_length > opcodeindex + 19 && pkt.payload[opcodeindex + 14] == 0x16 && pkt.payload[opcodeindex + 19] == 0x01) {
       return 1;
@@ -236,7 +236,7 @@ bool VPNDetectorPlugin::check_ssl_client_hello(const Packet &pkt, uint8_t opcode
    return 0;
 }
 
-bool VPNDetectorPlugin::check_ssl_server_hello(const Packet &pkt, uint8_t opcodeindex)
+bool OVPNPlugin::check_ssl_server_hello(const Packet &pkt, uint8_t opcodeindex)
 {
    if (pkt.payload_length > opcodeindex + 31 && pkt.payload[opcodeindex + 26] == 0x16 && pkt.payload[opcodeindex + 31] == 0x02) {
       return 1;

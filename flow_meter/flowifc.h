@@ -72,7 +72,7 @@ enum extTypeEnum {
    arp,
    passivedns,
    pstats,
-   vpndetector,
+   ovpn,
    ssdp,
    dnssd,
    /* Add extension header identifiers for your plugins here */
