@@ -69,24 +69,24 @@ struct RecordExtVPNDetector : RecordExt
 
    RecordExtVPNDetector() : RecordExt(vpndetector)
    {
-     possible_vpn = 0;
-     pkt_cnt = 0;
-     data_pkt_cnt = 0;
-     invalid_pkt_cnt = 0;
-     status = 0;
+      possible_vpn = 0;
+      pkt_cnt = 0;
+      data_pkt_cnt = 0;
+      invalid_pkt_cnt = 0;
+      status = 0;
    }
 
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
-     #ifndef DISABLE_UNIREC
-     ur_set(tmplt, record, F_VPN_CONF_LEVEL, possible_vpn);
-     #endif
+      #ifndef DISABLE_UNIREC
+      ur_set(tmplt, record, F_VPN_CONF_LEVEL, possible_vpn);
+      #endif
    }
 
    virtual int fillIPFIX(uint8_t *buffer, int size)
    {
       if (size < 1) {
-        return -1;
+         return -1;
       }
       buffer[0] = (uint8_t) possible_vpn;
       return 1;
@@ -109,8 +109,8 @@ public:
    string get_unirec_field_string();
 
    typedef enum e_ip_proto_nbr {
-     tcp = 6,
-     udp = 17
+      tcp = 6,
+      udp = 17
    } e_ip_proto_nbr;
 
    static const uint32_t c_udp_opcode_index = 0;
