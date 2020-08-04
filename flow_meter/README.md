@@ -286,9 +286,9 @@ Note: the following fields are UniRec arrays.
 
 | UniRec field               | Type     | Description                            |
 |:--------------------------:|:--------:|:--------------------------------------:|
-| PPI_PKT_LENGTHS            | uint16\* | Sizes of the first packets             |
-| PPI_PKT_TIMES              | time\*   | Timestamps of the first packets        |
-| PPI_PKT_DIRECTIONS         | int8\*   | Directions of the first packets        |
+| PPI_PKT_LENGTHS            | uint16\* | sizes of the first packets             |
+| PPI_PKT_TIMES              | time\*   | timestamps of the first packets        |
+| PPI_PKT_DIRECTIONS         | int8\*   | directions of the first packets        |
 | PPI_PKT_FLAGS              | uint8\*  | TCP flags for each packet              |
 
 ### ARP
@@ -346,7 +346,7 @@ List of UniRec fields exported together with basic flow fields on interface by O
 
 | UniRec field       | Type   | Description                     |
 |:------------------:|:------:|:-------------------------------:|
-| OVPN_CONF_LEVEL    | uint8  | Level of confidence that the flow record is an OpenVPN tunnel |
+| OVPN_CONF_LEVEL    | uint8  | level of confidence that the flow record is an OpenVPN tunnel |
 
 ## Simplified function diagram
 Diagram below shows how `flow_meter` works.
