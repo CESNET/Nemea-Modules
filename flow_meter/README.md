@@ -340,6 +340,14 @@ Format of DNSSD_RESPONSES: [service_instance_name;service_port;service_target;hi
    - File line format: service.domain,txt_key1,txt_key2,...
    - If no filepath is provided, all txt records will be aggregated.
 
+### OVPN (OpenVPN)
+
+List of UniRec fields exported together with basic flow fields on interface by OVPN plugin.
+
+| UniRec field       | Type   | Description                     |
+|:------------------:|:------:|:-------------------------------:|
+| OVPN_CONF_LEVEL    | uint8  | Level of confidence that the flow record is an OpenVPN tunnel |
+
 ## Simplified function diagram
 Diagram below shows how `flow_meter` works.
 
