@@ -181,6 +181,7 @@
 #define SSDP_ST(F)                    F(8057,    825,  -1,   NULL)
 #define DNSSD_QUERIES(F)              F(8057,    826,  -1,   NULL)
 #define DNSSD_RESPONSES(F)            F(8057,    827,  -1,   NULL)
+#define OVPN_CONF_LEVEL(F)            F(8057,    828,   1,   NULL)
 
 #define STATS_PCKT_SIZES(F)           F(0,    291,  -1,   NULL)
 #define STATS_PCKT_TIMESTAMPS(F)      F(0,    291,  -1,   NULL)
@@ -337,6 +338,9 @@
    F(STATS_PCKT_TCPFLGS) \
    F(STATS_PCKT_DIRECTIONS)
 
+#define IPFIX_OVPN_TEMPLATE(F) \
+   F(OVPN_CONF_LEVEL)
+
 #define IPFIX_SSDP_TEMPLATE(F) \
    F(SSDP_LOCATION_PORT) \
    F(SSDP_NT) \
@@ -367,6 +371,7 @@
    IPFIX_DNS_TEMPLATE(F) \
    IPFIX_PASSIVEDNS_TEMPLATE(F) \
    IPFIX_PSTATS_TEMPLATE(F) \
+   IPFIX_OVPN_TEMPLATE(F) \
    IPFIX_SMTP_TEMPLATE(F) \
    IPFIX_SSDP_TEMPLATE(F) \
    IPFIX_DNSSD_TEMPLATE(F)

@@ -74,9 +74,10 @@
 #include "arpplugin.h"
 #include "passivednsplugin.h"
 #include "smtpplugin.h"
-#include <pstatsplugin.h>
-#include <ssdpplugin.h>
-#include <dnssdplugin.h>
+#include "pstatsplugin.h"
+#include "ovpnplugin.h"
+#include "ssdpplugin.h"
+#include "dnssdplugin.h"
 
 using namespace std;
 
@@ -86,7 +87,7 @@ static int stop = 0;
 #define MODULE_BASIC_INFO(BASIC) \
   BASIC("flow_meter", "Convert packets from PCAP file or network interface into biflow records.", 0, -1)
 
-#define SUPPORTED_PLUGINS_LIST "http,rtsp,https,dns,sip,ntp,smtp,basic,arp,passivedns,pstats,ssdp,dnssd"
+#define SUPPORTED_PLUGINS_LIST "http,rtsp,https,dns,sip,ntp,smtp,basic,arp,passivedns,pstats,ssdp,dnssd,ovpn"
 
 // TODO: remove parameters when using ndp
 #define MODULE_PARAMS(PARAM) \
@@ -190,6 +191,11 @@ int parse_plugin_settings(const string &settings, vector<FlowCachePlugin *> &plu
          tmp.push_back(plugin_opt("pstats", pstats, ifc_num++));
 
          plugins.push_back(new PSTATSPlugin(module_options, tmp));
+      } else if (proto == "ovpn"){
+          vector<plugin_opt> tmp;
+          tmp.push_back(plugin_opt("ovpn", ovpn, ifc_num++));
+
+          plugins.push_back(new OVPNPlugin(module_options, tmp));
       } else if (proto == "ssdp"){
          vector<plugin_opt> tmp;
          tmp.push_back(plugin_opt("ssdp", ssdp, ifc_num++));
