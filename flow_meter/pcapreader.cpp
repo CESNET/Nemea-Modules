@@ -156,7 +156,8 @@ struct __attribute__((packed)) trill_hdr {
    uint8_t version:2;
    uint8_t res:2;
    uint8_t m:1;
-   uint8_t op_len:5;
+   uint8_t op_len1:3;
+   uint8_t op_len2:2;
    uint8_t hop_cnt:6;
 #endif
    uint16_t egress_nick;
