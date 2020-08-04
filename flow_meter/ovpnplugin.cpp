@@ -195,8 +195,8 @@ void OVPNPlugin::pre_export(Flow &rec)
    RecordExtOVPN *vpn_data = (RecordExtOVPN *) rec.getExtension(ovpn);
    if (vpn_data->pkt_cnt > min_pckt_treshold && vpn_data->status == status_data) {
       vpn_data->possible_vpn = 100;
-   } else if (vpn_data->pkt_cnt > min_pckt_treshold && (vpn_data->data_pkt_cnt / vpn_data->pkt_cnt) >= data_pckt_treshold) {
-      vpn_data->possible_vpn = vpn_data->data_pkt_cnt / vpn_data->pkt_cnt;
+   } else if (vpn_data->pkt_cnt > min_pckt_treshold && ((double) vpn_data->data_pkt_cnt / (double) vpn_data->pkt_cnt) >= data_pckt_treshold) {
+      vpn_data->possible_vpn = (uint8_t) ((vpn_data->data_pkt_cnt / (double) vpn_data->pkt_cnt) * 80);
    }
    return;
 }
