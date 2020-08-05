@@ -27,6 +27,7 @@ AC_ARG_ENABLE([debug],
               CPPFLAGS="-DNDEBUG=1 $CPPFLAGS"])
 AM_CONDITIONAL(DEBUG, test x"$debug" = x"true")
 
+AM_PROG_AR
 LT_INIT()
 
 pkgdatadir=${datadir}/nemea
@@ -219,6 +220,18 @@ AX_LUA_LIBS([liblua=yes], AC_MSG_WARN([liblua not found. The luamodule module wi
 
 AM_CONDITIONAL(HAVE_LIBLUA, test x${liblua} = xyes)
 
+GTEST_HEADER="googletest/googletest/include/gtest/gtest.h"
+AC_MSG_CHECKING(for googletest submodule)
+AM_CONDITIONAL([HAVE_GOOGLETEST], [test -f $GTEST_HEADER])
+AS_IF([test -f googletest/googletest/include/gtest/gtest.h],
+	[AC_DEFINE(HAVE_GOOGLETEST, 1, [Define to 1 if the googletest submodule is available]) AC_MSG_RESULT(yes)],
+	[AC_MSG_WARN([
+The googletest submodule is not present, so such tests are omitted. To prevent skipping use command:
+git clone --recurse-submodules <this_repository> or
+git clone https://github.com/google/googletest.git])]
+)
+
+
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h locale.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/socket.h sys/time.h syslog.h unistd.h omp.h])
 
@@ -280,6 +293,7 @@ AC_CONFIG_FILES([Makefile
                  flow_meter/flow_meter.bash
                  flow_meter/tests/Makefile
                  flow_meter/nfbCInterface/Makefile
+                 googletest_example/Makefile
                  ipv6stats/Makefile
                  json_dump/Makefile
                  json_replay/Makefile
