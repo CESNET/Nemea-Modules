@@ -14,7 +14,7 @@ endif
 
 check_PROGRAMS = test_suite_example1
 test_suite_example1_SOURCES = main.cpp \
-		test_suite_example1.cpp sum.cpp
+		test_suite_example1.cpp my_func.hpp sum.cpp
 test_suite_example1_LDADD = $(gtest_ldadd)
 test_suite_example1_LDFLAGS = $(gtest_ldflags)
 test_suite_example1_CPPFLAGS = $(gtest_cppflags)
@@ -22,7 +22,7 @@ test_suite_example1_CPPFLAGS = $(gtest_cppflags)
 # Notice the +=
 check_PROGRAMS += test_suite_example2
 test_suite_example2_SOURCES = main.cpp \
-		test_suite_example2.cpp sub.cpp
+		test_suite_example2.cpp my_func.hpp sub.cpp
 test_suite_example2_LDADD = $(gtest_ldadd)
 test_suite_example2_LDFLAGS = $(gtest_ldflags)
 test_suite_example2_CPPFLAGS = $(gtest_cppflags)
