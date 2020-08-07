@@ -1,3 +1,16 @@
+2020-07-30 nemea-modules-2.16.0
+	* flow_meter:
+		bugfixes, biflow support, added ppi feature, ssdp and dns-sd
+		improvements, added ovpn plugin, maintenance of plugins
+	* mux:
+		bugfixes
+	* anonymizer:
+		maintenance, bugfixes
+	* report2ides:
+		first version of SSH bruteforce detection,
+		maintenance, IDEA improvements
+	* removed Python2 support
+
 2020-04-21 nemea-modules-2.15.0
 	* unirecfilter:
 		new In Array feature
