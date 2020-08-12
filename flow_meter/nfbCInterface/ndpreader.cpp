@@ -13,8 +13,8 @@ using namespace std;
 /**
  * \brief Constructor.
  */
-NdpReader::NdpReader(uint16_t packetBufferSize, uint64_t timeout) : 
-	dev_handle(NULL),rx_handle(NULL), processed_packets(0), 
+NdpReader::NdpReader(uint16_t packetBufferSize, uint64_t timeout) :
+	dev_handle(NULL),rx_handle(NULL), processed_packets(0),
 	packet_bufferSize(packetBufferSize), timeout(timeout)
 {
 	ndp_packet_buffer = new struct ndp_packet[packet_bufferSize];
@@ -90,7 +90,7 @@ void NdpReader::close()
       ndp_close_rx_queue(rx_handle);
 	  rx_handle = NULL;
   }
-  if(dev_handle) {// close NFB device 
+  if(dev_handle) {// close NFB device
       nfb_close(dev_handle);
 	  dev_handle = NULL;
   }
@@ -101,7 +101,7 @@ void NdpReader::print_stats()
 	std::cout << "NFB Reader processed packets: " << processed_packets << std::endl;
 }
 
-bool NdpReader::retrieve_ndp_packets() 
+bool NdpReader::retrieve_ndp_packets()
 {
     int ret;
     if(ndp_packet_buffer_valid) {
@@ -119,7 +119,7 @@ bool NdpReader::retrieve_ndp_packets()
 	} else if(ret < 0) {
        std::cerr << "RX Burst error: " << ret << std::endl;
 	}
-   
+
 	return false;
 }
 
@@ -129,10 +129,10 @@ int NdpReader::get_pkt(struct ndp_packet **ndp_packet_out, struct ndp_header **n
       error_msg = "No live capture or file opened.";
       return -3;
    }
-   
+
    if(ndp_packet_buffer_processed >= ndp_packet_buffer_packets) {
 	   if(!retrieve_ndp_packets()) {
-			usleep(timeout);
+			usleep(1);
 			return 0;
 	   }
    }
@@ -144,7 +144,7 @@ int NdpReader::get_pkt(struct ndp_packet **ndp_packet_out, struct ndp_header **n
    ndp_header->timestamp_sec  = le32toh(ndp_header->timestamp_sec);
    processed_packets++;
    ndp_packet_buffer_processed++;
-   
+
    *ndp_packet_out = ndp_packet;
    *ndp_header_out = ndp_header;
    return 1;
@@ -172,7 +172,7 @@ void ndp_reader_close(struct NdpReaderContext* context) {
 int ndp_reader_get_pkt(struct NdpReaderContext* context, struct ndp_packet **ndp_packet, struct ndp_header **ndp_header) {
 	return ((NdpReader*)context->reader)->get_pkt(ndp_packet, ndp_header);
 }
-const char *ndp_reader_error_msg(struct NdpReaderContext* context) 
+const char *ndp_reader_error_msg(struct NdpReaderContext* context)
 {
     return ((NdpReader*)context->reader)->error_msg.c_str();
 }
