@@ -488,6 +488,9 @@ inline uint16_t process_pppoe(const u_char *data_ptr, Packet *pkt)
 void parse_packet(Packet *pkt, struct timeval ts, const uint8_t *data, uint16_t len, uint16_t caplen)
 {
    uint16_t data_offset = 0;
+   uint16_t tcp_header_length = 0;
+   uint16_t ihl = 0;
+   uint16_t payload_length = 0;
 
    DEBUG_MSG("---------- packet parser  #%u -------------\n", ++s_total_pkts);
    DEBUG_CODE(
@@ -512,9 +515,11 @@ void parse_packet(Packet *pkt, struct timeval ts, const uint8_t *data, uint16_t 
       data_offset += parse_eth_hdr(data + data_offset, pkt);
    }
    if (pkt->ethertype == ETH_P_IP) {
-      data_offset += parse_ipv4_hdr(data + data_offset, pkt);
+      ihl = parse_ipv4_hdr(data + data_offset, pkt);
+      data_offset += ihl;
    } else if (pkt->ethertype == ETH_P_IPV6) {
-      data_offset += parse_ipv6_hdr(data + data_offset, pkt);
+      ihl = parse_ipv6_hdr(data + data_offset, pkt);
+      data_offset += ihl;
    } else if (pkt->ethertype == ETH_P_MPLS_UC || pkt->ethertype == ETH_P_MPLS_MC) {
       data_offset += process_mpls(data + data_offset, pkt);
    } else if (pkt->ethertype == ETH_P_PPP_SES) {
@@ -525,9 +530,12 @@ void parse_packet(Packet *pkt, struct timeval ts, const uint8_t *data, uint16_t 
    }
 
    if (pkt->ip_proto == IPPROTO_TCP) {
-      data_offset += parse_tcp_hdr(data + data_offset, pkt);
+      tcp_header_length = parse_tcp_hdr(data + data_offset, pkt);
+      data_offset += tcp_header_length;
+      payload_length = pkt->ip_length - (ihl + tcp_header_length);
    } else if (pkt->ip_proto == IPPROTO_UDP) {
       data_offset += parse_udp_hdr(data + data_offset, pkt);
+      payload_length = pkt->ip_length - (ihl + 8);
    } else if (pkt->ip_proto == IPPROTO_ICMP) {
       data_offset += parse_icmp_hdr(data + data_offset, pkt);
    } else if (pkt->ip_proto == IPPROTO_ICMPV6) {
@@ -543,7 +551,7 @@ void parse_packet(Packet *pkt, struct timeval ts, const uint8_t *data, uint16_t 
    pkt->packet[pkt_len] = 0;
    pkt->total_length = pkt_len;
 
-   pkt->payload_length = pkt_len - data_offset;
+   pkt->payload_length = payload_length;
    pkt->payload = pkt->packet + data_offset;
 
    DEBUG_MSG("Payload length:\t%u\n", pkt->payload_length);
