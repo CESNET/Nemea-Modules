@@ -87,3 +87,30 @@ void last_variable(const void *src, void *dst)
    var_params *params = (var_params*)dst;
    ur_set_var(OutputTemplate::out_tmplt, params->dst, params->field_id, src, params->var_len);
 }
+
+
+/* ================================================================= */
+/* ================== First Non-Empty function ===================== */
+/* ================================================================= */
+void first_nonempty_var(const void *src, void *dst)
+{
+   var_params *params = (var_params*) dst;
+   if (ur_get_var_len(OutputTemplate::out_tmplt, params->dst, params->field_id) == 0) {
+      ur_set_var(OutputTemplate::out_tmplt, params->dst, params->field_id, src, params->var_len);
+   }
+}
+
+/* ================================================================= */
+/* ======================= Max function =========================== */
+/* ================================================================= */
+void first_nonempty_ip(const void *src, void *dst)
+{
+   // ret is positive number (>0) if addr1 > addr2
+   int ret = ip_is_null((const ip_addr_t *) dst);
+
+   if (ret == 0) {
+      *((ip_addr_t *)dst) = *((ip_addr_t *)src);
+   }
+   // or use memcpy(&dst, src, 16);
+}
+

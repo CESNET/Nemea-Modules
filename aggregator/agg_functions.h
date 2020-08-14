@@ -143,6 +143,36 @@ void nope(const void *src, void *dst); // Also min, because first value set usin
  * @param [in,out] dst pointer to already stored data which will be updated (modified).
  */
 template <typename T>
+void first_nonempty(const void *src, void *dst)
+{
+   if (*((T*) dst) == 0) {
+      *((T*) dst) = *((T*) src);
+   }
+}
+
+/**
+ * Update currently stored value of dst pointer with one from src pointer of given type T.
+ * @tparam T template type variable.
+ * @param [in] src pointer to source of new data.
+ * @param [in,out] dst pointer to already stored data which will be updated (modified).
+ */
+void first_nonempty_ip(const void *src, void *dst);
+
+/**
+ * Update currently stored value of dst pointer with one from src pointer of given type T.
+ * @tparam T template type variable.
+ * @param [in] src pointer to source of new data.
+ * @param [in,out] dst pointer to already stored data which will be updated (modified).
+ */
+void first_nonempty_var(const void *src, void *dst);
+
+/**
+ * Update currently stored value of dst pointer with one from src pointer of given type T.
+ * @tparam T template type variable.
+ * @param [in] src pointer to source of new data.
+ * @param [in,out] dst pointer to already stored data which will be updated (modified).
+ */
+template <typename T>
 void last(const void *src, void *dst)
 {
    *((T*)dst) = *((T*)src);

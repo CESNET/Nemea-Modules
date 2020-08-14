@@ -299,6 +299,71 @@ agg_func Config::get_function_ptr(int index, ur_field_type_t field_type)
          // Keep nope function because first value is set by copy from input record
          out = &nope;
          break;
+
+      case FIRST_NONEMPTY:
+         // Keep nope function because first value is set by copy from input record
+         switch (field_type) {
+            case UR_TYPE_INT8:
+               out = &first_nonempty<int8_t>;
+               break;
+            case UR_TYPE_INT16:
+               out = &first_nonempty<int16_t>;
+               break;
+            case UR_TYPE_INT32:
+               out = &first_nonempty<int32_t>;
+               break;
+            case UR_TYPE_INT64:
+               out = &first_nonempty<int64_t>;
+               break;
+            case UR_TYPE_UINT8:
+               out = &first_nonempty<uint8_t>;
+               break;
+            case UR_TYPE_UINT16:
+               out = &first_nonempty<uint16_t>;
+               break;
+            case UR_TYPE_UINT32:
+               out = &first_nonempty<uint32_t>;
+               break;
+            case UR_TYPE_UINT64:
+               out = &first_nonempty<uint64_t>;
+               break;
+            case UR_TYPE_FLOAT:
+               out = &first_nonempty<float>;
+               break;
+            case UR_TYPE_DOUBLE:
+               out = &first_nonempty<double>;
+               break;
+            case UR_TYPE_CHAR:
+               out = &first_nonempty<char>;
+               break;
+            case UR_TYPE_TIME:
+               out = &first_nonempty<uint64_t>;
+               break;
+            case UR_TYPE_IP:
+               out = &first_nonempty_ip;
+               break;
+            case UR_TYPE_STRING:
+            case UR_TYPE_BYTES:
+            case UR_TYPE_A_UINT8:
+            case UR_TYPE_A_INT8:
+            case UR_TYPE_A_UINT16:
+            case UR_TYPE_A_INT16:
+            case UR_TYPE_A_UINT32:
+            case UR_TYPE_A_INT32:
+            case UR_TYPE_A_UINT64:
+            case UR_TYPE_A_INT64:
+            case UR_TYPE_A_FLOAT:
+            case UR_TYPE_A_DOUBLE:
+            case UR_TYPE_A_IP:
+            case UR_TYPE_A_MAC:
+            case UR_TYPE_A_TIME:
+               out = &first_nonempty_var;
+               break;
+            default:
+               fprintf(stderr, "Type %s is not supported by current version of module, using first instead.\n", ur_field_type_str[field_type]);
+               out = &nope;
+         }
+         break;
       case LAST:
          switch (field_type) {
             case UR_TYPE_INT8:

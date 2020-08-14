@@ -128,6 +128,7 @@ UR_FIELDS (
   PARAM('m', "min", "Keep minimal value of UniRec field identified by given name.", required_argument, "URFIELD") \
   PARAM('M', "max", "Keep maximal value of UniRec field identified by given name.", required_argument, "URFIELD") \
   PARAM('f', "first", "Keep first value of UniRec field identified by given name.", required_argument, "URFIELD") \
+  PARAM('F', "firstne", "Keep first Non-Empty value of UniRec field identified by given name.", required_argument, "URFIELD") \
   PARAM('l', "last", "Keep first value of UniRec field identified by given name.", required_argument, "URFIELD") \
   PARAM('o', "or", "Make bitwise OR of UniRec field identified by given name.", required_argument, "URFIELD") \
   PARAM('n', "and", "Make bitwise AND of UniRec field identified by given name.", required_argument, "URFIELD")
@@ -518,6 +519,9 @@ int main(int argc, char **argv)
       case 'f':
          config.add_member(FIRST, optarg);
          break;
+      case 'F':
+         config.add_member(FIRST_NONEMPTY, optarg);
+         break;
       case 'l':
          config.add_member(LAST, optarg);
          break;
@@ -568,7 +572,8 @@ int main(int argc, char **argv)
 
       // Check for end-of-stream message, close only when signal caught
       if (in_rec_size <= 1) {
-         continue;
+         stop = 1;
+         break;
       }
 
       // Change of UniRec input template -> sanity check and templates creation
