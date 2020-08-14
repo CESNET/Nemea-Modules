@@ -271,7 +271,7 @@ void process_agg_functions(ur_template_t *in_tmplt, const void *src_rec, ur_temp
    void *ptr_src;
    // Process all registered fields with their agg function
    for (int i = 0; i < OutputTemplate::used_fields; i++) {
-      if (ur_is_fixlen(i)) {
+      if (ur_is_fixlen(OutputTemplate::indexes_to_record[i])) {
          ptr_dst = ur_get_ptr_by_id(out_tmplt, dst_rec, OutputTemplate::indexes_to_record[i]);
          ptr_src = ur_get_ptr_by_id(in_tmplt, src_rec, OutputTemplate::indexes_to_record[i]);
          OutputTemplate::process[i](ptr_src, ptr_dst);
