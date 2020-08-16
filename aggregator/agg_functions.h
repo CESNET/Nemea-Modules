@@ -2,10 +2,11 @@
  * \file agg_functions.h
  * \brief Aggregation functions available for use in module.
  * \author Michal Slabihoudek <slabimic@fit.cvut.cz>
- * \date 2018
+ * \author Tomas Cejka <cejkat@cesnet.cz>
+ * \date 2018-2020
  */
 /*
- * Copyright (C) 2018 CESNET
+ * Copyright (C) 2018-2020 CESNET
  *
  * LICENSE TERMS
  *
@@ -151,7 +152,7 @@ void first_nonempty(const void *src, void *dst)
 }
 
 /**
- * Update currently stored value of dst pointer with one from src pointer of given type T.
+ * Update currently stored ip_addr_t value of dst pointer with one from src pointer
  * @tparam T template type variable.
  * @param [in] src pointer to source of new data.
  * @param [in,out] dst pointer to already stored data which will be updated (modified).
@@ -159,15 +160,15 @@ void first_nonempty(const void *src, void *dst)
 void first_nonempty_ip(const void *src, void *dst);
 
 /**
- * Update currently stored value of dst pointer with one from src pointer of given type T.
+ * Update currently stored variable-length field value of dst pointer (stored in var_params) with one from the src pointer
  * @tparam T template type variable.
  * @param [in] src pointer to source of new data.
- * @param [in,out] dst pointer to already stored data which will be updated (modified).
+ * @param [in,out] dst pointer to var_params instance with information about destination.
  */
 void first_nonempty_var(const void *src, void *dst);
 
 /**
- * Update currently stored value of dst pointer with one from src pointer of given type T.
+ * Update currently stored value of the fixed-length field in src pointer with the value in dst pointer of given type T.
  * @tparam T template type variable.
  * @param [in] src pointer to source of new data.
  * @param [in,out] dst pointer to already stored data which will be updated (modified).

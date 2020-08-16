@@ -2,10 +2,11 @@
  * \file configuration.cpp
  * \brief Module running properties configuration.
  * \author Michal Slabihoudek <slabimic@fit.cvut.cz>
- * \date 2018
+ * \author Tomas Cejka <cejkat@cesnet.cz>
+ * \date 2018-2020
  */
 /*
- * Copyright (C) 2018 CESNET
+ * Copyright (C) 2018-2020 CESNET
  *
  * LICENSE TERMS
  *
@@ -129,361 +130,368 @@ agg_func Config::get_function_ptr(int index, ur_field_type_t field_type)
    }
 
    switch (functions[index]) {
-      case SUM:
-         switch (field_type) {
-            case UR_TYPE_INT8:
-               out = &sum<int8_t>;
-               break;
-            case UR_TYPE_INT16:
-               out = &sum<int16_t>;
-               break;
-            case UR_TYPE_INT32:
-               out = &sum<int32_t>;
-               break;
-            case UR_TYPE_INT64:
-               out = &sum<int64_t>;
-               break;
-            case UR_TYPE_UINT8:
-               out = &sum<uint8_t>;
-               break;
-            case UR_TYPE_UINT16:
-               out = &sum<uint16_t>;
-               break;
-            case UR_TYPE_UINT32:
-               out = &sum<uint32_t>;
-               break;
-            case UR_TYPE_UINT64:
-               out = &sum<uint64_t>;
-               break;
-            case UR_TYPE_FLOAT:
-               out = &sum<float>;
-               break;
-            case UR_TYPE_DOUBLE:
-               out = &sum<double>;
-               break;
-            default:
-               fprintf(stderr, "Only int, uint, float and double can use sum function, first assigned instead.\n");
-               out = &nope;
-         }
+   case SUM:
+      switch (field_type) {
+      case UR_TYPE_INT8:
+         out = &sum<int8_t>;
          break;
-      case AVG:
-         switch (field_type) {
-            case UR_TYPE_INT8:
-               out = &avg<int8_t>;
-               break;
-            case UR_TYPE_INT16:
-               out = &avg<int16_t>;
-               break;
-            case UR_TYPE_INT32:
-               out = &avg<int32_t>;
-               break;
-            case UR_TYPE_INT64:
-               out = &avg<int64_t>;
-               break;
-            case UR_TYPE_UINT8:
-               out = &avg<uint8_t>;
-               break;
-            case UR_TYPE_UINT16:
-               out = &avg<uint16_t>;
-               break;
-            case UR_TYPE_UINT32:
-               out = &avg<uint32_t>;
-               break;
-            case UR_TYPE_UINT64:
-               out = &avg<uint64_t>;
-               break;
-            case UR_TYPE_FLOAT:
-               out = &avg<float>;
-               break;
-            case UR_TYPE_DOUBLE:
-               out = &avg<double>;
-               break;
-            default:
-               fprintf(stderr, "Only int, uint, float and double can use avg function, first assigned instead.\n");
-               out = &nope;
-         }
+      case UR_TYPE_INT16:
+         out = &sum<int16_t>;
          break;
-      case MIN:
-         switch (field_type) {
-            case UR_TYPE_INT8:
-               out = &min<int8_t>;
-               break;
-            case UR_TYPE_INT16:
-               out = &min<int16_t>;
-               break;
-            case UR_TYPE_INT32:
-               out = &min<int32_t>;
-               break;
-            case UR_TYPE_INT64:
-               out = &min<int64_t>;
-               break;
-            case UR_TYPE_UINT8:
-               out = &min<uint8_t>;
-               break;
-            case UR_TYPE_UINT16:
-               out = &min<uint16_t>;
-               break;
-            case UR_TYPE_UINT32:
-               out = &min<uint32_t>;
-               break;
-            case UR_TYPE_UINT64:
-               out = &min<uint64_t>;
-               break;
-            case UR_TYPE_FLOAT:
-               out = &min<float>;
-               break;
-            case UR_TYPE_DOUBLE:
-               out = &min<double>;
-               break;
-            case UR_TYPE_CHAR:
-               out = &min<char>;
-               break;
-            case UR_TYPE_TIME:
-               out = &min<uint64_t>;
-               break;
-            case UR_TYPE_IP:
-               out = &min_ip;
-               break;
-            default:
-               fprintf(stderr, "Only fixed length fields can use min function, first assigned instead.\n");
-               out = &nope;
-         }
+      case UR_TYPE_INT32:
+         out = &sum<int32_t>;
          break;
-      case MAX:
-         switch (field_type) {
-            case UR_TYPE_INT8:
-               out = &max<int8_t>;
-               break;
-            case UR_TYPE_INT16:
-               out = &max<int16_t>;
-               break;
-            case UR_TYPE_INT32:
-               out = &max<int32_t>;
-               break;
-            case UR_TYPE_INT64:
-               out = &max<int64_t>;
-               break;
-            case UR_TYPE_UINT8:
-               out = &max<uint8_t>;
-               break;
-            case UR_TYPE_UINT16:
-               out = &max<uint16_t>;
-               break;
-            case UR_TYPE_UINT32:
-               out = &max<uint32_t>;
-               break;
-            case UR_TYPE_UINT64:
-               out = &max<uint64_t>;
-               break;
-            case UR_TYPE_FLOAT:
-               out = &max<float>;
-               break;
-            case UR_TYPE_DOUBLE:
-               out = &max<double>;
-               break;
-            case UR_TYPE_CHAR:
-               out = &max<char>;
-               break;
-            case UR_TYPE_TIME:
-               out = &max<uint64_t>;
-               break;
-            case UR_TYPE_IP:
-               out = &max_ip;
-               break;
-            default:
-               fprintf(stderr, "Only fixed length fields can use max function, first assigned instead.\n");
-               out = &nope;
-         }
+      case UR_TYPE_INT64:
+         out = &sum<int64_t>;
          break;
-      case FIRST:
-         // Keep nope function because first value is set by copy from input record
+      case UR_TYPE_UINT8:
+         out = &sum<uint8_t>;
+         break;
+      case UR_TYPE_UINT16:
+         out = &sum<uint16_t>;
+         break;
+      case UR_TYPE_UINT32:
+         out = &sum<uint32_t>;
+         break;
+      case UR_TYPE_UINT64:
+         out = &sum<uint64_t>;
+         break;
+      case UR_TYPE_FLOAT:
+         out = &sum<float>;
+         break;
+      case UR_TYPE_DOUBLE:
+         out = &sum<double>;
+         break;
+      default:
+         fprintf(stderr, "Only int, uint, float and double can use sum function, first assigned instead.\n");
          out = &nope;
-         break;
+      }
+      break;
 
-      case FIRST_NONEMPTY:
-         // Keep nope function because first value is set by copy from input record
-         switch (field_type) {
-            case UR_TYPE_INT8:
-               out = &first_nonempty<int8_t>;
-               break;
-            case UR_TYPE_INT16:
-               out = &first_nonempty<int16_t>;
-               break;
-            case UR_TYPE_INT32:
-               out = &first_nonempty<int32_t>;
-               break;
-            case UR_TYPE_INT64:
-               out = &first_nonempty<int64_t>;
-               break;
-            case UR_TYPE_UINT8:
-               out = &first_nonempty<uint8_t>;
-               break;
-            case UR_TYPE_UINT16:
-               out = &first_nonempty<uint16_t>;
-               break;
-            case UR_TYPE_UINT32:
-               out = &first_nonempty<uint32_t>;
-               break;
-            case UR_TYPE_UINT64:
-               out = &first_nonempty<uint64_t>;
-               break;
-            case UR_TYPE_FLOAT:
-               out = &first_nonempty<float>;
-               break;
-            case UR_TYPE_DOUBLE:
-               out = &first_nonempty<double>;
-               break;
-            case UR_TYPE_CHAR:
-               out = &first_nonempty<char>;
-               break;
-            case UR_TYPE_TIME:
-               out = &first_nonempty<uint64_t>;
-               break;
-            case UR_TYPE_IP:
-               out = &first_nonempty_ip;
-               break;
-            case UR_TYPE_STRING:
-            case UR_TYPE_BYTES:
-            case UR_TYPE_A_UINT8:
-            case UR_TYPE_A_INT8:
-            case UR_TYPE_A_UINT16:
-            case UR_TYPE_A_INT16:
-            case UR_TYPE_A_UINT32:
-            case UR_TYPE_A_INT32:
-            case UR_TYPE_A_UINT64:
-            case UR_TYPE_A_INT64:
-            case UR_TYPE_A_FLOAT:
-            case UR_TYPE_A_DOUBLE:
-            case UR_TYPE_A_IP:
-            case UR_TYPE_A_MAC:
-            case UR_TYPE_A_TIME:
-               out = &first_nonempty_var;
-               break;
-            default:
-               fprintf(stderr, "Type %s is not supported by current version of module, using first instead.\n", ur_field_type_str[field_type]);
-               out = &nope;
-         }
+   case AVG:
+      switch (field_type) {
+      case UR_TYPE_INT8:
+         out = &avg<int8_t>;
          break;
-      case LAST:
-         switch (field_type) {
-            case UR_TYPE_INT8:
-               out = &last<int8_t>;
-               break;
-            case UR_TYPE_INT16:
-               out = &last<int16_t>;
-               break;
-            case UR_TYPE_INT32:
-               out = &last<int32_t>;
-               break;
-            case UR_TYPE_INT64:
-               out = &last<int64_t>;
-               break;
-            case UR_TYPE_UINT8:
-               out = &last<uint8_t>;
-               break;
-            case UR_TYPE_UINT16:
-               out = &last<uint16_t>;
-               break;
-            case UR_TYPE_UINT32:
-               out = &last<uint32_t>;
-               break;
-            case UR_TYPE_UINT64:
-               out = &last<uint64_t>;
-               break;
-            case UR_TYPE_FLOAT:
-               out = &last<float>;
-               break;
-            case UR_TYPE_DOUBLE:
-               out = &last<double>;
-               break;
-            case UR_TYPE_CHAR:
-               out = &last<char>;
-               break;
-            case UR_TYPE_TIME:
-               out = &last<uint64_t>;
-               break;
-            case UR_TYPE_IP:
-               out = &last<ip_addr_t>;
-               break;
-            case UR_TYPE_STRING:
-               out = &last_variable;
-               break;
-            case UR_TYPE_BYTES:
-               out = &last_variable;
-               break;
-            default:
-               fprintf(stderr, "Type is not supported by current version of module, using first instead.\n");
-               out = &nope;
-         }
+      case UR_TYPE_INT16:
+         out = &avg<int16_t>;
          break;
-      case BIT_OR:
-         switch (field_type) {
-            case UR_TYPE_INT8:
-               out = &bitwise_or<int8_t>;
-               break;
-            case UR_TYPE_INT16:
-               out = &bitwise_or<int16_t>;
-               break;
-            case UR_TYPE_INT32:
-               out = &bitwise_or<int32_t>;
-               break;
-            case UR_TYPE_INT64:
-               out = &bitwise_or<int64_t>;
-               break;
-            case UR_TYPE_UINT8:
-               out = &bitwise_or<uint8_t>;
-               break;
-            case UR_TYPE_UINT16:
-               out = &bitwise_or<uint16_t>;
-               break;
-            case UR_TYPE_UINT32:
-               out = &bitwise_or<uint32_t>;
-               break;
-            case UR_TYPE_UINT64:
-               out = &bitwise_or<uint64_t>;
-               break;
-            case UR_TYPE_CHAR:
-               out = &bitwise_or<char>;
-               break;
-            default:
-               fprintf(stderr, "Only int, uint and char can use bitwise functions, first assigned instead.\n");
-               out = &nope;
-         }
+      case UR_TYPE_INT32:
+         out = &avg<int32_t>;
          break;
-      case BIT_AND:
-         switch (field_type) {
-            case UR_TYPE_INT8:
-               out = &bitwise_and<int8_t>;
-               break;
-            case UR_TYPE_INT16:
-               out = &bitwise_and<int16_t>;
-               break;
-            case UR_TYPE_INT32:
-               out = &bitwise_and<int32_t>;
-               break;
-            case UR_TYPE_INT64:
-               out = &bitwise_and<int64_t>;
-               break;
-            case UR_TYPE_UINT8:
-               out = &bitwise_and<uint8_t>;
-               break;
-            case UR_TYPE_UINT16:
-               out = &bitwise_and<uint16_t>;
-               break;
-            case UR_TYPE_UINT32:
-               out = &bitwise_and<uint32_t>;
-               break;
-            case UR_TYPE_UINT64:
-               out = &bitwise_and<uint64_t>;
-               break;
-            case UR_TYPE_CHAR:
-               out = &bitwise_and<char>;
-               break;
-            default:
-               fprintf(stderr, "Only int, uint and char can use bitwise functions, first assigned instead.\n");
-               out = &nope;
-         }
+      case UR_TYPE_INT64:
+         out = &avg<int64_t>;
          break;
+      case UR_TYPE_UINT8:
+         out = &avg<uint8_t>;
+         break;
+      case UR_TYPE_UINT16:
+         out = &avg<uint16_t>;
+         break;
+      case UR_TYPE_UINT32:
+         out = &avg<uint32_t>;
+         break;
+      case UR_TYPE_UINT64:
+         out = &avg<uint64_t>;
+         break;
+      case UR_TYPE_FLOAT:
+         out = &avg<float>;
+         break;
+      case UR_TYPE_DOUBLE:
+         out = &avg<double>;
+         break;
+      default:
+         fprintf(stderr, "Only int, uint, float and double can use avg function, first assigned instead.\n");
+         out = &nope;
+      }
+      break;
+
+   case MIN:
+      switch (field_type) {
+      case UR_TYPE_INT8:
+         out = &min<int8_t>;
+         break;
+      case UR_TYPE_INT16:
+         out = &min<int16_t>;
+         break;
+      case UR_TYPE_INT32:
+         out = &min<int32_t>;
+         break;
+      case UR_TYPE_INT64:
+         out = &min<int64_t>;
+         break;
+      case UR_TYPE_UINT8:
+         out = &min<uint8_t>;
+         break;
+      case UR_TYPE_UINT16:
+         out = &min<uint16_t>;
+         break;
+      case UR_TYPE_UINT32:
+         out = &min<uint32_t>;
+         break;
+      case UR_TYPE_UINT64:
+         out = &min<uint64_t>;
+         break;
+      case UR_TYPE_FLOAT:
+         out = &min<float>;
+         break;
+      case UR_TYPE_DOUBLE:
+         out = &min<double>;
+         break;
+      case UR_TYPE_CHAR:
+         out = &min<char>;
+         break;
+      case UR_TYPE_TIME:
+         out = &min<uint64_t>;
+         break;
+      case UR_TYPE_IP:
+         out = &min_ip;
+         break;
+      default:
+         fprintf(stderr, "Only fixed length fields can use min function, first assigned instead.\n");
+         out = &nope;
+      }
+      break;
+
+   case MAX:
+      switch (field_type) {
+      case UR_TYPE_INT8:
+         out = &max<int8_t>;
+         break;
+      case UR_TYPE_INT16:
+         out = &max<int16_t>;
+         break;
+      case UR_TYPE_INT32:
+         out = &max<int32_t>;
+         break;
+      case UR_TYPE_INT64:
+         out = &max<int64_t>;
+         break;
+      case UR_TYPE_UINT8:
+         out = &max<uint8_t>;
+         break;
+      case UR_TYPE_UINT16:
+         out = &max<uint16_t>;
+         break;
+      case UR_TYPE_UINT32:
+         out = &max<uint32_t>;
+         break;
+      case UR_TYPE_UINT64:
+         out = &max<uint64_t>;
+         break;
+      case UR_TYPE_FLOAT:
+         out = &max<float>;
+         break;
+      case UR_TYPE_DOUBLE:
+         out = &max<double>;
+         break;
+      case UR_TYPE_CHAR:
+         out = &max<char>;
+         break;
+      case UR_TYPE_TIME:
+         out = &max<uint64_t>;
+         break;
+      case UR_TYPE_IP:
+         out = &max_ip;
+         break;
+      default:
+         fprintf(stderr, "Only fixed length fields can use max function, first assigned instead.\n");
+         out = &nope;
+      }
+      break;
+
+   case FIRST:
+      // Keep nope function because first value is set by copy from input record
+      out = &nope;
+      break;
+
+   case FIRST_NONEMPTY:
+      // functions to set first non-empty / non-zero value of the field
+      switch (field_type) {
+      case UR_TYPE_INT8:
+         out = &first_nonempty<int8_t>;
+         break;
+      case UR_TYPE_INT16:
+         out = &first_nonempty<int16_t>;
+         break;
+      case UR_TYPE_INT32:
+         out = &first_nonempty<int32_t>;
+         break;
+      case UR_TYPE_INT64:
+         out = &first_nonempty<int64_t>;
+         break;
+      case UR_TYPE_UINT8:
+         out = &first_nonempty<uint8_t>;
+         break;
+      case UR_TYPE_UINT16:
+         out = &first_nonempty<uint16_t>;
+         break;
+      case UR_TYPE_UINT32:
+         out = &first_nonempty<uint32_t>;
+         break;
+      case UR_TYPE_UINT64:
+         out = &first_nonempty<uint64_t>;
+         break;
+      case UR_TYPE_FLOAT:
+         out = &first_nonempty<float>;
+         break;
+      case UR_TYPE_DOUBLE:
+         out = &first_nonempty<double>;
+         break;
+      case UR_TYPE_CHAR:
+         out = &first_nonempty<char>;
+         break;
+      case UR_TYPE_TIME:
+         out = &first_nonempty<uint64_t>;
+         break;
+      case UR_TYPE_IP:
+         out = &first_nonempty_ip;
+         break;
+      case UR_TYPE_STRING:
+      case UR_TYPE_BYTES:
+      case UR_TYPE_A_UINT8:
+      case UR_TYPE_A_INT8:
+      case UR_TYPE_A_UINT16:
+      case UR_TYPE_A_INT16:
+      case UR_TYPE_A_UINT32:
+      case UR_TYPE_A_INT32:
+      case UR_TYPE_A_UINT64:
+      case UR_TYPE_A_INT64:
+      case UR_TYPE_A_FLOAT:
+      case UR_TYPE_A_DOUBLE:
+      case UR_TYPE_A_IP:
+      case UR_TYPE_A_MAC:
+      case UR_TYPE_A_TIME:
+         out = &first_nonempty_var;
+         break;
+      default:
+         fprintf(stderr, "Type %s is not supported by current version of module, using first instead.\n", ur_field_type_str[field_type]);
+         out = &nope;
+      }
+      break;
+
+   case LAST:
+      switch (field_type) {
+      case UR_TYPE_INT8:
+         out = &last<int8_t>;
+         break;
+      case UR_TYPE_INT16:
+         out = &last<int16_t>;
+         break;
+      case UR_TYPE_INT32:
+         out = &last<int32_t>;
+         break;
+      case UR_TYPE_INT64:
+         out = &last<int64_t>;
+         break;
+      case UR_TYPE_UINT8:
+         out = &last<uint8_t>;
+         break;
+      case UR_TYPE_UINT16:
+         out = &last<uint16_t>;
+         break;
+      case UR_TYPE_UINT32:
+         out = &last<uint32_t>;
+         break;
+      case UR_TYPE_UINT64:
+         out = &last<uint64_t>;
+         break;
+      case UR_TYPE_FLOAT:
+         out = &last<float>;
+         break;
+      case UR_TYPE_DOUBLE:
+         out = &last<double>;
+         break;
+      case UR_TYPE_CHAR:
+         out = &last<char>;
+         break;
+      case UR_TYPE_TIME:
+         out = &last<uint64_t>;
+         break;
+      case UR_TYPE_IP:
+         out = &last<ip_addr_t>;
+         break;
+      case UR_TYPE_STRING:
+         out = &last_variable;
+         break;
+      case UR_TYPE_BYTES:
+         out = &last_variable;
+         break;
+      default:
+         fprintf(stderr, "Type is not supported by current version of module, using first instead.\n");
+         out = &nope;
+      }
+      break;
+
+   case BIT_OR:
+      switch (field_type) {
+      case UR_TYPE_INT8:
+         out = &bitwise_or<int8_t>;
+         break;
+      case UR_TYPE_INT16:
+         out = &bitwise_or<int16_t>;
+         break;
+      case UR_TYPE_INT32:
+         out = &bitwise_or<int32_t>;
+         break;
+      case UR_TYPE_INT64:
+         out = &bitwise_or<int64_t>;
+         break;
+      case UR_TYPE_UINT8:
+         out = &bitwise_or<uint8_t>;
+         break;
+      case UR_TYPE_UINT16:
+         out = &bitwise_or<uint16_t>;
+         break;
+      case UR_TYPE_UINT32:
+         out = &bitwise_or<uint32_t>;
+         break;
+      case UR_TYPE_UINT64:
+         out = &bitwise_or<uint64_t>;
+         break;
+      case UR_TYPE_CHAR:
+         out = &bitwise_or<char>;
+         break;
+      default:
+         fprintf(stderr, "Only int, uint and char can use bitwise functions, first assigned instead.\n");
+         out = &nope;
+      }
+      break;
+
+   case BIT_AND:
+      switch (field_type) {
+      case UR_TYPE_INT8:
+         out = &bitwise_and<int8_t>;
+         break;
+      case UR_TYPE_INT16:
+         out = &bitwise_and<int16_t>;
+         break;
+      case UR_TYPE_INT32:
+         out = &bitwise_and<int32_t>;
+         break;
+      case UR_TYPE_INT64:
+         out = &bitwise_and<int64_t>;
+         break;
+      case UR_TYPE_UINT8:
+         out = &bitwise_and<uint8_t>;
+         break;
+      case UR_TYPE_UINT16:
+         out = &bitwise_and<uint16_t>;
+         break;
+      case UR_TYPE_UINT32:
+         out = &bitwise_and<uint32_t>;
+         break;
+      case UR_TYPE_UINT64:
+         out = &bitwise_and<uint64_t>;
+         break;
+      case UR_TYPE_CHAR:
+         out = &bitwise_and<char>;
+         break;
+      default:
+         fprintf(stderr, "Only int, uint and char can use bitwise functions, first assigned instead.\n");
+         out = &nope;
+      }
+      break;
    }
    return out;
 }
