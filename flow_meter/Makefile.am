@@ -33,6 +33,8 @@ flow_meter_src=flow_meter.cpp \
 		flowcacheplugin.h \
 		httpplugin.cpp \
 		httpplugin.h \
+		rtspplugin.cpp \
+		rtspplugin.h \
 		sipplugin.cpp \
 		sipplugin.h \
 		httpsplugin.cpp \
@@ -58,9 +60,13 @@ flow_meter_src=flow_meter.cpp \
 		conversion.cpp \
 		pstatsplugin.h \
 		pstatsplugin.cpp \
+		ovpnplugin.h \
+		ovpnplugin.cpp \
 		byte-utils.h \
 		ssdpplugin.h \
-		ssdpplugin.cpp
+		ssdpplugin.cpp \
+		dnssdplugin.h \
+		dnssdplugin.cpp
 
 ipfixprobe_SOURCES=$(flow_meter_src)
 
@@ -80,12 +86,15 @@ EXTRA_DIST=README.md \
 	traffic-samples/arp-sample.pcap \
 	traffic-samples/mixed-sample.pcap \
 	traffic-samples/dns-sample.pcap \
+	traffic-samples/dnssd-sample.pcap \
 	traffic-samples/http-sample.pcap \
+	traffic-samples/rtsp-sample.pcap \
 	traffic-samples/https-sample.pcap \
 	traffic-samples/ntp-sample.pcap \
 	traffic-samples/sip-sample.pcap \
 	traffic-samples/ssdp-sample.pcap \
-	traffic-samples/smtp-sample.pcap
+	traffic-samples/smtp-sample.pcap \
+	traffic-samples/ovpn-sample.pcap
 
 bashcompl_DATA=flow_meter.bash
 include ../aminclude.am

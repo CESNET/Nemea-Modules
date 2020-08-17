@@ -1,12 +1,11 @@
 /**
- * \file httpplugin.h
- * \brief Plugin for parsing HTTP traffic
+ * \file rtspplugin.h
+ * \brief Plugin for parsing RTSP traffic
  * \author Jiri Havranek <havraji6@fit.cvut.cz>
- * \date 2015
- * \date 2016
+ * \date 2020
  */
 /*
- * Copyright (C) 2014-2016 CESNET
+ * Copyright (C) 2020 CESNET
  *
  * LICENSE TERMS
  *
@@ -42,8 +41,8 @@
  *
  */
 
-#ifndef HTTPPLUGIN_H
-#define HTTPPLUGIN_H
+#ifndef RTSPPLUGIN_H
+#define RTSPPLUGIN_H
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -54,53 +53,53 @@
 #include "flowcacheplugin.h"
 #include "packet.h"
 #include "flow_meter.h"
+#include "httpplugin.h"
 
 using namespace std;
 
-void copy_str(char *dst, ssize_t size, const char *begin, const char *end);
-
 /**
- * \brief Flow record extension header for storing HTTP requests.
+ * \brief Flow record extension header for storing RTSP requests.
  */
-struct RecordExtHTTP : RecordExt {
+struct RecordExtRTSP : RecordExt {
    bool req;
    bool resp;
 
    char method[10];
-   char host[64];
-   char uri[128];
    char user_agent[128];
-   char referer[128];
+   char uri[128];
+
 
    uint16_t code;
    char content_type[32];
+   char server[128];
 
    /**
     * \brief Constructor.
     */
-   RecordExtHTTP() : RecordExt(http)
+   RecordExtRTSP() : RecordExt(rtsp)
    {
       req = false;
       resp = false;
+
       method[0] = 0;
-      host[0] = 0;
-      uri[0] = 0;
       user_agent[0] = 0;
-      referer[0] = 0;
+      uri[0] = 0;
+
       code = 0;
       content_type[0] = 0;
+      server[0] = 0;
    }
 
    virtual void fillUnirec(ur_template_t *tmplt, void *record)
    {
 #ifndef DISABLE_UNIREC
-      ur_set_string(tmplt, record, F_HTTP_REQUEST_METHOD, method);
-      ur_set_string(tmplt, record, F_HTTP_REQUEST_HOST, host);
-      ur_set_string(tmplt, record, F_HTTP_REQUEST_URL, uri);
-      ur_set_string(tmplt, record, F_HTTP_REQUEST_AGENT, user_agent);
-      ur_set_string(tmplt, record, F_HTTP_REQUEST_REFERER, referer);
-      ur_set_string(tmplt, record, F_HTTP_RESPONSE_CONTENT_TYPE, content_type);
-      ur_set(tmplt, record, F_HTTP_RESPONSE_STATUS_CODE, code);
+      ur_set_string(tmplt, record, F_RTSP_REQUEST_METHOD, method);
+      ur_set_string(tmplt, record, F_RTSP_REQUEST_AGENT, user_agent);
+      ur_set_string(tmplt, record, F_RTSP_REQUEST_URI, uri);
+
+      ur_set(tmplt, record, F_RTSP_RESPONSE_STATUS_CODE, code);
+      ur_set_string(tmplt, record, F_RTSP_RESPONSE_SERVER, server);
+      ur_set_string(tmplt, record, F_RTSP_RESPONSE_CONTENT_TYPE, content_type);
 #endif
    }
 
@@ -108,14 +107,7 @@ struct RecordExtHTTP : RecordExt {
    {
       int length, total_length = 0;
 
-      length = strlen(user_agent);
-      if (length + 1 > size) {
-         return -1;
-      }
-      buffer[0] = length;
-      memcpy(buffer + 1, user_agent, length);
-      total_length = length + 1;
-
+      // Method
       length = strlen(method);
       if (total_length + length + 1 > size) {
          return -1;
@@ -124,54 +116,59 @@ struct RecordExtHTTP : RecordExt {
       memcpy(buffer + total_length + 1, method, length);
       total_length += length + 1;
 
-      length = strlen(host);
+      // User Agent
+      length = strlen(user_agent);
       if (total_length + length + 1 > size) {
          return -1;
       }
       buffer[total_length] = length;
-      memcpy(buffer + total_length + 1, host, length);
-      total_length += length + 1;
+      memcpy(buffer + total_length + 1, user_agent, length);
+      total_length = length + 1;
 
-      length = strlen(referer);
-      if (total_length + length + 1 > size) {
-         return -1;
-      }
-      buffer[total_length] = length;
-      memcpy(buffer + total_length + 1, referer, length);
-      total_length += length + 1;
-
+      // URI
       length = strlen(uri);
-      if (total_length + length + 4 > size) {
+      if (total_length + length + 3 > size) {
          return -1;
       }
       buffer[total_length] = length;
       memcpy(buffer + total_length + 1, uri, length);
       total_length += length + 1;
 
-      length = strlen(content_type);
-      if (total_length + length + 3 > size) {
+      // Response code
+      *(uint16_t *) (buffer + total_length) = ntohs(code);
+      total_length += 2;
+
+      // Server
+      length = strlen(server);
+      if (total_length + length + 1 > size) {
          return -1;
       }
       buffer[total_length] = length;
+      memcpy(buffer + total_length + 1, server, length);
+      total_length += length + 1;
 
+      // Content type
+      length = strlen(content_type);
+      if (total_length + length + 1 > size) {
+         return -1;
+      }
+      buffer[total_length] = length;
       memcpy(buffer + total_length + 1, content_type, length);
       total_length += length + 1;
-      *(uint16_t *) (buffer + total_length) = ntohs(code);
-      total_length += 2;
 
       return total_length;
    }
 };
 
 /**
- * \brief Flow cache plugin used to parse HTTP requests / responses.
+ * \brief Flow cache plugin used to parse RTSP requests / responses.
  */
-class HTTPPlugin : public FlowCachePlugin
+class RTSPPlugin : public FlowCachePlugin
 {
 public:
-   HTTPPlugin(const options_t &module_options);
-   HTTPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options);
-   ~HTTPPlugin();
+   RTSPPlugin(const options_t &module_options);
+   RTSPPlugin(const options_t &module_options, vector<plugin_opt> plugin_options);
+   ~RTSPPlugin();
    int post_create(Flow &rec, const Packet &pkt);
    int pre_update(Flow &rec, Packet &pkt);
    void finish();
@@ -181,18 +178,18 @@ public:
 private:
    bool is_response(const char *data, int payload_len);
    bool is_request(const char *data, int payload_len);
-   bool parse_http_request(const char *data, int payload_len, RecordExtHTTP *rec);
-   bool parse_http_response(const char *data, int payload_len, RecordExtHTTP *rec);
-   void add_ext_http_request(const char *data, int payload_len, Flow &flow);
-   void add_ext_http_response(const char *data, int payload_len, Flow &flow);
-   bool valid_http_method(const char *method) const;
+   bool parse_rtsp_request(const char *data, int payload_len, RecordExtRTSP *rec);
+   bool parse_rtsp_response(const char *data, int payload_len, RecordExtRTSP *rec);
+   void add_ext_rtsp_request(const char *data, int payload_len, Flow &flow);
+   void add_ext_rtsp_response(const char *data, int payload_len, Flow &flow);
+   bool valid_rtsp_method(const char *method) const;
 
-   RecordExtHTTP *recPrealloc;/**< Preallocated extension. */
+   RecordExtRTSP *recPrealloc;/**< Preallocated extension. */
    bool print_stats;          /**< Print stats when flow cache is finishing. */
    bool flush_flow;           /**< Tell FlowCache to flush current Flow. */
-   uint32_t requests;         /**< Total number of parsed HTTP requests. */
-   uint32_t responses;        /**< Total number of parsed HTTP responses. */
-   uint32_t total;            /**< Total number of parsed HTTP packets. */
+   uint32_t requests;         /**< Total number of parsed RTSP requests. */
+   uint32_t responses;        /**< Total number of parsed RTSP responses. */
+   uint32_t total;            /**< Total number of parsed RTSP packets. */
 };
 
 #endif

@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 #
 # Copyright (C) 2013-2016 CESNET
 #
@@ -82,7 +82,7 @@ Character in apostrophs is an abbreviation of the command (e.g. p for print).
       for name in fieldOrder:
          val = urtmplt.get(record, name)
          while True:
-            valstr = raw_input("%s [%s]%s: " % (name, val if not isinstance(val, str) else '"'+val+'"', " {"+record_metadata[name]+"}" if name in record_metadata else ""))
+            valstr = input("%s [%s]%s: " % (name, val if not isinstance(val, str) else '"'+val+'"', " {"+record_metadata[name]+"}" if name in record_metadata else ""))
             if valstr == "":
                break # Continue with next field
 
@@ -92,25 +92,25 @@ Character in apostrophs is an abbreviation of the command (e.g. p for print).
             if not edit_time_rules(name, valstr):
                try:
                   val = field_type(valstr)
-               except Exception, e:
-                  print "Unable to convert %r to %s:" % (valstr, field_type.__name__),
-                  print e
+               except Exception as e:
+                  print("Unable to convert %r to %s:" % (valstr, field_type.__name__), end=' ')
+                  print(e)
                   continue # Try it again
                urtmplt.set(record, name, val)
 
             break # Continue with next field
-      print
+      print()
 
    def do_stop(self, line):
       """'t'  Send terminate message."""
       try:
          trap.send(bytes("0"), 0)
-         print "done"
+         print("done")
       except pytrap.Terminated:
          print("Libtrap was terminated")
          return True
-      except Exception, e:
-         print "\nERROR:", e
+      except Exception as e:
+         print("\nERROR:", e)
 
    def do_send(self, line):
       """'s'  Send the record to the output interface.
@@ -122,11 +122,11 @@ Character in apostrophs is an abbreviation of the command (e.g. p for print).
          try:
             count = int(line)
          except ValueError:
-            print "ERROR: Parameter of 'send' command must be an integer."
+            print("ERROR: Parameter of 'send' command must be an integer.")
       if count == 1:
-         print "Sending the record ...",
+         print("Sending the record ...", end=' ')
       else:
-         print "Sending %i records ..." % count,
+         print("Sending %i records ..." % count, end=' ')
       sys.stdout.flush()
       try:
          for _ in range(int(count)):
@@ -134,12 +134,12 @@ Character in apostrophs is an abbreviation of the command (e.g. p for print).
             # Record was allocated of maximum size, extract only bytes that contain record data
             data_to_send = record[:urtmplt.recSize(record)]
             trap.send(data_to_send, 0)
-         print "done"
+         print("done")
       except pytrap.Terminated:
          print("Libtrap was terminated")
          return True
-      except Exception, e:
-         print "\nERROR:", e
+      except Exception as e:
+         print("\nERROR:", e)
 
    def do_exit(self, line):
       """'x'  Exit the Debug Sender"""
@@ -157,8 +157,8 @@ Character in apostrophs is an abbreviation of the command (e.g. p for print).
       # add abbr_ attributes of the class, it is used to support "one-char synonym" for a command
       # docstring of command method is used
       names = self.get_names()
-      a = filter(lambda x: x.startswith("abbr_"), names)
-      for i in filter(lambda x: x.startswith("do_"), names):
+      a = [x for x in names if x.startswith("abbr_")]
+      for i in [x for x in names if x.startswith("do_")]:
          abbrname = "abbr_" + i[3:]
          if abbrname not in a:
             fcn = getattr(Commands, i)
@@ -201,8 +201,8 @@ def edit_time_rules(name, valstr):
    # Apply edit-time rules
    try:
       apply_rules(wrapper, valstr)
-   except Exception, e:
-      print e
+   except Exception as e:
+      print(e)
       return wrapper['is_special'] # Should be false
 
    urtmplt.set(record, name, wrapper['val']) # Save attribute to record

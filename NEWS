@@ -1,3 +1,43 @@
+2020-08-04 (Karel Hynek): flow_meter: renamed vpndetector plugin to ovpn plugin
+2020-08-03 (Tomas Cejka): Merge pull request #165 from CESNET/centos8_support
+2020-08-03 (Tomáš Čejka): flow_meter: BUGFIX inconsistent TRILL struct for BIG_ENDIAN
+2020-07-31 (xsedla1o): flow_meter: ssdp: added stats
+2020-07-31 (xsedla1o): flow_meter: ssdp: Reworked parse_loc_port()
+2020-07-30 (ctrnama2): vpndetector: create module
+2020-07-30 (Adam Piecek): Removed python2 support
+2020-07-29 (Jiri Havranek): flow_meter: added RTSP parsing plugin prototype
+2020-07-29 (Jiri Havranek): flow_meter: exporting 8 bits of TCP flags
+2020-07-27 (Tomas Cejka): flow_meter: MAINTENANCE deduplicate list of supported plugins
+2020-07-27 (Jiri Havranek): flow_meter: http: now parsing protocol on all ports
+2020-07-17 (xsedla1o): flow_meter: dns-sd: adopted code from dnsplugin
+2020-07-15 (xsedla1o): flow_meter: dns-sd: created plugin files
+2020-07-14 (xsedla1o): flow_meter: ssdp: implemented export functions
+2020-07-14 (xsedla1o): flow_meter: created ssdp plugin files
+2020-06-21 (Tomas Cejka): report2idea: sshbfml: improved IDEA content based on feedback by @vaclavbartos
+2020-06-21 (Tomas Cejka): travis: update distro to current LTS - bionic
+2020-06-21 (Tomas Cejka): report2idea: sshbfml: debugging, update of test
+2020-06-08 (Tomas Cejka): flow_meter: pstats: update readme - list of UniRec fields
+2020-06-08 (Tomas Cejka): report2idea: draft of reporter for ML-based SSH bruteforce detection
+2020-06-04 (Karel Hynek): changed htonll function to swap_uint64
+2020-06-04 (Karel Hynek): moved swap_uint64 to separate file
+2020-06-03 (Karel Hynek): fixed IPFIX emelent size
+2020-06-03 (Jiri Havranek): flow_meter: added support for trill
+2020-06-03 (optical-o): flow_meter: Added support for selecting NDP DMA channel
+2020-06-02 (Tomas Benes): flow_meter: Added NDP Packet receiver
+2020-06-02 (Tomas Benes): flow_meter: Added nfbCInterface library
+2020-05-25 (Tomáš Čejka): travis: fix python problem
+2020-05-05 (Jiri Havranek): flow_meter: added test for pstats plugin
+2020-05-05 (Tomáš Čejka): flow_meter: ppi: rename fields to ipfixcol2-unirec-output
+2020-05-04 (Tomáš Čejka): flow_meter: ppi: merge stats array and add directions
+2020-05-04 (Jiri Havranek): flow_meter: plugins updated to work correctly with biflow related modifications, fixed tests
+2020-04-30 (Jiri Havranek): flow_meter: updated pstats plugin to export stats for biflow
+2020-04-27 (Karel Hynek): flow_meter: Changed numbers of IPFIX elements in pstats plugin
+2020-04-27 (Radko Krkos): anonymizer: Use memcpy() to copy UniRec strings
+2020-04-27 (Radko Krkos): anonymizer: Use size_t for iterators
+2020-04-27 (Radko Krkos): mux: Fix OpenMP build
+2020-04-26 (Jiri Havranek): flow_meter: fixed export of total byte count for IPv6 flows
+2020-04-26 (Jiri Havranek): flow_meter: now exporting biflow only
+
 2020-04-21 (Tomáš Čejka): travis: fix issue with MarkupSafe dependency version
 2020-04-21 (Tomáš Čejka): travis: fix issue with MarkupSafe dependency version
 2020-04-21 (Tomáš Čejka): unirecfilter: doc: described In Array feature

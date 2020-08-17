@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-modules], [2.15.0], [nemea@cesnet.cz])
+AC_INIT([nemea-modules], [2.16.0], [nemea@cesnet.cz])
 AC_CONFIG_SRCDIR([flowcounter/flowcounter.c])
 AC_CONFIG_HEADERS([config.h])
 RELEASE=1
@@ -74,7 +74,7 @@ if test x"$CC" = xgcc; then
     fi
 fi
 
-AC_CHECK_PROG(PYTHON, python, python, [""])
+AC_CHECK_PROG(PYTHON, python3, python3, [""])
 AC_SUBST(PYTHON)
 # Check for rpmbuild
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild, [""])

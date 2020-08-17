@@ -82,8 +82,12 @@ using namespace std;
 struct plugin_opt {
    string ext_name; /**< Extension name. */
    uint16_t ext_type; /**< Extension type. */
-   int out_ifc_num; /** Output interface number. */
+   int out_ifc_num; /**< Output interface number. */
+   string params; /**< Parameters for plugin from user. */
 
+   plugin_opt(string extension, uint16_t type, int ifc_num, string params) : ext_name(extension), ext_type(type), out_ifc_num(ifc_num), params(params)
+   {
+   }
    plugin_opt(string extension, uint16_t type, int ifc_num) : ext_name(extension), ext_type(type), out_ifc_num(ifc_num)
    {
    }

@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 
 import sys, os.path
 from string import *
@@ -6,7 +6,7 @@ from sys import argv
 from subr import *
 
 if len(argv) < 4:
-	print "Usage: %s testing_file testing_output_file training_class" % (argv[0])
+	print("Usage: %s testing_file testing_output_file training_class" % (argv[0]))
 	sys.exit(1)
 
 def main():
@@ -20,7 +20,7 @@ def main():
 		predict.append(train_new_class[idx])
 
 	if(len(predict) != len(original)):
-		print "Error: lines of %s and %s are different." % (argv[1],argv[2])
+		print("Error: lines of %s and %s are different." % (argv[1],argv[2]))
 		sys.exit(1)
 
 	labels = []
@@ -29,12 +29,12 @@ def main():
 			if (lab not in labels):
 				labels.append(lab)
 
-	print "number of labels = %s" % len(labels)
+	print("number of labels = %s" % len(labels))
 
 	result = measure(original,predict,labels)
 
-	print "Exact match ratio: %s" % result[0]
-	print "Microaverage F-measure: %s" % result[1]
-	print "Macroaverage F-measure: %s" % result[2]
+	print("Exact match ratio: %s" % result[0])
+	print("Microaverage F-measure: %s" % result[1])
+	print("Macroaverage F-measure: %s" % result[2])
 
 main()

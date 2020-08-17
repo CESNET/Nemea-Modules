@@ -57,6 +57,8 @@
 using namespace std;
 
 #define MAX_KEY_LENGTH 38
+#define INACTIVE_CHECK_PERIOD_1 5 // Inactive timeout of flows will be checked every X seconds when packets are continuously arriving
+#define INACTIVE_CHECK_PERIOD_2 1 // Inactive timeout of flows will be checked every X seconds when packet read timeout occured or read is nonblocking
 
 class FlowRecord
 {
@@ -128,7 +130,7 @@ class NHTFlowCache : public FlowCache
    uint64_t lookups2;
 #endif /* FLOW_CACHE_STATS */
    struct timeval current_ts;
-   struct timeval last_ts;
+   time_t last_ts;
    struct timeval active;
    struct timeval inactive;
    char key[MAX_KEY_LENGTH];
@@ -153,7 +155,7 @@ public:
       lookups = 0;
       lookups2 = 0;
 #endif /* FLOW_CACHE_STATS */
-      last_ts.tv_sec = 0;
+      last_ts = 0;
       print_stats = options.print_stats;
       active = options.active_timeout;
       inactive = options.inactive_timeout;

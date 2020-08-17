@@ -63,6 +63,7 @@ struct template_t;
  */
 enum extTypeEnum {
    http = 0,
+   rtsp,
    https,
    dns,
    sip,
@@ -71,7 +72,9 @@ enum extTypeEnum {
    arp,
    passivedns,
    pstats,
+   ovpn,
    ssdp,
+   dnssd,
    /* Add extension header identifiers for your plugins here */
    EXTENSION_CNT
 };

@@ -1,11 +1,11 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 
 import sys
 import os
 from subprocess import *
 
 if len(sys.argv) <= 1:
-	print('Usage: {0} training_file [testing_file]'.format(sys.argv[0]))
+	print(('Usage: {0} training_file [testing_file]'.format(sys.argv[0])))
 	raise SystemExit
 
 # svm, grid, and gnuplot executable files
@@ -58,15 +58,15 @@ while True:
 	last_line = line
 	line = f.readline()
 	if not line: break
-c,g,rate = map(float,last_line.split())
+c,g,rate = list(map(float,last_line.split()))
 
-print('Best c={0}, g={1} CV rate={2}'.format(c,g,rate))
+print(('Best c={0}, g={1} CV rate={2}'.format(c,g,rate)))
 
 cmd = '{0} -c {1} -g {2} "{3}" "{4}"'.format(svmtrain_exe,c,g,scaled_file,model_file)
 print('Training...')
 Popen(cmd, shell = True, stdout = PIPE).communicate()
 
-print('Output model: {0}'.format(model_file))
+print(('Output model: {0}'.format(model_file)))
 if len(sys.argv) > 2:
 	cmd = '{0} -r "{1}" "{2}" > "{3}"'.format(svmscale_exe, range_file, test_pathname, scaled_test_file)
 	print('Scaling testing data...')
@@ -76,4 +76,4 @@ if len(sys.argv) > 2:
 	print('Testing...')
 	Popen(cmd, shell = True).communicate()	
 
-	print('Output prediction: {0}'.format(predict_test_file))
+	print(('Output prediction: {0}'.format(predict_test_file)))

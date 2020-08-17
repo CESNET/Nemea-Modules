@@ -307,9 +307,8 @@ int NHTFlowCache::put_pkt(Packet &pkt)
       }
    }
 
-   if (current_ts.tv_sec - last_ts.tv_sec > 5) {
+   if (current_ts.tv_sec - last_ts >= INACTIVE_CHECK_PERIOD_1) {
       export_expired(current_ts.tv_sec);
-      last_ts = current_ts;
    }
 
    return 0;
@@ -317,20 +316,23 @@ int NHTFlowCache::put_pkt(Packet &pkt)
 
 void NHTFlowCache::export_expired(time_t ts)
 {
-   for (unsigned int i = 0; i < size; i++) {
-      if (!flow_array[i]->is_empty() &&
-         ts - flow_array[i]->flow.time_last.tv_sec >= inactive.tv_sec) {
+   if (ts - last_ts >= INACTIVE_CHECK_PERIOD_2) {
+      for (unsigned int i = 0; i < size; i++) {
+         if (!flow_array[i]->is_empty() &&
+               ts - flow_array[i]->flow.time_last.tv_sec >= inactive.tv_sec) {
 
-         plugins_pre_export(flow_array[i]->flow);
-         exporter->export_flow(flow_array[i]->flow);
+            plugins_pre_export(flow_array[i]->flow);
+            exporter->export_flow(flow_array[i]->flow);
 
-         flow_array[i]->erase();
+            flow_array[i]->erase();
 #ifdef FLOW_CACHE_STATS
-         expired++;
+            expired++;
 #endif /* FLOW_CACHE_STATS */
+         }
       }
+      exporter->flush();
+      last_ts = ts;
    }
-   exporter->flush();
 }
 
 bool NHTFlowCache::create_hash_key(Packet &pkt)

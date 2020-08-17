@@ -98,9 +98,15 @@
 #define HTTP_DOMAIN(F)                F(16982,  102,   -1,   NULL)
 #define HTTP_REFERER(F)               F(16982,  103,   -1,   NULL)
 #define HTTP_CONTENT_TYPE(F)          F(16982,  104,   -1,   NULL)
-#define HTTP_URL(F)                   F(16982,  105,   -1,   NULL)
+#define HTTP_URI(F)                   F(16982,  105,   -1,   NULL)
 #define HTTP_STATUS(F)                F(16982,  106,    2,   NULL)
 #define HTTP_HEADER_COUNT(F)          F(16982,  107,    2,   NULL)
+#define RTSP_METHOD(F)                F(16982,  600,   -1,   NULL)
+#define RTSP_USERAGENT(F)             F(16982,  601,   -1,   NULL)
+#define RTSP_URI(F)                   F(16982,  602,   -1,   NULL)
+#define RTSP_STATUS(F)                F(16982,  603,    2,   NULL)
+#define RTSP_CONTENT_TYPE(F)          F(16982,  604,   -1,   NULL)
+#define RTSP_SERVER(F)                F(16982,  605,   -1,   NULL)
 #define SRC_COUNTRY(F)                F(16982,  412,    4,   NULL)
 #define DST_COUNTRY(F)                F(16982,  413,    4,   NULL)
 #define TUN_HOP(F)                    F(16982,  414,    1,   NULL)
@@ -173,6 +179,9 @@
 #define SSDP_USER_AGENT(F)            F(8057,    823,  -1,   NULL)
 #define SSDP_NT(F)                    F(8057,    824,  -1,   NULL)
 #define SSDP_ST(F)                    F(8057,    825,  -1,   NULL)
+#define DNSSD_QUERIES(F)              F(8057,    826,  -1,   NULL)
+#define DNSSD_RESPONSES(F)            F(8057,    827,  -1,   NULL)
+#define OVPN_CONF_LEVEL(F)            F(8057,    828,   1,   NULL)
 
 #define STATS_PCKT_SIZES(F)           F(0,    291,  -1,   NULL)
 #define STATS_PCKT_TIMESTAMPS(F)      F(0,    291,  -1,   NULL)
@@ -240,9 +249,17 @@
    F(HTTP_METHOD) \
    F(HTTP_DOMAIN) \
    F(HTTP_REFERER) \
-   F(HTTP_URL) \
+   F(HTTP_URI) \
    F(HTTP_CONTENT_TYPE) \
    F(HTTP_STATUS)
+
+#define IPFIX_RTSP_TEMPLATE(F) \
+   F(RTSP_METHOD) \
+   F(RTSP_USERAGENT) \
+   F(RTSP_URI) \
+   F(RTSP_STATUS)\
+   F(RTSP_SERVER) \
+   F(RTSP_CONTENT_TYPE)
 
 #define IPFIX_HTTPS_TEMPLATE(F) \
    F(HTTPS_SNI)
@@ -321,6 +338,9 @@
    F(STATS_PCKT_TCPFLGS) \
    F(STATS_PCKT_DIRECTIONS)
 
+#define IPFIX_OVPN_TEMPLATE(F) \
+   F(OVPN_CONF_LEVEL)
+
 #define IPFIX_SSDP_TEMPLATE(F) \
    F(SSDP_LOCATION_PORT) \
    F(SSDP_NT) \
@@ -328,6 +348,9 @@
    F(SSDP_ST) \
    F(SSDP_SERVER)
 
+#define IPFIX_DNSSD_TEMPLATE(F) \
+   F(DNSSD_QUERIES) \
+   F(DNSSD_RESPONSES)
 
 /**
  * List of all known templated.
@@ -340,6 +363,7 @@
    BASIC_TMPLT_V4(F) \
    BASIC_TMPLT_V6(F) \
    IPFIX_HTTP_TEMPLATE(F) \
+   IPFIX_RTSP_TEMPLATE(F) \
    IPFIX_HTTPS_TEMPLATE(F) \
    IPFIX_NTP_TEMPLATE(F) \
    IPFIX_ARP_TEMPLATE(F) \
@@ -347,8 +371,10 @@
    IPFIX_DNS_TEMPLATE(F) \
    IPFIX_PASSIVEDNS_TEMPLATE(F) \
    IPFIX_PSTATS_TEMPLATE(F) \
+   IPFIX_OVPN_TEMPLATE(F) \
    IPFIX_SMTP_TEMPLATE(F) \
-   IPFIX_SSDP_TEMPLATE(F)
+   IPFIX_SSDP_TEMPLATE(F) \
+   IPFIX_DNSSD_TEMPLATE(F)
 
 
 /**
