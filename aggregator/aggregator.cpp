@@ -128,6 +128,7 @@ UR_FIELDS (
   PARAM('m', "min", "Keep minimal value of UniRec field identified by given name.", required_argument, "URFIELD") \
   PARAM('M', "max", "Keep maximal value of UniRec field identified by given name.", required_argument, "URFIELD") \
   PARAM('f', "first", "Keep first value of UniRec field identified by given name.", required_argument, "URFIELD") \
+  PARAM('F', "firstne", "Keep first Non-Empty value of UniRec field identified by given name.", required_argument, "URFIELD") \
   PARAM('l', "last", "Keep first value of UniRec field identified by given name.", required_argument, "URFIELD") \
   PARAM('o', "or", "Make bitwise OR of UniRec field identified by given name.", required_argument, "URFIELD") \
   PARAM('n', "and", "Make bitwise AND of UniRec field identified by given name.", required_argument, "URFIELD")
@@ -270,15 +271,16 @@ void process_agg_functions(ur_template_t *in_tmplt, const void *src_rec, ur_temp
    void *ptr_src;
    // Process all registered fields with their agg function
    for (int i = 0; i < OutputTemplate::used_fields; i++) {
-      if (ur_is_fixlen(i)) {
-         ptr_dst = ur_get_ptr_by_id(out_tmplt, dst_rec, OutputTemplate::indexes_to_record[i]);
-         ptr_src = ur_get_ptr_by_id(in_tmplt, src_rec, OutputTemplate::indexes_to_record[i]);
+      int field_id = OutputTemplate::indexes_to_record[i];
+      if (ur_is_fixlen(field_id)) {
+         ptr_dst = ur_get_ptr_by_id(out_tmplt, dst_rec, field_id);
+         ptr_src = ur_get_ptr_by_id(in_tmplt, src_rec, field_id);
          OutputTemplate::process[i](ptr_src, ptr_dst);
       }
       else {
-         var_params params = {dst_rec, i, ur_get_var_len(in_tmplt, src_rec, OutputTemplate::indexes_to_record[i])};
-         ptr_src = ur_get_ptr_by_id(in_tmplt, src_rec, OutputTemplate::indexes_to_record[i]);
-         OutputTemplate::process[i](ptr_src, (void*)&params);
+         var_params params = {dst_rec, field_id, ur_get_var_len(in_tmplt, src_rec, field_id)};
+         ptr_src = ur_get_ptr_by_id(in_tmplt, src_rec, field_id);
+         OutputTemplate::process[i](ptr_src, (void *) &params);
       }
    }
 }
@@ -518,6 +520,9 @@ int main(int argc, char **argv)
       case 'f':
          config.add_member(FIRST, optarg);
          break;
+      case 'F':
+         config.add_member(FIRST_NONEMPTY, optarg);
+         break;
       case 'l':
          config.add_member(LAST, optarg);
          break;
@@ -568,7 +573,8 @@ int main(int argc, char **argv)
 
       // Check for end-of-stream message, close only when signal caught
       if (in_rec_size <= 1) {
-         continue;
+         stop = 1;
+         break;
       }
 
       // Change of UniRec input template -> sanity check and templates creation
