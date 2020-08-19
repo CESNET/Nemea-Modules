@@ -707,8 +707,7 @@ int main(int argc, char **argv)
 
    flush_storage();
    trap_send(0, "", 1);
-   sleep(1);
-   trap_terminate();
+   trap_finalize();
 
    /* **** Cleanup **** */
    // Free unirec templates and stored records
