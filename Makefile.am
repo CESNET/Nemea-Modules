@@ -7,6 +7,7 @@ debug_sender \
 device_classifier \
 email_reporter \
 flowcounter \
+flow_meter \
 ipv6stats \
 json_dump \
 json_replay \
@@ -55,10 +56,6 @@ SUBDIRS += unirecfilter
 if HAVE_OPENSSL
 SUBDIRS += scalar-aggregator
 endif
-endif
-
-if COMPILE_FLOWMETER
-SUBDIRS += flow_meter
 endif
 
 if HAVE_LIBCURL

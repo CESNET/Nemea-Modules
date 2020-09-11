@@ -50,7 +50,7 @@
 #define AGGREGATOR_KEYWORD_H
 
 /** Maximal supported value of fields used to have aggregation function assigned.*/
-#define MAX_KEY_FIELDS 32                 // Static maximal key members count
+#define MAX_KEY_FIELDS 64                 // Static maximal key members count
 
 /**
  * Class to represent template for key class creation.

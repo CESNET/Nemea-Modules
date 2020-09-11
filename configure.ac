@@ -1,8 +1,8 @@
-#                                               -*- Autoconf -*-
+        #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-modules], [2.15.0], [nemea@cesnet.cz])
+AC_INIT([nemea-modules], [2.16.0], [nemea@cesnet.cz])
 AC_CONFIG_SRCDIR([flowcounter/flowcounter.c])
 AC_CONFIG_HEADERS([config.h])
 RELEASE=1
@@ -61,6 +61,20 @@ AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
+
+# Check the version of the compiler, if gcc is used and it is newer than 10, we
+# need -fcommon in CFLAGS
+if test x"$CC" = xgcc; then
+    AC_MSG_CHECKING([for version of compiler])
+    compiler_version="`$CC -dumpversion`"
+    if test "$compiler_version" -ge 10 2>/dev/null ; then
+        CFLAGS="$CFLAGS -fcommon"
+	AC_MSG_RESULT([$compiler_version -> adding -fcommon into CFLAGS])
+    else
+	AC_MSG_RESULT([$compiler_version])
+    fi
+fi
+
 AC_CHECK_PROG(PYTHON, python3, python3, [""])
 AC_SUBST(PYTHON)
 # Check for rpmbuild
@@ -131,19 +145,6 @@ else
   AC_DEFINE([HAVE_LIBCURL], [0], [Define to 1 if the libcurl is available])
 fi
 
-AC_ARG_WITH([flowcachesize],
-	AC_HELP_STRING([--with-flowcachesize=NUMBER],[Set default size of flow cache for flow_meter module in number of flow records.]),
-	[
-	CPPFLAGS="$CPPFLAGS -DFLOW_CACHE_SIZE=$withval"
-	]
-)
-AC_ARG_WITH([flowcachestats],
-	AC_HELP_STRING([--with-flowcachestats],[Enable print of flow cache stats when module exits.]),
-	[
-	CPPFLAGS="$CPPFLAGS -DFLOW_CACHE_STATS"
-	]
-)
-
 AC_ARG_WITH([nfreader],
 	AC_HELP_STRING([--without-nfreader], [Skip nfreader module.]),
         [if test "$withval" = "no"; then
@@ -173,45 +174,6 @@ if [[ -z "$HAVE_BISON_TRUE" ]]; then
 RPM_BUILDREQ+=" bison"
 RPM_BUILDREQ+=" flex"
 fi
-
-AC_ARG_WITH([ndp],
-	AC_HELP_STRING([--with-ndp],[Compile flow_meter with ndp library.]),
-	[
-      if test "$withval" = "yes"; then
-         withndp="yes"
-      else
-         withndp="no"
-      fi
-	], [withndp="no"]
-)
-
-if test x${withndp} = xyes; then
-	AC_CHECK_HEADER(nfb/nfb.h, AC_CHECK_LIB(nfb, nfb_open, [libnfb=yes],
-	  [AC_MSG_WARN([libnfb not found. The flow_meter module will not be compiled.])]
-	), AC_MSG_WARN([nfb/nfb.h not found. The flow_meter module will not be compiled.]))
-fi
-
-AM_CONDITIONAL(HAVE_NDP,  test x${libnfb} = xyes && test x${withndp} = xyes)
-if [[ -z "$HAVE_NDP_TRUE" ]]; then
-AC_DEFINE([HAVE_NDP], [1], [Define to 1 if the ndp is available])
-RPM_REQUIRES+=" netcope-common"
-RPM_BUILDREQ+=" netcope-common-devel"
-fi
-
-if test x${withndp} = xno; then
-   AC_CHECK_HEADER(pcap.h,
-           AC_CHECK_LIB(pcap, pcap_open_live, [libpcap=yes], AC_MSG_WARN([libpcap not found. The flow_meter module will not be compiled.])), AC_MSG_WARN([pcap.h not found. The flow_meter module will not be compiled.]))
-
-   AM_CONDITIONAL(HAVE_LIBPCAP, test x${libpcap} = xyes)
-   if [[ -z "$HAVE_LIBPCAP_TRUE" ]]; then
-   RPM_REQUIRES+=" libpcap"
-   RPM_BUILDREQ+=" libpcap-devel"
-   fi
-else
-   AM_CONDITIONAL(HAVE_LIBPCAP, false)
-fi
-
-AM_CONDITIONAL(COMPILE_FLOWMETER,  test x${libpcap} = xyes || test x${libnfb} = xyes)
 
 AX_PROG_LUA([], [], [
 AX_LUA_HEADERS([], [AC_MSG_WARN([lua.h not found. The luamodule module will not be compiled.])])
@@ -290,9 +252,6 @@ AC_CONFIG_FILES([Makefile
                  email_reporter/Makefile
                  flowcounter/Makefile
                  flow_meter/Makefile
-                 flow_meter/flow_meter.bash
-                 flow_meter/tests/Makefile
-                 flow_meter/nfbCInterface/Makefile
                  googletest_example/Makefile
                  ipv6stats/Makefile
                  json_dump/Makefile

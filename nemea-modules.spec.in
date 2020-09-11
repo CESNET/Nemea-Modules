@@ -1,13 +1,5 @@
-%bcond_with ndp
-
 %if x%{?python3_pkgversion} == x
 %global python3_pkgversion 3
-%endif
-
-%if %{with ndp}
-%global compile_ndp yes
-%else
-%global compile_ndp no
 %endif
 
 Summary: Package with basic NEMEA modules
@@ -24,13 +16,12 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 Requires: nemea-framework
 Requires: libnf
 Requires: openssl
-Requires: libpcap
 Requires: libcurl
 Requires: python%{python3_pkgversion}-nemea-pytrap
 Requires: lua
 Provides: nemea-modules
 BuildRequires: gcc gcc-c++ make doxygen pkgconfig nemea-framework-devel bison flex
-BuildRequires: libpcap-devel openssl-devel libnf-devel bzip2-devel libcurl-devel
+BuildRequires: openssl-devel libnf-devel bzip2-devel libcurl-devel
 BuildRequires: lua-devel
 
 %description
@@ -49,14 +40,13 @@ This package contains header file for liburfilter.
 %setup
 
 %build
-./configure -q --enable-silent-rules --disable-repobuild --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir} --docdir=%{_docdir}/nemea-modules --mandir=%{_mandir} --datadir=%{_datadir} --with-ndp=%{compile_ndp};
+./configure -q --enable-silent-rules --disable-repobuild --prefix=%{_prefix} --libdir=%{_libdir} --bindir=%{_bindir}/nemea --sysconfdir=%{_sysconfdir} --docdir=%{_docdir}/nemea-modules --mandir=%{_mandir} --datadir=%{_datadir} CFLAGS=-fcommon;
 make -j5
 
 %install
 make -j5 DESTDIR=$RPM_BUILD_ROOT install
 
 %post
-test -x %{_bindir}/nemea/flow_meter && setcap "CAP_NET_RAW+eip" %{_bindir}/nemea/flow_meter || true
 ldconfig
 
 %files
@@ -73,7 +63,7 @@ ldconfig
 %{_bindir}/nemea/email_reporter.py
 %{_bindir}/nemea/endiverter
 %{_bindir}/nemea/flowcounter
-%attr(0755, root, nemead) %{_bindir}/nemea/flow_meter
+%{_bindir}/nemea/flow_meter
 %{_bindir}/nemea/haddrscan2idea.py
 %{_bindir}/nemea/hoststats2idea.py
 %{_bindir}/nemea/idea2idea.py
@@ -116,7 +106,6 @@ ldconfig
 %config(noreplace) %{_sysconfdir}/nemea/link_traffic/link_traff_conf.cfg.example
 %config(noreplace) %{_datarootdir}/nemea-supervisor/munin/link_traffic.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/munin/proto_traffic.sup
-%config(noreplace) %{_sysconfdir}/bash_completion.d/flow_meter.bash
 
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/amplification2idea.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/bruteforce2idea.sup
@@ -156,37 +145,3 @@ ldconfig
 %{_libdir}/liburfilter.so
 %{_libdir}/pkgconfig/liburfilter.pc
 
-
-### Package ipfixprobe
-
-%package -n ipfixprobe
-Summary: Nemea ipfixprobe exporter
-Group: Liberouter
-%if %{with ndp}
-Requires: netcope-common
-BuildRequires: netcope-common
-%else
-Requires: libpcap
-BuildRequires: libpcap-devel
-%endif
-Provides: ipfixprobe
-
-%description -n ipfixprobe
-This package contains nemea flow exporter.
-
-%post -n ipfixprobe
-test -x %{_bindir}/nemea/ipfixprobe && setcap "CAP_NET_RAW+eip" %{_bindir}/nemea/ipfixprobe || true
-ldconfig
-
-%files -n ipfixprobe
-%attr(0755, root, nemead) %{_bindir}/nemea/ipfixprobe
-%if %{with ndp}
-%{_includedir}/ndpheader.h
-%{_includedir}/ndpreader.h
-%{_includedir}/ndpreader.hpp
-%{_libdir}/libndpRI.a
-%{_libdir}/libndpRI.la
-%{_libdir}/libndpRI.so
-%{_libdir}/libndpRI.so.0
-%{_libdir}/libndpRI.so.0.0.0
-%endif

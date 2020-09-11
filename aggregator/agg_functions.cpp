@@ -87,3 +87,31 @@ void last_variable(const void *src, void *dst)
    var_params *params = (var_params*)dst;
    ur_set_var(OutputTemplate::out_tmplt, params->dst, params->field_id, src, params->var_len);
 }
+
+
+/* ================================================================= */
+/* ================== First Non-Empty function ===================== */
+/* ================================================================= */
+void first_nonempty_var(const void *src, void *dst)
+{
+   var_params *params = (var_params *) dst;
+
+   if (ur_get_var_len(OutputTemplate::out_tmplt, params->dst, params->field_id) == 0) {
+      ur_set_var(OutputTemplate::out_tmplt, params->dst, params->field_id, src, params->var_len);
+   }
+}
+
+/* ================================================================= */
+/* ============ First Non-Empty/Non-Zero IP address ================ */
+/* ================================================================= */
+void first_nonempty_ip(const void *src, void *dst)
+{
+   // check if currently stored IP is null
+   int ret = ip_is_null((const ip_addr_t *) dst);
+
+   if (ret != 0 && ip_is_null((const ip_addr_t *) src) == 0) {
+      // replace null IP with the current non-null one
+      *((ip_addr_t *) dst) = *((ip_addr_t *) src);
+   }
+}
+
