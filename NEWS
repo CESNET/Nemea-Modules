@@ -1,3 +1,16 @@
+2020-08-22 (Jiri Havranek): logreplay: fixed parsing of arrays
+2020-08-19 (Tomas Cejka): flow_meter: migrated to https://github.com/CESNET/ipfixprobe
+2020-08-19 (Karel Hynek): flow_meter: Edited ipfix element number
+2020-08-18 (Jiri Havranek): flow_meter: HTTPS: removed use of flow flush feature
+2020-08-17 (Tomas Cejka): agg: increased max number of fields
+2020-08-17 (Tomas Cejka): agg: refactoring+bugfix passing index instead of field_id
+2020-08-17 (Tomas Cejka): build: gcc10+ compatibility: add -fcommon if gcc version is at least 10
+2020-08-16 (Tomáš Čejka): aggregator: first-nonempty: update of doc and coding style
+2020-08-14 (Tomas Cejka): aggregator: BUGFIX wrong field_id passed to ur_is_fixlen()
+2020-08-14 (Tomas Cejka): aggregator: add "first non-empty" aggregation function
+2020-08-12 (Jiri Havranek): flow_meter: fix high cpu usage while using ndp
+2020-07-27 (Tomas Cejka): fedora32 rpm: add -fcommon
+
 2020-08-04 (Karel Hynek): flow_meter: renamed vpndetector plugin to ovpn plugin
 2020-08-03 (Tomas Cejka): Merge pull request #165 from CESNET/centos8_support
 2020-08-03 (Tomáš Čejka): flow_meter: BUGFIX inconsistent TRILL struct for BIG_ENDIAN
