@@ -56,6 +56,7 @@ ldconfig
 %{_bindir}/nemea/bruteforce2idea.py
 %{_bindir}/nemea/bloom_history
 %{_bindir}/nemea/csv2nf.sh
+%{_bindir}/nemea/dgadetection2idea.py
 %{_bindir}/nemea/ddos_detector2idea.py
 %{_bindir}/nemea/debug_sender.py
 %{_bindir}/nemea/device_classifier
