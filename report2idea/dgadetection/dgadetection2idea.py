@@ -1,14 +1,8 @@
 #!/usr/bin/python3
 
-# In case we are in nemea/modules/report2idea/bruteforce and we want to import from repo:
-import os, sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "nemea-framework", "pycommon"))
-
-import argparse
 
 # The whole functionality of reporting is here:
 from report2idea import *
-import socket
 
 
 # Moudle name, description and required input data format
@@ -35,14 +29,16 @@ def convert_to_idea(rec, opts=None):
         "Format": "IDEA0",
         "ID": getRandomId(),
         "DetectTime": getIDEAtime(rec.TIME_LAST),
-        #"CreateTime": getIDEAtime(),
-        "Category": [ "Intrusion.Botnet","test" ],
+        "CreateTime": getIDEAtime(),
+        "Category": [ "Intrusion.Botnet","Test" ],
         "Description": "Botnet trying to comunicate with control server using DGA",
         "Source": [{
-            #"IP4": [rec.SRC_IP]
-         }],
-        "Target": [{    
-            #"IP4": [rec.DST_IP],
+            # Bot (address filled below)
+            "Type": ["Botnet"]
+        },
+        {
+            # CC server:
+            "Type": ["Botnet", "CC"],
             "Hostname": [rec.DNS_Q_NAME]
         }],
         'Node': [{
@@ -50,7 +46,6 @@ def convert_to_idea(rec, opts=None):
         }],
     }
     setAddr(idea['Source'][0], rec.SRC_IP)
-    setAddr(idea['Target'][0], rec.DST_IP)
     return idea
 
 

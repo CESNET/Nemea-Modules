@@ -111,6 +111,7 @@ ldconfig
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/amplification2idea.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/bruteforce2idea.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/dnstunnel2idea.sup
+%config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/dgadetection2idea.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/haddrscan2idea.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/hoststats2idea.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/reporters/blacklist2idea.sup
@@ -124,6 +125,7 @@ ldconfig
 %config(noreplace) %{_sysconfdir}/warden/amplificationdetector/config.cfg
 %config(noreplace) %{_sysconfdir}/warden/bruteforce/config.cfg
 %config(noreplace) %{_sysconfdir}/warden/dnstunnel/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/dgadtection/config.cfg
 %config(noreplace) %{_sysconfdir}/warden/haddrscan/config.cfg
 %config(noreplace) %{_sysconfdir}/warden/hoststats/config.cfg
 %config(noreplace) %{_sysconfdir}/warden/blacklist/config.cfg
