@@ -30,7 +30,7 @@ def convert_to_idea(rec, opts=None):
         "ID": getRandomId(),
         "DetectTime": getIDEAtime(rec.TIME_LAST),
         "CreateTime": getIDEAtime(),
-        "Category": [ "Intrusion.Botnet","Test" ],
+        "Category": [ "Intrusion.Botnet" ],
         "Description": "Botnet trying to comunicate with control server using DGA",
         "Source": [{
             # Bot (address filled below)
