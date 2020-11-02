@@ -168,6 +168,7 @@ void get_o_param(int argc, char **argv, const char *module_getopt_string, const 
                HANDLE_ERROR("-o: bad interval range");
             }
             send_interval = tmp_interval;
+            module_info->num_ifc_out = 1;
             break;
          }
       default:
