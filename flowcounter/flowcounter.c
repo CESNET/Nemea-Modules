@@ -84,7 +84,8 @@ trap_module_info_t *module_info = NULL;
 #define MODULE_PARAMS(PARAM) \
    PARAM('p', "print", "Show progress - print a dot every N flows.", required_argument, "int32") \
    PARAM('P', "print_c", "When showing progress, print CHAR instead of dot.", required_argument, "string") \
-   PARAM('o', "send_time", "Send record with current counters of FLOWS, BYTES, PACKETS every SEC second(s).", required_argument, "int32")
+   PARAM('o', "send_time", "Send record with current counters of FLOWS, BYTES, PACKETS every SEC second(s).", required_argument, "int32") \
+   PARAM('r', "relative", "Send relative stats to output interface when -o parameter is used.", no_argument, "none")
 
 
 
@@ -93,8 +94,14 @@ trap_module_info_t *module_info = NULL;
 
 static int stop = 0;
 static int stats = 0;
-static unsigned long cnt_flows = 0, cnt_packets = 0, cnt_bytes = 0;
+static unsigned long cnt_flows = 0;
+static unsigned long cnt_packets = 0;
+static unsigned long cnt_bytes = 0;
+static unsigned long old_cnt_flows = 0;
+static unsigned long old_cnt_packets = 0;
+static unsigned long old_cnt_bytes = 0;
 
+static int stats_out_relative = 0;
 static unsigned long send_interval; /* data sending interval */
 ur_template_t *out_tmplt;           /* output template */
 void *out_rec;                      /* output record */
@@ -120,10 +127,14 @@ void send_handler(int signal)
    if (signal != SIGALRM) {
       return;
    }
-
-   ur_set(out_tmplt, out_rec, F_FLOWS, cnt_flows);
-   ur_set(out_tmplt, out_rec, F_PACKETS, cnt_packets);
-   ur_set(out_tmplt, out_rec, F_BYTES, cnt_bytes);
+   ur_set(out_tmplt, out_rec, F_FLOWS, cnt_flows - old_cnt_flows);
+   ur_set(out_tmplt, out_rec, F_PACKETS, cnt_packets - old_cnt_packets);
+   ur_set(out_tmplt, out_rec, F_BYTES, cnt_bytes - old_cnt_bytes);
+   if (stats_out_relative) {
+      old_cnt_flows = cnt_flows;
+      old_cnt_packets = cnt_packets;
+      old_cnt_bytes = cnt_bytes;
+   }
    ret = trap_send(0, out_rec, ur_rec_fixlen_size(out_tmplt));
    TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, goto set_alarm, exit(EXIT_FAILURE));
 set_alarm:
@@ -220,6 +231,9 @@ int main(int argc, char **argv)
          break;
       case 'o':
          /* proccessed earlier */
+         break;
+      case 'r':
+         stats_out_relative = 1;
          break;
       default:
          fprintf(stderr, "Invalid arguments.\n");
