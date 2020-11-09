@@ -26,7 +26,8 @@ resolver \
 topn \
 traffic_repeater \
 unirec2json \
-endiverter
+endiverter \
+googletest_example
 
 EXTRA_DIST = AUTHORS COPYING ChangeLog INSTALL NEWS README.md nfreader \
 	debian/README.Debian \
