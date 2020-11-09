@@ -1,0 +1,13 @@
+<module>
+  <name>warden_dgadetection2idea</name>
+  <enabled>false</enabled>
+  <path>/usr/bin/nemea/dgadetection2idea.py</path>
+  <params>--name=cz.cesnet.nemea.dgadetection --warden=/etc/warden/dgadetection/config.cfg --test</params>
+  <trapinterfaces>
+    <interface>
+      <type>TCP</type>
+      <direction>IN</direction>
+      <params>12010</params>
+    </interface>
+  </trapinterfaces>
+</module>
