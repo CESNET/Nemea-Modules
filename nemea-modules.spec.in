@@ -92,6 +92,7 @@ ldconfig
 %{_bindir}/nemea/scalar_agg
 %{_bindir}/nemea/sipbf2idea.py
 %{_bindir}/nemea/sshbruteforceml2idea.py
+%{_bindir}/nemea/smashedblacklist2idea.py
 %{_bindir}/nemea/svm-tools
 %{_bindir}/nemea/topn
 %{_bindir}/nemea/traffic_repeater
@@ -125,7 +126,7 @@ ldconfig
 %config(noreplace) %{_sysconfdir}/warden/amplificationdetector/config.cfg
 %config(noreplace) %{_sysconfdir}/warden/bruteforce/config.cfg
 %config(noreplace) %{_sysconfdir}/warden/dnstunnel/config.cfg
-%config(noreplace) %{_sysconfdir}/warden/dgadtection/config.cfg
+%config(noreplace) %{_sysconfdir}/warden/dgadetection/config.cfg
 %config(noreplace) %{_sysconfdir}/warden/haddrscan/config.cfg
 %config(noreplace) %{_sysconfdir}/warden/hoststats/config.cfg
 %config(noreplace) %{_sysconfdir}/warden/blacklist/config.cfg
