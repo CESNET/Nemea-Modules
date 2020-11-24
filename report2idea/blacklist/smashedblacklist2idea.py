@@ -13,7 +13,25 @@ The expected input:
         "targets": ["18.191.86.84"]}
 
 The example output:
-    TODO!
+    {"Category": ["Suspicious.Miner"], "Format": "IDEA0", "ID":
+    "6707a4d9-f7c6-4962-bd1d-defb35fa3ae8", "CreateTime":
+    "2020-11-24T21:36:02Z", "EventTime": "2019-02-04T21:01:47Z", "DetectTime":
+    "2019-02-04T21:10:47Z", "CeaseTime": "2019-02-04T21:10:47Z", "Description":
+    "Possible CryptoCurrency mining identified by connection with a mining
+    pool.", "Source": [{"Proto": ["tcp"], "Type": "Miner", "IP4":
+    ["192.168.200.43", "192.168.200.39", "192.168.166.1", "192.168.199.102",
+    "192.168.200.6", "192.168.207.161", "192.168.180.38", "192.168.117.1",
+    "192.168.164.72", "192.168.190.201", "192.168.118.195"]}], "Target":
+    [{"Proto": ["tcp"], "IP4": ["192.168.207.106"], "Type": "MiningPool"}],
+    "Node": [{"Name": "cz.cesnet.nemea.smashedblacklist", "SW": ["Nemea",
+    "blacklistfilter"], "AggrWin": "00:05:00", "Type": ["Flow", "Blacklist"]}],
+    "Ref": ["http://smashed.fit.vutbr.cz:8080/miningProp/json"], "Note":
+    "Detected possible CryptoCurrency mining by IP 192.168.200.43,
+    192.168.200.39, 192.168.166.1, 192.168.199.102, 192.168.200.6,
+    192.168.207.161, 192.168.180.38, 192.168.117.1, 192.168.164.72,
+    192.168.190.201, 192.168.118.195, because of observed communication with
+    192.168.207.106:5555, 4444 listed as a mining pool server (by sMaSheD list
+    of cryptocurrency mining pools)."}
 """
 
 import argparse
