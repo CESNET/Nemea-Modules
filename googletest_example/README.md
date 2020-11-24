@@ -1,0 +1,1 @@
+This directory is here temporarily. It contains a template for the correct compilation and running of googletests. Once a number of tests are integrated in this repository, this template will no longer be needed.

@@ -1,3 +1,22 @@
+2020-09-20 nemea-modules-2.17.0
+	* logreplay: bugfix parsing arrays
+	* flow_meter: migrated to ipfixprobe
+	* agg: bugfixes and new agg function - first non-empty
+	* build: build on gcc10
+
+2020-07-30 nemea-modules-2.16.0
+	* flow_meter:
+		bugfixes, biflow support, added ppi feature, ssdp and dns-sd
+		improvements, added ovpn plugin, maintenance of plugins
+	* mux:
+		bugfixes
+	* anonymizer:
+		maintenance, bugfixes
+	* report2ides:
+		first version of SSH bruteforce detection,
+		maintenance, IDEA improvements
+	* removed Python2 support
+
 2020-04-21 nemea-modules-2.15.0
 	* unirecfilter:
 		new In Array feature

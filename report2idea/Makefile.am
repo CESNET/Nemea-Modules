@@ -5,6 +5,7 @@ SUBDIRS=hoststats \
 		venom \
 		vportscan \
 		voipfraud \
+		dgadetection \
 		dnstunnel \
 		ddos \
 		bruteforce \

@@ -64,6 +64,8 @@
 #define BIT_OR    7
 /** Aggregation function type value defining bitwise and.*/
 #define BIT_AND   8
+/** Aggregation function type value defining first non-empty/non-zero value.*/
+#define FIRST_NONEMPTY     9
 
 /** Active timeout type value definition.*/
 #define TIMEOUT_ACTIVE           0

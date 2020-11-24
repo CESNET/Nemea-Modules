@@ -55,6 +55,7 @@
 
 #include <inttypes.h>
 #include <iostream>
+#include <algorithm>
 #include <sstream>
 #include <fstream>
 #include <string>
@@ -337,6 +338,12 @@ int main(int argc, char **argv)
             // check if current field is dynamic
             if (ur_is_dynamic(*it) != 0) {
                // dynamic field, just store it in a map for later use
+               if (ur_get_type(*it) != UR_TYPE_STRING && ur_get_type(*it) != UR_TYPE_BYTES) {
+                  // Prepare field for parsing by ur_set_from_string(), which accepts elements delimited by space
+                  replace(column.begin(), column.end(), '|', ' ');
+                  column.erase(remove(column.begin(), column.end(), '['));
+                  column.erase(remove(column.begin(), column.end(), ']'));
+               }
                dynamic_field_map[*it] = column;
             } else {
                // store static field in unirec structure
