@@ -1,5 +1,5 @@
-bin_SCRIPTS=blacklist2idea.py
-TESTS=test.sh
+bin_SCRIPTS=blacklist2idea.py smashedblacklist2idea.py
+TESTS=test.sh test-smashedblacklist.sh
 
 confdir=${sysconfdir}/warden/blacklist
 conf_DATA=config.cfg
