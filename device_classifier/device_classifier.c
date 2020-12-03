@@ -388,6 +388,7 @@ void update_models_list(const char *fname)
    if (train_model_cnt > model_cnt) {
       if ((fp_model_list = fopen(fname, "a")) == NULL) {
          fprintf(stderr, "Error: Model list %s cannot be opened in write mode.\n", optarg);
+         return;
       }
       for (int i = model_cnt; i < train_model_cnt; i++) {
          fprintf(fp_model_list, "%d:%s\n", models[i].id, models[i].name);
