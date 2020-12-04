@@ -146,6 +146,7 @@ int main(int argc, char **argv)
    signed char opt;
 
    struct bloom_history_config config;
+   bloom_history_config_init(&config);
 
    /* TRAP initialization */
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
