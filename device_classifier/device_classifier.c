@@ -394,6 +394,7 @@ void update_models_list(const char *fname)
          fprintf(fp_model_list, "%d:%s\n", models[i].id, models[i].name);
       }
    }
+   fclose(fp_model_list);
 }
 
 /**

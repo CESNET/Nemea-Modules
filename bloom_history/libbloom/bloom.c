@@ -242,6 +242,7 @@ int bloom_file_write(const struct bloom * bloom, const char * filename)
 
   if (fwrite(buffer, sizeof(uint8_t), buffer_size, fp) != buffer_size) {
     fclose(fp);
+    bloom_free_serialized_buffer(&buffer);
     return -2;
   }
 
