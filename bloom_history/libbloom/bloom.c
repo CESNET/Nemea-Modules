@@ -205,7 +205,9 @@ int bloom_deserialize(struct bloom * bloom, const uint8_t * buffer)
   offset += sizeof(error);
 
   bloom_free(bloom);
-  bloom_init(bloom, entries, error);
+  if (bloom_init(bloom, entries, error != 0)) {
+    return -2;
+  }
 
   if (bloom->bytes != size - header_size) {
     return -2;
@@ -307,6 +309,7 @@ void bloom_free(struct bloom * bloom)
 {
   if (bloom->ready) {
     free(bloom->bf);
+    bloom->bf = NULL;
   }
   bloom->ready = 0;
 }
