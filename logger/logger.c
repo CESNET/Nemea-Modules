@@ -55,6 +55,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <getopt.h>
+#include <limits.h>
 #include <time.h>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
@@ -288,6 +289,7 @@ int main(int argc, char **argv)
    }
 
    // Parse remaining parameters and get configuration
+   long int long_int_opt = 0;
    signed char opt;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
@@ -313,11 +315,18 @@ int main(int argc, char **argv)
          break;
       case 'c':
 
-         max_num_records = strtol(optarg, NULL, 10);
-         if(max_num_records < 0)
-		 {
+         long_int_opt = strtol(optarg, NULL, 10);
+         if (max_num_records < 0) {
          	fprintf(stderr, "Error: Negative -c parameter. (max. records captured)");
-		 }
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+            return 1;
+         } else if (long_int_opt > UINT_MAX) {
+            fprintf(stderr, "Error: -c parameter is too large. (max. records captured)");
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+            return 1;
+         } else {
+            max_num_records = (unsigned int) long_int_opt;
+         }
          enabled_max_num_records = 1;
          break;
       case 'd':
