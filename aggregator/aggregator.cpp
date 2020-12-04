@@ -554,7 +554,13 @@ int main(int argc, char **argv)
 
    /* **** Create new thread for checking timeouts **** */
    pthread_t timeout_thread;
-   pthread_create(&timeout_thread, NULL, &check_timeouts, (void*)&config);
+   if (pthread_create(&timeout_thread, NULL, &check_timeouts, (void*)&config) != 0) {
+      fprintf(stderr, "Error: pthread_create\n");
+      TRAP_DEFAULT_FINALIZATION();
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+      return -1;
+   }
+
 
    /* **** Main processing loop **** */
 
