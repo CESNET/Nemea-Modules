@@ -1116,7 +1116,7 @@ int main(int argc, char **argv)
       update_models_list(models_lst_fname);
 
       printf("\nData collected. Do you wish to launch the training script now (Y/N)?\n");
-      char c = getchar();
+      int c = getchar();
       if (c == 'Y' || c == 'y') {
          printf("Training may take a few minutes, please wait.\n");
          if ((ret = system(train_script)) != 0) {
