@@ -104,8 +104,8 @@ given subnet.
 
 **In Array**
 
-It is possible to abbreviate (and optimize) filter when a field is match
-with a set values.
+It is possible to abbreviate (and optimize) filter when a field is to be matched
+with a set of values.
 For example, it is possible to rewrite this:
 
 `DST_PORT == 1 or DST_PORT == 234 or DST_PORT == 123 or DST_PORT == 80 or DST_PORT == 443`
@@ -116,10 +116,11 @@ into more readable this:
 
 Internally, the array (which is specified in brackets `[` and `]`) is parsed, sorted,
 and the filter matching is done using binary search, i.e., it is faster
-according to measurement (mainly for longer arrays).
+according to a measurement (mainly for longer arrays).
 
-These UniRec types are currently supported by this In Array feature:
+The following UniRec types are currently supported by this In Array feature:
 `int8`, `int16`, `int32`, `int64`, `uint8`, `uint16`, `uint32`, `uint64`, `ipaddr`, `time`, `float`, `double`
+Specifically, it can't be used with subnets.
 
 ### Format
 
