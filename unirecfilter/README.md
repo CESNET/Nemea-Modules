@@ -132,12 +132,31 @@ which is evaluated for the output interface. For example: `-F
 
 #### File
 
-Filter specified in a file provides more flexibility. Format of the
-file is `TEMPLATE_1:FILTER_1;...;TEMPLATE_N:FILTER_N;` where each
-semicolon separated item corresponds with one output interface.
-One-line comments starting with `#` are allowed. To reload filter
-while unirecfilter is running, send signal SIGUSR1 (10) to the
-process.
+Filter specified in a file provides more flexibility and allows to use more than
+one output interface.
+
+Format of the file is `TEMPLATE_1:FILTER_1; ...; TEMPLATE_N:FILTER_N;`
+where each semicolon separated item corresponds to one output interface.
+Line breaks along the separators as well as within a filter are allowed.
+One-line comments starting with `#` can be included.
+The semicolon at the end is necessary.
+
+Template can be empty, meaning to use the same template as on input.
+
+Examples:
+```
+ipaddr SRC_IP,ipaddr DST_IP: SRC_IP == 1.2.0.0/16;
+```
+
+```
+# ifc0: HTTP(S) traffic
+:PROTOCOL == 6 && (SRC_PORT in [80, 443] || DST_PORT in [80, 443]);
+# ifc1: DNS traffic
+:SRC_PORT == 53 || DST_PORT == 53;
+```
+
+To reload the filter while unirecfilter is running, send signal SIGUSR1 (10)
+to the process.
 
 ## Default values
 
