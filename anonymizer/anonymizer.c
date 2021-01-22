@@ -83,6 +83,7 @@ const char *anon_field_names[] = {"SRC_IP", "DST_IP", "SIP_CALLED_PARTY", "SIP_C
 ur_field_id_t anon_fields[ANON_FIELDS_COUNT]; // list of IDs of fields present in input template
 int anon_fields_cnt = 0; // number of valid field IDs in anon_fields
 
+uint8_t ANONYMIZATION_ALGORITHM;
 
 /**
  * \brief Hash used as PRNG

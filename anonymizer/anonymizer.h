@@ -72,7 +72,7 @@ enum anonymization_modes {
    DEANONYMIZATION
 };
 
-uint8_t ANONYMIZATION_ALGORITHM; // Determine which anonymization algorithm to use
+extern uint8_t ANONYMIZATION_ALGORITHM;	// Determine which anonymization algorithm to use
 
 
 #define ROTL64(num,amount) (((num) << (amount & 63)) | ((num) >> (64 - (amount & 63))))
