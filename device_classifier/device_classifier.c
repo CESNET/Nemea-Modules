@@ -388,11 +388,13 @@ void update_models_list(const char *fname)
    if (train_model_cnt > model_cnt) {
       if ((fp_model_list = fopen(fname, "a")) == NULL) {
          fprintf(stderr, "Error: Model list %s cannot be opened in write mode.\n", optarg);
+         return;
       }
       for (int i = model_cnt; i < train_model_cnt; i++) {
          fprintf(fp_model_list, "%d:%s\n", models[i].id, models[i].name);
       }
    }
+   fclose(fp_model_list);
 }
 
 /**
@@ -491,25 +493,25 @@ void compute_features(node_t *node)
 
    // Packets per source flow (ex and sd)
    ex = node->flows_src ? (node->packets_src / (double)node->flows_src) : 0;
-   var = (double)node->packets_src_2 / ((double)node->flows_src) - ex*ex;
+   var = node->flows_src ? (double)node->packets_src_2 / ((double)node->flows_src) - ex*ex : 0;
    node->features[2].value = ex;
    node->features[3].value = (node->flows_src && var > 0) ? sqrt(var): 0;
 
    // Packets per destination flow (ex and sd)
    ex = node->flows_dst ? (node->packets_dst / (double)node->flows_dst) : 0;
-   var = (double)node->packets_dst_2 / ((double)node->flows_dst) - ex*ex;
+   var = node->flows_dst ? (double)node->packets_dst_2 / ((double)node->flows_dst) - ex*ex : 0;
    node->features[4].value = ex;
    node->features[5].value = (node->flows_dst && var > 0)? sqrt(var): 0;
 
    // Seconds per source flow (ex and sd)
    ex = node->flows_src ? ((node->time_src_msec / 1000) / (double)(node->flows_src)) : 0;
-   ex_2 = ((double)(node->time_src_msec_2) / (1000*1000)) / ((double)(node->flows_src));
+   ex_2 = node->flows_src ? ((double)(node->time_src_msec_2) / (1000*1000)) / ((double)(node->flows_src)) : 0;
    node->features[6].value = ex;
    node->features[7].value = (node->flows_src && (ex_2 - ex*ex > 0)) ? sqrt(ex_2 - ex*ex): 0;
 
    // Seconds per destination flow (ex and sd)
    ex = node->flows_dst ? ((node->time_dst_msec / 1000) / (double)(node->flows_dst)) : 0;
-   ex_2 = ((double)(node->time_dst_msec_2) / (1000*1000)) / ((double)(node->flows_dst));
+   ex_2 = node->flows_dst ? ((double)(node->time_dst_msec_2) / (1000*1000)) / ((double)(node->flows_dst)) : 0;
    node->features[8].value = ex;
    node->features[9].value = (node->flows_dst && (ex_2 - ex*ex > 0)) ? sqrt(ex_2 - ex*ex): 0;
 
@@ -1114,7 +1116,7 @@ int main(int argc, char **argv)
       update_models_list(models_lst_fname);
 
       printf("\nData collected. Do you wish to launch the training script now (Y/N)?\n");
-      char c = getchar();
+      int c = getchar();
       if (c == 'Y' || c == 'y') {
          printf("Training may take a few minutes, please wait.\n");
          if ((ret = system(train_script)) != 0) {

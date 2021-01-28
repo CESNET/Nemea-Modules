@@ -305,6 +305,11 @@ int main(int argc, char **argv)
       printf("Creating UniRec templates ...\n");
    }
 
+   if (module_info->num_ifc_in < 0) {
+      fprintf(stderr, "Error: Number of input interfaces cannot be negative.\n");
+      ret = -1;
+      goto exit;
+   }
    in_template = (ur_template_t **) calloc(module_info->num_ifc_in, sizeof(ur_template_t *));
    if (in_template == NULL) {
       fprintf(stderr, "Error: allocation of templates failed.\n");

@@ -174,8 +174,6 @@ void *pthread_entry_upload(void *config_)
          free(url);
 
       }
-
-      pthread_mutex_unlock(&MUTEX_TIMER_STOP);
    }
 
    curl_free_handle(&curl);

@@ -39,7 +39,7 @@ int update_output_format(ur_template_t *template_in, const void *data_in, ur_tem
       fprintf(stderr, "Error: Recieved input template with variable sized fields - this is currently not supported.\n");
       return -1;
    }
-   if (data_out != NULL) {
+   if (*data_out != NULL) {
       ur_free_record(*data_out);
    }
    *data_out = ur_create_record(*template_out, 0); // Dynamic fields are currently not supported

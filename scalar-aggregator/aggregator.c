@@ -522,7 +522,7 @@ rule_t *rule_create(const char *specifier, int step, int size, int inactive_time
             }
          } else if (filter == NULL) { // or filter
             filter = (char *) calloc(i - token_start + 1, sizeof(char));
-            if (filter) {
+            if (!filter) {
                fprintf(stderr, "Error: Calloc failed during the creation of aggregation rule.\n");
                goto error_cleanup;
             }

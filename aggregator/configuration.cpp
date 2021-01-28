@@ -49,6 +49,9 @@ Config::Config() : used_fields(0), timeout_type(TIMEOUT_ACTIVE), variable_flag(f
    for (int i = 0; i < TIMEOUT_TYPES_COUNT; i++) {
       timeout[i] = DEFAULT_TIMEOUT;
    }
+   for (int i = 0; i < MAX_KEY_FIELDS; i++) {
+      field_names[i] = NULL;
+   }
 }
 
 

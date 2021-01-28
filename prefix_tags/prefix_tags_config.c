@@ -68,6 +68,9 @@ int parse_config(const char *config_file, ipps_context_t **config)
       fprintf(stderr, "ERROR allocating memory for network list\n");
       free(networks);
       return -1;
+   } else {
+      netlist->net_count = 0;
+      netlist->networks = NULL;
    }
 
    // Parse JSON
