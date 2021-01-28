@@ -163,7 +163,7 @@ void freeAST(struct ast *tree);
 struct ast *getTree(const char *str, const char *port_number);
 void changeProtocol(struct ast **ast);
 
-char * str_buffer;
+extern char *str_buffer;
 
 #endif /* LIB_UNIREC_FUNCTIONS_H */
 
