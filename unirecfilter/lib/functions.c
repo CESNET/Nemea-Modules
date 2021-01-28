@@ -72,7 +72,7 @@ struct ast *main_tree = NULL;
 extern struct yy_buffer_state * get_buf();
 extern struct yy_buffer_state * yy_scan_string(const char* yy_str);
 extern void yy_delete_buffer(struct yy_buffer_state * buffer);
-char * str_buffer;
+char *str_buffer;
 
 // mapping between strings and enumerated types of operators
 typedef struct { char * op_str; cmp_op op_type; } op_pair;
@@ -1278,4 +1278,3 @@ struct ast *getTree(const char *str, const char *port_number)
 
    return result;
 }
-
