@@ -98,8 +98,6 @@ class IdeaTemplate(object):
             self.idea["Source"].append(self.tgt_addr)
         else:
             self.idea["Description"] = "Blacklisted IP tried to communicate with host (with no response)"
-            if "Type" in self.tgt_addr:
-                del self.tgt_addr["Type"]
             self.idea["Target"] = [self.tgt_addr]
 
 
@@ -132,8 +130,6 @@ class IdeaTemplate(object):
             self.idea["Source"].append(self.tgt_addr)
         else:
             self.idea["Description"] = "Blacklisted IP tried to communicate with host (with no response)"
-            if "Type" in self.tgt_addr:
-                del self.tgt_addr["Type"]
             self.idea["Target"] = [self.tgt_addr]
 
 
@@ -155,7 +151,8 @@ class IntrusionBotnet(GeneralAlert):
         super(IntrusionBotnet, self).__init__(rec, bl)
 
         self.src_addr["Type"] = ["CC", "Botnet"]
-        self.tgt_addr["Type"] = ["Botnet"]
+        if rec["tgt_sent_flows"]:
+            self.tgt_addr["Type"] = ["Botnet"]
 
 
 class SuspiciousMiner(GeneralAlert):
@@ -163,7 +160,8 @@ class SuspiciousMiner(GeneralAlert):
         super(SuspiciousMiner, self).__init__(rec, bl)
 
         self.src_addr["Type"] = ["PoolServer"]
-        self.tgt_addr["Type"] = ["Miner"]
+        if rec["tgt_sent_flows"]:
+            self.tgt_addr["Type"] = ["Miner"]
 
 
 class SuspiciousBooter(GeneralAlert):
