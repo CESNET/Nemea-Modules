@@ -1,3 +1,15 @@
+2021-03-01 nemea-modules-2.18.0
+	* aggregator: bugfixes
+	* bloom_history: bugfixes
+	* device_classifier: bugfixes 
+	* flowcounter: bugfixes -o parameter, added -r parameter
+	* logger: bugfixes
+	* merger: bugfixes 
+	* prefix_tags: bugfixes
+	* report2idea: added dga detection
+	* unirecfilter: improved README and coding style
+	* build: build gcc10 fixes
+
 2020-09-20 nemea-modules-2.17.0
 	* logreplay: bugfix parsing arrays
 	* flow_meter: migrated to ipfixprobe

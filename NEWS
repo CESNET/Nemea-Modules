@@ -1,3 +1,26 @@
+2021-01-28 (Tomas Cejka): unirecfilter: fixed coding style
+2021-01-22 (Radko Krkos): unirecfilter: Fix build with GCC v10.x
+2021-01-22 (Radko Krkos): anonymizer: Fix build with GCC v10.x
+2021-01-22 (Radko Krkos): Revert "build: gcc10+ compatibility: add -fcommon if gcc version is at least 10"
+2020-12-17 (Václav Bartoš): unirecfilter: improved README - better explained expected file format
+2020-12-04 (aPiecek): refactor/bugfixes: bloom_history, use after free
+2020-12-04 (aPiecek): refactor/bugfixes: logger, unsigned compared against 0
+2020-12-04 (aPiecek): refactor/bugfixes: aggregator, prefix_tags, bloom_history, uninitialized pointer read/field
+2020-12-04 (aPiecek): refactor/bugfixes: aggregator, unchecked return value
+2020-12-04 (aPiecek): refactor/bugfixes: device_classifier, truncated stdio return value
+2020-12-04 (aPiecek): refactor/bugfixes: bloom_history, device_classifier, resource leak
+2020-12-03 (aPiecek): refactor/bugfixes: bloom_history_functions, double unlock
+2020-12-03 (aPiecek): refactor/bugfixes: device_classifier, division or modulo by float zero
+2020-12-03 (aPiecek): refactor/bugfixes: device_classifier, aggregator, prefix_tags_functions, dereference after null check
+2020-12-03 (aPiecek): refactor/bugfixes: merger, argument cannot be negative
+2020-11-24 (Tomas Cejka): report2idea: smashedblacklist: add example output - solved todo
+2020-11-24 (Tomas Cejka): report2idea: update smashedblacklist reference data
+2020-11-24 (Tomas Cejka): report2idea: fixed dgatest + rpmbuild
+2020-11-09 (Jiri Havranek): merger: fixed test
+2020-11-02 (Jiri Havranek): flowcounter: added -r parameter for sending relative stats to output interface
+2020-11-02 (Jiri Havranek): flowcounter: fixed module not working at all when -o parameter is used
+2020-09-29 (jirkaseta): added dga reporter
+
 2020-08-22 (Jiri Havranek): logreplay: fixed parsing of arrays
 2020-08-19 (Tomas Cejka): flow_meter: migrated to https://github.com/CESNET/ipfixprobe
 2020-08-19 (Karel Hynek): flow_meter: Edited ipfix element number
