@@ -8,8 +8,12 @@ This NEMEA module receive data from input interface and resend it to the output 
 - Output: 1
 
 ## Parameters
+### Module specific parameters
+- `-n` 		Do not send terminate message via output IFC.
+- `-t TIME` Flush output buffer every TIME seconds.      
+
 ### Common TRAP parameters
-- `-h [trap,1]`        Print help message for this module / for libtrap specific parameters.
+- `-h [trap,1]`      Print help message for this module / for libtrap specific parameters.
 - `-i IFC_SPEC`      Specification of interface types and their parameters.
 - `-v`               Be verbose.
 - `-vv`              Be more verbose.
