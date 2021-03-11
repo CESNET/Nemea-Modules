@@ -25,6 +25,10 @@ function on_record_recv()
 
       ur_set("DURATION", DURATION, "BPP", BPP, "PPS", PPS, "BPS", BPS)
 
-      print(DURATION, BPP, PPS, BPS)
+      print(
+         string.format("%18.06f", DURATION),
+         string.format("%18.03f", BPP),
+         string.format("%18.03f", PPS),
+         string.format("%18.03f", BPS))
    end
 end
