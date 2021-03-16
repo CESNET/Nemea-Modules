@@ -74,7 +74,8 @@ col = {
     "sanet":   "1e90ff",
     "telia":   "776655",
     "telia2":  "bc9269",
-    "amsix":   "af99dc"
+    "amsix":   "af99dc",
+    "Total":   "0ABA00"
 }
 
 #configures munin graph for the munin-node
@@ -86,12 +87,15 @@ graph_vlabel %s out (-)/in (+) per sec.
 graph_info The number of %s per second specified with link number in 5 minute interval.
 """ % (suffix, suffix, suffix)
     data = getData()
-    links = set()
+    links = list()
     for key in data[0].split(","):
         if not key.endswith(suffix):
             continue
         link = key.split('-')[:2]
-        links.add(link[0])
+        links.append(link[0])
+
+    links.append("Total")
+    config += "graph_order " + " ".join([i + "in " + i + "out" for i in links]) + "\n"
 
     for link in links:
         config += link + "in.label " + link + "\n"
@@ -116,10 +120,18 @@ def getValues():
     if len(head) != len(vals):
         sys.stderr.write("wrong number of columns!!!\n")
         sys.exit(1)
+    total = {"in": 0, "out": 0}
     data = sorted(zip(head, vals))
     for key, val in data:
         if key.endswith(suffix):
-            print("{0}.value {1}".format("".join(key.split("-")[:2]), val))
+            nameparts = key.split("-")
+            print("{0}.value {1}".format("".join(nameparts[:2]), val))
+            if nameparts[1] == "in":
+                total["in"] = total["in"] + int(val)
+            elif nameparts[1] == "out":
+                total["out"] = total["out"] + int(val)
+    print("Totalin.value {0}".format(total["in"]))
+    print("Totalout.value {0}".format(total["out"]))
 
 #suffix is the part after last '_' can be flows, packets, bytes
 suffix = sys.argv[0].split("_")[-1]
