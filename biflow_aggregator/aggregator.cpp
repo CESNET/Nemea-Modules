@@ -699,9 +699,11 @@ Field::Field(const Field_config cfg, const ur_field_id_t ur_fid, const ur_field_
     ur_field_type_t ur_field_type = ur_get_type(ur_fid);
 
     name = cfg.name;
+    reverse_name = cfg.reverse_name;
     type = cfg.type;
     sort_name = cfg.sort_name;
     delimiter = cfg.delimiter;
+    sort_type = cfg.sort_type;
     limit = cfg.limit;
 
     if (type == SORTED_MERGE) {
