@@ -53,6 +53,7 @@ ldconfig
 %{_bindir}/nemea/agg
 %{_bindir}/nemea/amplification2idea.py
 %{_bindir}/nemea/anonymizer
+%{_bindir}/nemea/biflow_aggregator
 %{_bindir}/nemea/bruteforce2idea.py
 %{_bindir}/nemea/bloom_history
 %{_bindir}/nemea/csv2nf.sh
