@@ -1,3 +1,8 @@
+2021-03-18 (SiskaPavel): nemea-modules: Added new biflow aggregator module.
+2021-03-17 (aPiecek): nfreader: bugfix infinite loop
+2021-03-16 (Tomas Cejka): link_traffic: add Total counter
+2021-03-11 (Jiri Havranek): luamodule: tests: improved output formating for stats test
+
 2021-01-28 (Tomas Cejka): unirecfilter: fixed coding style
 2021-01-22 (Radko Krkos): unirecfilter: Fix build with GCC v10.x
 2021-01-22 (Radko Krkos): anonymizer: Fix build with GCC v10.x
