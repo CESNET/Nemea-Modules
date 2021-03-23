@@ -271,9 +271,9 @@ struct Field_config {
     std::size_t limit;
 
     /**
-     * @brief Field goes to output template.
+     * @brief Field is generated automatically.
      */
-    bool to_output;
+    bool is_generated;
 };
 
 /**

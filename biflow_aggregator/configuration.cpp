@@ -112,7 +112,7 @@ agg::Field_type Configuration::get_field_type(const char *input)
     return agg::INVALID_TYPE;
 }
 
-std::vector<agg::Field_config> Configuration::get_cfg_fields() const noexcept
+std::vector<agg::Field_config> Configuration::get_cfg_fields() noexcept
 {
     return _cfg_fields;
 }
@@ -188,7 +188,7 @@ std::pair<agg::Field_config, bool> Configuration::parse_field(xml_node<> *xml_fi
             return std::make_pair(field, 1);;
         }
     }
-    field.to_output = true;
+    field.is_generated = false;
     //print_cfg_field(field);
     return std::make_pair(field, verify_field(field));
 }
@@ -238,7 +238,7 @@ int Configuration::check_biflow_key_presence()
             f_cfg.sort_type = field.sort_type;
             f_cfg.delimiter = field.delimiter;
             f_cfg.limit = field.limit;
-            f_cfg.to_output = false;
+            f_cfg.is_generated = true;
             _cfg_fields.emplace_back(f_cfg);
         }
     }

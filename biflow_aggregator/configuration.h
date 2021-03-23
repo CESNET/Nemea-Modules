@@ -122,7 +122,7 @@ public:
      * 
      * @return std::vector<agg::Field_config> 
      */
-    std::vector<agg::Field_config> get_cfg_fields() const noexcept;
+    std::vector<agg::Field_config> get_cfg_fields() noexcept;
 
 
     /**

@@ -202,6 +202,18 @@ proccess_and_send(agg::Aggregator<agg::FlowKey>& agg, const agg::FlowKey& key, c
     (void) send_record_out(out_tmplt, out_rec);
 }
 
+static int define_unirec_field(std::vector<agg::Field_config>&& fields)
+{
+    for (auto field_cfg : fields) {
+        if (field_cfg.is_generated == true) {
+            int ret = ur_define_field(field_cfg.name.c_str(), ur_get_type(ur_get_id_by_name(field_cfg.reverse_name.c_str())));
+            if (ret == UR_E_MEMORY || ret == UR_E_INVALID_NAME || ret == UR_E_TYPE_MISMATCH)
+                return 1;
+        }
+    }
+    return 0;
+}
+
 static int process_format_change(
         Configuration& config,
         agg::Aggregator<agg::FlowKey>& agg,
@@ -215,6 +227,13 @@ static int process_format_change(
 
     std::string out_template = "TIME_FIRST,TIME_LAST,COUNT";
 
+    if (config.is_biflow_key()) {
+        if (define_unirec_field(config.get_cfg_fields())) {
+            std::cerr << "Cannot define unirec field." << std::endl;
+            return 1;
+        }
+    }
+
     /*
      * Iterate over all fields specified in configuration and check if input template contains these fields.
      */
@@ -222,15 +241,12 @@ static int process_format_change(
         ur_fid = ur_get_id_by_name(field_cfg.name.c_str());
         ur_r_fid = ur_get_id_by_name(field_cfg.reverse_name.c_str());
 
-        if (!ur_is_present(in_tmplt, ur_fid)) {
+        if ((!ur_is_present(in_tmplt, ur_fid) && !field_cfg.is_generated) || (ur_fid == UR_E_INVALID_NAME && !field_cfg.is_generated)) {
             std::cerr << "Requested field " << field_cfg.name << " is not in input records, cannot continue." << std::endl;
             return 1;
         }
 
-        if (ur_r_fid != UR_E_INVALID_NAME && !ur_is_present(in_tmplt, ur_r_fid)) {
-            std::cerr << "Requested field " << field_cfg.reverse_name << " is not in input records, cannot continue." << std::endl;
-            return 1;
-        } else if (ur_r_fid == UR_E_INVALID_NAME) {
+        if (ur_r_fid == UR_E_INVALID_NAME) {
             ur_r_fid = ur_fid;
         } else {
             if (ur_get_size(ur_fid) != ur_get_size(ur_r_fid)) {
@@ -247,7 +263,7 @@ static int process_format_change(
             agg::Field field(field_cfg, ur_fid, ur_r_fid);
             agg.fields.add_field(field); 
         }
-        if (field_cfg.to_output)
+        if (field_cfg.is_generated == false || config.is_biflow_key())
             out_template.append("," + field_cfg.name);
     }
 
