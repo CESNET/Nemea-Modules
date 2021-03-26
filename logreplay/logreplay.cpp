@@ -172,6 +172,7 @@ time_t convert_timestamp(string &t)
    return mktime(&tm);
 }
 
+
 int main(int argc, char **argv)
 {
    int ret = 0;
@@ -341,6 +342,8 @@ int main(int argc, char **argv)
                if (ur_get_type(*it) != UR_TYPE_STRING && ur_get_type(*it) != UR_TYPE_BYTES) {
                   // Prepare field for parsing by ur_set_from_string(), which accepts elements delimited by space
                   replace(column.begin(), column.end(), '|', ' ');
+                  // replace carriage return flag if it is necessary
+                  replace(column.begin(), column.end(), '\r', ' ');
                   column.erase(remove(column.begin(), column.end(), '['));
                   column.erase(remove(column.begin(), column.end(), ']'));
                }
