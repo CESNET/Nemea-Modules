@@ -347,10 +347,11 @@ int prepare_data(link_load_t *links)
          fprintf(stderr, "Error: Cannot read from stats.\n");
          return 0;
       }
+      size_t stats_id = links->conf[i].m_id;
       size += snprintf(databuffer + size, databuffer_size - size, "%"
                        PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32",",
-                       stats[i].bytes_in, stats[i].flows_in, stats[i].packets_in,
-                       stats[i].bytes_out, stats[i].flows_out, stats[i].packets_out);
+                       stats[stats_id].bytes_in, stats[stats_id].flows_in, stats[stats_id].packets_in,
+                       stats[stats_id].bytes_out, stats[stats_id].flows_out, stats[stats_id].packets_out);
    }
    databuffer[size - 1] = '\n';
    databuffer[size] = '\0';
