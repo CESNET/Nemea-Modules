@@ -45,6 +45,7 @@
 #define TIMEDB_H
 
 #include <time.h>
+#include <stdbool.h>
 #include <inttypes.h>
 #include <unirec/unirec.h>
 #include <b_plus_tree.h>
@@ -83,6 +84,15 @@ typedef struct time_series_s {
 } time_series_t;
 
 /*!
+ * \brief Time b+ tree value structure
+ * Keeps information per item inside b+ tree
+ */
+typedef struct time_series_bpt_item_s {
+    uint32_t count;
+    uint8_t key[4];
+} time_series_bpt_item_t;
+
+/*!
  * \brief TimeDB structure
  * Structure describing internal state of TimeDB
  */
@@ -96,6 +106,7 @@ typedef struct timedb_s {
    int data_begin;
    ur_field_type_t value_type;
    int count_uniq;
+   bool count_uniq_item;
    int (*b_tree_compare) (void *, void *);
    int b_tree_key_size;
    uint8_t initialized;
@@ -110,7 +121,7 @@ typedef struct timedb_s {
  * \param[in] count_uniq positive number specifies that only unique values shall be counted (using B+ trees)
  * \return pointer to created stucture
  */
-timedb_t *timedb_create(int step, int delay, int inactive_timeout, int count_uniq);
+timedb_t *timedb_create(int step, int delay, int inactive_timeout, int count_uniq, bool count_uniq_item);
 
 /*!
  * \brief Initializes TimeDB
@@ -149,8 +160,10 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
  * \param[out] time beginning time of extracted time series
  * \param[out] sum extracted summary value
  * \param[out] count extracted count value
+ * \param[out] unique items sorted by timedb preference
+ * \param[out] number of items to retrieve
  */
-void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count);
+void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count, time_series_bpt_item_t* unique_items, size_t unique_items_len);
 
 /*!
  * \brief Free TimeDB structure

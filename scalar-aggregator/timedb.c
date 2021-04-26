@@ -153,7 +153,7 @@ char *get_md5_hash(const void * value, int value_size)
 
 // -------- TimeDB main code -------------
 
-timedb_t *timedb_create(int step, int delay, int inactive_timeout, int count_uniq)
+timedb_t *timedb_create(int step, int delay, int inactive_timeout, int count_uniq, bool count_uniq_item)
 {
    timedb_t *timedb = (timedb_t *) calloc(1, sizeof(timedb_t));
 
@@ -163,6 +163,10 @@ timedb_t *timedb_create(int step, int delay, int inactive_timeout, int count_uni
    timedb->data_begin = 0;
    timedb->initialized = 0;
    timedb->count_uniq = count_uniq > 0 ? 1 : 0;
+   if(count_uniq_item) {
+      timedb->count_uniq = 1;
+   }
+   timedb->count_uniq_item = count_uniq_item;
 
    timedb->data = (time_series_t **) calloc(timedb->size, sizeof(time_series_t *));
    for (int i = 0; i < timedb->size; i++) {
@@ -257,7 +261,7 @@ void timedb_init_tree(timedb_t *timedb, ur_field_type_t value_type)
                timedb->b_tree_key_size = 16;
                break;
          }
-         timedb->data[i]->b_plus_tree = bpt_init(TIMEDB__B_PLUS_TREE__LEAF_ITEM_NUMBER, timedb->b_tree_compare, 0, timedb->b_tree_key_size);
+         timedb->data[i]->b_plus_tree = bpt_init(TIMEDB__B_PLUS_TREE__LEAF_ITEM_NUMBER, timedb->b_tree_compare, sizeof(time_series_bpt_item_t), timedb->b_tree_key_size);
       }
       timedb->initialized = 1;
    }
@@ -357,11 +361,12 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
          }
 
          if (timedb->count_uniq) { // we want to count only unique values
-            void *item = bpt_search_or_insert(rolling_data(timedb, i)->b_plus_tree, value_ptr);
+            time_series_bpt_item_t *item = bpt_search_or_insert(rolling_data(timedb, i)->b_plus_tree, value_ptr);
             if (item == NULL) {
                fprintf(stderr, "Error: Could not allocate leaf node of the B+ tree. Perhaps out of memory?\n");
                return TIMEDB_SAVE_ERROR;
             }
+	    item->count +=1;
          } else {
             rolling_data(timedb, i)->count += 1;
          }
@@ -382,14 +387,45 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
    return TIMEDB_SAVE_OK;
 }
 
+
+int timedb_comp_items (const void * a, const void * b) {
+   return ( ((time_series_bpt_item_t*)b)->count - ((time_series_bpt_item_t*)a)->count);
+}
+
+size_t timedb_get_sorted_items(bpt_t *b_plus_tree, time_series_bpt_item_t **items)
+{
+   uint32_t len = (uint32_t) bpt_item_cnt(b_plus_tree);
+   if(!len) return 0;
+   *items = malloc(len*sizeof(time_series_bpt_item_t));
+   if(!(*items)) return 0;
+   size_t index = 0;
+   bpt_list_item_t *iter = bpt_list_init(b_plus_tree);
+   bpt_list_start(b_plus_tree, iter);
+   do {
+	memcpy((*items)[index].key, iter->key, min(b_plus_tree->size_of_key, sizeof((*items)[index].key)));
+	(*items)[index++].count = ((time_series_bpt_item_t*)iter->value)->count;
+   } while(bpt_list_item_next(b_plus_tree, iter));
+
+   qsort(*items, len, sizeof(time_series_bpt_item_t), timedb_comp_items);
+   return len;
+}
+
 // get last value, roll database, fill variables *sum and *count
-void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count)
+void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count, time_series_bpt_item_t *unique_items, size_t unique_items_len)
 {
    // get data
    *time = rolling_data(timedb, 0)->begin;
    *sum = rolling_data(timedb, 0)->sum;
    if (timedb->count_uniq) {
       *count = (uint32_t) bpt_item_cnt(rolling_data(timedb, 0)->b_plus_tree);
+      if(timedb->count_uniq_item && unique_items && unique_items_len > 0) {
+         time_series_bpt_item_t *sorted_values = NULL;
+	 *count = timedb_get_sorted_items(rolling_data(timedb, 0)->b_plus_tree, &sorted_values);
+	 if(sorted_values) {
+	 	memcpy(unique_items, sorted_values, min(*count, unique_items_len)*sizeof(time_series_bpt_item_t));
+	 	free(sorted_values);
+	 }
+      }
    } else {
       *count = rolling_data(timedb, 0)->count;
    }
@@ -401,7 +437,7 @@ void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count
    rolling_data(timedb, 0)->count = 0;
    if (timedb->count_uniq) {
       bpt_clean(rolling_data(timedb, 0)->b_plus_tree);
-      rolling_data(timedb, 0)->b_plus_tree = bpt_init(TIMEDB__B_PLUS_TREE__LEAF_ITEM_NUMBER, timedb->b_tree_compare, 0, timedb->b_tree_key_size);
+      rolling_data(timedb, 0)->b_plus_tree = bpt_init(TIMEDB__B_PLUS_TREE__LEAF_ITEM_NUMBER, timedb->b_tree_compare, sizeof(time_series_bpt_item_t), timedb->b_tree_key_size);
    }
 
    // jump step forward

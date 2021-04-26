@@ -64,6 +64,7 @@ typedef struct rule_s {
    char *name;
    urfilter_t *filter;
    agg_function agg;
+   int32_t opt_arg;
    char *agg_arg;
    ur_field_type_t agg_arg_field;
    timedb_t *timedb;
