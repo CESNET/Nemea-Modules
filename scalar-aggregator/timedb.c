@@ -153,20 +153,42 @@ char *get_md5_hash(const void * value, int value_size)
 
 // -------- TimeDB main code -------------
 
-timedb_t *timedb_create(int step, int delay, int inactive_timeout, int count_uniq, bool count_uniq_item)
+timedb_t *timedb_create(timedb_params_t params)
 {
    timedb_t *timedb = (timedb_t *) calloc(1, sizeof(timedb_t));
 
-   timedb->step = step;
-   timedb->size = delay / step + 2;
-   timedb->inactive_timeout = inactive_timeout;
+   timedb->step = params.step;
+   timedb->size = params.delay / params.step + 2;
+   timedb->inactive_timeout = params.inactive_timeout;
    timedb->data_begin = 0;
    timedb->initialized = 0;
-   timedb->count_uniq = count_uniq > 0 ? 1 : 0;
-   if(count_uniq_item) {
-      timedb->count_uniq = 1;
+
+   if(params.count) {
+      timedb->series_type = TIME_SERIES_COUNT;
+   } else if(params.count_uniq) {
+      timedb->series_type = TIME_SERIES_COUNT_UNIQ;
+      timedb->count_uniq_item = params.count_uniq_items;
+   } else if(params.histogram) {
+      timedb->series_type = TIME_SERIES_HIST;
+      timedb->hist_len = params.hist_len;
+      timedb->hist_power = params.hist_power;
+      timedb->hist_max_bin_value = params.hist_max_bin_value;
+      timedb->hist_type = params.hist_type;
+
+      if(timedb->hist_type == TIME_SERIES_HISTOGRAM_LOG) {
+         //Calculate histogram length based on the maxmimum value and log base
+         size_t hist_len = 1;
+         if(timedb->hist_power == 2) {
+            hist_len = ceil(log2(timedb->hist_max_bin_value));
+         } else if(timedb->hist_power == 10) {
+            hist_len = ceil(log10(timedb->hist_max_bin_value));
+         } else {
+            hist_len = ceil(log(timedb->hist_max_bin_value));
+         }
+
+         timedb->hist_len = hist_len;
+      }
    }
-   timedb->count_uniq_item = count_uniq_item;
 
    timedb->data = (time_series_t **) calloc(timedb->size, sizeof(time_series_t *));
    for (int i = 0; i < timedb->size; i++) {
@@ -198,71 +220,81 @@ void timedb_init(timedb_t *timedb, time_t time)
 // initialize timestamps by first inserted record
 void timedb_init_tree(timedb_t *timedb, ur_field_type_t value_type)
 {
-   if (timedb->count_uniq == 1 && !timedb->initialized) { // count will be counted as unique values
-      timedb->value_type = value_type;
-      for (int i = 0; i < timedb->size; i++) {
-         switch (timedb->value_type) {
-            case UR_TYPE_CHAR:
-            case UR_TYPE_UINT8:
-               timedb->b_tree_compare = &compare_uint8_t;
-               timedb->b_tree_key_size = 1;
-               break;
-            case UR_TYPE_INT8:
-               timedb->b_tree_compare = &compare_int8_t;
-               timedb->b_tree_key_size = 1;
-               break;
-            case UR_TYPE_UINT16:
-               timedb->b_tree_compare = &compare_uint16_t;
-               timedb->b_tree_key_size = 2;
-               break;
-            case UR_TYPE_INT16:
-               timedb->b_tree_compare = &compare_int16_t;
-               timedb->b_tree_key_size = 2;
-               break;
-            case UR_TYPE_UINT32:
-               timedb->b_tree_compare = &compare_uint32_t;
-               timedb->b_tree_key_size = 4;
-               break;
-            case UR_TYPE_INT32:
-               timedb->b_tree_compare = &compare_int32_t;
-               timedb->b_tree_key_size = 4;
-               break;
-            case UR_TYPE_FLOAT:
-               timedb->b_tree_compare = &compare_float;
-               timedb->b_tree_key_size = 4;
-               break;
-            case UR_TYPE_UINT64:
-               timedb->b_tree_compare = &compare_uint64_t;
-               timedb->b_tree_key_size = 8;
-               break;
-            case UR_TYPE_INT64:
-               timedb->b_tree_compare = &compare_int64_t;
-               timedb->b_tree_key_size = 8;
-               break;
-            case UR_TYPE_DOUBLE:
-               timedb->b_tree_compare = &compare_double;
-               timedb->b_tree_key_size = 8;
-               break;
-            case UR_TYPE_TIME:
-               timedb->b_tree_compare = &compare_ur_time_t;
-               timedb->b_tree_key_size = 8;
-               break;
-            case UR_TYPE_IP:
-               timedb->b_tree_compare = &compare_ip_addr_t;
-               timedb->b_tree_key_size = 16;
-               break;
-            case UR_TYPE_MAC:
-               timedb->b_tree_compare = &compare_mac_addr_t;
-               timedb->b_tree_key_size = 6;
-               break;
-            case UR_TYPE_STRING:
-            case UR_TYPE_BYTES:
-               timedb->b_tree_compare = &compare_md5;
-               timedb->b_tree_key_size = 16;
-               break;
+   if (!timedb->initialized) { // count will be counted as unique values
+      if(timedb->series_type == TIME_SERIES_COUNT_UNIQ) {
+         timedb->value_type = value_type;
+         for (int i = 0; i < timedb->size; i++) {
+            switch (timedb->value_type) {
+               case UR_TYPE_CHAR:
+               case UR_TYPE_UINT8:
+                  timedb->b_tree_compare = &compare_uint8_t;
+                  timedb->b_tree_key_size = 1;
+                  break;
+               case UR_TYPE_INT8:
+                  timedb->b_tree_compare = &compare_int8_t;
+                  timedb->b_tree_key_size = 1;
+                  break;
+               case UR_TYPE_UINT16:
+                  timedb->b_tree_compare = &compare_uint16_t;
+                  timedb->b_tree_key_size = 2;
+                  break;
+               case UR_TYPE_INT16:
+                  timedb->b_tree_compare = &compare_int16_t;
+                  timedb->b_tree_key_size = 2;
+                  break;
+               case UR_TYPE_UINT32:
+                  timedb->b_tree_compare = &compare_uint32_t;
+                  timedb->b_tree_key_size = 4;
+                  break;
+               case UR_TYPE_INT32:
+                  timedb->b_tree_compare = &compare_int32_t;
+                  timedb->b_tree_key_size = 4;
+                  break;
+               case UR_TYPE_FLOAT:
+                  timedb->b_tree_compare = &compare_float;
+                  timedb->b_tree_key_size = 4;
+                  break;
+               case UR_TYPE_UINT64:
+                  timedb->b_tree_compare = &compare_uint64_t;
+                  timedb->b_tree_key_size = 8;
+                  break;
+               case UR_TYPE_INT64:
+                  timedb->b_tree_compare = &compare_int64_t;
+                  timedb->b_tree_key_size = 8;
+                  break;
+               case UR_TYPE_DOUBLE:
+                  timedb->b_tree_compare = &compare_double;
+                  timedb->b_tree_key_size = 8;
+                  break;
+               case UR_TYPE_TIME:
+                  timedb->b_tree_compare = &compare_ur_time_t;
+                  timedb->b_tree_key_size = 8;
+                  break;
+               case UR_TYPE_IP:
+                  timedb->b_tree_compare = &compare_ip_addr_t;
+                  timedb->b_tree_key_size = 16;
+                  break;
+               case UR_TYPE_MAC:
+                  timedb->b_tree_compare = &compare_mac_addr_t;
+                  timedb->b_tree_key_size = 6;
+                  break;
+               case UR_TYPE_STRING:
+               case UR_TYPE_BYTES:
+                  timedb->b_tree_compare = &compare_md5;
+                  timedb->b_tree_key_size = 16;
+                  break;
+            }
+            timedb->data[i]->b_plus_tree = bpt_init(TIMEDB__B_PLUS_TREE__LEAF_ITEM_NUMBER, timedb->b_tree_compare, sizeof(time_series_bpt_item_t), timedb->b_tree_key_size);
          }
-         timedb->data[i]->b_plus_tree = bpt_init(TIMEDB__B_PLUS_TREE__LEAF_ITEM_NUMBER, timedb->b_tree_compare, sizeof(time_series_bpt_item_t), timedb->b_tree_key_size);
+      } else if(timedb->series_type == TIME_SERIES_HIST) {
+         for(int i = 0; i < timedb->size; i++) {
+            timedb->data[i]->hist = malloc(sizeof(double) * timedb->hist_len);
+            for(int z = 0; z < timedb->hist_len; z++) {
+               timedb->data[i]->hist[z] = 0.0;
+            }
+         }
       }
+      
       timedb->initialized = 1;
    }
 }
@@ -272,9 +304,11 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
    // get first and last time seen
    time_t first_sec = ur_time_get_sec(urfirst);
    int first_msec = ur_time_get_msec(urfirst);
+   double first_time = 1.0 * first_sec + 1.0 * first_msec / 1000.0;
 
    time_t last_sec = ur_time_get_sec(urlast);
    int last_msec = ur_time_get_msec(urlast);
+   double last_time = 1.0 * last_sec + 1.0 * last_msec / 1000.0;
 
    // check initialized timedb
    if (!timedb->begin) {
@@ -323,7 +357,7 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
          value = *((double *) value_ptr);
          break;
       default:
-         if (timedb->count_uniq) {
+         if (timedb->series_type == TIME_SERIES_COUNT_UNIQ) {
             value = 0;
             if (value_type == UR_TYPE_STRING || value_type == UR_TYPE_BYTES) {
                // @TODO Shall we allow saving zero length UR_STRING and UR_BYTES ??? Or it should be ignored as empty = nothing ?
@@ -338,8 +372,8 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
          }
          break;
    }
-
-   double value_per_sec = 1.0 * value / (1.0 * (last_sec - first_sec) + 1.0 * (last_msec - first_msec) / 1000 );
+   double data_time_length = (last_time - first_time);
+   double value_per_sec = 1.0 * value / data_time_length;
 
    // check if records ends too late, we need to rollout
    if (timedb->end < last_sec) {
@@ -348,27 +382,54 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
 
    // add portion of value (bytes/packets) to every time window
    for (int i = 0; i < timedb->size; i++) {
-      if(rolling_data(timedb, i)->begin <= last_sec && rolling_data(timedb, i)->end >= first_sec) {
+      if(rolling_data(timedb, i)->begin <= last_time && rolling_data(timedb, i)->end >= first_time) {
          // get time in this time window
          // @TODO consider direct comparition using ur_time_t instead of time_t
-         double time = min((double) (rolling_data(timedb, i)->end), 1.0 * last_sec + 1.0 * last_msec / 1000) - max((double) (rolling_data(timedb, i)->begin), 1.0 * first_sec + 1.0 * first_msec / 1000) ;
+         double time =  min((double) (rolling_data(timedb, i)->end), last_time)
+                           -
+                        max((double) (rolling_data(timedb, i)->begin), first_time);
 
-         // save portion of value in this time window
-         if (value_per_sec == INFINITY) { // watchout zero length interval
-            rolling_data(timedb, i)->sum += value;
-         } else {
-            rolling_data(timedb, i)->sum += value_per_sec * time;
-         }
-
-         if (timedb->count_uniq) { // we want to count only unique values
+         if (timedb->series_type == TIME_SERIES_SUM) {
+            // save portion of value in this time window
+            if (value_per_sec == INFINITY) { // watchout zero length interval
+               rolling_data(timedb, i)->sum += value;
+            } else {
+               rolling_data(timedb, i)->sum += value_per_sec * time;
+            }
+         } else if (timedb->series_type == TIME_SERIES_COUNT_UNIQ) { // we want to count only unique values
             time_series_bpt_item_t *item = bpt_search_or_insert(rolling_data(timedb, i)->b_plus_tree, value_ptr);
             if (item == NULL) {
                fprintf(stderr, "Error: Could not allocate leaf node of the B+ tree. Perhaps out of memory?\n");
                return TIMEDB_SAVE_ERROR;
             }
-	    item->count +=1;
-         } else {
+	         item->count +=1;
+         } else if(timedb->series_type == TIME_SERIES_COUNT) {
             rolling_data(timedb, i)->count += 1;
+         } else if(timedb->series_type == TIME_SERIES_HIST) {
+            size_t binInd = 0;
+
+            if(timedb->hist_type == TIME_SERIES_HISTOGRAM_NORM) {
+               binInd = floor((value/(timedb->hist_max_bin_value/timedb->hist_len)));
+            } else if(value > 0) {
+               if(timedb->hist_power == 2) {
+                  binInd = floor(log2(value));
+               } else if(timedb->hist_power == 10) {
+                  binInd = floor(log10(value));
+               } else {
+                  binInd = floor(log(value));
+               }
+            }
+            if(binInd >= timedb->hist_len) {
+               //Merge to last bin
+               binInd = timedb->hist_len-1;
+            }
+
+            //Save to bin index.
+            if (value_per_sec == INFINITY) { // watchout zero length interval
+               rolling_data(timedb, i)->hist[binInd] += 1.0;
+            } else {
+               rolling_data(timedb, i)->hist[binInd] += time/data_time_length;
+            }
          }
       }
    }
@@ -402,8 +463,8 @@ size_t timedb_get_sorted_items(bpt_t *b_plus_tree, time_series_bpt_item_t **item
    bpt_list_item_t *iter = bpt_list_init(b_plus_tree);
    bpt_list_start(b_plus_tree, iter);
    do {
-	memcpy((*items)[index].key, iter->key, min(b_plus_tree->size_of_key, sizeof((*items)[index].key)));
-	(*items)[index++].count = ((time_series_bpt_item_t*)iter->value)->count;
+      memcpy((*items)[index].key, iter->key, min(b_plus_tree->size_of_key, sizeof((*items)[index].key)));
+      (*items)[index++].count = ((time_series_bpt_item_t*)iter->value)->count;
    } while(bpt_list_item_next(b_plus_tree, iter));
 
    qsort(*items, len, sizeof(time_series_bpt_item_t), timedb_comp_items);
@@ -411,23 +472,28 @@ size_t timedb_get_sorted_items(bpt_t *b_plus_tree, time_series_bpt_item_t **item
 }
 
 // get last value, roll database, fill variables *sum and *count
-void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count, time_series_bpt_item_t *unique_items, size_t unique_items_len)
+void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count, time_series_bpt_item_t *unique_items, size_t unique_items_len, double **hist, size_t *hist_len)
 {
    // get data
    *time = rolling_data(timedb, 0)->begin;
    *sum = rolling_data(timedb, 0)->sum;
-   if (timedb->count_uniq) {
+   if (timedb->series_type == TIME_SERIES_COUNT_UNIQ) {
       *count = (uint32_t) bpt_item_cnt(rolling_data(timedb, 0)->b_plus_tree);
+      
       if(timedb->count_uniq_item && unique_items && unique_items_len > 0) {
          time_series_bpt_item_t *sorted_values = NULL;
-	 *count = timedb_get_sorted_items(rolling_data(timedb, 0)->b_plus_tree, &sorted_values);
-	 if(sorted_values) {
-	 	memcpy(unique_items, sorted_values, min(*count, unique_items_len)*sizeof(time_series_bpt_item_t));
-	 	free(sorted_values);
-	 }
+         *count = timedb_get_sorted_items(rolling_data(timedb, 0)->b_plus_tree, &sorted_values);
+         if(sorted_values) {
+            memcpy(unique_items, sorted_values, min(*count, unique_items_len)*sizeof(time_series_bpt_item_t));
+            free(sorted_values);
+         }
       }
-   } else {
+   } else if(timedb->series_type == TIME_SERIES_COUNT) {
       *count = rolling_data(timedb, 0)->count;
+   } else if(timedb->series_type == TIME_SERIES_HIST) {
+      *hist = malloc(sizeof(double)*timedb->hist_len);
+      *hist_len = timedb->hist_len;
+      memcpy(*hist, rolling_data(timedb, 0)->hist, sizeof(double)*timedb->hist_len);
    }
 
    // free time_serie before rolling
@@ -435,9 +501,13 @@ void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count
    rolling_data(timedb, 0)->end = timedb->end + timedb->step;
    rolling_data(timedb, 0)->sum = 0;
    rolling_data(timedb, 0)->count = 0;
-   if (timedb->count_uniq) {
+   if (timedb->series_type == TIME_SERIES_COUNT_UNIQ) {
       bpt_clean(rolling_data(timedb, 0)->b_plus_tree);
       rolling_data(timedb, 0)->b_plus_tree = bpt_init(TIMEDB__B_PLUS_TREE__LEAF_ITEM_NUMBER, timedb->b_tree_compare, sizeof(time_series_bpt_item_t), timedb->b_tree_key_size);
+   } else if(timedb->series_type == TIME_SERIES_HIST) {
+      for(int i = 0; i < timedb->hist_len; i++) {
+         rolling_data(timedb, 0)->hist[i] = 0;
+      }
    }
 
    // jump step forward
@@ -453,6 +523,9 @@ void timedb_free(timedb_t *timedb)
          for (int i = 0; i < timedb->size; i++) {
             if (timedb->data[i]->b_plus_tree) {
                bpt_clean(timedb->data[i]->b_plus_tree);
+            }
+            if(timedb->data[i]->hist) {
+               free(timedb->data[i]->hist);
             }
             free(timedb->data[i]);
          }

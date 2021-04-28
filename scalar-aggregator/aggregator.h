@@ -56,7 +56,8 @@ typedef enum {
    AGG_AVG,
    AGG_COUNT,
    AGG_RATE,
-   AGG_COUNT_UNIQ
+   AGG_COUNT_UNIQ,
+   AGG_HIST
 } agg_function;
 
 // aggregation rule structure
@@ -65,10 +66,20 @@ typedef struct rule_s {
    urfilter_t *filter;
    agg_function agg;
    int32_t opt_arg;
+   void *opt_params;
    char *agg_arg;
    ur_field_type_t agg_arg_field;
    timedb_t *timedb;
 } rule_t;
+
+typedef struct hist_param_s
+{
+   enum time_series_histogramt_type_t type;
+   uint64_t max_value;
+   uint8_t bins;
+   uint8_t power;
+} hist_param_t;
+
 
 void rule_init(rule_t *rule, ur_template_t *tpl, const void *data);
 rule_t *rule_create(const char *specifier, int step, int size, int inactive_timeout);

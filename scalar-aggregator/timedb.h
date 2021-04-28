@@ -71,6 +71,18 @@
 #define TIMEDB_SAVE_FLOW_TRUNCATED 2
  /* /} */
 
+enum time_series_type_t {
+    TIME_SERIES_SUM = 0,
+    TIME_SERIES_COUNT,
+    TIME_SERIES_COUNT_UNIQ,
+    TIME_SERIES_HIST
+};
+
+enum time_series_histogramt_type_t {
+    TIME_SERIES_HISTOGRAM_NORM = 0,
+    TIME_SERIES_HISTOGRAM_LOG
+};
+
 /*!
  * \brief Time series structure
  * Structure to keep calculated values for time series in TimeDB
@@ -80,6 +92,7 @@ typedef struct time_series_s {
     time_t end;
     double sum;
     uint32_t count;
+    double *hist;
     bpt_t *b_plus_tree;
 } time_series_t;
 
@@ -104,13 +117,38 @@ typedef struct timedb_s {
    time_t end;
    time_series_t **data;
    int data_begin;
+   enum time_series_type_t series_type;
    ur_field_type_t value_type;
+
    int count_uniq;
    bool count_uniq_item;
+
+   size_t hist_len;
+   size_t hist_max_bin_value;
+   uint8_t hist_power;
+   enum time_series_histogramt_type_t hist_type;
+
    int (*b_tree_compare) (void *, void *);
    int b_tree_key_size;
    uint8_t initialized;
 } timedb_t;
+
+typedef struct timedb_params_s {
+    int step;
+    int delay;
+    int inactive_timeout;
+    
+    bool count;
+
+    bool count_uniq;
+    bool count_uniq_items;
+
+    bool histogram;
+    enum time_series_histogramt_type_t hist_type;
+    size_t hist_len;
+    size_t hist_max_bin_value;
+    size_t hist_power;
+} timedb_params_t;
 
 /*!
  * \brief Creates TimeDB strucutre
@@ -121,7 +159,7 @@ typedef struct timedb_s {
  * \param[in] count_uniq positive number specifies that only unique values shall be counted (using B+ trees)
  * \return pointer to created stucture
  */
-timedb_t *timedb_create(int step, int delay, int inactive_timeout, int count_uniq, bool count_uniq_item);
+timedb_t *timedb_create(timedb_params_t params);
 
 /*!
  * \brief Initializes TimeDB
@@ -157,13 +195,13 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
  * \brief Gets values from TimeDB
  * Extracts values from oldest time series in database and frees it for next one
  * \param[in] timedb_t pointer to TimeDB structure
- * \param[out] time beginning time of extracted time series
+ * \param[out] time begintime_series_sning time of extracted time series
  * \param[out] sum extracted summary value
  * \param[out] count extracted count value
  * \param[out] unique items sorted by timedb preference
  * \param[out] number of items to retrieve
  */
-void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count, time_series_bpt_item_t* unique_items, size_t unique_items_len);
+void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count, time_series_bpt_item_t* unique_items, size_t unique_items_len, double **hist, size_t *hist_len);
 
 /*!
  * \brief Free TimeDB structure
