@@ -120,7 +120,7 @@ std::vector<agg::Field_config> Configuration::get_cfg_fields() const noexcept
 bool Configuration::is_key_present(std::string key_name)
 {
     for (auto cfg_field : _cfg_fields) {
-        if (!cfg_field.name.compare(key_name))
+        if (!cfg_field.name.compare(key_name) && cfg_field.type == agg::KEY)
             return true; 
     }
     return false;
