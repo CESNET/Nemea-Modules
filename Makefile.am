@@ -27,6 +27,7 @@ resolver \
 topn \
 traffic_repeater \
 unirec2json \
+unirec2db \
 endiverter \
 googletest_example
 
