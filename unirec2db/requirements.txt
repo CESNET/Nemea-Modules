@@ -1,0 +1,4 @@
+sqlalchemy
+sqlalchemy-utils
+pymysql
+cryptography
