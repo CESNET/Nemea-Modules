@@ -66,8 +66,8 @@
 
 #include "aggregator.h"
 
-#define MAX_OUTPUT_COUNT 32
-#define MAX_RULES_COUNT 32
+#define MAX_OUTPUT_COUNT 256
+#define MAX_RULES_COUNT 256
 
 /* error handling macros */
 #define HANDLE_PERROR(msg) \
@@ -396,8 +396,8 @@ int flush_aggregation_counters()
             unique_items = malloc(outputs[i]->rules[j]->opt_arg * sizeof(time_series_bpt_item_t));
             unique_items_len = outputs[i]->rules[j]->opt_arg;
          }
-         double *hist;
-         size_t hist_len;
+         double *hist = NULL;
+         size_t hist_len = 0;
          timedb_roll_db(outputs[i]->rules[j]->timedb, &time, &sum, &count, unique_items, unique_items_len, &hist, &hist_len);
 
          // time header
@@ -508,12 +508,14 @@ int flush_aggregation_counters()
             // Verbose
             if (trap_get_verbose_level() >= 0)
             {
+               printf("\r\nHistogram len: %d - ", hist_len);
                for (int z = 0; z < hist_len; z++)
                {
                   if (z != 0)
                      printf("|");
                   printf("%" PRIu64, (uint64_t)hist[z]);
                }
+               printf("\r\n");
             }
             break;
          default:
@@ -524,6 +526,10 @@ int flush_aggregation_counters()
          if (unique_items)
          {
             free(unique_items);
+         }
+         if(hist) 
+         {
+            free(hist);
          }
       }
 
@@ -682,13 +688,13 @@ int rule_parse_agg_function(const char *specifier, agg_function *function, char 
          } else if(!strcmp(opt_agg_str_arr[0], "LOG")) {
             hist_param.type = TIME_SERIES_HISTOGRAM_LOG;
             if(opt_agg_str_count != 3) {
-               fprintf(stderr, "Error: Wrong number of LOG Arguments HIST(NORM, [power], [bins]).\n");
+               fprintf(stderr, "Error: Wrong number of LOG Arguments HIST(NORM, [power], [max_value]).\n");
                fprintf(stderr, " Function name: %s\n", function_str);
                res = 0;
                goto rule_parse_agg_clean_up;
             }
-            if(sscanf(opt_agg_str_arr[1], "%lu", &hist_param.max_value) != 1 || 
-               sscanf(opt_agg_str_arr[2], "%hhu", &hist_param.power) != 1) {
+            if(sscanf(opt_agg_str_arr[1], "%lu", &hist_param.power) != 1 || 
+               sscanf(opt_agg_str_arr[2], "%hhu", &hist_param.max_value) != 1) {
                fprintf(stderr, "Error: Parsin LOG Arguments\n");
                fprintf(stderr, " Function name: %s\n", function_str);
                res = 0;

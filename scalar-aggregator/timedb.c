@@ -46,6 +46,7 @@
 #include "fields.h"
 #include <unirec/unirec.h>
 #include <stdio.h>
+#include <assert.h>
 #include <math.h>
 #include <b_plus_tree.h>
 #include <unirec/ipaddr.h>
@@ -188,6 +189,7 @@ timedb_t *timedb_create(timedb_params_t params)
 
          timedb->hist_len = hist_len;
       }
+      printf("Creating histogram with hist_len: %d, type: %d, power: %d, max_val: %d\r\n", timedb->hist_len, timedb->hist_type, timedb->hist_power, timedb->hist_max_bin_value);
    }
 
    timedb->data = (time_series_t **) calloc(timedb->size, sizeof(time_series_t *));
@@ -425,10 +427,11 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
             }
 
             //Save to bin index.
-            if (value_per_sec == INFINITY) { // watchout zero length interval
+            if (data_time_length == 0) { // watchout zero length interval
                rolling_data(timedb, i)->hist[binInd] += 1.0;
             } else {
                rolling_data(timedb, i)->hist[binInd] += time/data_time_length;
+               //printf("Hist Add: time: %lf, duration: %lf, add: %lf\r\n", time, data_time_length, data_time_length/time);
             }
          }
       }
@@ -471,12 +474,23 @@ size_t timedb_get_sorted_items(bpt_t *b_plus_tree, time_series_bpt_item_t **item
    return len;
 }
 
+#include <signal.h>
 // get last value, roll database, fill variables *sum and *count
 void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count, time_series_bpt_item_t *unique_items, size_t unique_items_len, double **hist, size_t *hist_len)
 {
    // get data
    *time = rolling_data(timedb, 0)->begin;
    *sum = rolling_data(timedb, 0)->sum;
+   if(!timedb->initialized) {
+      *sum = 0;
+      *count = 0;
+      *hist = malloc(timedb->hist_len*sizeof(double));
+      for(int z = 0; z < timedb->hist_len; z++) {
+         (*hist)[z] = 0.0;
+      }
+      *hist_len = timedb->hist_len;
+      return;
+   }
    if (timedb->series_type == TIME_SERIES_COUNT_UNIQ) {
       *count = (uint32_t) bpt_item_cnt(rolling_data(timedb, 0)->b_plus_tree);
       
