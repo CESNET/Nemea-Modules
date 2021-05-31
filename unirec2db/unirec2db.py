@@ -13,6 +13,18 @@ from sqlalchemy.dialects import mysql
 from sqlalchemy.ext.declarative import declarative_base
 import sqlalchemy_utils as sau
 
+reqTemplate = "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,time TIME_FIRST,time TIME_LAST,uint32 PACKETS,uint16 DST_PORT,uint16 SRC_PORT,uint8 PROTOCOL,uint8 TCP_FLAGS";
+
+def UnirecJsonDefault(o):
+    if isinstance(o, pytrap.UnirecIPAddr):
+        return str(o)
+    if isinstance(o, pytrap.UnirecMACAddr):
+        return str(o)
+    elif isinstance(o, pytrap.UnirecTime):
+        return float(o)
+    else:
+        return repr(o)
+
 
 def MakeDatetime(unirec_time):
     dt = unirec_time.toDatetime()
@@ -33,6 +45,16 @@ class BasicFlow(Base):
     protocol=sa.Column(sa.SmallInteger)
     packets=sa.Column(sa.Integer)
     bytes=sa.Column(sa.BigInteger)
+    aux_values=sa.Column(sa.Text, nullable=True)
+
+    @classmethod
+    def make_aux_values(cls, trap_rec):
+        d = {k:v for k, v in trap_rec}
+        tmpl_keys = reqTemplate.split(",")
+        for tmpl_key in tmpl_keys: 
+            key = tmpl_key.split(" ")[1]
+            d.pop(key, None)
+        return json.dumps(d, default=UnirecJsonDefault)
 
     def __init__(self, trap_rec):
         self.ip_src = trap_rec.SRC_IP
@@ -44,6 +66,7 @@ class BasicFlow(Base):
         self.protocol = trap_rec.PROTOCOL
         self.packets = trap_rec.PACKETS
         self.bytes = trap_rec.BYTES
+        self.aux_values = BasicFlow.make_aux_values(trap_rec)
 
 from optparse import OptionParser
 parser = OptionParser(add_help_option=True)
@@ -74,7 +97,7 @@ trap = pytrap.TrapCtx()
 trap.init(["-i", options.ifcspec])
 
 # Set data type on input
-trap.setRequiredFmt(0, pytrap.FMT_UNIREC, "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,time TIME_FIRST,time TIME_LAST,uint32 PACKETS,uint16 DST_PORT,uint16 SRC_PORT,uint8 PROTOCOL,uint8 TCP_FLAGS")
+trap.setRequiredFmt(0, pytrap.FMT_UNIREC, reqTemplate)
 
 stop = False
 try:
