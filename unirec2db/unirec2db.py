@@ -6,6 +6,7 @@ import pytrap
 import json
 import optparse
 import datetime
+from enum import Enum
 
 import sqlalchemy as sa
 from sqlalchemy import create_engine
@@ -13,7 +14,15 @@ from sqlalchemy.dialects import mysql
 from sqlalchemy.ext.declarative import declarative_base
 import sqlalchemy_utils as sau
 
-reqTemplate = "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,time TIME_FIRST,time TIME_LAST,uint32 PACKETS,uint16 DST_PORT,uint16 SRC_PORT,uint8 PROTOCOL,uint8 TCP_FLAGS";
+class InputType(Enum):
+    basic_flow = 1
+    scalar_agg = 2
+
+    def __str__(self):
+        return self.name
+
+reqBasicFlow_Template = "ipaddr DST_IP,ipaddr SRC_IP,uint64 BYTES,time TIME_FIRST,time TIME_LAST,uint32 PACKETS,uint16 DST_PORT,uint16 SRC_PORT,uint8 PROTOCOL,uint8 TCP_FLAGS";
+reqScalarAgg_Template = "time TIME"
 
 def UnirecJsonDefault(o):
     if isinstance(o, pytrap.UnirecIPAddr):
@@ -33,6 +42,15 @@ def MakeDatetime(unirec_time):
 
 Base = declarative_base()
 
+
+def make_aux_values(trap_rec, template):
+    d = {k:v for k, v in trap_rec}
+    tmpl_keys = template.split(",")
+    for tmpl_key in tmpl_keys: 
+        key = tmpl_key.split(" ")[1]
+        d.pop(key, None)
+    return json.dumps(d, default=UnirecJsonDefault)
+
 class BasicFlow(Base):
     __tablename__ = 'basic_flow'
     id=sa.Column(sa.Integer, primary_key=True)
@@ -47,15 +65,6 @@ class BasicFlow(Base):
     bytes=sa.Column(sa.BigInteger)
     aux_values=sa.Column(sa.Text, nullable=True)
 
-    @classmethod
-    def make_aux_values(cls, trap_rec):
-        d = {k:v for k, v in trap_rec}
-        tmpl_keys = reqTemplate.split(",")
-        for tmpl_key in tmpl_keys: 
-            key = tmpl_key.split(" ")[1]
-            d.pop(key, None)
-        return json.dumps(d, default=UnirecJsonDefault)
-
     def __init__(self, trap_rec):
         self.ip_src = trap_rec.SRC_IP
         self.ip_dst = trap_rec.DST_IP
@@ -66,7 +75,18 @@ class BasicFlow(Base):
         self.protocol = trap_rec.PROTOCOL
         self.packets = trap_rec.PACKETS
         self.bytes = trap_rec.BYTES
-        self.aux_values = BasicFlow.make_aux_values(trap_rec)
+        self.aux_values = make_aux_values(trap_rec, reqBasicFlow_Template)
+
+
+class ScalarAggregationEntry(Base):
+    __tablename__ = 'scalar_agg'
+    id=sa.Column(sa.Integer, primary_key=True)
+    time = sa.Column(mysql.DATETIME(fsp=6))  
+    aux_values=sa.Column(sa.Text, nullable=True)
+
+    def __init__(self, trap_rec):
+        self.time = MakeDatetime(trap_rec.TIME)
+        self.aux_values = make_aux_values(trap_rec, reqScalarAgg_Template)
 
 from optparse import OptionParser
 parser = OptionParser(add_help_option=True)
@@ -76,6 +96,8 @@ parser.add_option("-d", dest="db",
     help="SQL Alchemy connection string")
 parser.add_option("-v", "--verbose", action="store_true",
     help="Set verbose mode - print messages.")
+parser.add_option("-g", dest="agg", action="store_true",
+    help="Change input format to scalar aggregator")
 
 # Parse remaining command-line arguments
 (options, args) = parser.parse_args()
@@ -96,8 +118,14 @@ Base.metadata.create_all(engine)
 trap = pytrap.TrapCtx()
 trap.init(["-i", options.ifcspec])
 
+if(options.agg):
+    inputType = InputType.scalar_agg
+    trap.setRequiredFmt(0, pytrap.FMT_UNIREC, reqScalarAgg_Template)
+else:
+    inputType = InputType.basic_flow
+    trap.setRequiredFmt(0, pytrap.FMT_UNIREC, reqBasicFlow_Template)
+
 # Set data type on input
-trap.setRequiredFmt(0, pytrap.FMT_UNIREC, reqTemplate)
 
 stop = False
 try:
@@ -123,8 +151,12 @@ try:
             break
 
         recTmpl.setData(data)
-        db_flow = BasicFlow(recTmpl);
-        sa_session.add(db_flow)
+        
+        if(inputType == InputType.basic_flow):
+            db_rec = BasicFlow(recTmpl)
+        else:
+            db_rec = ScalarAggregationEntry(recTmpl)
+        sa_session.add(db_rec)
         sa_session.commit()
 finally:
     sa_session.close()
