@@ -63,6 +63,8 @@ while not stop:
 
     # Check for "end-of-stream" record
     if len(data) <= 1:
+        if options.verbose:
+            print('Received "end-of-stream" message, going to quit.')
         break
 
     try:
