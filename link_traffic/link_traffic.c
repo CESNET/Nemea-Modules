@@ -67,6 +67,8 @@
 #include <unistd.h>
 #include <sys/select.h>
 #include <ctype.h>
+#include <stdbool.h>
+
 /**
  * Definition of fields used in unirec templates (for both input and output interfaces)
  */
@@ -91,7 +93,9 @@ trap_module_info_t *module_info = NULL;
  * in case the parameter does not need argument.
  * Module parameter argument types: int8, int16, int32, int64, uint8, uint16, uint32, uint64, float, string
  */
-#define MODULE_PARAMS(PARAM)
+#define MODULE_PARAMS(PARAM) \
+    PARAM('d', "no-direction", "Don't use flow direction parameter.", no_argument, "flag")
+
 #define DEF_SOCKET_PATH "/var/run/libtrap/munin_link_traffic"
 #define CONFIG_PATH SYSCONFDIR"/link_traffic/link_traff_conf.cfg"
 #define CONFIG_VALUES 4 /* Definition of how many values link's config has. */
@@ -134,6 +138,7 @@ typedef struct link_conf {
 typedef struct link_loaded {
    link_conf_t    *conf;    /*! struct of loaded links configuration */
    size_t         num;       /*! size_t number of loaded links */
+   bool no_direction;        /*! Do not use direction parameter */
 } link_load_t;
 
 /*! @brief function that clears link_conf array
@@ -333,10 +338,16 @@ int prepare_data(link_load_t *links)
             fprintf(stderr, "Error: No links names loaded.\n");
             return 0;
          }
-         header_len += snprintf(databuffer + header_len, databuffer_size - header_len,
-                                "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,",
-                                 links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name,
-                                 links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name);
+         if (links->no_direction) {
+            header_len += snprintf(databuffer + header_len, databuffer_size - header_len,
+                                 "%s-in-bytes,%s-in-flows,%s-in-packets,",
+                                    links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name);
+         } else {
+            header_len += snprintf(databuffer + header_len, databuffer_size - header_len,
+                                 "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,",
+                                    links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name,
+                                    links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name);
+         }
       }
       databuffer[header_len - 1] = '\n';
    }
@@ -348,10 +359,16 @@ int prepare_data(link_load_t *links)
          return 0;
       }
       size_t stats_id = links->conf[i].m_id;
-      size += snprintf(databuffer + size, databuffer_size - size, "%"
-                       PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32",",
-                       stats[stats_id].bytes_in, stats[stats_id].flows_in, stats[stats_id].packets_in,
-                       stats[stats_id].bytes_out, stats[stats_id].flows_out, stats[stats_id].packets_out);
+      if (links->no_direction) {
+         size += snprintf(databuffer + size, databuffer_size - size, "%"
+                        PRIu64",%" PRIu64",%" PRIu32",",
+                        stats[stats_id].bytes_in, stats[stats_id].flows_in, stats[stats_id].packets_in);
+      } else {
+         size += snprintf(databuffer + size, databuffer_size - size, "%"
+                        PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32",",
+                        stats[stats_id].bytes_in, stats[stats_id].flows_in, stats[stats_id].packets_in,
+                        stats[stats_id].bytes_out, stats[stats_id].flows_out, stats[stats_id].packets_out);
+      }
    }
    databuffer[size - 1] = '\n';
    databuffer[size] = '\0';
@@ -466,6 +483,7 @@ int main(int argc, char **argv)
    signed char opt;
    ur_template_t *in_tmplt = NULL;
    link_load_t *links = NULL;
+   bool no_direction = false;
 
    pthread_t accept_thread;
    pthread_attr_t thrAttr;
@@ -522,11 +540,16 @@ int main(int argc, char **argv)
     */
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
+      case 'd':
+         no_direction = true;
+         break;
       default:
          fprintf(stderr, "Error: Invalid arguments.\n");
          goto cleanup;
       }
    }
+
+   links->no_direction = no_direction;
 
    /* **** Create UniRec templates **** */
    in_tmplt = ur_create_input_template(0, "BYTES,LINK_BIT_FIELD,PACKETS,DIR_BIT_FIELD", NULL);
