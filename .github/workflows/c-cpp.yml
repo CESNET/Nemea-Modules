@@ -1,4 +1,4 @@
-name: C/C++ CI
+name: Build and Checks
 
 on:
   push:
@@ -22,11 +22,21 @@ jobs:
     - name: autoreconf
       run: autoreconf -i
     - name: configure
-      run: ./configure --with-nemea
+      run: ./configure
     - name: make
       run: make
     - name: make check
       run: make check
     - name: make distcheck
       run: make distcheck
+    - name: configure with debug
+      run: ./configure --enable-debug CXXFLAGS=-coverage CFLAGS=-coverage LDFLAGS=-lgcov
+    - name: rebuild and check
+      run: make clean; make check
+    - uses: codecov/codecov-action@v1
+      with:
+        flags: tests # optional
+        name: nemea-modules # optional
+        fail_ci_if_error: true # optional (default = false)
+        verbose: true # optional (default = false)
 
