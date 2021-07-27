@@ -3,6 +3,7 @@ ACLOCAL_AMFLAGS = -I m4
 SUBDIRS= \
 aggregator \
 anonymizer \
+backscatter \
 biflow_aggregator \
 debug_sender \
 device_classifier \

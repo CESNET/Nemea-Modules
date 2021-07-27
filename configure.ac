@@ -226,6 +226,7 @@ AM_CONDITIONAL(MAKE_DEB, test x$DEBUILD != x)
 AC_CONFIG_FILES([Makefile
                  aggregator/Makefile
                  anonymizer/Makefile
+                 backscatter/Makefile
                  biflow_aggregator/Makefile
                  bloom_history/Makefile
                  debug_sender/Makefile
