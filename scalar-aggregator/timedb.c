@@ -393,11 +393,13 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
 
          if (timedb->series_type == TIME_SERIES_SUM) {
             // save portion of value in this time window
-            if (value_per_sec == INFINITY) { // watchout zero length interval
+            //printf("V: %lf, Frac: %lf, Time: %lf/Time_len: %lf\n", value, value * (time/data_time_length), time, data_time_length);
+            if (data_time_length == 0) { // watchout zero length interval
                rolling_data(timedb, i)->sum += value;
             } else {
-               rolling_data(timedb, i)->sum += value_per_sec * time;
+               rolling_data(timedb, i)->sum += value * (time/data_time_length);
             }
+            rolling_data(timedb, i)->count += 1;
          } else if (timedb->series_type == TIME_SERIES_COUNT_UNIQ) { // we want to count only unique values
             time_series_bpt_item_t *item = bpt_search_or_insert(rolling_data(timedb, i)->b_plus_tree, value_ptr);
             if (item == NULL) {
@@ -481,6 +483,7 @@ void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count
    // get data
    *time = rolling_data(timedb, 0)->begin;
    *sum = rolling_data(timedb, 0)->sum;
+   *count = rolling_data(timedb, 0)->count;
    if(!timedb->initialized) {
       *sum = 0;
       *count = 0;

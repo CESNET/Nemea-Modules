@@ -51,6 +51,7 @@
 #include <stdint.h>
 //#include <stdlib.h>
 #include <getopt.h>
+#include <math.h>
 #include <time.h> // debug time print
 #include <errno.h>
 #include <unistd.h>
@@ -443,6 +444,7 @@ int flush_aggregation_counters()
             }
             break;
          case AGG_AVG:
+            // printf("S: %lf, C: %d\n", sum, count);
             avgtmp = count > 0 ? 1.0 * sum / count : 0;
             // UniRec
             field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
@@ -668,6 +670,7 @@ int rule_parse_agg_function(const char *specifier, agg_function *function, char 
    {
       *function = AGG_HIST;
       hist_param_t hist_param;
+      memset(&hist_param, sizeof(hist_param), 0);
       if(opt_agg_str_count >= 1) {
          if (!strcmp(opt_agg_str_arr[0], "NORM"))
          {
@@ -679,7 +682,7 @@ int rule_parse_agg_function(const char *specifier, agg_function *function, char 
                goto rule_parse_agg_clean_up;
             }
             if(sscanf(opt_agg_str_arr[1], "%lu", &hist_param.max_value) != 1 || 
-               sscanf(opt_agg_str_arr[2], "%hhu", &hist_param.bins) != 1) {
+               sscanf(opt_agg_str_arr[2], "%u", &hist_param.bins) != 1) {
                fprintf(stderr, "Error: Parsin NORM Arguments\n");
                fprintf(stderr, " Function name: %s\n", function_str);
                res = 0;
@@ -693,13 +696,14 @@ int rule_parse_agg_function(const char *specifier, agg_function *function, char 
                res = 0;
                goto rule_parse_agg_clean_up;
             }
-            if(sscanf(opt_agg_str_arr[1], "%lu", &hist_param.power) != 1 || 
-               sscanf(opt_agg_str_arr[2], "%hhu", &hist_param.max_value) != 1) {
+            if(sscanf(opt_agg_str_arr[1], "%u", &hist_param.power) != 1 || 
+               sscanf(opt_agg_str_arr[2], "%lu", &hist_param.max_value) != 1) {
                fprintf(stderr, "Error: Parsin LOG Arguments\n");
                fprintf(stderr, " Function name: %s\n", function_str);
                res = 0;
                goto rule_parse_agg_clean_up;
             }
+            hist_param.max_value = pow(hist_param.power, hist_param.max_value);
          } else {
             fprintf(stderr, "Error: Unknown histogram binning.\n");
             fprintf(stderr, " Function name: %s\n", function_str);

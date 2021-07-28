@@ -76,8 +76,8 @@ typedef struct hist_param_s
 {
    enum time_series_histogramt_type_t type;
    uint64_t max_value;
-   uint8_t bins;
-   uint8_t power;
+   uint32_t bins;
+   uint32_t power;
 } hist_param_t;
 
 
