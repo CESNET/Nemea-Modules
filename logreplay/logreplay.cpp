@@ -73,7 +73,7 @@ UR_FIELDS(
 
 // Maximum size of dynamic field, longer fields will be cut to this
 // size
-#define DYN_FIELD_MAX_SIZE 1024
+#define DYN_FIELD_MAX_SIZE 16384
 
 // Struct with information about module
 trap_module_info_t *module_info = NULL;
@@ -171,6 +171,7 @@ time_t convert_timestamp(string &t)
    strptime(t.c_str(), "%FT%T", &tm);
    return mktime(&tm);
 }
+
 
 int main(int argc, char **argv)
 {
@@ -341,6 +342,8 @@ int main(int argc, char **argv)
                if (ur_get_type(*it) != UR_TYPE_STRING && ur_get_type(*it) != UR_TYPE_BYTES) {
                   // Prepare field for parsing by ur_set_from_string(), which accepts elements delimited by space
                   replace(column.begin(), column.end(), '|', ' ');
+                  // replace carriage return flag if it is necessary
+                  replace(column.begin(), column.end(), '\r', ' ');
                   column.erase(remove(column.begin(), column.end(), '['));
                   column.erase(remove(column.begin(), column.end(), ']'));
                }

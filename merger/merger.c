@@ -218,6 +218,7 @@ int set_output_by_first_message(void)
    out_rec = ur_create_record(out_template, UR_MAX_SIZE);
 
    for (i = 0; i < module_info->num_ifc_in; ++i) {
+      memset(out_rec, 0, ur_rec_size(out_template, out_rec));
       ur_copy_fields(out_template, out_rec, in_template[i], msgs[i]);
       trap_send(0, out_rec, ur_rec_size(out_template, out_rec));
    }

@@ -327,9 +327,6 @@ int main(int argc, char **argv)
        /* For all records in the file... */
       while (!stop && (max_records == 0 || record_counter < max_records)) {
          ret = lnf_read(filep, recp);
-         if (filter != NULL && !lnf_filter_match(filterp, recp)) {
-            continue;
-         }
 
          /* Read a record from the file. */
          if (ret != LNF_OK) {
@@ -341,6 +338,10 @@ int main(int argc, char **argv)
             lnf_close(filep);
             module_state = STATE_ERR;
             goto exit;
+         }
+
+         if (filter != NULL && !lnf_filter_match(filterp, recp)) {
+            continue;
          }
 
          lnf_rec_fget(recp, LNF_FLD_BREC1, &brec);

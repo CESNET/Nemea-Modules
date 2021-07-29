@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([nemea-modules], [2.18.0], [nemea@cesnet.cz])
+AC_INIT([nemea-modules], [2.18.1], [nemea@cesnet.cz])
 AC_CONFIG_SRCDIR([flowcounter/flowcounter.c])
 AC_CONFIG_HEADERS([config.h])
 RELEASE=1
@@ -226,6 +226,7 @@ AM_CONDITIONAL(MAKE_DEB, test x$DEBUILD != x)
 AC_CONFIG_FILES([Makefile
                  aggregator/Makefile
                  anonymizer/Makefile
+                 biflow_aggregator/Makefile
                  bloom_history/Makefile
                  debug_sender/Makefile
                  device_classifier/Makefile
