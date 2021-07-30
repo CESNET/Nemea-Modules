@@ -4,5 +4,4 @@ biflow_aggregator_SOURCES=main.cpp fields.c fields.h configuration.cpp configura
                           aggregator.cpp aggregator.h xxhash.h macaddr.h linked_list.h flat_hash_map.h aggregator_functions.h \
                           rapidxml.hpp
 biflow_aggregator_LDADD=-lunirec -ltrap
-biflow_aggregator_CXXFLAGS=-std=gnu++11
 include ../aminclude.am
