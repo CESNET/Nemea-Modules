@@ -22,7 +22,8 @@ json_replay is able to load data from JSON file and send it over a TRAP interfac
 ## Usage Examples
 ```
 #read data from file.json and send them to trap_out_ifc
-$ json_replay.py -i u:trap_out_ifc file.json
+$ json_replay.py -i u:trap_out_ifc < file.json
+
 #data send with format to recieve by module with required format set to "DST_IP, SRC_IP"
 $ json_replay.py -i u:trap_in_ifc -f "DST_IP, SRC_IP"
 ```
