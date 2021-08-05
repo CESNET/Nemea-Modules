@@ -1,0 +1,17 @@
+<module>
+<name>backscatter</name>
+<enabled>true</enabled>
+<path>/usr/bin/nemea/backscatter</path>
+<trapinterfaces>
+<interface>
+  <type>UNIXSOCKET</type>
+  <direction>IN</direction>
+  <params>flow_data_source</params>
+</interface>
+<interface>
+  <type>UNIXSOCKET</type>
+  <direction>OUT</direction>
+  <params>backscatter_out</params>
+</interface>
+</trapinterfaces>
+</module>

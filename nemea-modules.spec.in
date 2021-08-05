@@ -53,6 +53,7 @@ ldconfig
 %{_bindir}/nemea/agg
 %{_bindir}/nemea/amplification2idea.py
 %{_bindir}/nemea/anonymizer
+%{_bindir}/nemea/backscatter
 %{_bindir}/nemea/biflow_aggregator
 %{_bindir}/nemea/bruteforce2idea.py
 %{_bindir}/nemea/bloom_history
@@ -107,6 +108,9 @@ ldconfig
 %config(noreplace) %{_sysconfdir}/nemea/email_reporter/example.cfg
 %config(noreplace) %{_sysconfdir}/nemea/email_reporter/generic.cfg
 %config(noreplace) %{_sysconfdir}/nemea/link_traffic/link_traff_conf.cfg.example
+
+%config(noreplace) %{_datarootdir}/nemea-supervisor/backscatter/backscatter.sup
+
 %config(noreplace) %{_datarootdir}/nemea-supervisor/munin/link_traffic.sup
 %config(noreplace) %{_datarootdir}/nemea-supervisor/munin/proto_traffic.sup
 
