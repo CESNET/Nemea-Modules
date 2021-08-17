@@ -41,13 +41,15 @@ def parse_rule(rule : str):
     name = parts[0].strip()
     functionStr = parts[1].strip()
     functionName, functionArgs,*rest = functionStr.split("(")
-    templateName = functionArgs.split(",")[0]
+    functionArgsArr = list(map(str.strip, functionArgs.split(",")))
+    functionArgsArr[-1] = functionArgsArr[-1].rstrip(")")
+    templateName = functionArgsArr[0]
 
     r = {
         "name": name,
         "function": functionName.strip(),
-        "arguments": functionArgs.split(","),
-        "template": tmpl_map[functionName](functionArgs.split(",")[0])
+        "arguments": functionArgsArr,
+        "template": tmpl_map[functionName](functionArgsArr)
     }
     return r
 
@@ -61,22 +63,14 @@ def merge_records(outRec, rules, records):
             val = getattr(rec, rule["name"])
             merge_list.append(val)
 
-
-        if rule["name"] == "cnt_dst_ports" or rule["name"] == "cnt_src_ports":
-            print(rule["name"])
-            print(merge_list)
         outValue = merge_list[0]
         merge_list.pop(0)
         agg_func = agg_func_map[rule["function"]](rule["arguments"])
         while len(merge_list) != 0:
             outValue = agg_func(outValue, merge_list[0])
             merge_list.pop(0)
-
-        if rule["name"] == "cnt_dst_ports" or rule["name"] == "cnt_src_ports":
-            print(f"Set: {rule['name']} - {outValue}")
         setattr(outRec, rule["name"], outValue)
-        if rule["name"] == "cnt_dst_ports" or rule["name"] == "cnt_src_ports":
-            print(f"Get: {rule['name']} - {getattr(outRec, rule['name'])}")
+        
     return outRec
 
 parser = argparse.ArgumentParser()
@@ -113,7 +107,7 @@ while running:
             recFmt[i] = ctx.getDataFmt(i)[1]
             recTmpls[i] = pytrap.UnirecTemplate(recFmt[i])
             recDatas[i] = e.data
-            outTmpl = pytrap.UnirecTemplate(recFmt[i])
+            outTmpl = pytrap.UnirecTemplate(outFmt)
             del(e)
         if(len(recDatas[i]) == 0): 
             running = False
@@ -125,6 +119,6 @@ while running:
     #Join records
     outTmpl.createMessage(dyn_size=recTmpls[0].recVarlenSize())
     merge_records(outTmpl, rules, recTmpls)
-    print(outTmpl.strRecord(), outTmpl.recSize(), len(outTmpl.getData()))
+    # print(outTmpl.strRecord(), outTmpl.recSize(), len(outTmpl.getData()))
     ctx.send(ifcidx=0, data=outTmpl.getData())
 ctx.finalize()
