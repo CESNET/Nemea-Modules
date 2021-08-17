@@ -279,6 +279,7 @@ AC_CONFIG_FILES([Makefile
                  scalar-aggregator/Makefile
                  topn/Makefile
                  traffic_repeater/Makefile
+                 unirec2db/Makefile
                  unirec2json/Makefile
                  unirecfilter/lib/Makefile
                  unirecfilter/lib/liburfilter.pc
