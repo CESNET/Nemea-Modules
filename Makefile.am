@@ -10,6 +10,7 @@ device_classifier \
 email_reporter \
 flowcounter \
 flow_meter \
+flowscatter \
 ipv6stats \
 json_dump \
 json_replay \
