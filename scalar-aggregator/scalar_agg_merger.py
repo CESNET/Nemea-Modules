@@ -95,7 +95,7 @@ for i in range(0, args.aggnumber):
 
 rules = list(map(parse_rule, map(lambda x: x[0], args.rules)))
 tmplFields = ["time TIME"]
-tmplFields += map(lambda x: f"{x['template']} {x['name']}", rules)
+tmplFields += map(lambda x: "{} {}".format(x['template'], x['name']), rules)
 outFmt = ",".join(tmplFields)
 ctx.setDataFmt(0, pytrap.FMT_UNIREC, outFmt)
 
