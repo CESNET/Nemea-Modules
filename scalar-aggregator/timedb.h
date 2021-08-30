@@ -124,7 +124,7 @@ typedef struct timedb_s {
    bool count_uniq_item;
 
    size_t hist_len;
-   size_t hist_max_bin_value;
+   uint64_t hist_max_bin_value;
    uint8_t hist_power;
    enum time_series_histogramt_type_t hist_type;
 
@@ -146,8 +146,8 @@ typedef struct timedb_params_s {
     bool histogram;
     enum time_series_histogramt_type_t hist_type;
     size_t hist_len;
-    size_t hist_max_bin_value;
-    size_t hist_power;
+    uint64_t hist_max_bin_value;
+    uint8_t hist_power;
 } timedb_params_t;
 
 /*!
