@@ -58,8 +58,8 @@ class BasicFlow(Base):
     ip_dst = sa.Column(sau.IPAddressType)
     port_src=sa.Column(sa.Integer)
     port_dst=sa.Column(sa.Integer)
-    time_first = sa.Column(mysql.DATETIME(fsp=6)) 
-    time_last = sa.Column(mysql.DATETIME(fsp=6)) 
+    time_first = sa.Column(mysql.DATETIME(fsp=6), index=True) 
+    time_last = sa.Column(mysql.DATETIME(fsp=6), index=True) 
     protocol=sa.Column(sa.SmallInteger)
     packets=sa.Column(sa.Integer)
     bytes=sa.Column(sa.BigInteger)
@@ -81,7 +81,7 @@ class BasicFlow(Base):
 class ScalarAggregationEntry(Base):
     __tablename__ = 'scalar_agg'
     id=sa.Column(sa.Integer, primary_key=True)
-    time = sa.Column(mysql.DATETIME(fsp=6))  
+    time = sa.Column(mysql.DATETIME(fsp=6), index=True)  
     aux_values=sa.Column(sa.Text, nullable=True)
 
     def __init__(self, trap_rec):
