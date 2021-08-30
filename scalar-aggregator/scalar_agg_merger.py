@@ -1,7 +1,14 @@
+#!/usr/bin/python3
+
 import argparse
 import pytrap
 import statistics
 import json
+from itertools import groupby
+
+def all_equal(iterable):
+    g = groupby(iterable)
+    return next(g, True) and not next(g, False)
 
 def gen_agg_func(oper, step = 1, start = 0):
     def agg_func(a, b):
@@ -97,28 +104,48 @@ recFmt = [None for i in range(0, args.aggnumber)]
 recTmpls = [None for i in range(0, args.aggnumber)]
 outTmpl = None
 
+
+def recReady(recDatas):
+    if None in recDatas:
+        return False
+    return all_equal(map(lambda x: x.TIME, recDatas))
+
+def recNReadyIndex(data):
+    try:
+        return data.index(None)
+    except ValueError:
+        times = list(map(lambda x: x.TIME, data))
+        if all_equal(map(lambda x: x.TIME, data)):
+            raise ValueError()
+        return times.index(min(times))
+
 running = True
 while running:
-    recList = []
-    for i in range(args.aggnumber):
-        try:
-            recDatas[i] = ctx.recv(ifcidx=i)
-        except pytrap.FormatChanged as e:
-            recFmt[i] = ctx.getDataFmt(i)[1]
-            recTmpls[i] = pytrap.UnirecTemplate(recFmt[i])
-            recDatas[i] = e.data
-            outTmpl = pytrap.UnirecTemplate(outFmt)
-            del(e)
-        if(len(recDatas[i]) == 0): 
-            running = False
-            break
-        recTmpls[i].setData(recDatas[i])
+    curTmpls = [None for i in range(0, args.aggnumber)]
+    try:
+        while running:
+            i = recNReadyIndex(curTmpls)
+            try:
+                recDatas[i] = ctx.recv(ifcidx=i)
+            except pytrap.FormatChanged as e:
+                recFmt[i] = ctx.getDataFmt(i)[1]
+                recTmpls[i] = pytrap.UnirecTemplate(recFmt[i])
+                recDatas[i] = e.data
+                outTmpl = pytrap.UnirecTemplate(outFmt)
+                del(e)
+            if(len(recDatas[i]) == 0): 
+                running = False
+                break
+            recTmpls[i].setData(recDatas[i])
+            curTmpls[i] = recTmpls[i]
+    except ValueError:
+        pass
     if running == False:
         break
 
     #Join records
-    outTmpl.createMessage(dyn_size=recTmpls[0].recVarlenSize())
-    merge_records(outTmpl, rules, recTmpls)
+    outTmpl.createMessage(dyn_size=curTmpls[0].recVarlenSize())
+    merge_records(outTmpl, rules, curTmpls)
     # print(outTmpl.strRecord(), outTmpl.recSize(), len(outTmpl.getData()))
     ctx.send(ifcidx=0, data=outTmpl.getData())
 ctx.finalize()
