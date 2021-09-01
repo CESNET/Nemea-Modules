@@ -374,7 +374,7 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
          }
          break;
    }
-   double sec_value = 1;
+   double sec_value = 0;
    if(sec_value_ptr) {
       switch (sec_value_type) {
          case UR_TYPE_INT8:
@@ -414,7 +414,6 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
    }
    double data_time_length = (last_time - first_time);
    double value_per_sec = 1.0 * value / data_time_length;
-   double sec_value_per_sec = 1.0 * sec_value / data_time_length;
 
    // check if records ends too late, we need to rollout
    if (timedb->end < last_sec) {
@@ -445,12 +444,15 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
                fprintf(stderr, "Error: Could not allocate leaf node of the B+ tree. Perhaps out of memory?\n");
                return TIMEDB_SAVE_ERROR;
             }
-	         item->count +=1;
+            if(sec_value_ptr) {
+               item->count += sec_value;
+            } else {
+	            item->count +=1;
+            }
          } else if(timedb->series_type == TIME_SERIES_COUNT) {
-            rolling_data(timedb, i)->count += 1;
+               rolling_data(timedb, i)->count += 1;
          } else if(timedb->series_type == TIME_SERIES_HIST) {
             size_t binInd = 0;
-
             if(timedb->hist_type == TIME_SERIES_HISTOGRAM_NORM) {
                binInd = floor((value/(timedb->hist_max_bin_value/timedb->hist_len)));
             } else if(value > 0) {
@@ -471,7 +473,7 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
                if (data_time_length == 0) { // watchout zero length interval
                   rolling_data(timedb, i)->hist[binInd] += sec_value;
                } else {
-                  rolling_data(timedb, i)->hist[binInd] += sec_value_per_sec;
+                  rolling_data(timedb, i)->hist[binInd] += (time/data_time_length) * sec_value;
                }
             } else {
                if (data_time_length == 0) { // watchout zero length interval
