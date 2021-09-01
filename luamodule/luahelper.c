@@ -199,6 +199,26 @@ int ip_tostring(lua_State *luaVM)
    return 1;
 }
 
+int ip_tobytes(lua_State *luaVM)
+{
+   ip_addr_t *ip;
+
+   if (lua_gettop(luaVM) != 1 || lua_type(luaVM, 1) != LUA_TLIGHTUSERDATA) {
+      set_error(luaVM, "Expected IP address userdata");
+      return 0;
+   }
+   ip = lua_touserdata(luaVM, 1);
+   if (ip_is4(ip)) {
+      char tmp[4];
+      *(uint32_t *) tmp = htonl(ip_get_v4_as_int(ip));
+      lua_pushlstring(luaVM, tmp, sizeof(tmp));
+   } else {
+      lua_pushlstring(luaVM, (const char *) ip->bytes, sizeof(ip->bytes));
+   }
+
+   return 1;
+}
+
 int ip_eq(lua_State *luaVM)
 {
    char ip_str1_[INET6_ADDRSTRLEN];
@@ -255,6 +275,10 @@ void ip_create_meta(lua_State *luaVM, ip_addr_t ip)
 
    lua_pushstring(luaVM, "__tostring");
    lua_pushcfunction(luaVM, ip_tostring);
+   lua_settable(luaVM, -3);
+
+   lua_pushstring(luaVM, "__tobytes");
+   lua_pushcfunction(luaVM, ip_tobytes);
    lua_settable(luaVM, -3);
 
    lua_setmetatable(luaVM, -2);

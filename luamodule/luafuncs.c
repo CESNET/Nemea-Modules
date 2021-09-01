@@ -304,9 +304,18 @@ int field_ip(lua_State *luaVM)
    /* Iterate through function arguments. */
    for (i = 1; i <= n; i++) {
       if (lua_type(luaVM, i) == LUA_TSTRING) {
-         if (ip_from_str(lua_tostring(luaVM, i), &ip) == 0) {
-            lua_pushnil(luaVM);
-            continue;
+         const char *ip_ptr = lua_tostring(luaVM, i);
+         if (ip_from_str(ip_ptr, &ip) == 0) {
+            /* Try to parse 4 B addr or 16 B addr */
+            size_t len = lua_rawlen(luaVM, i);
+            if (len == 4) {
+               ip = ip_from_4_bytes_be(ip_ptr);
+            } else if (len == 16) {
+               ip = ip_from_16_bytes_be(ip_ptr);
+            } else {
+               lua_pushnil(luaVM);
+               continue;
+            }
          }
          ip_create_meta(luaVM, ip);
       } else {
