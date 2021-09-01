@@ -189,7 +189,7 @@ void timedb_init_tree(timedb_t *timedb, ur_field_type_t value_type);
  * \param[in] var_value_size size of variable-length value (if suitable)
  * \return Return value. Possible values are constants TIMEDB_SAVE_*
  */
-int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_field_type_t value_type, void *value, int var_value_size);
+int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_field_type_t value_type, void *value, int var_value_size, ur_field_type_t sec_value_type, void *sec_value, int sec_value_size);
 
 /*!
  * \brief Gets values from TimeDB

@@ -68,6 +68,7 @@ typedef struct rule_s {
    int32_t opt_arg;
    void *opt_params;
    char *agg_arg;
+   char *agg_sec_arg;
    ur_field_type_t agg_arg_field;
    timedb_t *timedb;
 } rule_t;

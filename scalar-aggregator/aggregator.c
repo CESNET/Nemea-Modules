@@ -549,7 +549,7 @@ int flush_aggregation_counters()
    return 0;
 }
 
-int rule_parse_agg_function(const char *specifier, agg_function *function, char **arg, int32_t *opt_arg, void **opt_params)
+int rule_parse_agg_function(const char *specifier, agg_function *function, char **arg, int32_t *opt_arg, void **opt_params, char *sec_value_name)
 {
    #define MAX_OPTIONAL_ARGS 10
    // expected format <function>(<arg>), all whitespaces should be trimmed before
@@ -661,9 +661,17 @@ int rule_parse_agg_function(const char *specifier, agg_function *function, char 
    else if (!strcmp(function_str, "COUNT_UNIQ"))
    {
       *function = AGG_COUNT_UNIQ;
-      if (!opt_agg_str_count >= 1 || sscanf(opt_agg_str_arr[0], "%d", opt_arg) != 1)
-      {
-         *opt_arg = -1;
+      *opt_arg = -1;
+      sec_value_name[0] = '\0';
+      if(opt_agg_str_count >= 2) {
+         if(strlen(opt_agg_str_arr[0]) == 0 ||
+            sscanf(opt_agg_str_arr[1], "%d", opt_arg) != 1) {
+            fprintf(stderr, "Error: Wrong of Arguments COUNT_UNIQUE.\n");
+            fprintf(stderr, " Function name: %s\n", function_str);
+            res = 0;
+            goto rule_parse_agg_clean_up;
+         }
+         strcpy(sec_value_name, opt_agg_str_arr[0]);
       }
    }
    else if(!strcmp(function_str, "HIST"))
@@ -671,34 +679,42 @@ int rule_parse_agg_function(const char *specifier, agg_function *function, char 
       *function = AGG_HIST;
       hist_param_t hist_param;
       memset(&hist_param, sizeof(hist_param), 0);
-      if(opt_agg_str_count >= 1) {
-         if (!strcmp(opt_agg_str_arr[0], "NORM"))
+      if(opt_agg_str_count >= 2) {
+         if(strlen(opt_agg_str_arr[0]) == 0) {
+            fprintf(stderr, "Error: Empty value_name of Arguments HIST([value_name], NORM, [max_value], [bins]).\n");
+            fprintf(stderr, " Function name: %s\n", function_str);
+            res = 0;
+            goto rule_parse_agg_clean_up;
+         }
+         strcpy(sec_value_name, opt_agg_str_arr[0]);
+
+         if (!strcmp(opt_agg_str_arr[1], "NORM"))
          {
             hist_param.type = TIME_SERIES_HISTOGRAM_NORM;
-            if(opt_agg_str_count != 3) {
-               fprintf(stderr, "Error: Wrong number of NORM Arguments HIST(NORM, [max_value], [bins]).\n");
+            if(opt_agg_str_count != 4) {
+               fprintf(stderr, "Error: Wrong number of Arguments HIST([value_name], NORM, [max_value], [bins]).\n");
                fprintf(stderr, " Function name: %s\n", function_str);
                res = 0;
                goto rule_parse_agg_clean_up;
             }
-            if(sscanf(opt_agg_str_arr[1], "%lu", &hist_param.max_value) != 1 || 
-               sscanf(opt_agg_str_arr[2], "%u", &hist_param.bins) != 1) {
+            if(sscanf(opt_agg_str_arr[2], "%lu", &hist_param.max_value) != 1 || 
+               sscanf(opt_agg_str_arr[3], "%u", &hist_param.bins) != 1) {
                fprintf(stderr, "Error: Parsin NORM Arguments\n");
                fprintf(stderr, " Function name: %s\n", function_str);
                res = 0;
                goto rule_parse_agg_clean_up;
             }
-         } else if(!strcmp(opt_agg_str_arr[0], "LOG")) {
+         } else if(!strcmp(opt_agg_str_arr[1], "LOG")) {
             hist_param.type = TIME_SERIES_HISTOGRAM_LOG;
-            if(opt_agg_str_count != 3) {
-               fprintf(stderr, "Error: Wrong number of LOG Arguments HIST(NORM, [power], [max_value]).\n");
+            if(opt_agg_str_count != 4) {
+               fprintf(stderr, "Error: Wrong number of Arguments HIST([value_name], LOG, [power], [max_value]).\n");
                fprintf(stderr, " Function name: %s\n", function_str);
                res = 0;
                goto rule_parse_agg_clean_up;
             }
-            if(sscanf(opt_agg_str_arr[1], "%u", &hist_param.power) != 1 || 
-               sscanf(opt_agg_str_arr[2], "%lu", &hist_param.max_value) != 1) {
-               fprintf(stderr, "Error: Parsin LOG Arguments\n");
+            if(sscanf(opt_agg_str_arr[2], "%u", &hist_param.power) != 1 || 
+               sscanf(opt_agg_str_arr[3], "%lu", &hist_param.max_value) != 1) {
+               fprintf(stderr, "Error: Parsing LOG Arguments\n");
                fprintf(stderr, " Function name: %s\n", function_str);
                res = 0;
                goto rule_parse_agg_clean_up;
@@ -721,6 +737,9 @@ int rule_parse_agg_function(const char *specifier, agg_function *function, char 
       fprintf(stderr, " Function name: %s\n", function_str);
       res = 0;
       goto rule_parse_agg_clean_up;
+   }
+   if(!strcmp(agg_str, sec_value_name)) {
+      sec_value_name[0] = '\0';
    }
 
    *arg = agg_str;
@@ -840,12 +859,19 @@ rule_t *rule_create(const char *specifier, int step, int size, int inactive_time
    object->name = name;
    object->opt_arg = 0;
 
+
+   char sec_value_name[256] = "";
    // parse aggregation function
-   if (!rule_parse_agg_function(agg, &object->agg, &object->agg_arg, &object->opt_arg, &object->opt_params))
+   if (!rule_parse_agg_function(agg, &object->agg, &object->agg_arg, &object->opt_arg, &object->opt_params, sec_value_name))
    {
       goto error_cleanup;
    }
 
+   object->agg_sec_arg = NULL;
+   if(strlen(sec_value_name) >= 0) {
+      object->agg_sec_arg = malloc(strlen(sec_value_name));
+      strcpy(object->agg_sec_arg, sec_value_name);
+   }
 
    timedb_params_t tdb_params;
    memset(&tdb_params, 0, sizeof(tdb_params));
@@ -881,6 +907,7 @@ error_cleanup:
    free(agg);
    free(filter);
    if(object->opt_params) free(object->opt_params);
+   if(object->agg_sec_arg) free(object->agg_sec_arg);
    free(object);
    return NULL;
 }
@@ -903,6 +930,8 @@ void rule_destroy(rule_t *object)
       {
          urfilter_destroy(object->filter);
       }
+      if(object->opt_params) free(object->opt_params);
+      if(object->agg_sec_arg) free(object->agg_sec_arg);
       timedb_free(object->timedb);
       free(object);
    }
@@ -946,6 +975,7 @@ int rule_save_data(rule_t *rule, ur_template_t *tpl, const void *record)
       case AGG_COUNT:
       case AGG_AVG:
       case AGG_RATE:
+      case AGG_HIST:
          fprintf(stderr, "Error: Only COUNT_UNIQ make sense with IP, MAC, TIME, STRING or BYTES.\n");
          fprintf(stderr, " Aggregation rule name: %s\n", rule->name);
          return 0;
@@ -976,6 +1006,34 @@ int rule_save_data(rule_t *rule, ur_template_t *tpl, const void *record)
       break;
    }
 
+   char *sec_name = rule->agg_sec_arg;
+   void *sec_value = NULL;
+   int sec_var_value_size = 0;
+
+   ur_field_type_t sec_field_type = UR_TYPE_INT8;
+   if(sec_name && strlen(sec_name) != 0) {
+      int sec_field_id = ur_get_id_by_name(sec_name);
+      if (sec_field_id == UR_E_INVALID_NAME)
+      {
+         fprintf(stderr, "Fatal error: Aggregation sec_argument is not present in UniRec template.\n");
+         fprintf(stderr, " Aggregation argument: %s\n", sec_name);
+         return 0;
+      }
+      sec_value = ur_get_ptr_by_id(tpl, record, sec_field_id);
+      sec_field_type = ur_get_type(sec_field_id);
+
+      switch (sec_field_type)
+      {
+      case UR_TYPE_STRING:
+      case UR_TYPE_BYTES:
+         sec_var_value_size = ur_get_var_len(tpl, record, sec_field_id);
+         break;
+      default:
+         sec_var_value_size = 0;
+         break;
+      }
+   }
+
    // add flow to time series
    switch (rule->agg)
    {
@@ -986,7 +1044,7 @@ int rule_save_data(rule_t *rule, ur_template_t *tpl, const void *record)
    case AGG_RATE:
    case AGG_HIST:
    case AGG_COUNT_UNIQ:
-      while (timedb_save_data(rule->timedb, ur_get(tpl, record, F_TIME_FIRST), ur_get(tpl, record, F_TIME_LAST), field_type, value, var_value_size) == TIMEDB_SAVE_NEED_ROLLOUT)
+      while (timedb_save_data(rule->timedb, ur_get(tpl, record, F_TIME_FIRST), ur_get(tpl, record, F_TIME_LAST), field_type, value, var_value_size, sec_field_type, sec_value, sec_var_value_size) == TIMEDB_SAVE_NEED_ROLLOUT)
       {
          flush_aggregation_counters();
       }

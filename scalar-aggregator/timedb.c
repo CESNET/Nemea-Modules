@@ -301,7 +301,7 @@ void timedb_init_tree(timedb_t *timedb, ur_field_type_t value_type)
    }
 }
 
-int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_field_type_t value_type, void *value_ptr, int var_value_size)
+int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_field_type_t value_type, void *value_ptr, int var_value_size, ur_field_type_t sec_value_type, void *sec_value_ptr, int sec_value_size)
 {
    // get first and last time seen
    time_t first_sec = ur_time_get_sec(urfirst);
@@ -374,8 +374,47 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
          }
          break;
    }
+   double sec_value = 1;
+   if(sec_value_ptr) {
+      switch (sec_value_type) {
+         case UR_TYPE_INT8:
+            sec_value = *((int8_t *) sec_value_ptr);
+            break;
+         case UR_TYPE_INT16:
+            sec_value = *((int16_t *) sec_value_ptr);
+            break;
+         case UR_TYPE_INT32:
+            sec_value = *((int32_t *) sec_value_ptr);
+            break;
+         case UR_TYPE_INT64:
+            sec_value = *((int64_t *) sec_value_ptr);
+            break;
+         case UR_TYPE_UINT8:
+            sec_value = *((uint8_t *) sec_value_ptr);
+            break;
+         case UR_TYPE_UINT16:
+            sec_value = *((uint16_t *) sec_value_ptr);
+            break;
+         case UR_TYPE_UINT32:
+            sec_value = *((uint32_t *) sec_value_ptr);
+            break;
+         case UR_TYPE_UINT64:
+            sec_value = *((uint64_t *) sec_value_ptr);
+            break;
+         case UR_TYPE_FLOAT:
+            sec_value = *((float *) sec_value_ptr);
+            break;
+         case UR_TYPE_DOUBLE:
+            sec_value = *((double *) sec_value_ptr);
+            break;
+         default:
+            fprintf(stderr, "Error: Trying to save unsupported sec_value into TimeDB.\n");
+            return TIMEDB_SAVE_ERROR;
+      }
+   }
    double data_time_length = (last_time - first_time);
    double value_per_sec = 1.0 * value / data_time_length;
+   double sec_value_per_sec = 1.0 * sec_value / data_time_length;
 
    // check if records ends too late, we need to rollout
    if (timedb->end < last_sec) {
@@ -427,13 +466,19 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
                //Merge to last bin
                binInd = timedb->hist_len-1;
             }
-
             //Save to bin index.
-            if (data_time_length == 0) { // watchout zero length interval
-               rolling_data(timedb, i)->hist[binInd] += 1.0;
+            if(sec_value_ptr) {
+               if (data_time_length == 0) { // watchout zero length interval
+                  rolling_data(timedb, i)->hist[binInd] += sec_value;
+               } else {
+                  rolling_data(timedb, i)->hist[binInd] += sec_value_per_sec;
+               }
             } else {
-               rolling_data(timedb, i)->hist[binInd] += time/data_time_length;
-               //printf("Hist Add: time: %lf, duration: %lf, add: %lf\r\n", time, data_time_length, data_time_length/time);
+               if (data_time_length == 0) { // watchout zero length interval
+                  rolling_data(timedb, i)->hist[binInd] += 1.0;
+               } else {
+                  rolling_data(timedb, i)->hist[binInd] += time/data_time_length;
+               }
             }
          }
       }
