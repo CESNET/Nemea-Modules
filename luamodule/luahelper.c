@@ -209,9 +209,8 @@ int ip_tobytes(lua_State *luaVM)
    }
    ip = lua_touserdata(luaVM, 1);
    if (ip_is4(ip)) {
-      char tmp[4];
-      *(uint32_t *) tmp = htonl(ip_get_v4_as_int(ip));
-      lua_pushlstring(luaVM, tmp, sizeof(tmp));
+      uint32_t tmp = htonl(ip_get_v4_as_int(ip));
+      lua_pushlstring(luaVM, (const char *) &tmp, sizeof(tmp));
    } else {
       lua_pushlstring(luaVM, (const char *) ip->bytes, sizeof(ip->bytes));
    }

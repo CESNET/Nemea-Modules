@@ -305,10 +305,10 @@ int field_ip(lua_State *luaVM)
    /* Iterate through function arguments. */
    for (i = 1; i <= n; i++) {
       if (lua_type(luaVM, i) == LUA_TSTRING) {
-         const char *ip_ptr = lua_tostring(luaVM, i);
+         size_t len = 0;
+         const char *ip_ptr = lua_tolstring(luaVM, i, &len);
          if (ip_from_str(ip_ptr, &ip) == 0) {
             /* Try to parse 4 B addr or 16 B addr */
-            size_t len = lua_rawlen(luaVM, i);
             if (len == 4) {
                ip = ip_from_4_bytes_be(ip_ptr);
             } else if (len == 16) {

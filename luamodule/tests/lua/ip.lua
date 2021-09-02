@@ -78,8 +78,8 @@ function on_template_recv()
 end
 
 function on_record_recv()
-   local ip = {"", {192, 168, 0, 1}, "2000:0000::1234:1", "\xC0\xA8\x01\x01", "\x11\x22\x33\x44\x55",
-      "\x00\x11\x22\x33\x44\x55\x66\x77\x88\x99\xAA\xBB\xCC\xDD\xEE\xFF"}
+   local ip = {"", {192, 168, 0, 1}, "2000:0000::1234:1", "\192\168\1\1", "\10\0\0\0\1",
+      "\0\17\34\51\68\85\102\119\136\153\170\187\204\221\238\255"}
    local expected = {nil, nil, "2000::1234:1", "192.168.1.1", nil, "11:2233:4455:6677:8899:aabb:ccdd:eeff"}
    local is4 = {false, false, false, true, false, false}
    local is6 = {false, false, true, false, false, true}
@@ -125,7 +125,7 @@ function on_record_recv()
       error("/24, (/56)/20 mask of ipv6 address failed")
    end
 
-   local ip3_str = "\xC0\xA8\x00\x01"
+   local ip3_str = "\10\0\0\1"
    local ip3 = ur_ip(ip3_str)
    ip_bytes_op = getmetatable(ip3)["__tobytes"]
    if ip_bytes_op(ip3) ~= ip3_str then
