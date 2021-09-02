@@ -4,7 +4,7 @@ Received fields can be manipulated (get/set field, add/del fields) using input s
 
 ## Requirements
 To compile this module, you will need the following packages:
-- `lua-devel`
+- `lua-devel` at least version 5.1
 - `lua-libs`
 
 ## Arguments
@@ -85,7 +85,7 @@ Example:
 local ret1, ret2, ret3 = ur_set("FOO", {1,2,3,4,5}, "BAR", 12345, "IP", ur_ip("10.200.4.1"))
 ```
 
-NOTE: when setting field of BYTES unirec type, use string type as an argument, which can contain regular bytes like "\xDE\xAD\xBE\xEF"
+NOTE: when setting field of BYTES unirec type, use string type as an argument, which can contain regular bytes like "\192\168\0\1" (or "\xDE\xAD\xBE\xEF" from lua version 5.2)
 
 ### ur\_add
 Arguments and return values:
