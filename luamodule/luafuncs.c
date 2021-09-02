@@ -81,6 +81,7 @@ int field_get(lua_State *luaVM)
          }
       } else {
          set_error(luaVM, "Incorrect argument(s) to '%s'", GET_FUNC_NAME);
+         return 0;
       }
 
       field_send_to_lua(luaVM, tmplt_in, rec_in, field_id);
