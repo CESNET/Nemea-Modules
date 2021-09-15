@@ -1,3 +1,11 @@
+2021-09-15 nemea-modules-2.19.0
+	* Added backscatter module
+	* ghactions: add codeql, coverity, codecov
+	* Link traffic: Improvements.
+	* logreplay: Bugfixes and improvements.
+	* link_traffic: Bugfixes.
+	* C/C++ standard unified to -std=gnu11 and -std=gnu++11
+	
 2021-03-22 nemea-modules-2.18.1
 	* luamodule: improved output formating
 	* link_traffic: added counter
