@@ -1,3 +1,23 @@
+2021-09-15 (xsiska12): Backscatter: Added missing DIST section to Makefile
+2021-08-05 (Martin Marusiak): Added backscatter module
+2021-08-02 (Matej Hulák): README example fix
+2021-07-29 (xsiska12): biflow_aggregator: removed gnu standard from Makefile
+2021-07-17 (Tomas Cejka): ghactions: add codeql, coverity, codecov
+2021-07-12 (Tomas Cejka): ghactions: add missing submodule update for tests
+2021-07-12 (Tomas Cejka): setup github actions workflow
+2021-07-12 (xsiska12): Link traffic: Added parameter to check only one direction of flow.
+2021-06-17 (Václav Bartoš): json_dump: added verbose print about end-of-stream msg
+2021-05-06 (xsiska12): logreplay: increased maximal size of dynamic field
+2021-05-04 (Tomas Cejka): travis: removed auto deploy
+2021-05-03 (xsiska12): biflow-aggregator: fixed missing type check in is_key_present() function.
+2021-04-20 (xsiska12): link_traffic: fixed mixed link statistics.
+2021-03-25 (xsiska12): logreplay: Fixed parsing of empty dynamic field at the end of line.
+2021-03-22 (xsiska12): merger: fix test
+2021-03-22 (Adam Piecek): nemea-modules: added biflow_aggregator to rpm package
+2021-03-22 (xsiska12): merger: fixed invalid first message
+2021-03-22 (xsiska12): biflow-aggregator: Fixed missing aggregation field initialization.
+2021-03-03 (SiskaPavel): C/C++ standard unified to -std=gnu11 and -std=gnu++11
+
 2021-03-18 (SiskaPavel): nemea-modules: Added new biflow aggregator module.
 2021-03-17 (aPiecek): nfreader: bugfix infinite loop
 2021-03-16 (Tomas Cejka): link_traffic: add Total counter
