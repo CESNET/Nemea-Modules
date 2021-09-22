@@ -142,9 +142,9 @@ void flush_stats(stats_t *stats, int stats_type, int window_size, const char* pa
    ofstream out_file;
 
    time_t now = time(NULL);
-   tm * ptm = localtime(&now);
+   struct tm tmp_tm;
    char buffer[32];
-   strftime(buffer, 32, "%Y-%m-%d.%H:%M:%S", ptm);
+   strftime(buffer, 32, "%Y-%m-%d.%H:%M:%S", localtime_r(&now, &tmp_tm));
 
    filename.str("");
    filename.clear();
@@ -379,9 +379,9 @@ int main (int argc, char** argv) {
          } else if (ret == TRAP_E_TIMEOUT) {
             if (!inactive){
                time_t now = time(NULL);
-               tm * ptm = localtime(&now);
+               struct tm tmp_tm;
                char buffer[32];
-               strftime(buffer, 32, "%Y-%m-%d.%H:%M:%S", ptm);
+               strftime(buffer, 32, "%Y-%m-%d.%H:%M:%S", localtime_r(&now, &tmp_tm));
 
                cerr << buffer << ", Error: timeout reached on input interface. Flushing by inactive." << endl;
                flush_stats(&stats, STSHORT, window_short, output_path.c_str(), true);
@@ -404,9 +404,9 @@ int main (int argc, char** argv) {
                inactive = true;
             } else {//after one short window, wirte zeros and wait on src data
                time_t now = time(NULL);
-               tm * ptm = localtime(&now);
+               struct tm tmp_tm;
                char buffer[32];
-               strftime(buffer, 32, "%Y-%m-%d.%H:%M:%S", ptm);
+               strftime(buffer, 32, "%Y-%m-%d.%H:%M:%S", localtime_r(&now, &tmp_tm));
 
                cerr << buffer << ", Error: timeout reached on input interface. No data since last timeout." << endl;
                flush_stats(&stats, STSHORT, window_short, output_path.c_str(), true);

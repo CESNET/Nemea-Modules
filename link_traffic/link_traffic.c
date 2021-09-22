@@ -324,6 +324,7 @@ size_t header_len = 0;
 int prepare_data(link_load_t *links)
 {
    size_t i = 0, size;
+   int ret;
 
    if (databuffer == NULL) {
       databuffer = calloc(4096, sizeof(char));
@@ -339,14 +340,22 @@ int prepare_data(link_load_t *links)
             return 0;
          }
          if (links->no_direction) {
-            header_len += snprintf(databuffer + header_len, databuffer_size - header_len,
+            ret = snprintf(databuffer + header_len, databuffer_size - header_len,
                                  "%s-in-bytes,%s-in-flows,%s-in-packets,",
                                     links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name);
+            if (header_len + ret >= databuffer_size) {
+               return 0;
+            }
+            header_len += ret;
          } else {
-            header_len += snprintf(databuffer + header_len, databuffer_size - header_len,
+            ret = snprintf(databuffer + header_len, databuffer_size - header_len,
                                  "%s-in-bytes,%s-in-flows,%s-in-packets,%s-out-bytes,%s-out-flows,%s-out-packets,",
                                     links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name,
                                     links->conf[i].m_name,links->conf[i].m_name,links->conf[i].m_name);
+            if (header_len + ret >= databuffer_size) {
+               return 0;
+            }
+            header_len += ret;
          }
       }
       databuffer[header_len - 1] = '\n';
@@ -360,14 +369,22 @@ int prepare_data(link_load_t *links)
       }
       size_t stats_id = links->conf[i].m_id;
       if (links->no_direction) {
-         size += snprintf(databuffer + size, databuffer_size - size, "%"
+         ret = snprintf(databuffer + size, databuffer_size - size, "%"
                         PRIu64",%" PRIu64",%" PRIu32",",
                         stats[stats_id].bytes_in, stats[stats_id].flows_in, stats[stats_id].packets_in);
+         if (size + ret >= databuffer_size) {
+            return 0;
+         }
+         size += ret;
       } else {
-         size += snprintf(databuffer + size, databuffer_size - size, "%"
+         ret = snprintf(databuffer + size, databuffer_size - size, "%"
                         PRIu64",%" PRIu64",%" PRIu32",%" PRIu64",%" PRIu64",%" PRIu32",",
                         stats[stats_id].bytes_in, stats[stats_id].flows_in, stats[stats_id].packets_in,
                         stats[stats_id].bytes_out, stats[stats_id].flows_out, stats[stats_id].packets_out);
+         if (size + ret >= databuffer_size) {
+            return 0;
+         }
+         size += ret;
       }
    }
    databuffer[size - 1] = '\n';

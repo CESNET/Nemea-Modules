@@ -230,7 +230,8 @@ void capture_data()
       if (print_time) {
          char str[32];
          time_t ts = time(NULL);
-         strftime(str, 31, "%FT%T", gmtime(&ts));
+         struct tm tmp_tm;
+         strftime(str, 31, "%FT%T", gmtime_r(&ts, &tmp_tm));
          fprintf(file, "%s,", str);
       }
 

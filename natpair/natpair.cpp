@@ -358,7 +358,7 @@ int Flow::sendToOutput(const ur_template_t *tmplt, void *rec) const
    ur_set(tmplt, rec, F_PROTOCOL, protocol);
    ur_set(tmplt, rec, F_DIRECTION, direction);
 
-   return trap_send(0, rec, ur_rec_fixlen_size(tmplt)); 
+   return trap_send(0, rec, ur_rec_fixlen_size(tmplt));
 }
 
 /**
@@ -375,16 +375,17 @@ ostream& operator<<(ostream& str, const Flow &f)
    time_t sec;
    int msec;
    ip_addr_t tmp;
-   
+   struct tm tmp_tm;
+
    sec = ur_time_get_sec(f.lan_time_first);
    msec = ur_time_get_msec(f.lan_time_first);
-   strftime(buf, 63, "%FT%T", gmtime(&sec));
+   strftime(buf, 63, "%FT%T", gmtime_r(&sec, &tmp_tm));
 
    str << "[" << buf << "." << msec << " - ";
 
    sec = ur_time_get_sec(f.lan_time_last);
    msec = ur_time_get_msec(f.lan_time_last);
-   strftime(buf, 63, "%FT%T", gmtime(&sec));
+   strftime(buf, 63, "%FT%T", gmtime_r(&sec, &tmp_tm));
 
    str << buf << "." << msec << "]\t";
 
@@ -407,13 +408,13 @@ ostream& operator<<(ostream& str, const Flow &f)
 
    sec = ur_time_get_sec(f.wan_time_first);
    msec = ur_time_get_msec(f.wan_time_first);
-   strftime(buf, 63, "%FT%T", gmtime(&sec));
+   strftime(buf, 63, "%FT%T", gmtime_r(&sec, &tmp_tm));
 
    str << "[" << buf << "." << msec << " - ";
 
    sec = ur_time_get_sec(f.wan_time_last);
    msec = ur_time_get_msec(f.wan_time_last);
-   strftime(buf, 63, "%FT%T", gmtime(&sec));
+   strftime(buf, 63, "%FT%T", gmtime_r(&sec, &tmp_tm));
 
    str << buf << "." << msec << "]\t";
 

@@ -669,7 +669,8 @@ void printAST(struct ast *ast)
          time_t sec = ur_time_get_sec(t);
          int msec = ur_time_get_msec(t);
          char str[32];
-         strftime(str, 31, "%FT%T", gmtime(&sec));
+         struct tm tmp_tm;
+         strftime(str, 31, "%FT%T", gmtime_r(&sec, &tmp_tm));
          printf("%s.%03i", str, msec);
       }
       if (((struct expression_fp*) ast)->id == UR_INVALID_FIELD) {
@@ -714,7 +715,8 @@ void printAST(struct ast *ast)
                time_t sec = ur_time_get_sec(((struct expression_array*) ast)->array_values_date[i]);
                int msec = ur_time_get_msec(((struct expression_array*) ast)->array_values_date[i]);
                char str[32];
-               strftime(str, 31, "%FT%T", gmtime(&sec));
+               struct tm tmp_tm;
+               strftime(str, 31, "%FT%T", gmtime_r(&sec, &tmp_tm));
                printf("%s.%03i, ", str, msec);
                break;
             }

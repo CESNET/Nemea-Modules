@@ -876,7 +876,7 @@ int add_flow(void *tree, flow_t *flow, ip_addr_t *ip_addr_src, ip_addr_t *ip_add
          node->flows_src++;
          node->bytes_src+=flow->bytes;
          node->packets_src+=flow->packets;
-         node->packets_src_2+=flow->packets * flow->packets;
+         node->packets_src_2+=(uint64_t)flow->packets * flow->packets;
          node->time_src_msec+=flow->time_last-flow->time_first;
          node->time_src_msec_2+=(flow->time_last-flow->time_first)*(flow->time_last-flow->time_first);
          add_port(node, flow->src_port);
@@ -884,7 +884,7 @@ int add_flow(void *tree, flow_t *flow, ip_addr_t *ip_addr_src, ip_addr_t *ip_add
          node->flows_dst++;
          node->bytes_dst+=flow->bytes;
          node->packets_dst+=flow->packets;
-         node->packets_dst_2+=flow->packets * flow->packets;
+         node->packets_dst_2+=(uint64_t)flow->packets * flow->packets;
          node->time_dst_msec+=flow->time_last-flow->time_first;
          node->time_dst_msec_2+=(flow->time_last-flow->time_first)*(flow->time_last-flow->time_first);
          add_port(node, flow->dst_port);
