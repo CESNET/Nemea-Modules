@@ -45,6 +45,16 @@ const void *Field::post_processing(void *ag_data, std::size_t& typename_size, st
     return static_cast<const void *>(ag_data);
 }
 
+const void *Field::post_processing_sm_dir(void *ag_data, std::size_t& typename_size, std::size_t& elem_cnt, bool is_reverse)
+{
+    typename_size = this->typename_size;
+    if (post_proc_sm_dir_fnc)
+        return post_proc_sm_dir_fnc(ag_data, elem_cnt, is_reverse);
+
+    elem_cnt = 1;
+    return static_cast<const void *>(ag_data);
+}
+
 void Field::aggregate(const void *src, void *dst)
 {
     ag_fnc(src, dst);
@@ -69,6 +79,19 @@ int Field_template::assign() noexcept
     init_fnc = Sorted_merge_data<T, K>::init;
     deinit_fnc = Sorted_merge_data<T, K>::deinit;
     ag_data_size = sizeof(Sorted_merge_data<T, K>);
+    return 0;
+}
+
+template<typename T, typename K>
+int Field_template::assign_dir() noexcept
+{
+    ag_fnc = sorted_merge_dir<T, K>;
+    post_proc_fnc = NULL;
+    post_proc_sm_dir_fnc = Sorted_merge_dir_data<T, K>::postprocessing;
+    typename_size = sizeof(T);
+    init_fnc = Sorted_merge_dir_data<T, K>::init;
+    deinit_fnc = Sorted_merge_dir_data<T, K>::deinit;
+    ag_data_size = sizeof(Sorted_merge_dir_data<T, K>);
     return 0;
 }
 
@@ -255,7 +278,6 @@ int Field_template::set_templates(const Field_type ag_type, const ur_field_type_
         case UR_TYPE_TIME:   return assign_min_max<MIN, time_t>();
         case UR_TYPE_IP:     return assign_min_max<MIN, uint128_t>();
         case UR_TYPE_MAC:    
-        std::cout << "MACCC\n";
         return assign_min_max<MIN, Mac_addr>();
         default:
             std::cerr << "Only char, int, uint, float, double, time, mac and ip can be used to MIN function." << std::endl;
@@ -693,6 +715,25 @@ int Field_template::set_templates(const ur_field_type_t ur_f_type, const ur_fiel
     }
 }
 
+
+// TODO sorted append ur_array ur_array
+int Field_template::set_templates_dir(const ur_field_type_t ur_f_type, const ur_field_type_t ur_sort_key_f_type)
+{
+    switch (ur_f_type) {
+    case UR_TYPE_A_INT8:
+        switch (ur_sort_key_f_type) {
+        case UR_TYPE_A_TIME:   return assign_dir<int8_t, time_t>();
+        default: 
+            std::cerr << "Only array of time can be used as SORTED_MERGE_DIR key." << std::endl;
+            return 1;
+        }
+        break;
+    default:
+        std::cerr << "Only array of int8 can be used as SORTED_MERGE_DIR data" << std::endl;
+        return 1;
+    }
+}
+
 Field::Field(const Field_config cfg, const ur_field_id_t ur_fid, const ur_field_id_t ur_r_fid) :
     ur_fid(ur_fid), ur_r_fid(ur_r_fid)
 {
@@ -714,6 +755,14 @@ Field::Field(const Field_config cfg, const ur_field_id_t ur_fid, const ur_field_
         ur_sort_key_type = ur_get_type(ur_sort_key_id);
         if (set_templates(ur_field_type, ur_sort_key_type))
             throw std::runtime_error("Cannot set field template.");
+    } else if (type == SORTED_MERGE_DIR) {
+        ur_sort_key_id = ur_get_id_by_name(sort_name.c_str());
+        if (ur_sort_key_id == UR_E_INVALID_NAME) {
+            throw std::runtime_error("Invalid sort key type.");
+        }
+        ur_sort_key_type = ur_get_type(ur_sort_key_id);
+        if (set_templates_dir(ur_field_type, ur_sort_key_type))
+            throw std::runtime_error("Cannot set field template.");   
     } else {
         if (set_templates(type, ur_field_type))
             throw std::runtime_error("Cannot set field template.");
@@ -766,7 +815,8 @@ void Fields::init(uint8_t *memory)
             data.first.init(memory, &cfg);
             break;
         }
-        case SORTED_MERGE: {
+        case SORTED_MERGE:
+        case SORTED_MERGE_DIR: {
             struct Config_sorted_merge cfg = {data.first.limit, data.first.delimiter, data.first.sort_type};
             data.first.init(memory, &cfg);
             break;

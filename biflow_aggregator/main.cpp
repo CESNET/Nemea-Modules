@@ -190,7 +190,12 @@ proccess_and_send(agg::Aggregator<agg::FlowKey>& agg, const agg::FlowKey& key, c
     // Add aggregated fields
     for (auto agg_field : agg.fields.get_fields()) {
         field = std::addressof(agg_field.first);
-        const void *agg_data = field->post_processing(&flow_data.ctx->data[agg_field.second], size, elem_cnt);
+        const void *agg_data;
+        if (field->type == agg::SORTED_MERGE_DIR) {
+            agg_data = field->post_processing_sm_dir(&flow_data.ctx->data[agg_field.second], size, elem_cnt, flow_data.reverse);
+        } else {
+            agg_data = field->post_processing(&flow_data.ctx->data[agg_field.second], size, elem_cnt);
+        }
         if (ur_is_array(field->ur_fid)) {
             ur_array_allocate(out_tmplt, out_rec, field->ur_fid, elem_cnt);
             std::memcpy(ur_get_ptr_by_id(out_tmplt, out_rec, field->ur_fid), agg_data, size * elem_cnt);
@@ -564,18 +569,31 @@ do_mainloop(Configuration& config)
         for (auto agg_field : agg.fields.get_fields()) {
             field = std::addressof(agg_field.first);
             if (ur_is_array(field->ur_fid)) {
-                agg::ur_array_data src_data;
-                src_data.cnt_elements = ur_array_get_elem_cnt(in_tmplt, in_data, field->ur_fid);
-                src_data.ptr_first = ur_get_ptr_by_id(in_tmplt, in_data, field->ur_fid);
-                if (field->type == agg::SORTED_MERGE) {
-                    src_data.sort_key = ur_get_ptr_by_id(in_tmplt, in_data, field->ur_sort_key_id);
+                if (field->type == agg::SORTED_MERGE_DIR) {
+                    agg::ur_array_dir_data src_dir_data;
+                    src_dir_data.cnt_elements = ur_array_get_elem_cnt(in_tmplt, in_data, field->ur_fid);
+                    src_dir_data.ptr_first = ur_get_ptr_by_id(in_tmplt, in_data, field->ur_fid);
+                    src_dir_data.sort_key = ur_get_ptr_by_id(in_tmplt, in_data, field->ur_sort_key_id);
                     if (ur_is_array(field->ur_sort_key_id))
-                        src_data.sort_key_elements = ur_array_get_elem_cnt(in_tmplt, in_data, field->ur_sort_key_id);
+                        src_dir_data.sort_key_elements = ur_array_get_elem_cnt(in_tmplt, in_data, field->ur_sort_key_id);
                     else
-                        src_data.sort_key_elements = 1;
+                        src_dir_data.sort_key_elements = 1;
+                    src_dir_data.is_key_reversed = is_key_reversed;
+                    field->aggregate(std::addressof(src_dir_data), std::addressof(cache_data->ctx->data[agg_field.second]));
+                } else {
+                    agg::ur_array_data src_data;
+                    src_data.cnt_elements = ur_array_get_elem_cnt(in_tmplt, in_data, field->ur_fid);
+                    src_data.ptr_first = ur_get_ptr_by_id(in_tmplt, in_data, field->ur_fid);
+                    if (field->type == agg::SORTED_MERGE) {
+                        src_data.sort_key = ur_get_ptr_by_id(in_tmplt, in_data, field->ur_sort_key_id);
+                        if (ur_is_array(field->ur_sort_key_id))
+                            src_data.sort_key_elements = ur_array_get_elem_cnt(in_tmplt, in_data, field->ur_sort_key_id);
+                        else
+                            src_data.sort_key_elements = 1;
 
+                    }
+                    field->aggregate(std::addressof(src_data), std::addressof(cache_data->ctx->data[agg_field.second]));
                 }
-                field->aggregate(std::addressof(src_data), std::addressof(cache_data->ctx->data[agg_field.second]));
             } else {
                 ur_field_id_t field_id = is_key_reversed ? field->ur_r_fid : field->ur_fid;
                 field->aggregate(ur_get_ptr_by_id(in_tmplt, in_data, field_id), std::addressof(cache_data->ctx->data[agg_field.second]));

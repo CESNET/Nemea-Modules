@@ -108,7 +108,8 @@ agg::Field_type Configuration::get_field_type(const char *input)
     if (!std::strcmp(input, "BITOR")) return agg::BIT_OR;
     if (!std::strcmp(input, "APPEND")) return agg::APPEND;
     if (!std::strcmp(input, "SORTED_MERGE")) return agg::SORTED_MERGE;
-    std::cerr << "Invalid type field. Given: " << input << ", Expected: KEY|SUM|MIN|MAX|AVG|FIRST|FIRST_NON_EMPTY|LAST|LAST_NON_EMPTY|BITAND|BITOR|APPEND|SORTED_MERGE." << std::endl;
+    if (!std::strcmp(input, "SORTED_MERGE_DIR")) return agg::SORTED_MERGE_DIR;
+    std::cerr << "Invalid type field. Given: " << input << ", Expected: KEY|SUM|MIN|MAX|AVG|FIRST|FIRST_NON_EMPTY|LAST|LAST_NON_EMPTY|BITAND|BITOR|APPEND|SORTED_MERGE|SORTED_MERGE_DIR." << std::endl;
     return agg::INVALID_TYPE;
 }
 
@@ -130,9 +131,9 @@ bool Configuration::verify_field(agg:: Field_config& field)
 {
     if (field.type == agg::INVALID_TYPE)
         return false;
-    if (field.sort_name.length() == 0 && field.type == agg::SORTED_MERGE)
+    if (field.sort_name.length() == 0 && (field.type == agg::SORTED_MERGE || field.type == agg::SORTED_MERGE_DIR))
         return false;
-    if (field.sort_type == agg::INVALID_SORT_TYPE && field.type == agg::SORTED_MERGE) 
+    if (field.sort_type == agg::INVALID_SORT_TYPE && (field.type == agg::SORTED_MERGE || field.type == agg::SORTED_MERGE_DIR))
         return false;
 
     // check duplications
