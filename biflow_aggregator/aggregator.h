@@ -162,7 +162,7 @@ struct Timeout_data {
      * @brief Construct a new Timeout_data object
      * 
      */
-    Timeout_data()
+    Timeout_data() : passive_timeout(0), active_timeout(0)
     {
     }
 
@@ -356,7 +356,7 @@ public:
     /**
      * @brief Construct a new Fields object
      */
-    Fields()
+    Fields() : _offset(0)
     {
     }
 
@@ -368,7 +368,7 @@ public:
     /**
      * @brief Add field
      */
-    void add_field(Field field);
+    void add_field(Field &field);
     
     /**
      * @brief Reset to default state

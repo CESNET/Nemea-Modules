@@ -368,6 +368,9 @@ int prepare_data(link_load_t *links)
          return 0;
       }
       size_t stats_id = links->conf[i].m_id;
+      if (size >= databuffer_size) {
+         return 0;
+      }
       if (links->no_direction) {
          ret = snprintf(databuffer + size, databuffer_size - size, "%"
                         PRIu64",%" PRIu64",%" PRIu32",",

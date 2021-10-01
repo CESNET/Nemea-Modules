@@ -381,7 +381,7 @@ void print_model_list()
  *
  * @param fname File with a list of models
  */
-void update_models_list(const char *fname) 
+void update_models_list(const char *fname)
 {
    FILE *fp_model_list = NULL;
 
@@ -394,7 +394,9 @@ void update_models_list(const char *fname)
          fprintf(fp_model_list, "%d:%s\n", models[i].id, models[i].name);
       }
    }
-   fclose(fp_model_list);
+   if (fp_model_list) {
+      fclose(fp_model_list);
+   }
 }
 
 /**

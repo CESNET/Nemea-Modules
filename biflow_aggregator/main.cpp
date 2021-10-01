@@ -245,7 +245,7 @@ static int process_format_change(
             agg::Key_template::add(ur_fid, ur_r_fid);
         } else {
             agg::Field field(field_cfg, ur_fid, ur_r_fid);
-            agg.fields.add_field(field); 
+            agg.fields.add_field(field);
         }
         if (field_cfg.to_output)
             out_template.append("," + field_cfg.name);
@@ -656,17 +656,24 @@ main(int argc, char **argv)
         goto failure;
     }
 
-    if (config.parse_xml(cfg_path, cfg_name) != 0)
+    try {
+        if (config.parse_xml(cfg_path, cfg_name) != 0)
+           goto failure;
+    } catch (rapidxml::parse_error &e) {
         goto failure;
-
+    }
     if (config.get_passive_timeout() > config.get_active_timeout()) {
         std::cerr << "Passive timeout cannot be bigger than active timeout." << std::endl;
         goto failure;
     }
 
-    if (do_mainloop(config) != 0)
-        goto failure;
-
+    try {
+        if (do_mainloop(config) != 0)
+            goto failure;
+    } catch ( std::runtime_error &e) {
+      std::cerr << e.what() << std::endl;
+      goto failure;
+    }
     trap_terminate();
     FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
     TRAP_DEFAULT_FINALIZATION();

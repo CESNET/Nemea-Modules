@@ -28,11 +28,9 @@ void Flow_data::update(const time_t first, const time_t last, const uint32_t cnt
         time_last = last;
 }
 
-Flow_data::Flow_data()
+Flow_data::Flow_data() : ctx(nullptr), count(0),
+   time_first(std::numeric_limits<time_t>::max()), time_last(0), reverse(false)
 {
-    count = 0;
-    time_last = 0;
-    time_first = std::numeric_limits<time_t>::max();
 }
 
 const void *Field::post_processing(void *ag_data, std::size_t& typename_size, std::size_t& elem_cnt)
@@ -694,7 +692,7 @@ int Field_template::set_templates(const ur_field_type_t ur_f_type, const ur_fiel
 }
 
 Field::Field(const Field_config cfg, const ur_field_id_t ur_fid, const ur_field_id_t ur_r_fid) :
-    ur_fid(ur_fid), ur_r_fid(ur_r_fid)
+    ur_fid(ur_fid), ur_r_fid(ur_r_fid), ur_sort_key_id(0), ur_sort_key_type()
 {
     ur_field_type_t ur_field_type = ur_get_type(ur_fid);
 
@@ -721,7 +719,7 @@ Field::Field(const Field_config cfg, const ur_field_id_t ur_fid, const ur_field_
 }
 
 
-void Fields::add_field(Field field)
+void Fields::add_field(Field &field)
 {
     _fields.emplace_back(std::make_pair(field, _offset));
     _offset += field.ag_data_size;
