@@ -77,24 +77,37 @@ int curl_send_bloom(CURL *curl, const char *aggregator_service_url, const struct
    /* list = curl_slist_append(list, "Content-Encoding: gzip"); */
 
    /* set url */
-   curl_easy_setopt(curl, CURLOPT_URL, aggregator_service_url);
+   if (curl_easy_setopt(curl, CURLOPT_URL, aggregator_service_url) != CURLE_OK) {
+      error = -4;
+      goto failure;
+   }
    /* specify POST data */
-   curl_easy_setopt(curl, CURLOPT_POSTFIELDS, buffer);
+   if (curl_easy_setopt(curl, CURLOPT_POSTFIELDS, buffer) != CURLE_OK) {
+      error = -5;
+      goto failure;
+   }
    /* libcurl will strlen() by itself otherwise */
-   curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long) buffer_size);
-   curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
+   if (curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long) buffer_size) != CURLE_OK) {
+      error = -6;
+      goto failure;
+   }
+   if (curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list) != CURLE_OK) {
+      error = -7;
+      goto failure;
+   }
 
    res = curl_easy_perform(curl);
    if (res != CURLE_OK) {
       fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-      error = -4;
+      error = -8;
    }
 
    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &code);
    if (code != 200L) {
-      error = -5;
+      error = -9;
    }
 
+failure:
    curl_slist_free_all(list);
    bloom_free_serialized_buffer(&buffer);
 

@@ -535,7 +535,8 @@ int main(int argc, char **argv)
       /* Printing results after time is up */
       if (print_stats == 1) {
          time_print = time(NULL);
-         strftime(time_print_buff, 128, "%Y-%m-%d %H:%M:%S", localtime (&time_print));
+         struct tm tmp_tm;
+         strftime(time_print_buff, 128, "%Y-%m-%d %H:%M:%S", localtime_r (&time_print, &tmp_tm));
          printf ("\n===================\n%s\n===================\n", time_print_buff);
 
          print_top_flows(sorted_array_of_bytes, sorted_array_of_packets, array_counter, ip_string, ip_string2, -1);
@@ -628,7 +629,8 @@ int main(int argc, char **argv)
    /* Printing final results after interrupt */
 
    time_print = time(NULL);
-   strftime (time_print_buff, 128, "%Y-%m-%d %H:%M:%S", localtime (&time_print));
+   struct tm tmp_tm;
+   strftime (time_print_buff, 128, "%Y-%m-%d %H:%M:%S", localtime_r (&time_print, &tmp_tm));
    printf ("\n===================\n%s\n===================\n", time_print_buff);
 
    print_top_flows(sorted_array_of_bytes, sorted_array_of_packets, array_counter, ip_string, ip_string2, -1);
@@ -1309,8 +1311,8 @@ void process_ip_pab(fhf_table_t *table_pab, ip_addr_t *ip, ip_t *record, const v
          timediff = (timediff / PAB_TIME_INTERVAL) + 1;
 
          for (int i = 0; i < FHF_TABLE_COLS; i++) {
-            if (((ip_t *) &(table_pab->data_field[(table_col_row + i) *table_pab->data_size]))->packets < average_packets * (PAB_BASE + timediff * PAB_MULTIPLIER) &&
-            ((ip_t *) &(table_pab->data_field[(table_col_row + i) * table_pab->data_size]))->bytes < average_bytes * (PAB_BASE + timediff * PAB_MULTIPLIER)) {
+            if (((ip_t *) &(table_pab->data_field[(table_col_row + i) *table_pab->data_size]))->packets < (unsigned long int) average_packets * (PAB_BASE + timediff * PAB_MULTIPLIER) &&
+            ((ip_t *) &(table_pab->data_field[(table_col_row + i) * table_pab->data_size]))->bytes < (unsigned long int) average_bytes * (PAB_BASE + timediff * PAB_MULTIPLIER)) {
                fhf_remove(table_pab, ((ip_addr_t*) (&(table_pab->key_field[(table_col_row + i) * table_pab->key_size]))));
                removed = 1;
             }

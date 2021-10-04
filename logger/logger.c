@@ -230,7 +230,8 @@ void capture_data()
       if (print_time) {
          char str[32];
          time_t ts = time(NULL);
-         strftime(str, 31, "%FT%T", gmtime(&ts));
+         struct tm tmp_tm;
+         strftime(str, 31, "%FT%T", gmtime_r(&ts, &tmp_tm));
          fprintf(file, "%s,", str);
       }
 
@@ -316,11 +317,7 @@ int main(int argc, char **argv)
       case 'c':
 
          long_int_opt = strtol(optarg, NULL, 10);
-         if (max_num_records < 0) {
-         	fprintf(stderr, "Error: Negative -c parameter. (max. records captured)");
-            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
-            return 1;
-         } else if (long_int_opt > UINT_MAX) {
+         if (long_int_opt > UINT_MAX) {
             fprintf(stderr, "Error: -c parameter is too large. (max. records captured)");
             FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
             return 1;
