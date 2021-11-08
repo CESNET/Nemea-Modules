@@ -291,6 +291,9 @@ int main(int argc, char **argv)
          }
       }
 
+      if (memory_needed > UR_MAX_SIZE) {
+         memory_needed = UR_MAX_SIZE;
+      }
       data = ur_create_record(utmpl, memory_needed);
       if (data == NULL) {
          fprintf(stderr, "Error: Cannot create template for dynamic fields (not enough memory?).\n");
