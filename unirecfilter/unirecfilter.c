@@ -728,7 +728,6 @@ int main(int argc, char **argv)
             }
             // Send record to corresponding interface
             ret = trap_send(i, output_specifiers[i]->out_rec, ur_rec_size(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec));
-            trap_send_flush(i);
             // Handle possible errors
             TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, continue, {stop=1; break;});
          } else {
@@ -771,6 +770,12 @@ int main(int argc, char **argv)
       }
    }
 
+
+   // flush buffers before ending
+   for (i = 0; i < n_outputs; i++) {
+      trap_send_flush(i);
+   }
+
    // ***** Cleanup *****
 cleanup:
    if (verbose >= 0) {
@@ -785,6 +790,7 @@ cleanup:
             fprintf(stderr, "ERROR while sending message of module ending: %s\n \
                Receiving side probably did not notice shutdown of module", trap_last_error_msg);
          }
+         trap_send_flush(i);
       }
    }
 
