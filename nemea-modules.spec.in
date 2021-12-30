@@ -1,4 +1,4 @@
-%if x%{?python3_pkgversion} == x
+%if "x%{?python3_pkgversion}" == "x"
 %global python3_pkgversion 3
 %endif
 
