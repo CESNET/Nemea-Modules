@@ -4,7 +4,7 @@ Received fields can be manipulated (get/set field, add/del fields) using input s
 
 ## Requirements
 To compile this module, you will need the following packages:
-- `lua-devel`
+- `lua-devel` at least version 5.1
 - `lua-libs`
 
 ## Arguments
@@ -85,6 +85,8 @@ Example:
 local ret1, ret2, ret3 = ur_set("FOO", {1,2,3,4,5}, "BAR", 12345, "IP", ur_ip("10.200.4.1"))
 ```
 
+NOTE: when setting field of BYTES unirec type, use string type as an argument, which can contain regular bytes like "\192\168\0\1" (or "\xDE\xAD\xBE\xEF" from lua version 5.2)
+
 ### ur\_add
 Arguments and return values:
 - `ur_add(fields1 [, fields2, ...])`   - Return true if change of template succeded, false otherwise. Accept strings with field name and type definition.
@@ -131,13 +133,22 @@ print(ur_id("FOO", "BAR", "ABC"))
 
 ### ur\_ip
 Arguments and return values:
-- `ur_ip(ip1 [, ip2, ...])`   - Return IP address object for each IP string argument, nil when address parsing failed. Accepts strings with IP v4 or v6 addresses.
+- `ur_ip(ip1 [, ip2, ...])`   - Return IP address object for each IP string argument, nil when address parsing failed. Accepts string objects with ascii string IP v4 or v6 addresses or string of 4 or 16 bytes.
 
 IP address can be masked using `/` operator. Comparsion should be done with strings e.g. `tostring(ip1) == tostring(ip2) or tostring(ip) == "10.0.0.1"`  Example:
 ```
 local ip1, ip2 = ur_ip("192.168.5.200", "::1")
 print(ip1 / 24, ip2) -- mask 192.168.5.200 with /24
 -- prints 192.168.5.0 ::1
+```
+
+IP address can be converted to byte representation using `__tobytes` meta function:
+```
+local ip = ur_ip("\xC0\xA8\x00\x01") -- 192.168.0.1
+local ip_bytes_op = getmetatable(ip)["__tobytes"]
+local ip_bytes = ip_bytes_op(ip)
+
+-- ip_bytes now contains "\xC0\xA8\x00\x01" string
 ```
 
 ### ur\_ip4

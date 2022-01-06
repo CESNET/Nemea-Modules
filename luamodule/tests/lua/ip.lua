@@ -78,11 +78,12 @@ function on_template_recv()
 end
 
 function on_record_recv()
-   local ip = {"", {192, 168, 0, 1}, "2000:0000::1234:1"}
-   local expected = {nil, nil, "2000::1234:1"}
-   local is4 = {false, false, false}
-   local is6 = {false, false, true}
-   local should_fail = {false, true, false}
+   local ip = {"", {192, 168, 0, 1}, "2000:0000::1234:1", "\192\168\1\1", "\10\0\0\0\1",
+      "\0\17\34\51\68\85\102\119\136\153\170\187\204\221\238\255"}
+   local expected = {nil, nil, "2000::1234:1", "192.168.1.1", nil, "11:2233:4455:6677:8899:aabb:ccdd:eeff"}
+   local is4 = {false, false, false, true, false, false}
+   local is6 = {false, false, true, false, false, true}
+   local should_fail = {false, true, false, false, false, false}
 
    test_ip_create(ip, expected, is4, is6, should_fail)
 
@@ -122,5 +123,12 @@ function on_record_recv()
 
    if tostring(ip2 / 24) ~= "2001:d00::" or tostring((ip2 / 56) / 20) ~= "2001::" then
       error("/24, (/56)/20 mask of ipv6 address failed")
+   end
+
+   local ip3_str = "\10\0\0\1"
+   local ip3 = ur_ip(ip3_str)
+   ip_bytes_op = getmetatable(ip3)["__tobytes"]
+   if ip_bytes_op(ip3) ~= ip3_str then
+      error("conversion of ip address to bytes failed")
    end
 end

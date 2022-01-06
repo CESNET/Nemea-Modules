@@ -81,6 +81,7 @@ int field_get(lua_State *luaVM)
          }
       } else {
          set_error(luaVM, "Incorrect argument(s) to '%s'", GET_FUNC_NAME);
+         return 0;
       }
 
       field_send_to_lua(luaVM, tmplt_in, rec_in, field_id);
@@ -304,9 +305,18 @@ int field_ip(lua_State *luaVM)
    /* Iterate through function arguments. */
    for (i = 1; i <= n; i++) {
       if (lua_type(luaVM, i) == LUA_TSTRING) {
-         if (ip_from_str(lua_tostring(luaVM, i), &ip) == 0) {
-            lua_pushnil(luaVM);
-            continue;
+         size_t len = 0;
+         const char *ip_ptr = lua_tolstring(luaVM, i, &len);
+         if (ip_from_str(ip_ptr, &ip) == 0) {
+            /* Try to parse 4 B addr or 16 B addr */
+            if (len == 4) {
+               ip = ip_from_4_bytes_be(ip_ptr);
+            } else if (len == 16) {
+               ip = ip_from_16_bytes_be(ip_ptr);
+            } else {
+               lua_pushnil(luaVM);
+               continue;
+            }
          }
          ip_create_meta(luaVM, ip);
       } else {
