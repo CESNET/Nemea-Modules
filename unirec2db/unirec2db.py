@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python
 
 import sys
 import os.path
@@ -149,6 +149,9 @@ try:
         # Check for "end-of-stream" record
         if len(data) <= 1:
             break
+	
+        if options.verbose:
+            print(data)	
 
         recTmpl.setData(data)
         
