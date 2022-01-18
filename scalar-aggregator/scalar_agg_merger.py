@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/home/benesto3/venv-scalar/bin/python3
 
 import argparse
 import pytrap
@@ -148,4 +148,5 @@ while running:
     merge_records(outTmpl, rules, curTmpls)
     # print(outTmpl.strRecord(), outTmpl.recSize(), len(outTmpl.getData()))
     ctx.send(ifcidx=0, data=outTmpl.getData())
+    ctx.sendFlush(0)
 ctx.finalize()

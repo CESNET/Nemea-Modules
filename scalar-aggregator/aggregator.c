@@ -544,6 +544,7 @@ int flush_aggregation_counters()
       ret = trap_send(i, outputs[i]->out_rec, ur_rec_size(outputs[i]->tpl, outputs[i]->out_rec));
       // Handle possible errors
       TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, continue, break)
+      trap_send_flush(i);
    }
 
    return 0;
