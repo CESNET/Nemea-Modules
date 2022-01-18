@@ -1,4 +1,4 @@
-#!/home/benesto3/venv-scalar/bin/python3
+#!/usr/bin/env python
 
 import argparse
 import pytrap
