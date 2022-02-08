@@ -93,6 +93,7 @@ ldconfig
 %{_bindir}/nemea/resolver.py
 %{_bindir}/nemea/scalar_agg
 %{_bindir}/nemea/sipbf2idea.py
+%{_bindir}/nemea/sni_dataset_saver
 %{_bindir}/nemea/sshbruteforceml2idea.py
 %{_bindir}/nemea/smashedblacklist2idea.py
 %{_bindir}/nemea/svm-tools
