@@ -278,6 +278,7 @@ AC_CONFIG_FILES([Makefile
                  report2idea/warden_filer/Makefile
                  resolver/Makefile
                  scalar-aggregator/Makefile
+                 sni_dataset_saver/Makefile
                  topn/Makefile
                  traffic_repeater/Makefile
                  unirec2json/Makefile
