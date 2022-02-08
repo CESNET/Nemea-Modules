@@ -1,3 +1,8 @@
+2022-02-08 nemea-modules-2.20.0
+	* imroved luamodule - support of bytes-ip conversion
+	* bugfixes
+	* added sni-dataset-saver module
+
 2021-09-15 nemea-modules-2.19.0
 	* Added backscatter module
 	* ghactions: add codeql, coverity, codecov
