@@ -41,6 +41,7 @@ enum Field_type {
     LAST_NON_EMPTY,
     APPEND,
     SORTED_MERGE,
+    SORTED_MERGE_DIR,
     INVALID_TYPE,
 };
 
@@ -56,6 +57,7 @@ enum Sort_type {
 using uint128_t = unsigned __int128;
 using aggr_func = void (*)(const void *, void *);
 using post_func = const void *(*)(void *, std::size_t&);
+using post_func_sm_dir = const void *(*)(void *, std::size_t&, bool);
 using init_func = void (*)(void *, const void *);
 using deinit_func = void (*)(void *);
 
@@ -65,6 +67,9 @@ using deinit_func = void (*)(void *);
 class Field_template {
     template<typename T, typename K>
     int assign() noexcept;
+
+    template<typename T, typename K>
+    int assign_dir() noexcept;
 
     template<typename T>
     int assign_sum() noexcept;
@@ -105,6 +110,8 @@ protected:
      */
     post_func post_proc_fnc;
 
+    post_func_sm_dir post_proc_sm_dir_fnc;
+
     /**
      * @brief Pointer to init function
      */
@@ -135,6 +142,8 @@ protected:
      * @param ur_sort_key_f_type Type of KEY unirec field 
      */
     int set_templates(const ur_field_type_t ur_f_type, const ur_field_type_t ur_sort_key_f_type);
+
+    int set_templates_dir(const ur_field_type_t ur_f_type, const ur_field_type_t ur_sort_key_f_type);
 
 public:
 
@@ -334,6 +343,8 @@ public:
      * @brief Call field post-processing function.
      */
     const void *post_processing(void *ag_data, std::size_t& typename_size, std::size_t& elem_cnt);
+
+    const void *post_processing_sm_dir(void *ag_data, std::size_t& typename_size, std::size_t& elem_cnt, bool is_reverse);
 };
 
 /**

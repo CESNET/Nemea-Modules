@@ -30,6 +30,17 @@ struct ur_array_data {
     std::size_t sort_key_elements;
 };
 
+/**
+ * @brief Structure of unirec array input.
+ */
+struct ur_array_dir_data {
+    std::size_t cnt_elements;
+    const void *ptr_first;
+    const void *sort_key;
+    std::size_t sort_key_elements;
+    bool is_key_reversed;
+};
+
 /** 
  * @brief Basic template data structure that store variable of given type T.
  */ 
@@ -211,6 +222,52 @@ struct Sorted_merge_data : Config_sorted_merge {
             if (sorted_merge->result.size() == sorted_merge->limit)
                 break;
             sorted_merge->result.emplace_back(it->first);
+        }
+
+        elem_cnt = sorted_merge->result.size();
+        return sorted_merge->result.data();
+    }    
+};
+
+template <typename T, typename K>
+struct Sorted_merge_dir_data : Config_sorted_merge {
+    std::vector<std::pair<T, K>> data;
+    std::vector<T> result;
+    
+    static inline void init(void *mem, const void *cfg)
+    {
+        Sorted_merge_dir_data<T, K> *sorted_merge = new(mem) Sorted_merge_dir_data<T, K>();
+        const Config_sorted_merge *config = static_cast<const Config_sorted_merge *>(cfg);
+        sorted_merge->limit = config->limit;
+        sorted_merge->sort_type = config->sort_type;
+        sorted_merge->delimiter = config->delimiter;
+        sorted_merge->result.reserve(config->limit);
+    }
+
+    static inline void deinit(void *mem)
+    {
+        Sorted_merge_dir_data<T, K> *sorted_merge = static_cast<Sorted_merge_dir_data<T, K> *>(mem);
+        sorted_merge->~Sorted_merge_dir_data<T, K>();
+    }
+
+    static inline const void *postprocessing(void *mem, std::size_t& elem_cnt, bool is_reverse)
+    {
+        Sorted_merge_dir_data<T, K> *sorted_merge = static_cast<Sorted_merge_dir_data<T, K>*>(mem);
+        Sort_type sort_type = sorted_merge->sort_type;
+        sort(sorted_merge->data.begin(), sorted_merge->data.end(), [&sort_type](const std::pair<T,K>& a, const std::pair<T,K>& b) -> bool { 
+            if (sort_type == ASCENDING)
+                return a.second < b.second;
+            else
+                return a.second > b.second;
+            }); 
+
+        for (auto it = sorted_merge->data.begin(); it != sorted_merge->data.end(); it++) {
+            if (sorted_merge->result.size() == sorted_merge->limit)
+                break;
+            if (is_reverse)
+                sorted_merge->result.emplace_back(-(it->first));
+            else
+                sorted_merge->result.emplace_back(it->first);
         }
 
         elem_cnt = sorted_merge->result.size();
@@ -472,6 +529,24 @@ inline void sorted_merge(const void *src, void *dst) noexcept
 
     for (std::size_t i = 0; i < src_data->sort_key_elements; i++) {
         std::pair<T, K> t_k = std::make_pair(((T *)src_data->ptr_first)[i], ((K*)src_data->sort_key)[i]);
+        sorted_merge->data.emplace_back(t_k);
+    }
+}
+
+template <typename T, typename K>
+inline void sorted_merge_dir(const void *src, void *dst) noexcept
+{
+    Sorted_merge_dir_data<T, K> *sorted_merge = static_cast<Sorted_merge_dir_data<T, K>*>(dst);
+    const ur_array_dir_data *src_data = (static_cast<const ur_array_dir_data*>(src));
+
+    assert(src_data->sort_key_elements == src_data->cnt_elements);
+
+    for (std::size_t i = 0; i < src_data->sort_key_elements; i++) {
+        T value = ((T *)src_data->ptr_first)[i];
+        if (src_data->is_key_reversed) {
+            value = -value;
+        }
+        std::pair<T, K> t_k = std::make_pair(value, ((K*)src_data->sort_key)[i]);
         sorted_merge->data.emplace_back(t_k);
     }
 }
