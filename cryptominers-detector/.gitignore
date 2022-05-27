@@ -1,0 +1,10 @@
+detector/src/__pycache__/
+detector/src/pyds/__pycache__/
+detector/build/
+detector/src/build/
+detector/src/*.c
+detector/src/*.so
+detector/src/pyds/*.c
+detector/src/pyds/*.so
+detector/src/pyds/build/
+aggregator/src/__pycache__/
