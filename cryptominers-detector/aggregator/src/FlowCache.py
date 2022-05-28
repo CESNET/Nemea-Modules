@@ -8,7 +8,7 @@
 
 # BSD 3-Clause License
 # 
-# Copyright (c) 2022, Richard Plny
+# Copyright (c) 2022, CESNET
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
