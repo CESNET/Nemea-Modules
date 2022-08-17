@@ -58,7 +58,6 @@ def getFeatures(PPI_PKT_DIRECTIONS, PPI_PKT_TIMES, PPI_PKT_LENGTHS, PPI_PKT_FLAG
     # Sent and received ratios are complementary, their is has to be one
     # Save time by simple arithmetics
     recv = 1 - sent
-    reqres = sent == 0.5
 
     # Calculate array with number of seconds between each two packets
     # And then calculate the average idle time between two packets
@@ -81,4 +80,15 @@ def getFeatures(PPI_PKT_DIRECTIONS, PPI_PKT_TIMES, PPI_PKT_LENGTHS, PPI_PKT_FLAG
         pshCnt += tcpFlags & 8
     pshRatio =  (pshCnt // 8) / len(PPI_PKT_FLAGS)
 
-    return sent, recv, reqres, avgTimeBetween, avgPktLen, pshRatio
+    minPktLen = np.amin(PPI_PKT_LENGTHS)
+
+    btsStats = [0, 0, 0]
+    for i in range(0, len(PPI_PKT_LENGTHS)):
+        btsStats[PPI_PKT_DIRECTIONS[i]] += PPI_PKT_LENGTHS[i]
+
+    if btsStats[2] == 0:
+        dataSymmetry = 0
+    else:
+        dataSymmetry = btsStats[1] / btsStats[2]
+
+    return sent, recv, avgTimeBetween, avgPktLen, pshRatio, minPktLen, dataSymmetry

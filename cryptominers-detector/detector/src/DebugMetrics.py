@@ -42,12 +42,15 @@ class DebugMetrics:
     Class for simple calculation and evaluation of the detector's accuracy.
     """
 
-    def __init__(self):
+    def __init__(self, mlWithDstCache, settings):
         self.stats = {
-            'S': self.getEmptyStatsDict(),
-            'D': self.getEmptyStatsDict(),
-            'M': self.getEmptyStatsDict(),
+            'S': self.getEmptyStatsDict(), # Stratum Path
+            'D': self.getEmptyStatsDict(), # DST Path
+            'M': self.getEmptyStatsDict(), # ML Path
+            'C': self.getEmptyStatsDict(), # DST Cache used in ML
         }
+        self.ML_WITH_DST_CACHE = mlWithDstCache
+        self.settings = settings
 
     def addResult(self, path, label, prediction):
         """
@@ -68,26 +71,107 @@ class DebugMetrics:
         else:
             raise Error('Unknown possibility in DebugMetrics.addResult()')
 
+    @staticmethod
+    def accuracy(TP, FP, FN, TN):
+        if TP + FP + FN + TN == 0:
+            return 0
+        return ((TP + TN) / (TP + FP + FN + TN)) * 100
+
+    @staticmethod
+    def precision(TP, FP):
+        if TP + FP == 0:
+            return 0
+        return (TP / (TP + FP)) * 100
+
+    @staticmethod
+    def f(d):
+        return f'{d:.04f}'
+
+    @staticmethod
+    def evaluatePath(name, TP, FP, FN, TN):
+        TOTAL = TP + FP + FN + TN
+        accuracy = DebugMetrics.accuracy(TP, FP, FN, TN)
+        precision = DebugMetrics.precision(TP, FP)
+        print(f'{name}')
+        print(f' {{ TP = {TP} ; FP = {FP} ; FN = {FN} ; TN = {TN} }}')
+        print(f' Total  = {TOTAL}')
+        print(f' Accuracy  = {DebugMetrics.f(accuracy)} %')
+        print(f' Precision = {DebugMetrics.f(precision)} %')
+
+    @staticmethod
+    def evaluatePathWithCache(name, cacheName, TP, FP, FN, TN, cTP, cFP, cFN, cTN):
+        TOTAL_PATH = TP + FP + FN + TN
+        TOTAL_CACHE = cTP + cFP + cFN + cTN
+        TOTAL = TOTAL_PATH + TOTAL_CACHE
+        accuracyPath = DebugMetrics.accuracy(TP, FP, FN, TN)
+        precisionPath = DebugMetrics.precision(TP, FP)
+        accuracyCache = DebugMetrics.accuracy(cTP, cFP, cFN, cTN)
+        precisionCache = DebugMetrics.precision(cTP, cFP)
+        accuracyTotal = DebugMetrics.accuracy(TP + cTP, FP + cFP, FN + cFN, TN + cTN)
+        precisionTotal = DebugMetrics.precision(TP + cTP, FP + cFP)
+        print(f'{name} with {cacheName}')
+        print(f' {name:<5} {{ TP = {TP} ; FP = {FP} ; FN = {FN} ; TN = {TN} }}')
+        print(f' Total  = {TOTAL_PATH}')
+        print(f' Accuracy  = {DebugMetrics.f(accuracyPath)} %')
+        print(f' Precision = {DebugMetrics.f(precisionPath)} %')
+        print()
+        print(f' {cacheName:<5}: {{ TP = {cTP} ; FP = {cFP} ; FN = {cFN} ; TN = {cTN} }}')
+        print(f' Total  = {TOTAL_CACHE}')
+        print(f' Accuracy  = {DebugMetrics.f(accuracyCache)} %')
+        print(f' Precision = {DebugMetrics.f(precisionCache)} %')
+        print()
+        print(f' {"Together":<5} {{ TP = {TP + cTP} ; FP = {FP + cFP} ; FN = {FN + cFN} ; TN = {TN + cTN} }}')
+        print(f' Total  = {TOTAL}')
+        print(f' Accuracy  = {DebugMetrics.f(accuracyTotal)} %')
+        print(f' Precision = {DebugMetrics.f(precisionTotal)} %')
+
     def printMetrics(self):
         """
         Method to print statistics of the registered predictions.
         """
 
-        print(f"Stratum: {self.stats['S']}")
-        accStratum = (self.stats['S']['TP'] + self.stats['S']['TN']) / (self.stats['S']['TP'] + self.stats['S']['FP'] + self.stats['S']['FN'] + self.stats['S']['TN'])
-        accStratum *= 100
-        print(f"Accuracy = {accStratum:.04f} %\n")
+        for e in self.settings:
+            print(f"{e[0]:<20} => {e[1]}")
+        print()
 
-        print(f"DST:\t{self.stats['D']}")
-        accDst = (self.stats['D']['TP'] + self.stats['D']['TN']) / (self.stats['D']['TP'] + self.stats['D']['FP'] + self.stats['D']['FN'] + self.stats['D']['TN'])
-        accDst *= 100
-        print(f"Accuracy = {accDst:.04f} %\n")
-
-        print(f"ML:\t{self.stats['M']}")
-        accMl = (self.stats['M']['TP'] + self.stats['M']['TN']) / (self.stats['M']['TP'] + self.stats['M']['FP'] + self.stats['M']['FN'] + self.stats['M']['TN'])
-        accMl *= 100
-        print(f"Accuracy = {accMl:.04f} %\n")
-
+        self.evaluatePath(
+            'Stratum',
+            self.stats['S']['TP'],
+            self.stats['S']['FP'],
+            self.stats['S']['FN'],
+            self.stats['S']['TN']
+        )
+        print()
+        self.evaluatePath(
+            'DST',
+            self.stats['D']['TP'],
+            self.stats['D']['FP'],
+            self.stats['D']['FN'],
+            self.stats['D']['TN']
+        )
+        print()
+        if self.ML_WITH_DST_CACHE:
+            self.evaluatePathWithCache(
+                'ML',
+                'DST Cache',
+                self.stats['M']['TP'],
+                self.stats['M']['FP'],
+                self.stats['M']['FN'],
+                self.stats['M']['TN'],
+                self.stats['C']['TP'],
+                self.stats['C']['FP'],
+                self.stats['C']['FN'],
+                self.stats['C']['TN']
+            )
+        else:
+            self.evaluatePath(
+                'ML',
+                self.stats['M']['TP'],
+                self.stats['M']['FP'],
+                self.stats['M']['FN'],
+                self.stats['M']['TN']
+            )
+        print()
         tp = self.stats['S']['TP'] + self.stats['M']['TP'] + self.stats['D']['TP']
         fp = self.stats['S']['FP'] + self.stats['M']['FP'] + self.stats['D']['FP']
         fn = self.stats['S']['FN'] + self.stats['M']['FN'] + self.stats['D']['FN']
@@ -101,9 +185,10 @@ class DebugMetrics:
         print(f'Total flows processed: {total}')
         print()
 
-        acc = (tp + tn) / (tp + fp + fn + tn)
-        acc *= 100
-        print(f'Accuracy = {acc:.04f} %')
+        accuracy = self.accuracy(tp, fp, fn, tn)
+        precision = self.precision(tp, fp)
+        print(f'Accuracy  = {accuracy:.04f} %')
+        print(f'Precision = {precision:.04f} %')
 
     @staticmethod
     def getEmptyStatsDict():

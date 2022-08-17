@@ -46,15 +46,17 @@ import sys, argparse
 
 ### CONFIG ###
 BUFFER_SIZE = 100000
-ML_MODEL_PATH = './latest.pickle'
-DST_THRESHOLD = 0.44
-ML_THRESHOLD = 0.997
+ML_MODEL_PATH = '../models/data_symmetry.pickle'
+DST_THRESHOLD = 0.03
+ML_THRESHOLD = 0.99
+USE_DST_CACHE = False
 ### CONFIG ###
 
 ### PYTRAP FORMATS DEFINITIONS ###
 FMT_IN_SPECS = "ipaddr DST_IP,ipaddr SRC_IP,uint16 SRC_PORT,uint16 DST_PORT,uint64 BYTES,uint64 BYTES_REV,uint32 PACKETS,uint32 PACKETS_REV,int8* PPI_PKT_DIRECTIONS,time* PPI_PKT_TIMES,uint16* PPI_PKT_LENGTHS,uint8* PPI_PKT_FLAGS,time TIME_FIRST,time TIME_LAST,string TLS_SNI,bytes IDP_CONTENT,bytes IDP_CONTENT_REV,uint8 PROTOCOL"
 FMT_IN_SPECS_DEBUG = "ipaddr DST_IP,ipaddr SRC_IP,uint16 SRC_PORT,uint16 DST_PORT,uint64 BYTES,uint64 BYTES_REV,uint32 PACKETS,uint32 PACKETS_REV,int8* PPI_PKT_DIRECTIONS,time* PPI_PKT_TIMES,uint16* PPI_PKT_LENGTHS,uint8* PPI_PKT_FLAGS,time TIME_FIRST,time TIME_LAST,string TLS_SNI,bytes IDP_CONTENT,bytes IDP_CONTENT_REV,uint8 PROTOCOL,string LABEL"
 FMT_OUT_SPECS = "ipaddr DST_IP,ipaddr SRC_IP,uint16 SRC_PORT,uint16 DST_PORT,uint64 BYTES,uint64 BYTES_REV,uint32 PACKETS,uint32 PACKETS_REV,int8* PPI_PKT_DIRECTIONS,time* PPI_PKT_TIMES,uint16* PPI_PKT_LENGTHS,uint8* PPI_PKT_FLAGS,time TIME_FIRST,time TIME_LAST,string TLS_SNI,bytes IDP_CONTENT,bytes IDP_CONTENT_REV,uint8 IS_MINER,uint8 REASON,uint8 PROTOCOL"
+FMT_OUT_SPECS_DEBUG = "ipaddr DST_IP,ipaddr SRC_IP,uint16 SRC_PORT,uint16 DST_PORT,uint64 BYTES,uint64 BYTES_REV,uint32 PACKETS,uint32 PACKETS_REV,int8* PPI_PKT_DIRECTIONS,time* PPI_PKT_TIMES,uint16* PPI_PKT_LENGTHS,uint8* PPI_PKT_FLAGS,time TIME_FIRST,time TIME_LAST,string TLS_SNI,bytes IDP_CONTENT,bytes IDP_CONTENT_REV,uint8 IS_MINER,uint8 REASON,uint8 PROTOCOL,string LABEL"
 ### PYTRAP FORMATS DEFINITIONS ###
 
 
@@ -69,11 +71,12 @@ def reasonToUint8(reason):
         return 1
     elif reason == 'D':
         return 2
+    # ML or ML with Cache
     else:
         return 3
 
 
-def processMinerFlows(pyCtx, flows, urOut):
+def processMinerFlows(pyCtx, flows, urOut, debug):
     """
     Function for sending detected miner flows to the output interface.
     Parameters:
@@ -102,6 +105,8 @@ def processMinerFlows(pyCtx, flows, urOut):
         urOut.IS_MINER = 1
         urOut.REASON = reasonToUint8(reason)
         urOut.PROTOCOL = flow.PROTOCOL
+        if debug:
+            urOut.LABEL = flow.LABEL
 
         pyCtx.send(urOut.getData(), 0)
 
@@ -112,6 +117,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--model", help=f"Pickle file with ML model, default is {ML_MODEL_PATH}", type=str, default=ML_MODEL_PATH)
     parser.add_argument("-b", "--buffer", help=f"Flow buffer size, default is {BUFFER_SIZE}", type=int, default=BUFFER_SIZE)
+    parser.add_argument("-c", "--use-dst-cache", help=f"Cache DST output and use as prefilter in ML", action='store_const', const=True)
+    parser.add_argument("-f", "--filter", help=f"Filter flows with DST PORT/443 without SNI", action='store_const', const=True)
     parser.add_argument("-i", help="IFC interfaces for pytrap", type=str)
     parser.add_argument("-d", "--dst-threshold", help=f"Threshold for miners' DST pignistic function [0..1], default is {DST_THRESHOLD}", type=float, default=DST_THRESHOLD)
     parser.add_argument("-t", "--ml-threshold", help=f"Threshold for ML proba [0..1], default is {ML_THRESHOLD}", type=float, default=ML_THRESHOLD)
@@ -121,9 +128,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     BUFFER_SIZE = args.buffer
     ML_MODEL_PATH = args.model
+    DST_PORT_FILTER = args.filter is not None
     DST_THRESHOLD = args.dst_threshold
     ML_THRESHOLD = args.ml_threshold
     DEBUG = args.verify_mode is not None
+    USE_DST_CACHE = args.use_dst_cache is not None
 
     # Arguments checks
     if BUFFER_SIZE <= 0:
@@ -143,18 +152,20 @@ if __name__ == "__main__":
     fmtTypeIn = pytrap.FMT_UNIREC
     if DEBUG:
         fmtSpecIn = FMT_IN_SPECS_DEBUG
+        fmtSpecOut = FMT_OUT_SPECS_DEBUG
     else:
         fmtSpecIn = FMT_IN_SPECS
+        fmtSpecOut = FMT_OUT_SPECS
 
     trap.setRequiredFmt(0, fmtTypeIn, fmtSpecIn)
     rec = pytrap.UnirecTemplate(fmtSpecIn)
 
-    out = pytrap.UnirecTemplate(FMT_OUT_SPECS)
+    out = pytrap.UnirecTemplate(fmtSpecOut)
     out.createMessage(8192)
-    trap.setDataFmt(0, pytrap.FMT_UNIREC, FMT_OUT_SPECS)
+    trap.setDataFmt(0, pytrap.FMT_UNIREC, fmtSpecOut)
 
     # Detector init
-    detector = MetaClassifier(ML_MODEL_PATH, DST_THRESHOLD, ML_THRESHOLD, DEBUG)
+    detector = MetaClassifier(ML_MODEL_PATH, DST_THRESHOLD, ML_THRESHOLD, DEBUG, USE_DST_CACHE, DST_PORT_FILTER)
     buffer = []
 
     # Main program loop
@@ -184,12 +195,12 @@ if __name__ == "__main__":
             if len(buffer) >= BUFFER_SIZE:
                 minerFlows = detector.detectMiners(buffer)
                 buffer = []
-                processMinerFlows(trap, minerFlows, out)
+                processMinerFlows(trap, minerFlows, out, DEBUG)
 
     # If detector was stopped, send remaining flows from buffer to output IFC even if buffer was not filled
     if len(buffer) > 0:
         predicted = detector.detectMiners(buffer)
-        processMinerFlows(trap, predicted, out)
+        processMinerFlows(trap, predicted, out, DEBUG)
 
     # Cleanup
     trap.finalize()

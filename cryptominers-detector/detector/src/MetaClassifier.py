@@ -38,8 +38,8 @@
 
 import pickle
 import os
-import pandas as pd
 import numpy as np
+from hashlib import sha256
 from src.TlsSniCryptoDetector import TlsSniCryptoDetector
 from src.StratumDetector import StratumDetector
 from src.FeatureGenerator import getFeatures
@@ -60,14 +60,15 @@ class MetaClassifier:
         'PACKETS_REV',
         'SENT_PERCENTAGE',
         'RECV_PERCENTAGE',
-        'IS_REQUEST_RESPONSE',
-        'AVG_SECS_BETWEEN_PKTS',
-        'OVERALL_DURATION_IN_SECS',
+        'AVG_PKT_INTERVAL',
+        'OVERALL_DURATION',
         'AVG_PKT_LEN',
-        'PSH_RATIO'
+        'PSH_RATIO',
+        'MIN_PKT_LEN',
+        'DATA_SYMMETRY'
     ]
 
-    def __init__(self, modelPath: str, dstThreshold: float, mlThreshold: float, debug: bool):
+    def __init__(self, modelPath: str, dstThreshold: float, mlThreshold: float, debug: bool, useDstCache: bool, dstPortFilter: bool):
         """
         Init.
         Parameters:
@@ -79,7 +80,15 @@ class MetaClassifier:
         self.DST_THRESHOLD = dstThreshold
         self.ML_THRESHOLD = mlThreshold
         self.DEBUG = debug
-        self.metrics = DebugMetrics()
+        self.USE_DST_CACHE = useDstCache
+        self.DST_PORT_PREFILTER_ACTIVE = dstPortFilter
+        self.metrics = DebugMetrics(self.USE_DST_CACHE, [
+            ['DST Threshold', dstThreshold],
+            ['ML Threshold', mlThreshold],
+            ['ML Model Path', modelPath],
+            ['Use DST Cache', useDstCache],
+            ['443 Filter', dstPortFilter]
+        ])
         if not os.path.exists(modelPath):
             raise FileNotFoundError(f'ML Model on path `{modelPath}` not found!')
 
@@ -90,6 +99,8 @@ class MetaClassifier:
         )
         with open(modelPath, 'rb') as src:
             self.model = pickle.load(src)
+        self.dstMiners = set()
+        self.dstOthers = set()
 
     def detectMiners(self, flows):
         """
@@ -119,7 +130,7 @@ class MetaClassifier:
         featureFlows = []
         for idx in nextProcessingIdxs:
             flow = flows[idx]
-            sent, recv, reqres, avgTimeBetween, avgPktLen, pshRatio = getFeatures(
+            sent, recv, avgPktInterval, avgPktLen, pshRatio, minPktLen, dataSymmetry = getFeatures(
                 flow.PPI_PKT_DIRECTIONS,
                 flow.PPI_PKT_TIMES,
                 flow.PPI_PKT_LENGTHS,
@@ -132,11 +143,12 @@ class MetaClassifier:
                 flow.PACKETS_REV,
                 sent,
                 recv,
-                reqres,
-                avgTimeBetween,
+                avgPktInterval,
                 flow.TIME_LAST.getSeconds() - flow.TIME_FIRST.getSeconds(),
                 avgPktLen,
-                pshRatio
+                pshRatio,
+                minPktLen,
+                dataSymmetry
             ])
             featureFlows.append(featureFlow)
 
@@ -149,14 +161,32 @@ class MetaClassifier:
                 dst = DSTCombinator.combine(mlMinerProbas[localIdx][1], tlsSniScore)
                 prediction = dst > self.DST_THRESHOLD
                 path = 'D'
+                if self.USE_DST_CACHE:
+                    self.updateDSTCache(flows[globalIdx], prediction)
             # Otherwise do ML only
             else:
-                # Do not do detection of flow which encrytped on 443 and do not have TLS SNI, since flow representing same connection
-                # was most probably processed before, and this only produces false positives
-                if flows[globalIdx].DST_PORT == 443:
-                    continue
-                prediction = mlMinerProbas[localIdx][1] > self.ML_THRESHOLD
-                path = 'M'
+                if self.USE_DST_CACHE:
+                    flowKey = self.getFlowKey(flows[globalIdx])
+                    if flowKey in self.dstMiners:
+                        prediction = True
+                        path = 'C'
+                    elif flowKey in self.dstOthers:
+                        prediction = False
+                        path = 'C'
+                    else:
+                        # Do not do detection of flow which encrytped on 443 and do not have TLS SNI, since flow representing same connection
+                        # was most probably processed before, and this only produces false positives
+                        if self.DST_PORT_PREFILTER_ACTIVE and flows[globalIdx].DST_PORT == 443:
+                            continue
+                        prediction = mlMinerProbas[localIdx][1] > self.ML_THRESHOLD
+                        path = 'M'
+                else:
+                    # Do not do detection of flow which encrytped on 443 and do not have TLS SNI, since flow representing same connection
+                    # was most probably processed before, and this only produces false positives
+                    if self.DST_PORT_PREFILTER_ACTIVE and flows[globalIdx].DST_PORT == 443:
+                       continue
+                    prediction = mlMinerProbas[localIdx][1] > self.ML_THRESHOLD
+                    path = 'M'
 
             if prediction:
                 minerFlows.append((flows[globalIdx], path))
@@ -168,6 +198,26 @@ class MetaClassifier:
     def getMetrics(self):
         """
         Method for printing the results and detecion statistics.
-        Avaialble in the verification and evaluation mode only.
+        Available in the verification and evaluation mode only.
         """
         return self.metrics
+
+    def updateDSTCache(self, flow, prediction):
+        flowKey = self.getFlowKey(flow)
+        if prediction:
+            self.dstMiners.add(flowKey)
+        else:
+            self.dstOthers.add(flowKey)
+
+    @staticmethod
+    def getFlowKey(flow):
+        strKey = ','.join([
+            str(flow.SRC_IP),
+            str(flow.DST_IP),
+            str(flow.SRC_PORT),
+            str(flow.DST_PORT),
+            str(flow.PROTOCOL)
+        ])
+        return sha256(strKey.encode('utf-8')).hexdigest()
+
+
