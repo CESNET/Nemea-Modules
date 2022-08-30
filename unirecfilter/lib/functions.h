@@ -129,6 +129,9 @@ struct ip {
    char *column;
    ip_addr_t ipAddr;
    ur_field_id_t id;
+   ur_field_id_t srcip;
+   ur_field_id_t dstip;
+   char host;
 };
 
 struct ipnet {
@@ -139,6 +142,9 @@ struct ipnet {
    ip_addr_t ipMask;
    uint8_t mask;
    ur_field_id_t id;
+   ur_field_id_t srcip;
+   ur_field_id_t dstip;
+   char host;
 };
 
 struct str {

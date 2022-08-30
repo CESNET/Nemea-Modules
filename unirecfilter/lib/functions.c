@@ -437,10 +437,16 @@ struct ast *newProtocol(char *cmp, char *data)
 struct ast *newIP(char *column, char *cmp, char *ipAddr)
 {
    struct ip *newast = (struct ip *) malloc(sizeof(struct ip));
+   int id;
    newast->type = NODE_T_IP;
    newast->column = column;
    newast->cmp = get_op_type(cmp);
    free(cmp);
+   if (strcmp(column, "HOST") == 0) {
+      newast->host = 1;
+   } else {
+      newast->host = 0;
+   }
 
    if (!ip_from_str(ipAddr, &(newast->ipAddr))) {
       printf("Warning: %s is not a valid IP address. Corresponding rule will always evaluate false.\n", ipAddr);
@@ -450,26 +456,66 @@ struct ast *newIP(char *column, char *cmp, char *ipAddr)
    }
    free(ipAddr);
 
-   int id = ur_get_id_by_name(column);
-   if (id == UR_E_INVALID_NAME) {
-      printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
-      newast->id = UR_INVALID_FIELD;
-   } else if (ur_get_type(id) != UR_TYPE_IP) {
-      printf("Warning: Type of %s is not IP address. Corresponding rule will always evaluate false.\n", column);
-      newast->id = UR_INVALID_FIELD;
+   if (newast->host == 0) {
+      id = ur_get_id_by_name(column);
+      if (id == UR_E_INVALID_NAME) {
+         printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
+         newast->id = UR_INVALID_FIELD;
+      } else if (ur_get_type(id) != UR_TYPE_IP) {
+         printf("Warning: Type of %s is not IP address. Corresponding rule will always evaluate false.\n", column);
+         newast->id = UR_INVALID_FIELD;
+      } else {
+         newast->id = id;
+      }
+      newast->srcip = UR_INVALID_FIELD;
+      newast->dstip = UR_INVALID_FIELD;
    } else {
-      newast->id = id;
+      newast->id = UR_INVALID_FIELD;
+
+      id = ur_get_id_by_name("SRC_IP");
+      if (id == UR_E_INVALID_NAME) {
+         printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
+         newast->srcip = UR_INVALID_FIELD;
+      } else if (ur_get_type(id) != UR_TYPE_IP) {
+         printf("Warning: Type of %s is not IP address. Corresponding rule will always evaluate false.\n", column);
+         newast->srcip = UR_INVALID_FIELD;
+      } else {
+         newast->srcip = id;
+      }
+
+      id = ur_get_id_by_name("DST_IP");
+      if (id == UR_E_INVALID_NAME) {
+         printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
+         newast->dstip = UR_INVALID_FIELD;
+      } else if (ur_get_type(id) != UR_TYPE_IP) {
+         printf("Warning: Type of %s is not IP address. Corresponding rule will always evaluate false.\n", column);
+         newast->dstip = UR_INVALID_FIELD;
+      } else {
+         newast->dstip = id;
+      }
+
+      if (newast->srcip == UR_INVALID_FIELD || newast->dstip == UR_INVALID_FIELD) {
+         printf("Warning: SRC_IP or DST_IP field was not found in UniRec template, HOST cannot be used. Corresponding rule will always evaluate false.\n");
+         newast->srcip = UR_INVALID_FIELD;
+         newast->dstip = UR_INVALID_FIELD;
+      }
    }
    return (struct ast *) newast;
 }
 
 struct ast *newIPNET(char *column, char *cmp, char *ipAddr)
 {
+   int id;
    struct ipnet *newast = (struct ipnet *) malloc(sizeof(struct ipnet));
    newast->type = NODE_T_NET;
    newast->column = column;
    newast->cmp = get_op_type(cmp);
    free(cmp);
+   if (strcmp(column, "HOST") == 0) {
+      newast->host = 1;
+   } else {
+      newast->host = 0;
+   }
 
    char *mask = strchr(ipAddr, '/');
    if (mask == NULL) {
@@ -492,15 +538,49 @@ struct ast *newIPNET(char *column, char *cmp, char *ipAddr)
    ip_make_mask(&newast->ipMask, newast->mask);
    ip_mask(&newast->ipAddr, &newast->ipMask);
 
-   int id = ur_get_id_by_name(column);
-   if (id == UR_E_INVALID_NAME) {
-      printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
-      newast->id = UR_INVALID_FIELD;
-   } else if (ur_get_type(id) != UR_TYPE_IP) {
-      printf("Warning: Type of %s is not IP address. Corresponding rule will always evaluate false.\n", column);
-      newast->id = UR_INVALID_FIELD;
+   if (newast->host == 0) {
+      id = ur_get_id_by_name(column);
+      if (id == UR_E_INVALID_NAME) {
+         printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
+         newast->id = UR_INVALID_FIELD;
+      } else if (ur_get_type(id) != UR_TYPE_IP) {
+         printf("Warning: Type of %s is not IP address. Corresponding rule will always evaluate false.\n", column);
+         newast->id = UR_INVALID_FIELD;
+      } else {
+         newast->id = id;
+      }
+      newast->srcip = UR_INVALID_FIELD;
+      newast->dstip = UR_INVALID_FIELD;
    } else {
-      newast->id = id;
+      newast->id = UR_INVALID_FIELD;
+
+      id = ur_get_id_by_name("SRC_IP");
+      if (id == UR_E_INVALID_NAME) {
+         printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
+         newast->srcip = UR_INVALID_FIELD;
+      } else if (ur_get_type(id) != UR_TYPE_IP) {
+         printf("Warning: Type of %s is not IP address. Corresponding rule will always evaluate false.\n", column);
+         newast->srcip = UR_INVALID_FIELD;
+      } else {
+         newast->srcip = id;
+      }
+
+      id = ur_get_id_by_name("DST_IP");
+      if (id == UR_E_INVALID_NAME) {
+         printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
+         newast->dstip = UR_INVALID_FIELD;
+      } else if (ur_get_type(id) != UR_TYPE_IP) {
+         printf("Warning: Type of %s is not IP address. Corresponding rule will always evaluate false.\n", column);
+         newast->dstip = UR_INVALID_FIELD;
+      } else {
+         newast->dstip = id;
+      }
+
+      if (newast->srcip == UR_INVALID_FIELD || newast->dstip == UR_INVALID_FIELD) {
+         printf("Warning: SRC_IP or DST_IP field was not found in UniRec template, HOST cannot be used. Corresponding rule will always evaluate false.\n");
+         newast->srcip = UR_INVALID_FIELD;
+         newast->dstip = UR_INVALID_FIELD;
+      }
    }
    return (struct ast *) newast;
 }
@@ -741,15 +821,18 @@ void printAST(struct ast *ast)
       break;
 
    case NODE_T_NET: {
-      if (((struct ipnet *) ast)->id == UR_INVALID_FIELD) { // There was error with this expr., print it in red color
-         printf("%s", TTY_RED);
-      }
       char str[46];
-      ip_to_str(&(((struct ipnet *) ast)->ipAddr), str);
+      struct ipnet *ipnet = (struct ipnet *) ast;
+      if (ipnet->host == 0) {
+         if (ipnet->id == UR_INVALID_FIELD) { // There was error with this expr., print it in red color
+            printf("%s", TTY_RED);
+         }
+         printf("%s", ipnet->column);
+      } else {
+         printf("HOST");
+      }
 
-      printf("%s", ((struct ipnet *) ast)->column);
-
-      switch (((struct ipnet *) ast)->cmp) {
+      switch (ipnet->cmp) {
       case (OP_EQ):
          printf(" == ");
          break;
@@ -771,11 +854,10 @@ void printAST(struct ast *ast)
       default:
          printf(" <invalid operator> ");
       }
-      printf("%s/%" PRIu8, str, ((struct ipnet*) ast)->mask);
-      ip_to_str(&(((struct ipnet *) ast)->ipMask), str);
-      printf(" (%s)" , str);
+      ip_to_str(&ipnet->ipAddr, str);
+      printf("%s/%" PRIu8, str, ipnet->mask);
 
-      if (((struct ipnet *) ast)->id == UR_INVALID_FIELD) {
+      if (ipnet->host == 0 && ipnet->id == UR_INVALID_FIELD) {
          printf("%s", TTY_RESET);
       }
 
@@ -783,16 +865,18 @@ void printAST(struct ast *ast)
    }
 
    case NODE_T_IP: {
-      if (((struct ip*) ast)->id == UR_INVALID_FIELD) { // There was error with this expr., print it in red color
-         printf("%s", TTY_RED);
-      }
       char str[46];
-      ip_to_str(&(((struct ip*) ast)->ipAddr), str);
+      struct ip *ip = (struct ip *) ast;
+      if (ip->host == 0) {
+         if (ip->id == UR_INVALID_FIELD) { // There was error with this expr., print it in red color
+            printf("%s", TTY_RED);
+         }
+         printf("%s", ip->column);
+      } else {
+         printf("HOST");
+      }
 
-      printf("%s",
-            ((struct ip*) ast)->column);
-
-      switch (((struct ip*) ast)->cmp) {
+      switch (ip->cmp) {
       case (OP_EQ):
          printf(" == ");
          break;
@@ -814,8 +898,10 @@ void printAST(struct ast *ast)
       default:
          printf(" <invalid operator> ");
       }
+
+      ip_to_str(&ip->ipAddr, str);
       printf("%s", str);
-      if (((struct ip*) ast)->id == UR_INVALID_FIELD) {
+      if (ip->host == 0 && ip->id == UR_INVALID_FIELD) {
          printf("%s", TTY_RESET);
       }
 
@@ -1117,53 +1203,105 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
       }
 
    case NODE_T_NET: {
-      if (((struct ipnet *) ast)->id == UR_INVALID_FIELD) {
-         return 0;
-      }
-      ip_addr_t cur_ip = *((ip_addr_t *) (ur_get_ptr_by_id(in_tmplt, in_rec, ((struct ipnet *) ast)->id)));
+      struct ipnet *ipnet = (struct ipnet*) ast;
+      int cmp_res1, cmp_res2, settype;
+      cmp_op cmp = ipnet->cmp;
+      settype = ip_is4(&(ipnet->ipAddr));
 
-      cmp_op cmp = ((struct ipnet *) ast)->cmp;
+      if (ipnet->host == 0) {
+         if (ipnet->id == UR_INVALID_FIELD) {
+            return 0;
+         }
+         ip_addr_t cur_ip = *((ip_addr_t *) (ur_get_ptr_by_id(in_tmplt, in_rec, ipnet->id)));
 
-      /* check if both IPs are of the same version and return if not */
-      int curtype = ip_is4(&cur_ip);
-      int settype = ip_is4(&(((struct ipnet *) ast)->ipAddr));
-      if (curtype != settype) {
-         return cmp == OP_NE || cmp == OP_LT || cmp == OP_GT;
-      }
+         /* check if both IPs are of the same version and return if not */
+         if (ip_is4(&cur_ip) != settype) {
+            return cmp == OP_NE || cmp == OP_LT || cmp == OP_GT;
+         }
 
-      /* mask current IP and then just compare it */
-      ip_mask(&cur_ip, &((struct ipnet *) ast)->ipMask);
-      int cmp_res = ip_cmp(&cur_ip, &(((struct ipnet *) ast)->ipAddr));
+         /* mask current IP and then just compare it */
+         ip_mask(&cur_ip, &(ipnet->ipMask));
+         cmp_res1 = ip_cmp(&cur_ip, &(ipnet->ipAddr));
 
-
-      if (cmp_res == 0) {
-         // Same addresses
-         return cmp == OP_EQ || cmp == OP_LE || cmp == OP_GE;
-      } else if (cmp_res < 0) {
-         // Address in record is lower than the given one
-         return cmp == OP_NE || cmp == OP_LT || cmp == OP_LE;
+         if (cmp_res1 == 0) {
+            // Same addresses
+            return cmp == OP_EQ || cmp == OP_LE || cmp == OP_GE;
+         } else if (cmp_res1 < 0) {
+            // Address in record is lower than the given one
+            return cmp == OP_NE || cmp == OP_LT || cmp == OP_LE;
+         } else {
+            // Address in record is higher than the given one
+            return cmp == OP_NE || cmp == OP_GT || cmp == OP_GE;
+         }
       } else {
-         // Address in record is higher than the given one
-         return cmp == OP_NE || cmp == OP_GT || cmp == OP_GE;
+         if (ipnet->srcip == UR_INVALID_FIELD || ipnet->dstip == UR_INVALID_FIELD) {
+            return 0;
+         }
+         ip_addr_t cur_ip1 = *((ip_addr_t *) (ur_get_ptr_by_id(in_tmplt, in_rec, ipnet->srcip)));
+         ip_addr_t cur_ip2 = *((ip_addr_t *) (ur_get_ptr_by_id(in_tmplt, in_rec, ipnet->dstip)));
+
+         /* check if at least one (first) IP has the same version with the given prefix and return if not */
+         if (ip_is4(&cur_ip1) != settype) {
+            return cmp == OP_NE || cmp == OP_LT || cmp == OP_GT;
+         }
+
+         /* mask current IP and then just compare it */
+         ip_mask(&cur_ip1, &(ipnet->ipMask));
+         ip_mask(&cur_ip2, &(ipnet->ipMask));
+         cmp_res1 = ip_cmp(&cur_ip1, &(ipnet->ipAddr));
+         cmp_res2 = ip_cmp(&cur_ip2, &(ipnet->ipAddr));
+
+         if (cmp_res1 == 0 || cmp_res2 == 0) {
+            // Same addresses
+            return cmp == OP_EQ || cmp == OP_LE || cmp == OP_GE;
+         } else if (cmp_res1 < 0 || cmp_res2 < 0) {
+            // Address in record is lower than the given one
+            return cmp == OP_NE || cmp == OP_LT || cmp == OP_LE;
+         } else {
+            // Address in record is higher than the given one
+            return cmp == OP_NE || cmp == OP_GT || cmp == OP_GE;
+         }
       }
    }
-   case NODE_T_IP:
-      if (((struct ip*) ast)->id == UR_INVALID_FIELD) {
-         return 0;
-      }
-      int cmp_res = ip_cmp((ip_addr_t *) (ur_get_ptr_by_id(in_tmplt, in_rec, ((struct ip*) ast)->id)), &(((struct ip*) ast)->ipAddr));
-      cmp_op cmp = ((struct ip*) ast)->cmp;
-
-      if (cmp_res == 0) {
-         // Same addresses
-         return cmp == OP_EQ || cmp == OP_LE || cmp == OP_GE;
-      } else if (cmp_res < 0) {
-         // Address in record is lower than the given one
-         return cmp == OP_NE || cmp == OP_LT || cmp == OP_LE;
+   case NODE_T_IP: {
+      struct ip *ip = (struct ip*) ast;
+      int cmp_res1, cmp_res2;
+      cmp_op cmp = ip->cmp;
+      if (ip->host == 0) {
+         if (ip->id == UR_INVALID_FIELD) {
+            return 0;
+         }
+         cmp_res1 = ip_cmp((ip_addr_t *) (ur_get_ptr_by_id(in_tmplt, in_rec, ip->id)), &ip->ipAddr);
+         if (cmp_res1 == 0) {
+            // Same addresses
+            return cmp == OP_EQ || cmp == OP_LE || cmp == OP_GE;
+         } else if (cmp_res1 < 0) {
+            // Address in record is lower than the given one
+            return cmp == OP_NE || cmp == OP_LT || cmp == OP_LE;
+         } else {
+            // Address in record is higher than the given one
+            return cmp == OP_NE || cmp == OP_GT || cmp == OP_GE;
+         }
       } else {
-         // Address in record is higher than the given one
-         return cmp == OP_NE || cmp == OP_GT || cmp == OP_GE;
+         if (ip->srcip == UR_INVALID_FIELD || ip->dstip == UR_INVALID_FIELD) {
+            return 0;
+         }
+         // HOST evaluation:
+         cmp_res1 = ip_cmp((ip_addr_t *) (ur_get_ptr_by_id(in_tmplt, in_rec, ip->srcip)), &(ip->ipAddr));
+         cmp_res2 = ip_cmp((ip_addr_t *) (ur_get_ptr_by_id(in_tmplt, in_rec, ip->dstip)), &(ip->ipAddr));
+         if (cmp_res1 == 0 || cmp_res2 == 0) {
+            // At least one address is same
+            return cmp == OP_EQ || cmp == OP_LE || cmp == OP_GE;
+         } else if (cmp_res1 < 0 || cmp_res2 < 0) {
+            // At least one address in record is lower than the given one
+            return cmp == OP_NE || cmp == OP_LT || cmp == OP_LE;
+         } else {
+            // At least one address in record is higher than the given one
+            return cmp == OP_NE || cmp == OP_GT || cmp == OP_GE;
+         }
       }
+
+   }
    case NODE_T_STRING:
       size = ur_get_var_len(in_tmplt, in_rec, ((struct str*) ast)->id); // only relevant for strings
       expr = (char *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct str*) ast)->id));
