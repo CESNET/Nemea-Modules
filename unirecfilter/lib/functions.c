@@ -194,6 +194,43 @@ struct ast *newExpression(char *column, char *cmp, int64_t number, int is_signed
    return (struct ast *) newast;
 }
 
+struct ast *newExpressionPort(char *cmp, uint64_t number)
+{
+   int id;
+   struct expression_port *newast = (struct expression_port *) malloc(sizeof(struct expression_port));
+
+   newast->type = NODE_T_EXPRESSION_PORT;
+   newast->number = number;
+   newast->cmp = get_op_type(cmp);
+   free(cmp);
+
+   if (newast->number > 65535) {
+      printf("Warning: port is only 16b field but a value bigger than 65535 was given. This can work badly.\n");
+   }
+
+   id = ur_get_id_by_name("SRC_PORT");
+   if (id == UR_E_INVALID_NAME) {
+      printf("Warning: SRC_PORT is not present in input format. Corresponding rule will always evaluate false.\n");
+      newast->srcport = UR_INVALID_FIELD;
+   } else if (ur_get_type(id) != UR_TYPE_UINT16) {
+      printf("Error: Type of SRC_PORT is not integer. Corresponding rule will always evaluate false.\n");
+      newast->srcport = UR_INVALID_FIELD;
+   } else {
+      newast->srcport = id;
+   }
+   id = ur_get_id_by_name("DST_PORT");
+   if (id == UR_E_INVALID_NAME) {
+      printf("Warning: DST_PORT is not present in input format. Corresponding rule will always evaluate false.\n");
+      newast->dstport = UR_INVALID_FIELD;
+   } else if (ur_get_type(id) != UR_TYPE_UINT16) {
+      printf("Error: Type of DST_PORT is not integer. Corresponding rule will always evaluate false.\n");
+      newast->dstport = UR_INVALID_FIELD;
+   } else {
+      newast->dstport = id;
+   }
+   return (struct ast *) newast;
+}
+
 struct ast *newExpressionFP(char *column, char *cmp, double number)
 {
    struct expression_fp *newast = (struct expression_fp *) malloc(sizeof(struct expression_fp));
@@ -276,34 +313,77 @@ static int compareDouble(const void *p1, const void *p2)
 
 static int compareIPs(const void *p1, const void *p2)
 {
-   return ip_cmp((const ip_addr_t *) p1, (const ip_addr_t *) p2);
+
+   if (ip_is4(&((const struct ipprefix *) p1)->ip) && ip_is6(&((const struct ipprefix *) p2)->ip)) {
+      return -1;
+   } else if (ip_is6(&((const struct ipprefix *) p1)->ip) && ip_is4(&((const struct ipprefix *) p2)->ip)) {
+      return 1;
+   }
+
+   return ip_cmp(&((const struct ipprefix *) p1)->ip, &((const struct ipprefix *) p2)->ip);
+}
+
+static int compareIPwithPrefix(const void *p1, const void *p2)
+{
+   struct ipprefix *stack = (struct ipprefix *) p2;
+   ip_addr_t needle = ((struct ipprefix *) p1)->ip;
+
+   if (ip_is4(&needle) && ip_is6(&stack->ip)) {
+      return -1;
+   } else if (ip_is6(&needle) && ip_is4(&stack->ip)) {
+      return 1;
+   }
+
+   ip_mask(&needle, &stack->mask);
+
+   return ip_cmp(&needle, &stack->ip);
 }
 
 struct ast *newExpressionArray(char *column, char *cmp, char *array)
 {
-   int i;
+   int i, id, iddst, host = 0;
    struct expression_array *newast = (struct expression_array *) malloc(sizeof(struct expression_array));
 
    /* init all arrays, one will be allocated: */
    newast->array_values = 0;
-   newast->array_values_ip = 0;
+   newast->array_values_ipprefix = 0;
    newast->array_values_date = 0;
    newast->array_values_double = 0;
 
+   newast->id = UR_INVALID_FIELD;
+   newast->dstid = UR_INVALID_FIELD;
+
    newast->type = NODE_T_EXPRESSION_ARRAY;
    newast->column = column;
-
-   int id = ur_get_id_by_name(column);
    newast->cmp = get_op_type(cmp);
    free(cmp);
 
+   if (strcmp(column, "host") == 0) {
+      id = ur_get_id_by_name("SRC_IP");
+      iddst = ur_get_id_by_name("DST_IP");
+      host = 1;
+   } else if (strcmp(column, "port") == 0) {
+      id = ur_get_id_by_name("SRC_PORT");
+      iddst = ur_get_id_by_name("DST_PORT");
+      host = 1;
+   } else {
+      id = ur_get_id_by_name(column);
+   }
+
    if (id == UR_E_INVALID_NAME) {
       printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
-      newast->id = UR_INVALID_FIELD;
    } else {
       newast->id = id;
    }
    newast->field_type = ur_get_type(id);
+
+   if (host == 1) {
+      if (iddst == UR_E_INVALID_NAME) {
+         printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
+      } else {
+         newast->dstid = iddst;
+      }
+   }
 
    newast->array_size = 0;
    newast->array_values = 0;
@@ -359,22 +439,62 @@ struct ast *newExpressionArray(char *column, char *cmp, char *array)
       }
       break;
    case UR_TYPE_IP:
-      newast->array_values_ip = calloc(newast->array_size, sizeof(ip_addr_t));
+      // Expect the array is pure IP addresses only at first
+      newast->ipprefixes = 0;
+      newast->array_values_ipprefix = calloc(newast->array_size, sizeof(struct ipprefix));
       for (int i=0; i < newast->array_size; i++) {
          while (*p == ' ') {
             /* skip leading spaces */
             p++;
          }
-         if (ip_from_str(p, &newast->array_values_ip[i]) == 0) {
-            /* error */
-            printf("Error: %s could not be parsed as IP address.\n", p);
-            free(newast->array_values_ip);
-            newast->array_values_ip = 0;
+
+         // Parse mask if it is given
+         int prefixlen = 128;
+         char *mask = strchr(p, '/');
+         if (mask != NULL) {
+            // create mask and store it
+            prefixlen = atoi(mask + 1);
+            *mask = 0;
+            mask += 1;
+            // switch this array into IP prefixes (different evaluation)
+            newast->ipprefixes = 1;
+         } else if (newast->ipprefixes == 1) {
+            printf("Error: Found IP without prefix after IP with prefix. Please use either IP addresses or IP prefixes.\n");
+            newast->id = UR_INVALID_FIELD;
+            free(newast->array_values_ipprefix);
+            newast->array_values_ipprefix = 0;
             goto parsing_error;
          }
-         p += strlen(p) + 1;
+
+         if (!ip_from_str(p, &newast->array_values_ipprefix[i].ip)) {
+            // error
+            printf("Error: %s is not a valid IP address. Corresponding rule will always evaluate false.\n", p);
+            newast->id = UR_INVALID_FIELD;
+            free(newast->array_values_ipprefix);
+            newast->array_values_ipprefix = 0;
+            goto parsing_error;
+         } else {
+            if (newast->ipprefixes == 0 && ip_is4(&newast->array_values_ipprefix[i].ip)) {
+               prefixlen = 32;
+            }
+         }
+
+         newast->array_values_ipprefix[i].mask = newast->array_values_ipprefix[i].ip;
+         ip_make_mask(&newast->array_values_ipprefix[i].mask, prefixlen);
+
+         if (mask != NULL) {
+            ip_mask(&newast->array_values_ipprefix[i].ip, &newast->array_values_ipprefix[i].mask);
+            p = mask + strlen(mask) + 1;
+         } else {
+            if (ip_is4(&newast->array_values_ipprefix[i].mask)) {
+               ip_make_mask(&newast->array_values_ipprefix[i].mask, 32);
+            } else {
+               ip_make_mask(&newast->array_values_ipprefix[i].mask, 128);
+            }
+            p += strlen(p) + 1;
+         }
       }
-      qsort(newast->array_values_ip, newast->array_size, sizeof(ip_addr_t), compareIPs);
+      qsort(newast->array_values_ipprefix, newast->array_size, sizeof(struct ipprefix), compareIPs);
       break;
    case UR_TYPE_TIME:
       newast->array_values_date = calloc(newast->array_size, sizeof(ur_time_t));
@@ -437,8 +557,11 @@ struct ast *newProtocol(char *cmp, char *data)
 struct ast *newIP(char *column, char *cmp, char *ipAddr)
 {
    struct ip *newast = (struct ip *) malloc(sizeof(struct ip));
+   int id, iddst, host = 0;
    newast->type = NODE_T_IP;
    newast->column = column;
+   newast->id = UR_INVALID_FIELD;
+   newast->dstid = UR_INVALID_FIELD;
    newast->cmp = get_op_type(cmp);
    free(cmp);
 
@@ -450,30 +573,46 @@ struct ast *newIP(char *column, char *cmp, char *ipAddr)
    }
    free(ipAddr);
 
-   int id = ur_get_id_by_name(column);
+   if (strcmp(column, "host") == 0) {
+      // "host" was given in column name, consider SRC & DST
+      id = ur_get_id_by_name("SRC_IP");
+      iddst = ur_get_id_by_name("DST_IP");
+      host = 1;
+   } else {
+      id = ur_get_id_by_name(column);
+   }
+
    if (id == UR_E_INVALID_NAME) {
       printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
-      newast->id = UR_INVALID_FIELD;
    } else if (ur_get_type(id) != UR_TYPE_IP) {
       printf("Warning: Type of %s is not IP address. Corresponding rule will always evaluate false.\n", column);
-      newast->id = UR_INVALID_FIELD;
    } else {
       newast->id = id;
+   }
+   if (host == 1) {
+      if (iddst == UR_E_INVALID_NAME) {
+         printf("Warning: DST field is not present in input format. Corresponding rule will always evaluate false.\n");
+      } else {
+         newast->dstid = iddst;
+      }
    }
    return (struct ast *) newast;
 }
 
 struct ast *newIPNET(char *column, char *cmp, char *ipAddr)
 {
+   int id, iddst, host = 0;
    struct ipnet *newast = (struct ipnet *) malloc(sizeof(struct ipnet));
    newast->type = NODE_T_NET;
    newast->column = column;
+   newast->id = UR_INVALID_FIELD;
+   newast->dstid = UR_INVALID_FIELD;
+
    newast->cmp = get_op_type(cmp);
    free(cmp);
 
    char *mask = strchr(ipAddr, '/');
    if (mask == NULL) {
-      newast->id = UR_INVALID_FIELD;
       printf("Warning: %s is not a valid IP subnet. Corresponding rule will always evaluate false.\n", ipAddr);
       return (struct ast *) newast;
    }
@@ -482,7 +621,6 @@ struct ast *newIPNET(char *column, char *cmp, char *ipAddr)
 
    if (!ip_from_str(ipAddr, &(newast->ipAddr))) {
       printf("Warning: %s is not a valid IP address. Corresponding rule will always evaluate false.\n", ipAddr);
-      newast->id = UR_INVALID_FIELD;
       free(ipAddr);
       return (struct ast *) newast;
    }
@@ -492,15 +630,29 @@ struct ast *newIPNET(char *column, char *cmp, char *ipAddr)
    ip_make_mask(&newast->ipMask, newast->mask);
    ip_mask(&newast->ipAddr, &newast->ipMask);
 
-   int id = ur_get_id_by_name(column);
+   if (strcmp(column, "host") == 0) {
+      // "host" was given in column name, consider SRC & DST
+      id = ur_get_id_by_name("SRC_IP");
+      iddst = ur_get_id_by_name("DST_IP");
+      host = 1;
+   } else {
+      id = ur_get_id_by_name(column);
+   }
+
    if (id == UR_E_INVALID_NAME) {
       printf("Warning: %s is not present in input format. Corresponding rule will always evaluate false.\n", column);
-      newast->id = UR_INVALID_FIELD;
    } else if (ur_get_type(id) != UR_TYPE_IP) {
       printf("Warning: Type of %s is not IP address. Corresponding rule will always evaluate false.\n", column);
-      newast->id = UR_INVALID_FIELD;
    } else {
       newast->id = id;
+   }
+
+   if (host == 1) {
+      if (iddst == UR_E_INVALID_NAME) {
+         printf("Warning: DST field of host is not present in input format. Only SRC field will be considered.\n");
+      } else {
+         newast->dstid = iddst;
+      }
    }
    return (struct ast *) newast;
 }
@@ -629,6 +781,36 @@ void printAST(struct ast *ast)
          printf("%s", TTY_RESET);
       }
       break;
+   case NODE_T_EXPRESSION_PORT:
+      printf("port");
+
+      switch (((struct expression_port*) ast)->cmp) {
+      case (OP_EQ):
+         printf(" == ");
+         break;
+      case (OP_NE):
+         printf(" != ");
+         break;
+      case (OP_LT):
+         printf(" < ");
+         break;
+      case (OP_LE):
+         printf(" <= ");
+         break;
+      case (OP_GT):
+         printf(" > ");
+         break;
+      case (OP_GE):
+         printf(" >= ");
+         break;
+      case (OP_RE):
+         printf(" =~ ");
+         break;
+      default:
+         printf(" <invalid operator> ");
+      }
+      printf("%" PRIu64, (uint64_t) ((struct expression_port*) ast)->number);
+      break;
 
    case NODE_T_EXPRESSION_FP:
    case NODE_T_EXPRESSION_DATETIME:
@@ -678,42 +860,45 @@ void printAST(struct ast *ast)
       }
       break;
 
-   case NODE_T_EXPRESSION_ARRAY:
-      if (((struct expression_array*) ast)->id == UR_INVALID_FIELD) { // There was error with this expr., print it in red color
+   case NODE_T_EXPRESSION_ARRAY: {
+      struct expression_array *array = (struct expression_array *) ast;
+      if (array->id == UR_INVALID_FIELD) { // There was error with this expr., print it in red color
          printf("%s", TTY_RED);
       }
-      printf("%s", ((struct expression_array*) ast)->column);
-      if (((struct expression_array*) ast)->id == UR_INVALID_FIELD) {
+      printf("%s", array->column);
+      if (array->id == UR_INVALID_FIELD) {
          printf("%s", TTY_RESET);
       }
 
       printf(" IN [");
-      if (((struct expression_array*) ast)->id != UR_INVALID_FIELD) {
-         for (int i=0; i < ((struct expression_array*) ast)->array_size; i++) {
-            switch (((struct expression_array*) ast)->field_type) {
+      if (array->id != UR_INVALID_FIELD) {
+         for (int i=0; i < array->array_size; i++) {
+            switch (array->field_type) {
             case UR_TYPE_UINT8:
             case UR_TYPE_UINT16:
             case UR_TYPE_UINT32:
             case UR_TYPE_UINT64:
-               printf("%"PRIu64", ", ((struct expression_array*) ast)->array_values[i]);
+               printf("%"PRIu64", ", array->array_values[i]);
                break;
             case UR_TYPE_INT8:
             case UR_TYPE_INT16:
             case UR_TYPE_INT32:
             case UR_TYPE_INT64:
-               printf("%"PRIi64", ", ((struct expression_array*) ast)->array_values[i]);
+               printf("%"PRIi64", ", array->array_values[i]);
                break;
             case UR_TYPE_IP:
             {
                char ipstr[INET6_ADDRSTRLEN];
-               ip_to_str(&((struct expression_array*) ast)->array_values_ip[i], ipstr);
+               ip_to_str(&array->array_values_ipprefix[i].ip, ipstr);
+               printf("%s/", ipstr);
+               ip_to_str(&array->array_values_ipprefix[i].mask, ipstr);
                printf("%s, ", ipstr);
                break;
             }
             case UR_TYPE_TIME:
             {
-               time_t sec = ur_time_get_sec(((struct expression_array*) ast)->array_values_date[i]);
-               int msec = ur_time_get_msec(((struct expression_array*) ast)->array_values_date[i]);
+               time_t sec = ur_time_get_sec(array->array_values_date[i]);
+               int msec = ur_time_get_msec(array->array_values_date[i]);
                char str[32];
                struct tm tmp_tm;
                strftime(str, 31, "%FT%T", gmtime_r(&sec, &tmp_tm));
@@ -722,17 +907,18 @@ void printAST(struct ast *ast)
             }
             case UR_TYPE_FLOAT:
             case UR_TYPE_DOUBLE:
-               printf("%lf"", ", ((struct expression_array*) ast)->array_values_double[i]);
+               printf("%lf"", ", array->array_values_double[i]);
                break;
             default:
                /* not supported yet */
-               printf("Type %d is not supported.\n", ((struct expression_array*) ast)->field_type);
+               printf("Type %d is not supported.\n", array->field_type);
             }
          }
       }
       printf("]");
 
       break;
+   }
 
    case NODE_T_PROTOCOL:
       printf("PROTOCOL %s %s",
@@ -741,15 +927,14 @@ void printAST(struct ast *ast)
       break;
 
    case NODE_T_NET: {
-      if (((struct ipnet *) ast)->id == UR_INVALID_FIELD) { // There was error with this expr., print it in red color
+      char str[46];
+      struct ipnet *ipnet = (struct ipnet *) ast;
+      if (ipnet->id == UR_INVALID_FIELD) { // There was error with this expr., print it in red color
          printf("%s", TTY_RED);
       }
-      char str[46];
-      ip_to_str(&(((struct ipnet *) ast)->ipAddr), str);
+      printf("%s", ipnet->column);
 
-      printf("%s", ((struct ipnet *) ast)->column);
-
-      switch (((struct ipnet *) ast)->cmp) {
+      switch (ipnet->cmp) {
       case (OP_EQ):
          printf(" == ");
          break;
@@ -771,11 +956,12 @@ void printAST(struct ast *ast)
       default:
          printf(" <invalid operator> ");
       }
-      printf("%s/%" PRIu8, str, ((struct ipnet*) ast)->mask);
-      ip_to_str(&(((struct ipnet *) ast)->ipMask), str);
+      ip_to_str(&ipnet->ipAddr, str);
+      printf("%s/%" PRIu8, str, ipnet->mask);
+      ip_to_str(&ipnet->ipMask, str);
       printf(" (%s)" , str);
 
-      if (((struct ipnet *) ast)->id == UR_INVALID_FIELD) {
+      if (ipnet->id == UR_INVALID_FIELD) {
          printf("%s", TTY_RESET);
       }
 
@@ -783,16 +969,14 @@ void printAST(struct ast *ast)
    }
 
    case NODE_T_IP: {
-      if (((struct ip*) ast)->id == UR_INVALID_FIELD) { // There was error with this expr., print it in red color
+      char str[46];
+      struct ip *ip = (struct ip *) ast;
+      if (ip->id == UR_INVALID_FIELD) { // There was error with this expr., print it in red color
          printf("%s", TTY_RED);
       }
-      char str[46];
-      ip_to_str(&(((struct ip*) ast)->ipAddr), str);
+      printf("%s", ip->column);
 
-      printf("%s",
-            ((struct ip*) ast)->column);
-
-      switch (((struct ip*) ast)->cmp) {
+      switch (ip->cmp) {
       case (OP_EQ):
          printf(" == ");
          break;
@@ -814,8 +998,10 @@ void printAST(struct ast *ast)
       default:
          printf(" <invalid operator> ");
       }
+
+      ip_to_str(&ip->ipAddr, str);
       printf("%s", str);
-      if (((struct ip*) ast)->id == UR_INVALID_FIELD) {
+      if (ip->id == UR_INVALID_FIELD) {
          printf("%s", TTY_RESET);
       }
 
@@ -858,7 +1044,6 @@ void printAST(struct ast *ast)
       printf(" )");
       break;
    }
-
 }
 
 void freeAST(struct ast *ast)
@@ -875,6 +1060,9 @@ void freeAST(struct ast *ast)
       free(((struct expression *) ast)->column);
       ((struct expression *) ast)->column = NULL;
       break;
+   case NODE_T_EXPRESSION_PORT:
+      /* nothing was allocated */
+      break;
    case NODE_T_EXPRESSION_FP:
       free(((struct expression_fp *) ast)->column);
       break;
@@ -884,7 +1072,7 @@ void freeAST(struct ast *ast)
    case NODE_T_EXPRESSION_ARRAY:
       free(((struct expression_array *) ast)->column);
       free(((struct expression_array *) ast)->array_values);
-      free(((struct expression_array *) ast)->array_values_ip);
+      free(((struct expression_array *) ast)->array_values_ipprefix);
       free(((struct expression_array *) ast)->array_values_date);
       free(((struct expression_array *) ast)->array_values_double);
       break;
@@ -1021,7 +1209,11 @@ int compareElemInArray(void *val, struct expression_array *ast)
       res = bsearch(&val_i, ast->array_values, ast->array_size, sizeof(int64_t), compareI64);
       break;
    case UR_TYPE_IP:
-      res = bsearch(val, ast->array_values_ip, ast->array_size, sizeof(ip_addr_t), compareIPs);
+      if (ast->ipprefixes == 0) {
+         res = bsearch(val, ast->array_values_ipprefix, ast->array_size, sizeof(struct ipprefix), compareIPs);
+      } else {
+         res = bsearch(val, ast->array_values_ipprefix, ast->array_size, sizeof(struct ipprefix), compareIPwithPrefix);
+      }
       break;
    case UR_TYPE_TIME:
       res = bsearch(val, ast->array_values_date, ast->array_size, sizeof(ur_time_t), compareUI64);
@@ -1100,46 +1292,89 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
       return compareUnsigned(*(ur_time_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_datetime *) ast)->id)),
                              ((struct expression_datetime *) ast)->date, ((struct expression_datetime *) ast)->cmp);
 
-   case NODE_T_EXPRESSION_ARRAY:
-      {
+   case NODE_T_EXPRESSION_PORT: {
+      struct expression_port *port = (struct expression_port *) ast;
+      cmp_op cmp = port->cmp;
+      if (port->srcport == UR_INVALID_FIELD || port->dstport == UR_INVALID_FIELD) {
+         return 0;
+      }
+      int cmp_res1 = compareUnsigned(*(uint16_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, port->srcport)), port->number, cmp);
+      int cmp_res2 = compareUnsigned(*(uint16_t *)(ur_get_ptr_by_id(in_tmplt, in_rec, port->dstport)), port->number, cmp);
+      return cmp_res1 || cmp_res2;
+   }
+
+   case NODE_T_EXPRESSION_ARRAY: {
          if (((struct expression_array*) ast)->id == UR_INVALID_FIELD) {
             return 0;
          }
 
+         int result = 0;
          /* This test should be probably everywhere */
          if (ur_is_present(in_tmplt, ((struct expression_array*) ast)->id)) {
             void *field_val = ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_array*) ast)->id);
-            return compareElemInArray(field_val, (struct expression_array *) ast);
+            result = compareElemInArray(field_val, (struct expression_array *) ast);
+            if (result != 0) {
+               return 1;
+            }
          } else {
             printf("Error: Field '%s' is not in the UniRec template.\n", ((struct expression_array*) ast)->column);
             return 0;
          }
-      }
+
+         if (((struct expression_array*) ast)->dstid != UR_INVALID_FIELD && ur_is_present(in_tmplt, ((struct expression_array*) ast)->dstid)) {
+            void *field_val = ur_get_ptr_by_id(in_tmplt, in_rec, ((struct expression_array*) ast)->dstid);
+            return compareElemInArray(field_val, (struct expression_array *) ast);
+         } else {
+            return 0;
+         }
+   }
 
    case NODE_T_NET: {
-      if (((struct ipnet *) ast)->id == UR_INVALID_FIELD) {
+      struct ipnet *ipnet = (struct ipnet*) ast;
+      int cmp_res1, cmp_res2, settype;
+      cmp_op cmp = ipnet->cmp;
+      settype = ip_is4(&(ipnet->ipAddr));
+
+      if (ipnet->id == UR_INVALID_FIELD) {
          return 0;
       }
-      ip_addr_t cur_ip = *((ip_addr_t *) (ur_get_ptr_by_id(in_tmplt, in_rec, ((struct ipnet *) ast)->id)));
-
-      cmp_op cmp = ((struct ipnet *) ast)->cmp;
+      ip_addr_t cur_ip = *((ip_addr_t *) (ur_get_ptr_by_id(in_tmplt, in_rec, ipnet->id)));
 
       /* check if both IPs are of the same version and return if not */
-      int curtype = ip_is4(&cur_ip);
-      int settype = ip_is4(&(((struct ipnet *) ast)->ipAddr));
-      if (curtype != settype) {
+      if (ip_is4(&cur_ip) != settype) {
          return cmp == OP_NE || cmp == OP_LT || cmp == OP_GT;
       }
 
       /* mask current IP and then just compare it */
-      ip_mask(&cur_ip, &((struct ipnet *) ast)->ipMask);
-      int cmp_res = ip_cmp(&cur_ip, &(((struct ipnet *) ast)->ipAddr));
+      ip_mask(&cur_ip, &(ipnet->ipMask));
+      cmp_res1 = ip_cmp(&cur_ip, &(ipnet->ipAddr));
 
+      if (ipnet->dstid == UR_INVALID_FIELD) {
+         // we do not have DST, this is final result
+         if (cmp_res1 == 0) {
+            // Same addresses
+            return cmp == OP_EQ || cmp == OP_LE || cmp == OP_GE;
+         } else if (cmp_res1 < 0) {
+            // Address in record is lower than the given one
+            return cmp == OP_NE || cmp == OP_LT || cmp == OP_LE;
+         } else {
+            // Address in record is higher than the given one
+            return cmp == OP_NE || cmp == OP_GT || cmp == OP_GE;
+         }
+      }
 
-      if (cmp_res == 0) {
+      // we have DST, process it
+      cur_ip = *((ip_addr_t *) (ur_get_ptr_by_id(in_tmplt, in_rec, ipnet->dstid)));
+
+      /* mask current IP and then just compare it */
+      ip_mask(&cur_ip, &(ipnet->ipMask));
+      cmp_res2 = ip_cmp(&cur_ip, &(ipnet->ipAddr));
+
+      // combine results from SRC and DST
+      if (cmp_res1 == 0 || cmp_res2 == 0) {
          // Same addresses
          return cmp == OP_EQ || cmp == OP_LE || cmp == OP_GE;
-      } else if (cmp_res < 0) {
+      } else if (cmp_res1 < 0 || cmp_res2 < 0) {
          // Address in record is lower than the given one
          return cmp == OP_NE || cmp == OP_LT || cmp == OP_LE;
       } else {
@@ -1147,23 +1382,43 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
          return cmp == OP_NE || cmp == OP_GT || cmp == OP_GE;
       }
    }
-   case NODE_T_IP:
-      if (((struct ip*) ast)->id == UR_INVALID_FIELD) {
+   case NODE_T_IP: {
+      struct ip *ip = (struct ip*) ast;
+      int cmp_res1, cmp_res2;
+      cmp_op cmp = ip->cmp;
+      if (ip->id == UR_INVALID_FIELD) {
          return 0;
       }
-      int cmp_res = ip_cmp((ip_addr_t *) (ur_get_ptr_by_id(in_tmplt, in_rec, ((struct ip*) ast)->id)), &(((struct ip*) ast)->ipAddr));
-      cmp_op cmp = ((struct ip*) ast)->cmp;
+      cmp_res1 = ip_cmp((ip_addr_t *) (ur_get_ptr_by_id(in_tmplt, in_rec, ip->id)), &ip->ipAddr);
 
-      if (cmp_res == 0) {
-         // Same addresses
+      if (ip->dstid == UR_INVALID_FIELD) {
+         // we do not have DST, this is final result
+         if (cmp_res1 == 0) {
+            // Same addresses
+            return cmp == OP_EQ || cmp == OP_LE || cmp == OP_GE;
+         } else if (cmp_res1 < 0) {
+            // Address in record is lower than the given one
+            return cmp == OP_NE || cmp == OP_LT || cmp == OP_LE;
+         } else {
+            // Address in record is higher than the given one
+            return cmp == OP_NE || cmp == OP_GT || cmp == OP_GE;
+         }
+      }
+
+      // we have DST, process it
+      cmp_res2 = ip_cmp((ip_addr_t *) (ur_get_ptr_by_id(in_tmplt, in_rec, ip->dstid)), &(ip->ipAddr));
+      // combine results from SRC and DST
+      if (cmp_res1 == 0 || cmp_res2 == 0) {
+         // At least one address is same
          return cmp == OP_EQ || cmp == OP_LE || cmp == OP_GE;
-      } else if (cmp_res < 0) {
-         // Address in record is lower than the given one
+      } else if (cmp_res1 < 0 || cmp_res2 < 0) {
+         // At least one address in record is lower than the given one
          return cmp == OP_NE || cmp == OP_LT || cmp == OP_LE;
       } else {
-         // Address in record is higher than the given one
+         // At least one address in record is higher than the given one
          return cmp == OP_NE || cmp == OP_GT || cmp == OP_GE;
       }
+   }
    case NODE_T_STRING:
       size = ur_get_var_len(in_tmplt, in_rec, ((struct str*) ast)->id); // only relevant for strings
       expr = (char *)(ur_get_ptr_by_id(in_tmplt, in_rec, ((struct str*) ast)->id));
@@ -1224,6 +1479,7 @@ void changeProtocol(struct ast **ast)
       changeProtocol(&((*ast)->r));
       return;
    case NODE_T_EXPRESSION:
+   case NODE_T_EXPRESSION_PORT:
    case NODE_T_EXPRESSION_FP:
    case NODE_T_EXPRESSION_DATETIME:
    case NODE_T_EXPRESSION_ARRAY:
@@ -1265,6 +1521,9 @@ struct ast *getTree(const char *str, const char *port_number)
       printf("[%s] No Filter.\n", port_number);
       return NULL;
    }
+   #ifdef YYDEBUG
+   yydebug = 1;
+   #endif
    yy_scan_string(str);
 
    if (yyparse()) {        // failure

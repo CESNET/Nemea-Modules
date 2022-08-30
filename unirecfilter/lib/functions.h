@@ -53,13 +53,15 @@
 #include <sys/types.h>
 #include <regex.h>
 
+extern int yydebug;
+
 #define DYN_FIELD_MAX_SIZE 1024 // Maximal size of dynamic field, longer fields will be cutted to this size
 
 #define SET_NULL(field_id, tmpl, data) \
 memset(ur_get_ptr_by_id(tmpl, data, field_id), 0, ur_get_size(field_id));
 
 /* Used for types of expression nodes in abstract syntax tree */
-typedef enum { NODE_T_AST, NODE_T_EXPRESSION, NODE_T_EXPRESSION_FP,
+typedef enum { NODE_T_AST, NODE_T_EXPRESSION, NODE_T_EXPRESSION_PORT, NODE_T_EXPRESSION_FP,
                NODE_T_EXPRESSION_DATETIME, NODE_T_EXPRESSION_ARRAY,
                NODE_T_PROTOCOL, NODE_T_IP, NODE_T_NET, NODE_T_STRING,
                NODE_T_BRACKET, NODE_T_NEGATION } node_type;
@@ -70,6 +72,10 @@ typedef enum { OP_EQ, OP_NE, OP_LT, OP_LE, OP_GT, OP_GE, OP_RE /* regex match */
 /* Used for describing logical operators */
 typedef enum { OP_AND, OP_OR, OP_NOP } log_op;
 
+struct ipprefix {
+   ip_addr_t ip;
+   ip_addr_t mask;
+};
 
 /* AST nodes */
 struct ast {
@@ -86,6 +92,14 @@ struct expression {
    int64_t number;
    ur_field_id_t id;
    int is_signed;
+};
+
+struct expression_port {
+   node_type type;
+   cmp_op cmp;
+   uint64_t number;
+   ur_field_id_t srcport;
+   ur_field_id_t dstport;
 };
 
 struct expression_fp {
@@ -110,10 +124,12 @@ struct expression_array {
    char *column;
    uint32_t array_size;
    uint64_t *array_values;
-   ip_addr_t *array_values_ip;
+   struct ipprefix *array_values_ipprefix;
+   char ipprefixes;
    ur_time_t *array_values_date;
    double *array_values_double;
    ur_field_id_t id;
+   ur_field_id_t dstid;
    ur_field_type_t field_type;
 };
 
@@ -129,6 +145,7 @@ struct ip {
    char *column;
    ip_addr_t ipAddr;
    ur_field_id_t id;
+   ur_field_id_t dstid;
 };
 
 struct ipnet {
@@ -139,6 +156,7 @@ struct ipnet {
    ip_addr_t ipMask;
    uint8_t mask;
    ur_field_id_t id;
+   ur_field_id_t dstid;
 };
 
 struct str {
