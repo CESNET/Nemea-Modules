@@ -7,6 +7,7 @@ unirecfilter_SOURCES=unirecfilter.c \
 unirecfilter_LDADD=-ltrap -lunirec -lurfilter
 unirecfilter_CPPFLAGS=-I${top_srcdir}/unirecfilter/lib
 unirecfilter_LDFLAGS=-L${top_builddir}/unirecfilter/lib
+unirecfilter_CFLAGS=${OPENMP_CFLAGS}
 pkgdocdir=${docdir}/unirecfilter
 pkgdoc_DATA=README.md
 EXTRA_DIST=README.md

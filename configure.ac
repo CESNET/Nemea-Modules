@@ -168,6 +168,8 @@ AX_LUA_LIBS([liblua=yes], AC_MSG_WARN([liblua not found. The luamodule module wi
 
 AM_CONDITIONAL(HAVE_LIBLUA, test x${liblua} = xyes)
 
+AX_OPENMP([], [AC_MSG_WARN([Cannot use OpenMP, skipping.])])
+
 GTEST_HEADER="googletest/googletest/include/gtest/gtest.h"
 AC_MSG_CHECKING(for googletest submodule)
 AM_CONDITIONAL([HAVE_GOOGLETEST], [test -f $GTEST_HEADER])

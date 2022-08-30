@@ -54,6 +54,9 @@
 #include <getopt.h>
 #include <string.h>
 #include <ctype.h>
+#ifdef HAVE_OPENMP
+#include <omp.h>
+#endif
 
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
@@ -421,6 +424,7 @@ int main(int argc, char **argv)
    signed char opt;
    int ret;
    int i;
+   int error = 0;
    int from = 0; // 0 - template and filter from CMD, 1 - from file
    int n_outputs;
    trap_ifc_spec_t ifc_spec;
@@ -688,11 +692,14 @@ int main(int argc, char **argv)
       // then load another one at the end of the loop 
 
       // PROCESS THE DATA
+      #ifdef HAVE_OPENMP
+      #pragma omp parallel for
+      #endif
       for (i = 0; i < n_outputs; i++) {
          ret = urfilter_match(output_specifiers[i]->filter, in_tmplt, in_rec);
          if (ret == URFILTER_ERROR) {
             stop = 1;
-            break;
+            error = 1;
          } else if (ret == URFILTER_TRUE) {
             if (verbose >= 1) {
                printf("ADVANCED VERBOSE: Record %u accepted on interface %d\n", num_records, i);
@@ -721,21 +728,29 @@ int main(int argc, char **argv)
                      //copy the data
                      if (ur_set_var(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec, id, in_ptr, size) != UR_OK) {
                         fprintf(stderr, "Error: failed to copy data to output.)\n");
-                        goto cleanup;
+                        error = 1;
+                        break;
                      }
                   }
                }
             }
-            // Send record to corresponding interface
-            ret = trap_send(i, output_specifiers[i]->out_rec, ur_rec_size(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec));
-            // Handle possible errors
-            TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, continue, {stop=1; break;});
+            if (error == 0) {
+               // Send record to corresponding interface
+               ret = trap_send(i, output_specifiers[i]->out_rec, ur_rec_size(output_specifiers[i]->out_tmplt, output_specifiers[i]->out_rec));
+               // Handle possible errors
+               TRAP_DEFAULT_SEND_DATA_ERROR_HANDLING(ret, continue, {stop=1;});
+            }
          } else {
             if (verbose >= 1) {
                printf("ADVANCED VERBOSE: Record %u declined on interface %d\n", num_records, i);
             }
          }
       }
+
+      if (error == 1) {
+         goto cleanup;
+      }
+
       // SIGUSR1 has been sent, reload filter
       if (reload_filter == 1) {
          printf("\nReloading filter...\n\n");
