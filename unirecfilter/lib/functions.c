@@ -985,7 +985,7 @@ int compareElemInArray(void *val, struct expression_array *ast)
 
    uint64_t val_u;
    int64_t val_i;
-   float val_f;
+   double val_f;
 
    switch (ast->field_type) {
    case UR_TYPE_UINT8:
@@ -1027,7 +1027,7 @@ int compareElemInArray(void *val, struct expression_array *ast)
       res = bsearch(val, ast->array_values_date, ast->array_size, sizeof(ur_time_t), compareUI64);
       break;
    case UR_TYPE_FLOAT:
-      val_f = *((float *) val);
+      val_f = (double) *((float *) val);
       res = bsearch(&val_f, ast->array_values_double, ast->array_size, sizeof(double), compareDouble);
       break;
    case UR_TYPE_DOUBLE:
