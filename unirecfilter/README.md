@@ -38,6 +38,27 @@ Filter is a logical expression composed of terms joined together by
 logical operators, possibly with the use of brackets. Term is a
 triplet `unirec_field cmp_operator value`, e.g. FOO == 1.
 
+### Keywords
+
+It is possible to use the following keywords that are a shortcut (and simplification) for compound expressions:
+
+- `host` - stands for `SRC_IP` or `DST_IP`
+- `port` - stands for `SRC_PORT` or `DST_PORT`
+
+The semantics can be explain using the following example of filter:
+
+```
+host == 192.168.0.0/24
+```
+
+which returns true if and only if:
+
+```
+SRC_IP == 192.168.0.0/24 or DST_IP == 192.168.0.0/24
+```
+
+Note: it means any IP address in the range 192.168.0.0-192.168.0.255 matches.
+
 ### Operators
 
 Available comparison operators are:
@@ -119,16 +140,16 @@ and the filter matching is done using binary search, i.e., it is faster
 according to a measurement (mainly for longer arrays).
 
 The following UniRec types are currently supported by this In Array feature:
-`int8`, `int16`, `int32`, `int64`, `uint8`, `uint16`, `uint32`, `uint64`, `ipaddr`, `time`, `float`, `double`
-Specifically, it can't be used with subnets.
+`int8`, `int16`, `int32`, `int64`, `uint8`, `uint16`, `uint32`, `uint64`,
+`ipaddr`, `time`, `float`, `double`, and "subnets" (i.e., `ipaddr` with prefix
+length such as `192.168.0.0/24`)
 
 ### Format
 
 #### Command line
 
 Filter specified on command line with `-F` flag is a single expression
-which is evaluated for the output interface. For example: `-F
-"SRC_PORT == 23"`
+which is evaluated for the output interface. For example: `-F "SRC_PORT == 23"`
 
 #### File
 
