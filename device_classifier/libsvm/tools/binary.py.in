@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 
 import sys, os.path
 from sys import argv
@@ -19,14 +19,14 @@ def process_options(argv = sys.argv):
 	global train, pass_through_options
 
 	if len(argv) < 2:
-		print "Usage: %s [parameters for svm-train] training_file" % argv[0]
+		print("Usage: %s [parameters for svm-train] training_file" % argv[0])
 		sys.exit(1)
 
 	train = argv[-1]
 
 	assert os.path.exists(train), "training_file not found."
 
-	pass_through_options = join(argv[1:len(argv)-2], " ")
+	pass_through_options = argv[1:len(argv)-2].join(" ")
 
 def read_problem(file):
 	assert os.path.exists(file), "%s not found." % (file)
@@ -36,13 +36,13 @@ def read_problem(file):
 
 	in_file = open(file, "r")
 	for line in in_file:
-		spline = split(line)
+		spline = line.split()
 		if spline[0].find(':') == -1:
-			_labels.append(split(spline[0], ','))
-			_features.append(join(spline[1:]))
+			_labels.append(spline[0].split(','))
+			_features.append(spline[1:].join())
 		else:
 			_labels.append([])
-			_features.append(join(spline))
+			_features.append(spline.join())
 	in_file.close()
 
 	return (_labels, _features)
@@ -72,12 +72,12 @@ def build_problem(lab):
 
 def train_problem(lab):
 	global pass_through_options
-	print "Training problem for label %s..." % lab
+	print("Training problem for label %s..." % lab)
 
 	rate, param = grid.find_parameters("/tmp/tmp_binary", "")
 
 	pass_through_options = "-c %f -g %f" % (param['c'], param['g'])
-	print pass_through_options
+	print(pass_through_options)
 
 	cmd = "%s %s %s %s" % (svmtrain_exe, pass_through_options, "/tmp/tmp_binary", "%s/%s" % (models_path, lab))
 	os.system(cmd)
