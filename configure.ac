@@ -285,6 +285,7 @@ AC_CONFIG_FILES([Makefile
                  unirecfilter/lib/Makefile
                  unirecfilter/lib/liburfilter.pc
                  unirecfilter/Makefile
+                 unirecfilter/test/Makefile
                  endiverter/Makefile
                  nfwriter/Makefile
                  luamodule/Makefile

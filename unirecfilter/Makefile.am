@@ -1,4 +1,4 @@
-SUBDIRS = lib
+SUBDIRS = lib . test
 bin_PROGRAMS=unirecfilter
 unirecfilter_SOURCES=unirecfilter.c \
                      unirecfilter.h \
