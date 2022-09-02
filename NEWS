@@ -1,3 +1,23 @@
+2022-02-08 (Tomas Cejka): Merge pull request #205 from CESNET/sni-dataset-saver
+2022-02-08 (Tomas Cejka): rpm: add sni_dataset_saver
+2022-01-20 (root): sni-dataset-saver: Added missing files to Makefile
+2022-01-20 (root): Added new module SNI-dataset-saver
+2022-01-06 (SiskaPavel): Merge pull request #197 from CESNET/lua_bytes
+2021-12-30 (SiskaPavel): Merge pull request #204 from CESNET/rpm_build_fix
+2021-12-29 (Tomas Cejka): rpm: fixed build on fedora35
+2021-12-15 (Tomas Cejka): Merge pull request #203 from CESNET/urfilter_trap_flush
+2021-12-14 (root): unirecfilter: Removed trap flush after every sent message due to performance issues.
+2021-11-08 (Tomas Cejka): Merge pull request #201 from CESNET/logreplay_fix
+2021-11-08 (Jiri Havranek): logreplay: fixed segfault when reading dynamic files
+2021-10-04 (SiskaPavel): Merge pull request #200 from CESNET/codeql_coverity_fix
+2021-10-01 (Jiri Havranek): fixed issues reported by coverity
+2021-09-22 (Jiri Havranek): fixed issues reported by codeQL
+2021-09-15 (Tomas Cejka): Merge pull request #199 from CESNET/new_version
+2021-09-02 (Jiri Havranek): luamodule: fixed ur_ip for lua versions up to 5.2
+2021-09-02 (Jiri Havranek): luamodule: fixed compilation warning
+2021-09-02 (Jiri Havranek): luamodule: updated README.md
+2021-09-01 (Jiri Havranek): luamodule: added support for conversion between bytes and ip address
+
 2021-09-15 (xsiska12): Backscatter: Added missing DIST section to Makefile
 2021-08-05 (Martin Marusiak): Added backscatter module
 2021-08-02 (Matej Hulák): README example fix
