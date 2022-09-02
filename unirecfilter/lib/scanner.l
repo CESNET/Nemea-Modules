@@ -1,6 +1,7 @@
-%option noyywrap warn nounput case-insensitive
+%option noyywrap warn nounput case-sensitive
 
 %{
+    #define YYDEBUG 1
     #include "parser.tab.h"
     #include <string.h>
 
@@ -29,17 +30,19 @@ IPv6MASK      [0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8]
 
 DATETIME [0-9]{4}-[0-9]{1,2}-[0-9]{1,2}T[0-9]{2}:[0-9]{2}:[0-9]{2}|[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}
 FLOAT       -?[0-9]+\.[0-9]+
-ARRAY_ELEM  -?[0-9]+|{IPv4}|{IPv6}|{DATETIME}|{FLOAT}
+ARRAY_ELEM  -?[0-9]+|{IPv4}("/"{IPv4MASK})?|{IPv6}("/"{IPv6MASK})?|{DATETIME}|{FLOAT}
 ARRAY \[{ARRAY_ELEM}(," "*{ARRAY_ELEM})*\]
+PORT "port"
+HOST "host"
 
 %%
 
 ">"|"<"|"=<"|"<="|">="|"=>"|"IN"|"in"                    { yylval.string = copyString(yytext, yyleng); return CMP; }
 "="|"=="|"!="|"<>"                                       { yylval.string = copyString(yytext, yyleng); return EQ; }
 "=~"|"~="                                                { yylval.string = copyString(yytext, yyleng); return REGEX; }
-"!"|"NOT"                                                { return NOT; }
-"||"|"OR"                                                { return OR; }
-"&&"|"AND"                                               { return AND; }
+"!"|"NOT"|"not"                                          { return NOT; }
+"||"|"OR"|"or"                                           { return OR; }
+"&&"|"AND"|"and"                                         { return AND; }
 {DATETIME}                                               { yylval.string = copyString(yytext, yyleng); return DATETIME; }
 \"({DATETIME})\"                                         { yylval.string = cutString(yytext, yyleng); return DATETIME; }
 {ARRAY}                                                  { yylval.string = cutString(yytext, yyleng); return ARRAY; }
@@ -50,6 +53,8 @@ ARRAY \[{ARRAY_ELEM}(," "*{ARRAY_ELEM})*\]
 {IPv6}("/"{IPv6MASK})?                                   { yylval.string = copyString(yytext, yyleng); if (strchr(yytext, '/') == NULL) { return IP;} else {return NET;}}
 \"({IPv4}("/"{IPv4MASK})?)\"                             { yylval.string = cutString(yytext, yyleng); if (strchr(yytext, '/') == NULL) { return IP;} else {return NET;}}
 \"({IPv6}("/"{IPv6MASK})?)\"                             { yylval.string = cutString(yytext, yyleng); if (strchr(yytext, '/') == NULL) { return IP;} else {return NET;} }
+{PORT}                                                   { return PORT; }
+{HOST}                                                   { return HOST; }
 "PROTOCOL"                                               { return PROTOCOL; }
 "TCP"|"ICMP"|"UDP"                                       { yylval.string = copyString(yytext, yyleng); return PROTO_NAME; }
 [a-zA-Z_]+                                               { yylval.string = copyString(yytext, yyleng); return COLUMN; }

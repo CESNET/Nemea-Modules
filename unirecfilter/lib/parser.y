@@ -1,4 +1,5 @@
 %{
+    //#define YYDEBUG 1
     #include <stdio.h>
     #include <stdlib.h>
     #include "functions.h"
@@ -8,6 +9,7 @@
     /* functions definition */
     struct ast *newAST(struct ast *l, struct ast *r, log_op operator);
     struct ast *newExpression(char *column, char *cmp, int64_t number, int is_signed);
+    struct ast *newExpressionPort(char *cmp, uint64_t number);
     struct ast *newExpressionFP(char *column, char *cmp, double number);
     struct ast *newExpressionDateTime(char *column, char *cmp, char *datetime);
     struct ast *newExpressionArray(char *column, char *cmp, char *array);
@@ -43,6 +45,8 @@
 %token <string> ARRAY
 %token <string> STRING
 %token <string> NET
+%token PORT
+%token HOST
 %token AND OR
 %token LEFT RIGHT PROTOCOL
 %token END
@@ -72,6 +76,8 @@ exp:
     | COLUMN CMP DATETIME { $$ = newExpressionDateTime($1, $2, $3); }
     | COLUMN EQ DATETIME { $$ = newExpressionDateTime($1, $2, $3); }
     | COLUMN CMP ARRAY { $$ = newExpressionArray($1, $2, $3); if ($$ == NULL) {YYERROR;}}
+    | HOST CMP ARRAY { $$ = newExpressionArray(strdup("host"), $2, $3); if ($$ == NULL) {YYERROR;}}
+    | PORT CMP ARRAY { $$ = newExpressionArray(strdup("port"), $2, $3); if ($$ == NULL) {YYERROR;}}
     | PROTOCOL CMP UNSIGNED { $$ = newExpression(strdup("PROTOCOL"), $2, $3, 0); }
     | PROTOCOL EQ UNSIGNED { $$ = newExpression(strdup("PROTOCOL"), $2, $3, 0); }
     | PROTOCOL EQ PROTO_NAME { $$ = (struct ast *) newProtocol($2, $3); }
@@ -80,11 +86,17 @@ exp:
     | COLUMN EQ NET { $$ = (struct ast *) newIPNET($1, $2, $3); }
     | COLUMN CMP IP { $$ = (struct ast *) newIP($1, $2, $3); }
     | COLUMN CMP NET { $$ = (struct ast *) newIPNET($1, $2, $3); }
+    | HOST EQ IP { $$ = (struct ast *) newIP(strdup("host"), $2, $3); }
+    | HOST EQ NET { $$ = (struct ast *) newIPNET(strdup("host"), $2, $3); }
+    | HOST CMP IP { $$ = (struct ast *) newIP(strdup("host"), $2, $3); }
+    | HOST CMP NET { $$ = (struct ast *) newIPNET(strdup("host"), $2, $3); }
     | COLUMN EQ STRING { $$ = (struct ast *) newString($1, $2, $3); }
     | COLUMN REGEX STRING { $$ = (struct ast *) newString($1, $2, $3); }
     | COLUMN EQ SIGNED { $$ = newExpression($1, $2, $3, 1); }
     | COLUMN EQ UNSIGNED { $$ = newExpression($1, $2, $3, 0); }
     | COLUMN EQ FLOAT { $$ = newExpressionFP($1, $2, $3); }
+    | PORT CMP UNSIGNED { $$ = newExpressionPort($2, $3); }
+    | PORT EQ UNSIGNED { $$ = newExpressionPort($2, $3); }
     | NOT explist {$$ = (struct ast *) newNegation($2);}
     | LEFT explist RIGHT { $$ = (struct ast *) newBrack($2); }
     ;
