@@ -256,6 +256,21 @@ void timedb_init_tree(timedb_t *timedb, ur_field_type_t value_type)
                timedb->b_tree_compare = &compare_md5;
                timedb->b_tree_key_size = 16;
                break;
+            case UR_TYPE_A_UINT8:
+            case UR_TYPE_A_INT8:
+            case UR_TYPE_A_UINT16:
+            case UR_TYPE_A_INT16:
+            case UR_TYPE_A_UINT32:
+            case UR_TYPE_A_INT32:
+            case UR_TYPE_A_UINT64:
+            case UR_TYPE_A_INT64:
+            case UR_TYPE_A_FLOAT:
+            case UR_TYPE_A_DOUBLE:
+            case UR_TYPE_A_IP:
+            case UR_TYPE_A_MAC:
+            case UR_TYPE_A_TIME:
+               fprintf(stderr, "Error: UniRec Array types are not supported in TimeDB.\n");
+               break;
          }
          timedb->data[i]->b_plus_tree = bpt_init(TIMEDB__B_PLUS_TREE__LEAF_ITEM_NUMBER, timedb->b_tree_compare, 0, timedb->b_tree_key_size);
       }
