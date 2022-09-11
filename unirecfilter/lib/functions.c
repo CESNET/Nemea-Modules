@@ -50,6 +50,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <ctype.h>
 
 #include "functions.h"
 
@@ -443,7 +444,7 @@ struct ast *newExpressionArray(char *column, char *cmp, char *array)
       newast->ipprefixes = 0;
       newast->array_values_ipprefix = calloc(newast->array_size, sizeof(struct ipprefix));
       for (int i=0; i < newast->array_size; i++) {
-         while (*p == ' ') {
+         while (isblank(*p) || *p == '\n') {
             /* skip leading spaces */
             p++;
          }

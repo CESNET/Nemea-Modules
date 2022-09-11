@@ -31,7 +31,7 @@ IPv6MASK      [0-9]|[1-9][0-9]|1[0-1][0-9]|12[0-8]
 DATETIME [0-9]{4}-[0-9]{1,2}-[0-9]{1,2}T[0-9]{2}:[0-9]{2}:[0-9]{2}|[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}
 FLOAT       -?[0-9]+\.[0-9]+
 ARRAY_ELEM  -?[0-9]+|{IPv4}("/"{IPv4MASK})?|{IPv6}("/"{IPv6MASK})?|{DATETIME}|{FLOAT}
-ARRAY \[{ARRAY_ELEM}(," "*{ARRAY_ELEM})*\]
+ARRAY \[{ARRAY_ELEM}(," "*\s*\n*{ARRAY_ELEM})*\]
 PORT "port"
 HOST "host"
 
