@@ -34,7 +34,8 @@ ARRAY_ELEM  -?[0-9]+|{IPv4}("/"{IPv4MASK})?|{IPv6}("/"{IPv6MASK})?|{DATETIME}|{F
 ARRAY \[{ARRAY_ELEM}(," "*\s*\n*{ARRAY_ELEM})*\]
 PORT "port"
 HOST "host"
-
+TRUE "true"|"True"|"TRUE"
+FALSE "false"|"False"|"FALSE"
 %%
 
 ">"|"<"|"=<"|"<="|">="|"=>"|"IN"|"in"                    { yylval.string = copyString(yytext, yyleng); return CMP; }
@@ -43,6 +44,7 @@ HOST "host"
 "!"|"NOT"|"not"                                          { return NOT; }
 "||"|"OR"|"or"                                           { return OR; }
 "&&"|"AND"|"and"                                         { return AND; }
+{TRUE}|{FALSE}                                           { yylval.string = copyString(yytext, yyleng); return BOOLEAN; }
 {DATETIME}                                               { yylval.string = copyString(yytext, yyleng); return DATETIME; }
 \"({DATETIME})\"                                         { yylval.string = cutString(yytext, yyleng); return DATETIME; }
 {ARRAY}                                                  { yylval.string = cutString(yytext, yyleng); return ARRAY; }

@@ -159,6 +159,17 @@ struct ast *newAST(struct ast *l, struct ast *r, log_op operator)
 
    return newast;
 }
+struct ast *newBoolean(char *value)
+{
+   struct boolean *newast = (struct boolean *) malloc(sizeof(struct boolean));
+   newast->type = NODE_T_BOOLEAN;
+   if (strcasecmp(value, "true") == 0) {
+      newast->value = 1;
+   } else {
+      newast->value = 0;
+   }
+   return (struct ast *) newast;
+}
 
 struct ast *newExpression(char *column, char *cmp, int64_t number, int is_signed)
 {
@@ -742,6 +753,17 @@ void printAST(struct ast *ast)
       }
       break;
 
+   case NODE_T_BOOLEAN: {
+      struct boolean *b = (struct boolean *) ast;
+      if (b->value) {
+         printf("TRUE");
+      } else {
+         printf("FALSE");
+      }
+
+      break;
+   }
+
    case NODE_T_EXPRESSION:
       if (((struct expression*) ast)->id == UR_INVALID_FIELD) { // There was error with this expr., print it in red color
          printf("%s", TTY_RED);
@@ -1061,6 +1083,7 @@ void freeAST(struct ast *ast)
       free(((struct expression *) ast)->column);
       ((struct expression *) ast)->column = NULL;
       break;
+   case NODE_T_BOOLEAN:
    case NODE_T_EXPRESSION_PORT:
       /* nothing was allocated */
       break;
@@ -1256,6 +1279,8 @@ int evalAST(struct ast *ast, const ur_template_t *in_tmplt, const void *in_rec)
          fprintf(stderr, "Warning: Unknown operator in NODE_T_AST.\n");
          return 0;
       }
+   case NODE_T_BOOLEAN:
+      return ((struct boolean*) ast)->value;
    case NODE_T_EXPRESSION:
       if (((struct expression*) ast)->id == UR_INVALID_FIELD) {
          return 0;
@@ -1480,6 +1505,7 @@ void changeProtocol(struct ast **ast)
       changeProtocol(&((*ast)->r));
       return;
    case NODE_T_EXPRESSION:
+   case NODE_T_BOOLEAN:
    case NODE_T_EXPRESSION_PORT:
    case NODE_T_EXPRESSION_FP:
    case NODE_T_EXPRESSION_DATETIME:

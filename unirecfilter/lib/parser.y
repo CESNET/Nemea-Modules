@@ -8,6 +8,7 @@
 
     /* functions definition */
     struct ast *newAST(struct ast *l, struct ast *r, log_op operator);
+    struct ast *newBoolean(char *value);
     struct ast *newExpression(char *column, char *cmp, int64_t number, int is_signed);
     struct ast *newExpressionPort(char *cmp, uint64_t number);
     struct ast *newExpressionFP(char *column, char *cmp, double number);
@@ -45,6 +46,7 @@
 %token <string> ARRAY
 %token <string> STRING
 %token <string> NET
+%token <string> BOOLEAN
 %token PORT
 %token HOST
 %token AND OR
@@ -99,6 +101,7 @@ exp:
     | PORT EQ UNSIGNED { $$ = newExpressionPort($2, $3); }
     | NOT explist {$$ = (struct ast *) newNegation($2);}
     | LEFT explist RIGHT { $$ = (struct ast *) newBrack($2); }
+    | BOOLEAN { $$ = (struct ast *) newBoolean($1); }
     ;
 
 %%
