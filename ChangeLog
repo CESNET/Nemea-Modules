@@ -1,3 +1,9 @@
+2022-09-12 nemea-modules-2.21.0
+	* unirecfilter: add boolean support (true/false in AND/OR expressions)
+	* unirecfilter: BUGFIX parsing multiline array
+	* scalar-agg: BUGFIX empty filter means true
+	* scalar-agg: fixed warnings - unsupported UniRec Array types
+
 2022-02-08 nemea-modules-2.20.0
 	* imroved luamodule - support of bytes-ip conversion
 	* bugfixes
