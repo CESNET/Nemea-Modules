@@ -574,7 +574,10 @@ rule_t *rule_create(const char *specifier, int step, int size, int inactive_time
    }
 
    object->timedb = timedb_create(step, size, inactive_timeout, object->agg == AGG_COUNT_UNIQ ? 1 : 0);
-   object->filter = urfilter_create(filter, "0");
+   if (filter != NULL) {
+      // non-empty filter is passed and compiled by liburfilter, empty filter means True
+      object->filter = urfilter_create(filter, "0");
+   }
 
    free(filter);
    free(agg);
@@ -600,7 +603,9 @@ void rule_destroy(rule_t *object)
    if (object) {
       free(object->name);
       free(object->agg_arg);
-      urfilter_destroy(object->filter);
+      if (object->filter) {
+         urfilter_destroy(object->filter);
+      }
       timedb_free(object->timedb);
       free(object);
    }
@@ -831,8 +836,16 @@ int main(int argc, char **argv)
          // process every rule in output
          for (int i = 0; i < outputs[o]->rules_count; i++) {
             // match UniRec filter
-            if (urfilter_match(outputs[o]->rules[i]->filter, tpl, data)) {
-               // save record data
+            if (outputs[o]->rules[i]->filter) {
+               if (urfilter_match(outputs[o]->rules[i]->filter, tpl, data)) {
+                  // save record data
+                  if (!rule_save_data(outputs[o]->rules[i], tpl, data)) {
+                     fprintf(stderr, "Error: Saving aggregation data failed.\n");
+                     goto cleanup;
+                  }
+               }
+            } else {
+               // empty filter means True
                if (!rule_save_data(outputs[o]->rules[i], tpl, data)) {
                   fprintf(stderr, "Error: Saving aggregation data failed.\n");
                   goto cleanup;

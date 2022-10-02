@@ -439,5 +439,115 @@ class PortTest(unittest.TestCase):
 
         self.trap.eval_data_stop()
 
+class BooleanTest(unittest.TestCase):
+    """Test case to check IP prefix in filters"""
+
+    def setUp(self):
+        self.trap = PytrapHelper()
+
+    def tearDown(self):
+        #os.unlink(INPUTTESTFILENAME)
+        os.unlink(OUTPUTTESTFILENAME)
+
+    def test_true(self):
+        f = "true"
+
+        # generate test data
+        trueip = ("192.168.0.0", "192.168.0.1", "192.168.0.255", "192.168.255.255")
+        rec = self.trap.prepare_data_start()
+        for ip in trueip:
+            rec.SRC_IP = pytrap.UnirecIPAddr(ip)
+            self.trap.store_test_record()
+
+        self.trap.prepare_data_stop()
+
+        self.trap.run_unirecfilter(f)
+
+        self.trap.eval_data_start()
+        rec = self.trap.load_result_record()
+        while rec:
+            self.assertIn(str(rec.SRC_IP), trueip)
+            rec = self.trap.load_result_record()
+
+        self.trap.eval_data_stop()
+
+    def test_false(self):
+        f = "false"
+
+        # generate test data
+        trueip = ("192.168.0.0", "192.168.0.1", "192.168.0.255", "192.168.255.255")
+        rec = self.trap.prepare_data_start()
+        for ip in trueip:
+            rec.SRC_IP = pytrap.UnirecIPAddr(ip)
+            self.trap.store_test_record()
+
+        self.trap.prepare_data_stop()
+
+        self.trap.run_unirecfilter(f)
+
+        self.trap.eval_data_start()
+        rec = self.trap.load_result_record()
+        while rec:
+            self.assertNotIn(str(rec.SRC_IP), trueip)
+            rec = self.trap.load_result_record()
+
+        self.trap.eval_data_stop()
+
+    def test_alwaysfalse(self):
+        f = "SRC_IP in [192.168.0.0/24] and false"
+
+        # generate test data
+        trueip = ("192.168.0.0", "192.168.0.1")
+        falseip = ("10.1.2.3", "192.168.255.255")
+        rec = self.trap.prepare_data_start()
+        for ip in trueip:
+            rec.SRC_IP = pytrap.UnirecIPAddr(ip)
+            self.trap.store_test_record()
+        for ip in falseip:
+            rec.SRC_IP = pytrap.UnirecIPAddr(ip)
+            self.trap.store_test_record()
+
+        self.trap.prepare_data_stop()
+
+        self.trap.run_unirecfilter(f)
+
+        self.trap.eval_data_start()
+        mergedlist = trueip + falseip
+        rec = self.trap.load_result_record()
+        while rec:
+            self.assertNotIn(str(rec.SRC_IP), mergedlist)
+            rec = self.trap.load_result_record()
+
+        self.trap.eval_data_stop()
+
+    def test_alwaystrue(self):
+        f = "SRC_IP in [192.168.0.0/24] or true"
+
+        # generate test data
+        trueip = ("192.168.0.0", "192.168.0.1")
+        falseip = ("10.1.2.3", "192.168.255.255")
+        rec = self.trap.prepare_data_start()
+        for ip in trueip:
+            rec.SRC_IP = pytrap.UnirecIPAddr(ip)
+            self.trap.store_test_record()
+        for ip in falseip:
+            rec.SRC_IP = pytrap.UnirecIPAddr(ip)
+            self.trap.store_test_record()
+
+        self.trap.prepare_data_stop()
+
+        self.trap.run_unirecfilter(f)
+
+        self.trap.eval_data_start()
+        mergedlist = trueip + falseip
+        rec = self.trap.load_result_record()
+        while rec:
+            self.assertIn(str(rec.SRC_IP), mergedlist)
+            rec = self.trap.load_result_record()
+
+        self.trap.eval_data_stop()
+
+
+
 if __name__ == '__main__':
     unittest.main()

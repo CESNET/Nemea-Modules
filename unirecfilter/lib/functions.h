@@ -61,7 +61,7 @@ extern int yydebug;
 memset(ur_get_ptr_by_id(tmpl, data, field_id), 0, ur_get_size(field_id));
 
 /* Used for types of expression nodes in abstract syntax tree */
-typedef enum { NODE_T_AST, NODE_T_EXPRESSION, NODE_T_EXPRESSION_PORT, NODE_T_EXPRESSION_FP,
+typedef enum { NODE_T_AST, NODE_T_BOOLEAN, NODE_T_EXPRESSION, NODE_T_EXPRESSION_PORT, NODE_T_EXPRESSION_FP,
                NODE_T_EXPRESSION_DATETIME, NODE_T_EXPRESSION_ARRAY,
                NODE_T_PROTOCOL, NODE_T_IP, NODE_T_NET, NODE_T_STRING,
                NODE_T_BRACKET, NODE_T_NEGATION } node_type;
@@ -83,6 +83,11 @@ struct ast {
    log_op operator;
    struct ast *l;
    struct ast *r;
+};
+
+struct boolean {
+   node_type type;
+   char value;
 };
 
 struct expression {

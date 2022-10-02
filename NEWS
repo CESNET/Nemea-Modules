@@ -1,3 +1,8 @@
+2022-09-11 (Tomas Cejka): unirecfilter: add true/false support
+2022-09-11 (Tomas Cejka): unirecfilter: fixed array parsing - skip newlines and spaces
+2022-09-07 (Tomas Cejka): scalar-agg: fixed empty filter that means true
+2022-09-07 (Tomas Cejka): scalar-agg: timedb: fixed warnings, unsupported UniRec Array types
+
 2022-02-08 (Tomas Cejka): Merge pull request #205 from CESNET/sni-dataset-saver
 2022-02-08 (Tomas Cejka): rpm: add sni_dataset_saver
 2022-01-20 (root): sni-dataset-saver: Added missing files to Makefile
