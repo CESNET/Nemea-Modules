@@ -1,3 +1,9 @@
+2022-10-03 (SiskaPavel): Merge pull request #212 from CESNET/release
+2022-10-03 (SiskaPavel): Merge pull request #210 from CESNET/rpm_remove_python2
+2022-10-03 (SiskaPavel): Merge pull request #213 from CESNET/prefix_tags_varlen_fields
+2022-10-03 (Tomas Cejka): prefix_tags: remove error on variable length fields, just copy them
+2022-09-01 (Tomas Cejka): device_classifier: minor changes to get rid of python2
+
 2022-09-11 (Tomas Cejka): unirecfilter: add true/false support
 2022-09-11 (Tomas Cejka): unirecfilter: fixed array parsing - skip newlines and spaces
 2022-09-07 (Tomas Cejka): scalar-agg: fixed empty filter that means true
