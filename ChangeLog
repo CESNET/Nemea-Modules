@@ -1,3 +1,7 @@
+2022-10-03 nemea-modules-2.21.1
+	* prefix_tags: enable variable length fields
+	* device_classifier: remove python2
+
 2022-09-12 nemea-modules-2.21.0
 	* unirecfilter: add boolean support (true/false in AND/OR expressions)
 	* unirecfilter: BUGFIX parsing multiline array
