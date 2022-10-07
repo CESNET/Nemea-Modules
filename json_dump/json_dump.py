@@ -2,6 +2,8 @@
 
 import sys
 import os.path
+import socket
+import io
 import pytrap
 import json
 import optparse
@@ -14,6 +16,8 @@ parser.add_option("-w", dest="filename",
     help="Write dump to FILE instead of stdout (overwrite file)", metavar="FILE")
 parser.add_option("-a", dest="filename_append",
     help="Write dump to FILE instead of stdout (append to file)", metavar="FILE")
+parser.add_option("-s", dest="networktarget",
+    help="Stream data over TCP", metavar="HOST:PORT")
 parser.add_option("-I", "--indent", metavar="N", type=int,
     help="Pretty-print JSON with indentation set to N spaces. Note that such format can't be read by json_replay module.")
 parser.add_option("-v", "--verbose", action="store_true",
@@ -34,9 +38,15 @@ if options.filename and options.filename_append:
     sys.stderr.write("Error: -w and -a are mutually exclusive.")
     sys.exit(1)
 if options.filename:
-    file = open(options.filename, "w")
+    file = io.FileIO(options.filename, "w")
 elif options.filename_append:
-    file = open(options.filename_append, "a")
+    file = io.FileIO(options.filename_append, "a")
+elif options.networktarget:
+    addr = options.networktarget.split(":")
+    if len(addr) != 2:
+        raise AttributeError("Malformed argument of -s host:port")
+    s = socket.create_connection((addr[0], int(addr[1])))
+    file = socket.SocketIO(s, "w")
 else:
     file = sys.stdout
 
@@ -73,7 +83,7 @@ while not stop:
         if options.verbose:
             print("Message: {0}".format(rec))
         # Print it to file or stdout
-        file.write(json.dumps(rec, indent=options.indent) + '\n')
+        file.write(bytes(json.dumps(rec, indent=options.indent) + '\n', "utf-8"))
         if not options.noflush:
             file.flush()
     except ValueError as e:
