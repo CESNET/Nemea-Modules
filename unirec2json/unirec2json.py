@@ -5,6 +5,7 @@ import pytrap
 import sys
 import optparse
 import json
+import re
 from optparse import OptionParser
 
 parser = OptionParser(add_help_option=True)
@@ -12,6 +13,8 @@ parser.add_option("-i", "--ifcspec", dest="ifcspec",
         help="TRAP IFC specifier", metavar="IFCSPEC")
 parser.add_option("-n", "--no-eos", action="store_true",
         help="Don't send end-of-stream message at the end.")
+parser.add_option("-M", "--maps", dest="maps", metavar="JSONFILE",
+        help="Load mappings and apply them on incoming messages.")
 parser.add_option("-v", "--verbose", action="store_true",
         help="Set verbose mode - print messages.")
 parser.add_option("-f", "--format", dest="format", default="",
@@ -36,6 +39,30 @@ def default(o):
     else:
         return repr(o)
 
+mapping = None
+
+if options.maps:
+    with open(options.maps, "r") as f:
+        mapping = json.load(f)
+
+def apply_mappings(data, mapping):
+    matches = mapping.get("match", None)
+    regexs = mapping.get("regex", None)
+    timify = mapping.get("timify", None)
+    if matches:
+        for field in matches:
+            data[field["dest"]] = field["mapping"].get(str(data[field["src"]]), None)
+
+    if regexs:
+        for field in regexs:
+            for reg in field["mapping"].keys():
+                if re.match(reg, str(data[field["src"]])):
+                    data[field["dest"]] = field["mapping"][reg]
+    if timify:
+        for t in timify:
+            data[t] = pytrap.UnirecTime(float(data[t])).format()
+    return data
+
 # Main loop
 stop = False
 while not stop:
@@ -52,7 +79,8 @@ while not stop:
             trap.sendFlush(0)
         break
     rec.setData(data)
-    j = json.dumps({k:v for k, v in rec}, default=default)
+    d = apply_mappings(rec.getDict(), mapping)
+    j = json.dumps(d, default=default)
     if options.verbose:
         print(j)
     trap.send(bytearray(j, "utf-8"))
