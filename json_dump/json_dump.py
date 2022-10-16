@@ -2,13 +2,14 @@
 
 import sys
 import os.path
+import time
 import socket
 import io
 import pytrap
 import json
 import optparse
-
 from optparse import OptionParser
+
 parser = OptionParser(add_help_option=True)
 parser.add_option("-i", "--ifcspec", dest="ifcspec",
       help="See https://nemea.liberouter.org/trap-ifcspec/", metavar="IFCSPEC")
@@ -25,13 +26,26 @@ parser.add_option("-v", "--verbose", action="store_true",
 parser.add_option("--noflush", action="store_true",
     help="Disable automatic flush of output buffer after writing a record (may improve performance).")
 
+def connectsocket(address, port):
+    s = None
+    while not s:
+        try:
+            s = socket.create_connection((address, port))
+            break
+        except socket.error:
+            # sleep for a while and then reconnect
+            sys.stderr.write(time.strftime("%F-%T") + " Connection failed, reconnection will be tried again after 5 seconds.\n")
+            sys.stderr.flush()
+            time.sleep(5)
+
+    sys.stderr.write(time.strftime("%F-%T") + f" Connection to {address}:{port} established.\n")
+    sys.stderr.flush()
+    return socket.SocketIO(s, "w")
 
 # Parse remaining command-line arguments
 (options, args) = parser.parse_args()
-
-# Initialize module
-trap = pytrap.TrapCtx()
-trap.init(["-i", options.ifcspec])
+ADDRESS = None
+PORT = None
 
 # Open output file
 if options.filename and options.filename_append:
@@ -45,10 +59,15 @@ elif options.networktarget:
     addr = options.networktarget.split(":")
     if len(addr) != 2:
         raise AttributeError("Malformed argument of -s host:port")
-    s = socket.create_connection((addr[0], int(addr[1])))
-    file = socket.SocketIO(s, "w")
+    ADDRESS =addr[0]
+    PORT = addr[1]
+    file = connectsocket(ADDRESS, PORT)
 else:
     file = sys.stdout
+
+# Initialize module
+trap = pytrap.TrapCtx()
+trap.init(["-i", options.ifcspec])
 
 # Set JSON as required data type on input
 trap.setRequiredFmt(0, pytrap.FMT_JSON, "")
@@ -88,4 +107,11 @@ while not stop:
             file.flush()
     except ValueError as e:
         sys.stderr.write(str(e) + '\n')
+        sys.stderr.flush()
+    except BrokenPipeError as e:
+        if options.networktarget:
+            file = connectsocket(ADDRESS, PORT)
+            file.write(bytes(json.dumps(rec, indent=options.indent) + '\n', "utf-8"))
+            if not options.noflush:
+                file.flush()
 
