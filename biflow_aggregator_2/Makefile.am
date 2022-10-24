@@ -5,7 +5,9 @@ biflow_aggregator_SOURCES=main.cpp \
 	aggregatorConfigParser.cpp \
 	aggregatorConfigParserFactory.hpp \
 	aggregatorConfigParserFactory.cpp \
-	aggregatorConfigParserFactoryRegistrator.hpp
+	aggregatorConfigParserFactoryRegistrator.hpp \
+	config.hpp \
+	config.cpp
 biflow_aggregator_LDADD=-lunirec -ltrap
 biflow_aggregator_CXXFLAGS=-std=gnu++17
 include ../aminclude.am
