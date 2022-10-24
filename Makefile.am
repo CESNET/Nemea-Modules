@@ -4,8 +4,9 @@ SUBDIRS= \
 aggregator \
 anonymizer \
 backscatter \
-biflow_aggregator \
 debug_sender \
+biflow_aggregator \
+biflow_aggregator_2 \
 device_classifier \
 email_reporter \
 flowcounter \

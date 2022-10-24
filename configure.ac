@@ -227,8 +227,9 @@ AC_CONFIG_FILES([Makefile
                  aggregator/Makefile
                  anonymizer/Makefile
                  backscatter/Makefile
-                 biflow_aggregator/Makefile
                  bloom_history/Makefile
+                 biflow_aggregator/Makefile
+                 biflow_aggregator_2/Makefile
                  debug_sender/Makefile
                  device_classifier/Makefile
                  device_classifier/libsvm/tools/train.sh
