@@ -7,7 +7,9 @@ biflow_aggregator_SOURCES=main.cpp \
 	aggregatorConfigParserFactory.cpp \
 	aggregatorConfigParserFactoryRegistrator.hpp \
 	config.hpp \
-	config.cpp
+	config.cpp \
+	libtrapAdapter.hpp \
+	libtrapAdapter.cpp
 biflow_aggregator_LDADD=-lunirec -ltrap
 biflow_aggregator_CXXFLAGS=-std=gnu++17
 include ../aminclude.am
