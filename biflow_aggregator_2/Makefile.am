@@ -13,7 +13,9 @@ biflow_aggregator_SOURCES=main.cpp \
 	unirecAdapter.hpp \
 	unirecAdapter.cpp \
 	xmlAggregatorConfigParser.hpp \
-	xmlAggregatorConfigParser.cpp
+	xmlAggregatorConfigParser.cpp \
+	flowKeyUnirecDescription.hpp \
+	flowKeyUnirecDescription.cpp
 biflow_aggregator_LDADD=-lunirec -ltrap -lpugixml
 biflow_aggregator_CXXFLAGS=-std=gnu++17
 include ../aminclude.am
