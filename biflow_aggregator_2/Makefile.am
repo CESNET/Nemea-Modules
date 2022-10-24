@@ -11,7 +11,9 @@ biflow_aggregator_SOURCES=main.cpp \
 	libtrapAdapter.hpp \
 	libtrapAdapter.cpp \
 	unirecAdapter.hpp \
-	unirecAdapter.cpp
-biflow_aggregator_LDADD=-lunirec -ltrap
+	unirecAdapter.cpp \
+	xmlAggregatorConfigParser.hpp \
+	xmlAggregatorConfigParser.cpp
+biflow_aggregator_LDADD=-lunirec -ltrap -lpugixml
 biflow_aggregator_CXXFLAGS=-std=gnu++17
 include ../aminclude.am
