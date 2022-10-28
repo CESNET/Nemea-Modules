@@ -481,10 +481,10 @@ int flush_aggregation_counters()
             else
             {
                field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
-               ur_array_allocate(outputs[i]->tpl, outputs[i]->out_rec, field_id, min(unique_items_len, count) * 2);
-               for (int z = 0; z < min(unique_items_len, count); z++)
-               {
-                  ((uint64_t *)ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id))[2 * z] = (uint64_t) * ((uint16_t *)(unique_items[z].key));
+               if(ur_array_allocate(outputs[i]->tpl, outputs[i]->out_rec, field_id, min(unique_items_len, count) * 2) == UR_OK) {
+                  for (int z = 0; z < min(unique_items_len, count); z++)
+                  {
+                     ((uint64_t *)ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id))[2 * z] = (uint64_t) * ((uint16_t *)(unique_items[z].key));
                   ((uint64_t *)ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id))[2 * z + 1] = unique_items[z].count;
                }
 
@@ -495,17 +495,20 @@ int flush_aggregation_counters()
                   {
                      if (z != 0)
                         printf("|");
-                     printf("%" PRIu32 "-%" PRIu32, (uint32_t) * ((uint16_t *)(unique_items[z].key)), unique_items[z].count);
-                  }
+                        printf("%" PRIu32 "-%" PRIu32, (uint32_t) * ((uint16_t *)(unique_items[z].key)), unique_items[z].count);
+                     }
+                  } 
+               } else {
+                  fprintf(stderr, "Error: Output array allocation failed: %s.\n", outputs[i]->rules[j]->name);
                }
             }
             break;
          case AGG_HIST:
             field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
-            ur_array_allocate(outputs[i]->tpl, outputs[i]->out_rec, field_id, hist_len);
-            for (int z = 0; z < hist_len; z++) {
-               ((uint64_t *)ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id))[z] = (uint64_t)hist[z];
-            }
+            if(ur_array_allocate(outputs[i]->tpl, outputs[i]->out_rec, field_id, hist_len) == UR_OK) {
+               for (int z = 0; z < hist_len; z++) {
+                  ((uint64_t *)ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id))[z] = (uint64_t)hist[z];
+               }
 
             // Verbose
             if (trap_get_verbose_level() >= 0)
@@ -516,8 +519,11 @@ int flush_aggregation_counters()
                   if (z != 0)
                      printf("|");
                   printf("%" PRIu64, (uint64_t)hist[z]);
+                  }
+                  printf("\r\n");
                }
-               printf("\r\n");
+            } else {
+               fprintf(stderr, "Error: Output array allocation failed: %s.\n", outputs[i]->rules[j]->name);
             }
             break;
          default:
@@ -1075,6 +1081,8 @@ int main(int argc, char **argv)
    const void *data;
    uint16_t data_size;
    uint8_t timedb_initialized = 0;
+   long long unsigned int processed_records = 0;
+   long long unsigned int filtered_records = 0;
 
    // ***** TRAP initialization *****
    INIT_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
@@ -1212,6 +1220,7 @@ int main(int argc, char **argv)
          timedb_initialized = 1;
       }
 
+      bool processed = false;
       // process every output
       for (int o = 0; o < outputs_count; o++)
       {
@@ -1221,6 +1230,7 @@ int main(int argc, char **argv)
             // match UniRec filter
             if (!outputs[o]->rules[i]->filter || urfilter_match(outputs[o]->rules[i]->filter, tpl, data))
             {
+               processed = true;
                // save record data
                if (!rule_save_data(outputs[o]->rules[i], tpl, data))
                {
@@ -1230,11 +1240,32 @@ int main(int argc, char **argv)
             }
          }
       }
+
+      if(processed) {
+         processed_records++;
+      } else {
+         filtered_records++;
+      }
+   }
+
+   if (trap_get_verbose_level() >= 0)
+   {
+      printf("Main loop terminated ret: %d, stop: %d\n", (int)ret, (int)stop);
+      printf("Processed: %llu, Filtered: %llu\n", processed_records, filtered_records);
    }
 
    if (ret == TRAP_E_TERMINATED || ret == TRAP_E_OK)
    {
       ret_val = EXIT_SUCCESS;
+   }
+   
+   if (trap_get_verbose_level() >= 0)
+   {
+      printf("Main loop terminated ret: %d, stop: %d\n", (int)ret, (int)stop);
+   }
+
+   for(int i = 0; i < param_output_interval; i++) {
+      flush_aggregation_counters();
    }
 
 cleanup:
