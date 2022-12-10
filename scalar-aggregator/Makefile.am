@@ -7,3 +7,6 @@ pkgdocdir=${docdir}/scalar_agg
 pkgdoc_DATA=README.md
 EXTRA_DIST=README.md
 include ../aminclude.am
+
+EXTRA_DIST=scalar_agg_merger.py
+bin_SCRIPTS=scalar_agg_merger.py
