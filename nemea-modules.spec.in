@@ -151,7 +151,6 @@ ldconfig
 %files devel
 %{_includedir}/liburfilter.h
 %{_libdir}/liburfilter.a
-%{_libdir}/liburfilter.la
 %{_libdir}/liburfilter.so
 %{_libdir}/pkgconfig/liburfilter.pc
 
