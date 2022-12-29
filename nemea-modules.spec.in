@@ -2,6 +2,11 @@
 %global python3_pkgversion 3
 %endif
 
+# Hotfix to allow RPM build on fedora36+
+# There is a problem in configure autodetection when
+# LDFLAGS=-specs=/usr/lib/rpm/redhat/redhat-hardened-ld
+%undefine _auto_set_build_flags
+
 Summary: Package with basic NEMEA modules
 Name: nemea-modules
 Version: @PACKAGE_VERSION@
