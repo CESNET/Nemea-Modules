@@ -1,3 +1,8 @@
+2022-12-28 nemea-modules-2.22.0
+	* rpm: skip installation of .la files
+	* unirec2json: mappings feature
+	* json_dump: send JSON via TCP to server
+
 2022-10-03 nemea-modules-2.21.1
 	* prefix_tags: enable variable length fields
 	* device_classifier: remove python2

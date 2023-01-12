@@ -39,3 +39,9 @@ test_liburfilter_LDADD=-lcmocka -lurfilter
 TESTS=test_liburfilter
 endif
 
+install-exec-hook:
+	rm -f $(DESTDIR)$(libdir)/liburfilter.la
+
+uninstall-hook:
+	rm -f $(DESTDIR)$(libdir)/liburfilter.la $(DESTDIR)$(libdir)/liburfilter.a $(DESTDIR)$(libdir)/liburfilter.so.*
+

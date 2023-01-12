@@ -1,3 +1,10 @@
+2022-12-28 (Tomas Cejka): rpm: skip installation of .la files
+2022-10-13 (Tomas Cejka): Merge pull request #216 from CESNET/unirec2json-mappings
+2022-10-13 (Tomas Cejka): Merge pull request #215 from CESNET/jsondump-socket
+2022-10-09 (Tomas Cejka): unirec2json: add mappings feature to modify converted message
+2022-10-08 (Tomas Cejka): json_dump: support -s to stream JSON via TCP to server
+2022-10-03 (SiskaPavel): Merge pull request #214 from CESNET/release
+
 2022-10-03 (SiskaPavel): Merge pull request #212 from CESNET/release
 2022-10-03 (SiskaPavel): Merge pull request #210 from CESNET/rpm_remove_python2
 2022-10-03 (SiskaPavel): Merge pull request #213 from CESNET/prefix_tags_varlen_fields
