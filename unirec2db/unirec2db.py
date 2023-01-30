@@ -11,7 +11,7 @@ from enum import Enum
 import sqlalchemy as sa
 from sqlalchemy import create_engine
 from sqlalchemy.dialects import mysql
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 import sqlalchemy_utils as sau
 
 class InputType(Enum):
@@ -77,23 +77,14 @@ class BasicFlow(Base):
         self.bytes = trap_rec.BYTES
         self.aux_values = make_aux_values(trap_rec, reqBasicFlow_Template)
 
-
-class ScalarAggregationEntry(Base):
-    __tablename__ = 'scalar_agg'
-    id=sa.Column(sa.Integer, primary_key=True)
-    time = sa.Column(mysql.DATETIME(fsp=6), index=True)  
-    aux_values=sa.Column(sa.Text, nullable=True)
-
-    def __init__(self, trap_rec):
-        self.time = MakeDatetime(trap_rec.TIME)
-        self.aux_values = make_aux_values(trap_rec, reqScalarAgg_Template)
-
 from optparse import OptionParser
 parser = OptionParser(add_help_option=True)
 parser.add_option("-i", "--ifcspec", dest="ifcspec",
       help="See https://nemea.liberouter.org/trap-ifcspec/", metavar="IFCSPEC")
 parser.add_option("-d", dest="db",
     help="SQL Alchemy connection string")
+parser.add_option("-t", dest="table",
+    help="SQL Alchemy agg table name", default="scalar_agg")
 parser.add_option("-v", "--verbose", action="store_true",
     help="Set verbose mode - print messages.")
 parser.add_option("-g", dest="agg", action="store_true",
@@ -101,6 +92,17 @@ parser.add_option("-g", dest="agg", action="store_true",
 
 # Parse remaining command-line arguments
 (options, args) = parser.parse_args()
+sys.stderr.write(f"Using table: {options.table}")
+
+class ScalarAggregationEntry(Base):
+    __tablename__ = options.table
+    id=sa.Column(sa.Integer, primary_key=True)
+    time = sa.Column(mysql.DATETIME(fsp=6), index=True)  
+    aux_values=sa.Column(sa.Text, nullable=True)
+
+    def __init__(self, trap_rec):
+        self.time = MakeDatetime(trap_rec.TIME)
+        self.aux_values = make_aux_values(trap_rec, reqScalarAgg_Template)
 
 # Initialize database
 #'mysql+pymysql://test:test@10.10.10.2/test'
@@ -151,7 +153,7 @@ try:
             break
 	
         if options.verbose:
-            print(data)	
+            sys.stderr.write(data)	
 
         recTmpl.setData(data)
         
