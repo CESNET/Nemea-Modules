@@ -209,7 +209,10 @@ def convert_to_idea(rec, opts=None):
         bl_config = load_blacklists(opts.blacklist_config)
 
     # Fetch the corresponding blacklist
-    current_bl = [val for key, val in bl_config[bl_type].items() if key == rec["blacklist_id"]][0]
+    current_bl = bl_config[bl_type].get(rec["blacklist_id"])
+    if current_bl is None:
+        print("Reported blacklist '{}/{}' not found in configuration, skipping alert.".format(bl_type, rec["blacklist_id"]))
+        return None
 
     # Try to match category to class (e.g. Intrusion.Botnet -> IntrusionBotnet
     category_class = current_bl["category"].replace('.', '')
