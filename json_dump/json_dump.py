@@ -34,19 +34,24 @@ trap = pytrap.TrapCtx()
 trap.init(["-i", options.ifcspec])
 
 # Open output file
-if options.filename and options.filename_append:
-    sys.stderr.write("Error: -w and -a are mutually exclusive.")
+if (options.filename and options.filename_append or
+    options.filename and options.networktarget or
+    options.filename_append and options.networktarget):
+    sys.stderr.write("Error: -w, -a, -s are mutually exclusive.")
     sys.exit(1)
 if options.filename:
-    file = io.FileIO(options.filename, "w")
+    file = open(options.filename, "w", encoding="utf-8")
 elif options.filename_append:
-    file = io.FileIO(options.filename_append, "a")
+    file = open(options.filename_append, "a", encoding="utf-8")
 elif options.networktarget:
-    addr = options.networktarget.split(":")
-    if len(addr) != 2:
-        raise AttributeError("Malformed argument of -s host:port")
-    s = socket.create_connection((addr[0], int(addr[1])))
-    file = socket.SocketIO(s, "w")
+    try:
+        addr, port = options.networktarget.split(":")
+        port = int(port)
+    except (TypeError, ValueError):
+        sys.stderr.write("Error: malformed argument of -s host:port")
+        sys.exit(1)
+    s = socket.create_connection((addr, port))
+    file = s.makefile("w", encoding="utf-8")
 else:
     file = sys.stdout
 
@@ -82,8 +87,8 @@ while not stop:
         rec = json.loads(data.decode("utf-8"))
         if options.verbose:
             print("Message: {0}".format(rec))
-        # Print it to file or stdout
-        file.write(bytes(json.dumps(rec, indent=options.indent) + '\n', "utf-8"))
+        # Print it to file, stdout, or send to socket
+        file.write(json.dumps(rec, indent=options.indent) + '\n')
         if not options.noflush:
             file.flush()
     except ValueError as e:
