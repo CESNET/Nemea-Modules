@@ -495,6 +495,10 @@ int main(int argc, char **argv)
       printf("Verbosity level: %i\n", verbose);
    }
 
+   if (from == 1 && output_specifier_str != NULL) {
+      fprintf(stderr, "Warning: The -O parameter is ignored when output specification is read from a file.\n");
+   }
+
    // Count number of output interfaces
    n_outputs = strlen(ifc_spec.types) - 1;
    module_info->num_ifc_out = n_outputs;
