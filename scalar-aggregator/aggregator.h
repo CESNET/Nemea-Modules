@@ -57,7 +57,8 @@ typedef enum {
    AGG_COUNT,
    AGG_RATE,
    AGG_COUNT_UNIQ,
-   AGG_HIST
+   AGG_HIST,
+   AGG_SUM_ARRAY
 } agg_function;
 
 // aggregation rule structure

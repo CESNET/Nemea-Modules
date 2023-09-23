@@ -248,6 +248,9 @@ int output_initialize_template(output_t *object, int ifc)
       case AGG_RATE:
          tpl_string_len += strlen("double ");
          break;
+      case AGG_SUM_ARRAY:
+         tpl_string_len += strlen("uint64* ");
+         break;
       }
 
       tpl_string_len += strlen(object->rules[j]->name) + 1;
@@ -295,6 +298,10 @@ int output_initialize_template(output_t *object, int ifc)
       case AGG_RATE:
          strcpy(tpl_string + tpl_string_i, ",double ");
          tpl_string_i += strlen(",double ");
+         break;
+      case AGG_SUM_ARRAY:
+         strcpy(tpl_string + tpl_string_i, ",double* ");
+         tpl_string_i += strlen(",double* ");
          break;
       }
 
@@ -385,6 +392,7 @@ int flush_aggregation_counters()
       char buff[20];
       time_t time;
       double sum;
+      double *sum_arr;
       uint32_t count;
       int field_id;
       for (int j = 0; j < outputs[i]->rules_count; j++)
@@ -392,14 +400,16 @@ int flush_aggregation_counters()
          // get stats and roll old data
          time_series_bpt_item_t *unique_items = NULL;
          size_t unique_items_len = 0;
-         if (outputs[i]->rules[j]->agg == AGG_COUNT_UNIQ && outputs[i]->rules[j]->opt_arg > 0)
+         if ((outputs[i]->rules[j]->agg == AGG_COUNT_UNIQ || outputs[i]->rules[j]->agg == AGG_SUM_ARRAY) && outputs[i]->rules[j]->opt_arg > 0)
          {
             unique_items = malloc(outputs[i]->rules[j]->opt_arg * sizeof(time_series_bpt_item_t));
             unique_items_len = outputs[i]->rules[j]->opt_arg;
          }
+         double *sum_arr = NULL;
+         size_t sum_arr_len = 0;
          double *hist = NULL;
          size_t hist_len = 0;
-         timedb_roll_db(outputs[i]->rules[j]->timedb, &time, &sum, &count, unique_items, unique_items_len, &hist, &hist_len);
+         timedb_roll_db(outputs[i]->rules[j]->timedb, &time, &sum, &count, unique_items, unique_items_len, &hist, &hist_len, &sum_arr, &sum_arr_len);
 
          // time header
          if (j == 0)
@@ -432,6 +442,27 @@ int flush_aggregation_counters()
             {
                printf("%.2f", sum);
             }
+            break;
+         case AGG_SUM_ARRAY:
+               field_id = ur_get_id_by_name(outputs[i]->rules[j]->name);
+               if(ur_array_allocate(outputs[i]->tpl, outputs[i]->out_rec, field_id, sum_arr_len) == UR_OK) {
+                  for (int z = 0; z < sum_arr_len; z++) {
+                     ((double *)ur_get_ptr_by_id(outputs[i]->tpl, outputs[i]->out_rec, field_id))[z] = (double)sum_arr[z];
+                  }
+               }
+
+               // Verbose
+               if (trap_get_verbose_level() >= 0)
+               {
+                  printf("\r\nSum_arr len: %d - ", sum_arr_len);
+                  for (int z = 0; z < sum_arr_len; z++)
+                  {
+                     if (z != 0)
+                        printf("|");
+                     printf("%f", sum_arr[z]);
+                  }
+                  printf("\r\n");
+               }
             break;
          case AGG_COUNT:
             // UniRec
@@ -538,6 +569,10 @@ int flush_aggregation_counters()
          if(hist) 
          {
             free(hist);
+         }
+         if(sum_arr) 
+         {
+            free(sum_arr);
          }
       }
 
@@ -665,6 +700,20 @@ int rule_parse_agg_function(const char *specifier, agg_function *function, char 
    {
       *function = AGG_RATE;
    }
+   else if (!strcmp(function_str, "SUM_ARR"))
+   {
+      *function = AGG_SUM_ARRAY;
+      *opt_arg = -1;
+      sec_value_name[0] = '\0';
+      if(opt_agg_str_count >= 1) {
+         if(sscanf(opt_agg_str_arr[0], "%d", opt_arg) != 1) {
+            fprintf(stderr, "Error: Wrong of Arguments COUNT_UNIQUE.\n");
+            fprintf(stderr, " Function name: %s\n", function_str);
+            res = 0;
+            goto rule_parse_agg_clean_up;
+         }
+      }
+   }
    else if (!strcmp(function_str, "COUNT_UNIQ"))
    {
       *function = AGG_COUNT_UNIQ;
@@ -679,6 +728,13 @@ int rule_parse_agg_function(const char *specifier, agg_function *function, char 
             goto rule_parse_agg_clean_up;
          }
          strcpy(sec_value_name, opt_agg_str_arr[0]);
+      } else if(opt_agg_str_count >=1) {
+         if(sscanf(opt_agg_str_arr[0], "%d", opt_arg) != 1) {
+            fprintf(stderr, "Error: Wrong of Arguments COUNT_UNIQUE.\n");
+            fprintf(stderr, " Function name: %s\n", function_str);
+            res = 0;
+            goto rule_parse_agg_clean_up;
+         }
       }
    }
    else if(!strcmp(function_str, "HIST"))
@@ -897,6 +953,8 @@ rule_t *rule_create(const char *specifier, int step, int size, int inactive_time
       tdb_params.hist_power = hist_param->power;
       tdb_params.hist_type = hist_param->type;
       tdb_params.hist_max_bin_value = hist_param->max_value;
+   } else if(object->agg == AGG_SUM_ARRAY) {
+      tdb_params.sum_arr_len = object->opt_arg;
    }
 
    object->timedb = timedb_create(tdb_params);
@@ -991,6 +1049,22 @@ int rule_save_data(rule_t *rule, ur_template_t *tpl, const void *record)
          break;
       }
       break;
+   case UR_TYPE_A_INT8:
+   case UR_TYPE_A_INT16:
+   case UR_TYPE_A_INT32:
+   case UR_TYPE_A_INT64:
+   case UR_TYPE_A_UINT8:
+   case UR_TYPE_A_UINT16:
+   case UR_TYPE_A_UINT32:
+   case UR_TYPE_A_UINT64:
+   case UR_TYPE_A_FLOAT:
+   case UR_TYPE_A_DOUBLE:
+      if(rule->agg != AGG_SUM_ARRAY) {
+         fprintf(stderr, "Error: Only AGG_SUM_ARRAY make sense with ARRAY types.\n");
+         fprintf(stderr, " Aggregation rule name: %s\n", rule->name);
+         return 0;
+      }
+      break;
    default:
       fprintf(stderr, "Error: Unsupported type of aggregation argument.\n");
       fprintf(stderr, " Aggregation rule name: %s\n", rule->name);
@@ -1051,6 +1125,7 @@ int rule_save_data(rule_t *rule, ur_template_t *tpl, const void *record)
    case AGG_RATE:
    case AGG_HIST:
    case AGG_COUNT_UNIQ:
+   case AGG_SUM_ARRAY:
       while (timedb_save_data(rule->timedb, ur_get(tpl, record, F_TIME_FIRST), ur_get(tpl, record, F_TIME_LAST), field_type, value, var_value_size, sec_field_type, sec_value, sec_var_value_size) == TIMEDB_SAVE_NEED_ROLLOUT)
       {
          flush_aggregation_counters();

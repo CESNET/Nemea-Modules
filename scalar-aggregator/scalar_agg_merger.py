@@ -28,6 +28,7 @@ def gen_agg_func(oper, step = 1, start = 0):
 agg_func_map = {
     "AVG": lambda args : gen_agg_func(statistics.mean),
     "SUM": lambda args : gen_agg_func(sum),
+    "SUM_ARR": lambda args : gen_agg_func(sum),
     "RATE": lambda args : gen_agg_func(sum),
     "COUNT_UNIQ": lambda args : gen_agg_func(sum, 2, 1) if len(args) > 1 else gen_agg_func(sum),
     "COUNT": lambda args : gen_agg_func(sum),
@@ -37,6 +38,7 @@ agg_func_map = {
 tmpl_map = {
     "AVG": lambda args : "double",
     "SUM": lambda args : "double",
+    "SUM_ARR": lambda args : "double*",
     "RATE": lambda args : "double",
     "COUNT_UNIQ": lambda args : "uint64*" if len(args) > 1 else "uint64",
     "COUNT": lambda args : "uint64",

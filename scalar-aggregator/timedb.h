@@ -75,7 +75,8 @@ enum time_series_type_t {
     TIME_SERIES_SUM = 0,
     TIME_SERIES_COUNT,
     TIME_SERIES_COUNT_UNIQ,
-    TIME_SERIES_HIST
+    TIME_SERIES_HIST,
+    TIME_SERIES_SUM_ARRAY
 };
 
 enum time_series_histogramt_type_t {
@@ -91,6 +92,7 @@ typedef struct time_series_s {
     time_t begin;
     time_t end;
     double sum;
+    double *sum_arr;
     uint32_t count;
     double *hist;
     bpt_t *b_plus_tree;
@@ -122,7 +124,8 @@ typedef struct timedb_s {
 
    int count_uniq;
    bool count_uniq_item;
-
+   double *sum_arr;
+   size_t sum_arr_len;
    size_t hist_len;
    uint64_t hist_max_bin_value;
    uint8_t hist_power;
@@ -146,6 +149,7 @@ typedef struct timedb_params_s {
     bool histogram;
     enum time_series_histogramt_type_t hist_type;
     size_t hist_len;
+    size_t sum_arr_len;
     uint64_t hist_max_bin_value;
     uint8_t hist_power;
 } timedb_params_t;
@@ -201,7 +205,7 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
  * \param[out] unique items sorted by timedb preference
  * \param[out] number of items to retrieve
  */
-void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count, time_series_bpt_item_t* unique_items, size_t unique_items_len, double **hist, size_t *hist_len);
+void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count, time_series_bpt_item_t *unique_items, size_t unique_items_len, double **hist, size_t *hist_len, double **sum_arr, size_t *sum_arr_len);
 
 /*!
  * \brief Free TimeDB structure

@@ -189,7 +189,12 @@ timedb_t *timedb_create(timedb_params_t params)
 
          timedb->hist_len = hist_len;
       }
-      printf("Creating histogram with hist_len: %d, type: %d, power: %d, max_val: %d\r\n", timedb->hist_len, timedb->hist_type, timedb->hist_power, timedb->hist_max_bin_value);
+      fprintf(stderr, "Creating histogram with hist_len: %d, type: %d, power: %d, max_val: %d\r\n", timedb->hist_len, timedb->hist_type, timedb->hist_power, timedb->hist_max_bin_value);
+   } else if(params.sum_arr_len) {
+      timedb->series_type = TIME_SERIES_SUM_ARRAY;
+      timedb->sum_arr_len = params.sum_arr_len;
+      timedb->sum_arr = malloc(timedb->sum_arr_len * sizeof(double));
+      fprintf(stderr, "Creating sum_arr with len: %d\r\n", timedb->sum_arr_len);
    }
 
    timedb->data = (time_series_t **) calloc(timedb->size, sizeof(time_series_t *));
@@ -295,6 +300,13 @@ void timedb_init_tree(timedb_t *timedb, ur_field_type_t value_type)
                timedb->data[i]->hist[z] = 0.0;
             }
          }
+      } else if(timedb->series_type == TIME_SERIES_SUM_ARRAY) {
+         for(int i = 0; i < timedb->size; i++) {
+            timedb->data[i]->sum_arr = malloc(sizeof(double) * timedb->sum_arr_len);
+            for(int z = 0; z < timedb->sum_arr_len; z++) {
+               timedb->data[i]->sum_arr[z] = 0.0;
+            }
+         }
       }
       
       timedb->initialized = 1;
@@ -327,6 +339,7 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
 
    // get value and convert it into double
    double value;
+   double *value_array = timedb->sum_arr;
    switch (value_type) {
       case UR_TYPE_INT8:
          value = *((int8_t *) value_ptr);
@@ -359,7 +372,63 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
          value = *((double *) value_ptr);
          break;
       default:
-         if (timedb->series_type == TIME_SERIES_COUNT_UNIQ) {
+         if(timedb->series_type == TIME_SERIES_SUM_ARRAY) {
+            switch (value_type) {
+            case UR_TYPE_A_DOUBLE:
+               for(int i = 0; i < timedb->sum_arr_len; i++) {
+                  value_array[i] = ((double *)value_ptr)[i];
+               }
+               break;
+            case UR_TYPE_A_FLOAT:
+               for(int i = 0; i < timedb->sum_arr_len; i++) {
+                  value_array[i] = ((float *)value_ptr)[i];
+               }
+               break;
+            case UR_TYPE_A_INT8:
+               for(int i = 0; i < timedb->sum_arr_len; i++) {
+                  value_array[i] = ((int8_t *)value_ptr)[i];
+               }
+               break;
+            case UR_TYPE_A_INT16:
+               for(int i = 0; i < timedb->sum_arr_len; i++) {
+                  value_array[i] = ((int16_t *)value_ptr)[i];
+               }
+               break;
+            case UR_TYPE_A_INT32:
+               for(int i = 0; i < timedb->sum_arr_len; i++) {
+                  value_array[i] = ((int32_t *)value_ptr)[i];
+               }
+               break;
+            case UR_TYPE_A_INT64:
+               for(int i = 0; i < timedb->sum_arr_len; i++) {
+                  value_array[i] = ((int64_t *)value_ptr)[i];
+               }
+               break;
+            case UR_TYPE_A_UINT8:
+               for(int i = 0; i < timedb->sum_arr_len; i++) {
+                  value_array[i] = ((uint8_t *)value_ptr)[i];
+               }
+               break;
+            case UR_TYPE_A_UINT16:
+               for(int i = 0; i < timedb->sum_arr_len; i++) {
+                  value_array[i] = ((uint16_t *)value_ptr)[i];
+               }
+               break;
+            case UR_TYPE_A_UINT32:
+               for(int i = 0; i < timedb->sum_arr_len; i++) {
+                  value_array[i] = ((uint32_t *)value_ptr)[i];
+               }
+               break;
+            case UR_TYPE_A_UINT64:
+               for(int i = 0; i < timedb->sum_arr_len; i++) {
+                  value_array[i] = ((uint64_t *)value_ptr)[i];
+               }
+               break;
+            default:
+               fprintf(stderr, "Error: Trying to save unsupported value into TimeDB.\n");
+               return TIMEDB_SAVE_ERROR;
+            }
+         } else if (timedb->series_type == TIME_SERIES_COUNT_UNIQ) {
             value = 0;
             if (value_type == UR_TYPE_STRING || value_type == UR_TYPE_BYTES) {
                // @TODO Shall we allow saving zero length UR_STRING and UR_BYTES ??? Or it should be ignored as empty = nothing ?
@@ -445,7 +514,7 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
                return TIMEDB_SAVE_ERROR;
             }
             if(sec_value_ptr) {
-               item->count += sec_value;
+               item->count += (time/data_time_length) * sec_value;
             } else {
 	            item->count +=1;
             }
@@ -482,6 +551,17 @@ int timedb_save_data(timedb_t *timedb, ur_time_t urfirst, ur_time_t urlast, ur_f
                   rolling_data(timedb, i)->hist[binInd] += time/data_time_length;
                }
             }
+         } else if(timedb->series_type == TIME_SERIES_SUM_ARRAY && value_array) {
+            // fprintf(stderr, "Addin sum_arr: ");
+            for(int z = 0; z < timedb->sum_arr_len; z++) {
+               if (data_time_length == 0) { // watchout zero length interval
+                  rolling_data(timedb, i)->sum_arr[z] += value_array[z];
+               } else {
+                  rolling_data(timedb, i)->sum_arr[z] += value_array[z] * (time/data_time_length);
+               }
+               // fprintf(stderr, "%f|", rolling_data(timedb, i)->sum_arr[z]);
+            }
+            // fprintf(stderr, "\r\n");
          }
       }
    }
@@ -525,7 +605,7 @@ size_t timedb_get_sorted_items(bpt_t *b_plus_tree, time_series_bpt_item_t **item
 
 #include <signal.h>
 // get last value, roll database, fill variables *sum and *count
-void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count, time_series_bpt_item_t *unique_items, size_t unique_items_len, double **hist, size_t *hist_len)
+void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count, time_series_bpt_item_t *unique_items, size_t unique_items_len, double **hist, size_t *hist_len, double **sum_arr, size_t *sum_arr_len)
 {
    // get data
    *time = rolling_data(timedb, 0)->begin;
@@ -534,6 +614,13 @@ void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count
    if(!timedb->initialized) {
       *sum = 0;
       *count = 0;
+      *sum_arr = NULL;
+      *sum_arr = malloc(timedb->sum_arr_len*sizeof(double));
+      for(int z = 0; z < timedb->sum_arr_len; z++) {
+         (*sum_arr)[z] = 0.0;
+      }
+      *sum_arr_len = timedb->sum_arr_len;
+
       *hist = malloc(timedb->hist_len*sizeof(double));
       for(int z = 0; z < timedb->hist_len; z++) {
          (*hist)[z] = 0.0;
@@ -558,7 +645,12 @@ void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count
       *hist = malloc(sizeof(double)*timedb->hist_len);
       *hist_len = timedb->hist_len;
       memcpy(*hist, rolling_data(timedb, 0)->hist, sizeof(double)*timedb->hist_len);
+   } else if(timedb->series_type == TIME_SERIES_SUM_ARRAY) {
+      *sum_arr = malloc(sizeof(double)*timedb->sum_arr_len);
+      *sum_arr_len = timedb->sum_arr_len;
+      memcpy(*sum_arr, rolling_data(timedb, 0)->sum_arr, sizeof(double)*timedb->sum_arr_len);
    }
+
 
    // free time_serie before rolling
    rolling_data(timedb, 0)->begin = timedb->end;
@@ -571,6 +663,10 @@ void timedb_roll_db(timedb_t *timedb, time_t *time, double *sum, uint32_t *count
    } else if(timedb->series_type == TIME_SERIES_HIST) {
       for(int i = 0; i < timedb->hist_len; i++) {
          rolling_data(timedb, 0)->hist[i] = 0;
+      }
+   } else if(timedb->series_type == TIME_SERIES_SUM_ARRAY) {
+      for(int i = 0; i < timedb->sum_arr_len; i++) {
+         rolling_data(timedb, 0)->sum_arr[i] = 0;
       }
    }
 
@@ -591,10 +687,14 @@ void timedb_free(timedb_t *timedb)
             if(timedb->data[i]->hist) {
                free(timedb->data[i]->hist);
             }
+            if(timedb->data[i]->sum_arr) {
+               free(timedb->data[i]->sum_arr);
+            }
             free(timedb->data[i]);
          }
          free(timedb->data);
       }
+      free(timedb->sum_arr);
       free(timedb);
    }
 }
