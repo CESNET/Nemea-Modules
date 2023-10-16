@@ -45,6 +45,7 @@
 #define SAMPLER_H_
 
 #include <ctime>
+#include <cstdint>
 #include <iostream>
 
 /**
