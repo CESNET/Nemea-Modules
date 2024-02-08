@@ -1,3 +1,7 @@
+2024-02-08 nemea-modules-2.24.0
+	* unirecfilter: fix filter syntax error caused by empty filter
+	* sni_dataset_saver: fix missing include
+
 2023-04-29 nemea-modules-2.23.0
 	* unirecfilter: Warn user when parameters -O -F have no effect
 	* json_dump: Send messages using TCP and auto-reconnect
