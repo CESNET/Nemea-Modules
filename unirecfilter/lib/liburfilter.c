@@ -54,13 +54,19 @@
 #include "functions.h"
 #include "liburfilter.h"
 
+#include <string.h>
+
 urfilter_t *urfilter_create(const char *filter_str, const char *ifc_identifier)
 {
    // allocate filter structure
    urfilter_t *unirec_filter = (urfilter_t *) calloc(1, sizeof (urfilter_t));
 
    if (filter_str) {
-      unirec_filter->filter = strdup(filter_str);
+      if (strlen(filter_str) == 0) {
+         unirec_filter->filter = NULL;
+      } else {
+         unirec_filter->filter = strdup(filter_str);
+      }
       unirec_filter->ifc_identifier = ifc_identifier;
    }
 
@@ -87,6 +93,11 @@ int urfilter_compile(urfilter_t *unirec_filter)
 
 int urfilter_match(urfilter_t *unirec_filter, const ur_template_t *template, const void *record)
 {
+   // empty filter means always TRUE
+   if (!unirec_filter->filter) {
+      return URFILTER_TRUE;
+   }
+
    if (!unirec_filter->tree) {
       if (unirec_filter->filter) {
          if (urfilter_compile(unirec_filter) != URFILTER_TRUE) {
@@ -98,12 +109,7 @@ int urfilter_match(urfilter_t *unirec_filter, const ur_template_t *template, con
          return URFILTER_ERROR;
       }
    }
-   
-   // empty filter means always TRUE
-   if (!unirec_filter->filter) {
-      return URFILTER_TRUE;
-   }
-   
+
    if (unirec_filter->tree) {
       return evalAST((struct ast *) unirec_filter->tree, template, record);
    }
