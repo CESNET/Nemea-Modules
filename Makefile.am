@@ -8,6 +8,7 @@ biflow_aggregator \
 debug_sender \
 device_classifier \
 email_reporter \
+flow_age_stats \
 flowcounter \
 flow_meter \
 ipv6stats \
