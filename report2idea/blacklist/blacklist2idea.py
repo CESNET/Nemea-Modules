@@ -90,11 +90,11 @@ class IdeaTemplate(object):
         if self.rec["src_sent_flows"]:
             self.src_addr["OutFlowCount"] = self.rec["src_sent_flows"]
             self.src_addr["OutByteCount"] = self.rec["src_sent_bytes"]
-            self.src_addr["OutPacketsCount"] = self.rec["src_sent_packets"]
+            self.src_addr["OutPacketCount"] = self.rec["src_sent_packets"]
         if self.rec["tgt_sent_flows"]:
             self.src_addr["InFlowCount"] = self.rec["tgt_sent_flows"]
             self.src_addr["InByteCount"] = self.rec["tgt_sent_bytes"]
-            self.src_addr["InPacketsCount"] = self.rec["tgt_sent_packets"]
+            self.src_addr["InPacketCount"] = self.rec["tgt_sent_packets"]
             self.idea["Source"].append(self.tgt_addr)
         else:
             self.idea["Description"] = "Blacklisted IP tried to communicate with host (with no response)"
@@ -126,7 +126,7 @@ class IdeaTemplate(object):
         if self.rec["tgt_sent_flows"]:
             self.src_addr["InFlowCount"] = self.rec["tgt_sent_flows"]
             self.src_addr["InByteCount"] = self.rec["tgt_sent_bytes"]
-            self.src_addr["InPacketsCount"] = self.rec["tgt_sent_packets"]
+            self.src_addr["InPacketCount"] = self.rec["tgt_sent_packets"]
             self.idea["Source"].append(self.tgt_addr)
         else:
             self.idea["Description"] = "Blacklisted IP tried to communicate with host (with no response)"
