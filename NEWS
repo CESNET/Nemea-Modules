@@ -1,3 +1,6 @@
+2024-05-09 (Tomas Cejka): blacklist2idea: fixed test reference after In/OutPacketCount change
+2024-04-24 (Pavel Siska): blacklist - rename Idea fields InPacketsCount -> InPacketCount OutPacketsCount -> OutPacketCount
+
 2024-02-08 (Pavel Siska): unirecfilter - fix filter syntax error caused by empty filter
 2023-10-02 (Pavel Valach): sni_dataset_saver: add cstdint include in sampler.h
 
