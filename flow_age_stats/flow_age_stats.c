@@ -51,14 +51,34 @@
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 #include "fields.h"
+#include <time.h>
+
+/**
+ * Linked list structure for storing flows in a certain interval
+ */
+typedef struct bins_t {
+   uint64_t max_age; //maximal duration of the bin TO DO
+   size_t count_first;
+   size_t count_last;
+   struct bins_t *next;
+} bin;
+
+
+/**
+ * Structure for storing statistics about flow ages
+*/
+typedef struct stats_t {
+   uint64_t max;
+   uint64_t min;
+   uint64_t avg;
+} stat;
 
 /**
  * Definition of fields used in unirec templates (for both input and output interfaces)
  */
 UR_FIELDS (
-   uint32 BAR,
-   uint32 FOO,
-   uint32 BAZ
+   time TIME_FIRST,
+   time TIME_LAST,
 )
 
 trap_module_info_t *module_info = NULL;
@@ -68,9 +88,9 @@ trap_module_info_t *module_info = NULL;
  * Definition of basic module information - module name, module description, number of input and output interfaces
  */
 #define MODULE_BASIC_INFO(BASIC) \
-  BASIC("Example module", \
-        "This module serves as an example of module implementation in TRAP platform. It receives UniRec" \
-        "containing two numbers (FOO and BAR) and sends UniRec containing the same numbers and their sum (BAZ).", 1, 1)
+  BASIC("Flow Age Stats module", \
+        "This module makes a " \
+        "", 1, 1)
   //BASIC(char *, char *, int, int)
 
 
@@ -80,16 +100,24 @@ trap_module_info_t *module_info = NULL;
  * in case the parameter does not need argument.
  * Module parameter argument types: int8, int16, int32, int64, uint8, uint16, uint32, uint64, float, string
  */
-#define MODULE_PARAMS(PARAM) \
-  PARAM('m', "mult", "Multiplies the sum of received numbers with ARG of the parameter.", required_argument, "int32")
-//PARAM(char, char *, char *, no_argument  or  required_argument, char *)
-/**
- * To define positional parameter ("param" instead of "-m param" or "--mult param"), use the following definition:
- * PARAM('-', "", "Parameter description", required_argument, "string")
- * There can by any argument type mentioned few lines before.
- * This parameter will be listed in Additional parameters in module help output
- */
+#define MODULE_PARAMS(PARAM)
 
+
+
+/**
+ * Function for creating the bins
+*/
+bin* createNode(uint64_t max, size_t count){
+   bin* new_node = (bin*)malloc(sizeof(bin));
+    if (new_node == NULL) {
+        fprintf(stderr, "Error: Memory allocation failed\n");
+        return NULL;
+    }
+    new_node->max_age = max;
+    new_node->count = count;
+    new_node->next = NULL;
+    return new_node;
+}
 
 static int stop = 0;
 
@@ -141,30 +169,35 @@ int main(int argc, char **argv)
    }
 
    /* **** Create UniRec templates **** */
-   ur_template_t *in_tmplt = ur_create_input_template(0, "FOO,BAR", NULL);
+   ur_template_t *in_tmplt = ur_create_input_template(0, "TIME_FIRST,TIME_LAST", NULL);
    if (in_tmplt == NULL){
       fprintf(stderr, "Error: Input template could not be created.\n");
       return -1;
    }
-   ur_template_t *out_tmplt = ur_create_output_template(0, "FOO,BAR,BAZ", NULL);
-   if (out_tmplt == NULL){
-      ur_free_template(in_tmplt);
-      fprintf(stderr, "Error: Output template could not be created.\n");
-      return -1;
-   }
 
-   // Allocate memory for output record
-   void *out_rec = ur_create_record(out_tmplt, 0);
-   if (out_rec == NULL){
-      ur_free_template(in_tmplt);
-      ur_free_template(out_tmplt);
-      fprintf(stderr, "Error: Memory allocation problem (output record).\n");
-      return -1;
-   }
+   //initialization of the structs for statistics like min, max, avg
+   stat* first = {0, UINT64_MAX, 0};
 
+   stat* last = {0, UINT64_MAX, 0};
+
+   //initialization of age bins
+    uint64_t values[] = {1, 5, 10, 20, 30, 60, 300, 600, 0};
+
+    bin *head = create_node(values[0], 0);
+    bin *current = head;
+    for (size_t i = 1; i < 9; ++i) {
+        current->next = create_node(values[i], 0);
+        current = current->next;
+    }
+
+   //initialization of time
+   time_t rawTime;
+   struct tm *local;
+   
 
    /* **** Main processing loop **** */
-
+   size_t flow_count = 0;
+   
    // Read data from input, process them and write to output
    while (!stop) {
       const void *in_rec;
@@ -189,25 +222,99 @@ int main(int argc, char **argv)
       }
 
       // PROCESS THE DATA
+      time(&rawTime);
+      local = localtime(&rawTime);
+      char time_received[20];
+      strftime(time_received, 20, "%Y-%m-%dT%H:%M:%S", local);
 
-      // Read FOO and BAR from input record and compute their sum
-      uint32_t baz = ur_get(in_tmplt, in_rec, F_FOO) +
-                     ur_get(in_tmplt, in_rec, F_BAR);
+      ur_time_t received = ur_time_from_string(&received, time_received);
 
-      // Fill output record
-      ur_copy_fields(out_tmplt, out_rec, in_tmplt, in_rec);
-      ur_set(out_tmplt, out_rec, F_BAZ, mult * baz);
+      //time difference between time at which the flow was received vs the time in the record itself
+      uint64_t first_diff = ur_timediff(received, ur_get(in_tmplt, in_rec, F_TIME_FIRST));
+      uint64_t last_diff = ur_timediff(received, ur_get(in_tmplt, in_rec, F_TIME_LAST));
+      //time will be in milliseconds
 
-      // Send record to interface 0.
-      // Block if ifc is not ready (unless a timeout is set using trap_ifcctl)
-      ret = trap_send(0, out_rec, ur_rec_fixlen_size(out_tmplt));
+      flow_count++;
 
-      // Handle possible errors
-      TRAP_DEFAULT_SEND_ERROR_HANDLING(ret, continue, break);
+      //categorization into bins
+      bin* curr;
+      int first_inc = 0;// to make sure it only increments once
+      int last_inc = 0;
+      while (curr != NULL){
+         if (first_inc == 0){
+            if((curr->max_age * 1000) >= first_diff){
+               curr->count_first++;
+               first_inc++;
+            }
+         }
+         if (last_inc == 0){
+            if ((curr->max_age * 1000) >= last_diff){//both diffs are in milliseconds, so coversions is in place
+               curr->count_last++;
+               last_inc++;
+            }
+         }
+         if(last_inc == 1 && first_inc == 1){
+            break;
+         }
+         if(curr->next == NULL){
+            if (first_inc == 0){
+               curr->count_first++;
+            }
+            if(last_inc == 0){
+               curr->count_last++;
+            }
+            break;
+         }
+         curr = curr->next;
+      }
+      
+      first->avg += first_diff;
+      last->avg += last_diff;
+
+      //setting new max or min if needed for first
+      if(first->max < first_diff){
+         first->max = first_diff;
+      }
+      else if (first->min > first_diff){
+         first->min = first_diff;
+      }
+
+      //setting new max or min if needed for last
+      if(last->max < last_diff){
+         last->max = last_diff;
+      }
+      else if (last->min > last_diff){
+         last->min = last_diff;
+      }
    }
 
+   printf("Number of flows processed: %d\n \n", flow_count);
+   printf("Minimal value for time_first(ms): %d\n", first->min);
+   printf("Maximal value for time_first(ms): %d\n", first->max);
+   printf("Minimal value for time_last(ms): %d\n", last->min);
+   printf("Maximal value for time_last(ms): %d\n \n", last->max);
+
+   printf("Histogram for time_first:\n");
+   current = head;
+   while(current != NULL){
+      printf("%ds: %d/%", current->max_age, (current->count_first\flow_count));
+      current = current->next;
+   }
+
+   printf("\nHistogram for time_last:\n");
+   current = head;
+   while(current != NULL){
+      printf("%ds: %d/%", current->max_age, (current->count_last\flow_count));
+      current = current->next;
+   }
 
    /* **** Cleanup **** */
+   current = head;
+   while(current != NULL){
+      bin* next = current->next;
+      free(current);
+      current = next;
+   }
 
    // Do all necessary cleanup in libtrap before exiting
    TRAP_DEFAULT_FINALIZATION();
@@ -215,10 +322,8 @@ int main(int argc, char **argv)
    // Release allocated memory for module_info structure
    FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
 
-   // Free unirec templates and output record
-   ur_free_record(out_rec);
+   // Free unirec template
    ur_free_template(in_tmplt);
-   ur_free_template(out_tmplt);
    ur_finalize();
 
    return 0;

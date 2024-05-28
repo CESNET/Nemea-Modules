@@ -37,3 +37,5 @@ unirecfilter/lib/lex.yy.c
 unirecfilter/lib/liburfilter.pc
 unirecfilter/lib/parser.tab.c
 unirecfilter/lib/parser.tab.h
+.gitignore
+.vscode/
