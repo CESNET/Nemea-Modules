@@ -178,6 +178,7 @@ int main(int argc, char **argv)
 
    /* **** Main processing loop **** */
    size_t flow_count = 0;
+   clock_t start_time = clock();
    
    // Read data from input, process them and write to output
    while (!stop) {
@@ -229,7 +230,7 @@ int main(int argc, char **argv)
             }
          }
          if (last_inc == 0){
-            if ((curr->max_age * 1000) >= last_diff){//both diffs are in milliseconds, so coversions is in place
+            if ((curr->max_age * 1000) >= last_diff){
                curr->count_last++;
                last_inc++;
             }
@@ -269,6 +270,10 @@ int main(int argc, char **argv)
       }
    }
 
+   clock_t end_time = clock();
+   double runtime = (double)(end_time - start_time) / CLOCKS_PER_SEC;
+
+   printf("Runtime: %0.2lf\n", runtime);
    printf("Number of flows processed: %d\n \n", flow_count);
    printf("Minimal value for time_first(ms): %d\n", first->min);
    printf("Maximal value for time_first(ms): %d\n", first->max);
@@ -296,7 +301,7 @@ int main(int argc, char **argv)
       free(current);
       current = next;
    }
-
+   
    // Do all necessary cleanup in libtrap before exiting
    TRAP_DEFAULT_FINALIZATION();
 
