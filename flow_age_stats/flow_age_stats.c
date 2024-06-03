@@ -51,6 +51,7 @@
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
 #include <inttypes.h>
+#include <stdint.h>
 #include "fields.h"
 #include <time.h>
 
@@ -285,8 +286,8 @@ int main(int argc, char **argv)
    printf("Histogram for time_first:\n");
    current = head;
    printf("0-1s: %zu %% \n", (current->count_first/flow_count));
-   current = current->next;
    uint64_t tmp = current->max_age;
+   current = current->next;
    while(current->next != NULL){
       printf("%" PRIu64 "-%" PRIu64 "s: %zu %% \n", tmp, current->max_age, (current->count_first/flow_count));
       tmp = current->max_age;
@@ -298,8 +299,8 @@ int main(int argc, char **argv)
    printf("\nHistogram for time_last:\n");
    current = head;
    printf("0-1s: %zu %% \n", (current->count_last/flow_count));
-   current = current->next;
    tmp = current->max_age;
+   current = current->next;
    while(current->next != NULL){
       printf("%" PRIu64 "-%" PRIu64 "s: %zu %% \n", tmp, current->max_age, (current->count_last/flow_count));
       tmp = current->max_age;
