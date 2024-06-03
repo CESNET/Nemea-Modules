@@ -299,7 +299,7 @@ int main(int argc, char **argv)
    current = head;
    printf("0-1s: %zu %% \n", (current->count_last/flow_count));
    current = current->next;
-   tmp = current->max_age
+   tmp = current->max_age;
    while(current->next != NULL){
       printf("%" PRIu64 "-%" PRIu64 "s: %zu %% \n", tmp, current->max_age, (current->count_last/flow_count));
       tmp = current->max_age;
