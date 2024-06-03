@@ -284,6 +284,8 @@ int main(int argc, char **argv)
 
    printf("Histogram for time_first:\n");
    current = head;
+   printf("0-1s: %zu %% \n", (current->count_first/flow_count));
+   current = current->next;
    while(current->next != NULL){
       printf("%" PRIu64 "s: %zu %% \n", current->max_age, (current->count_first/flow_count));
       current = current->next;
@@ -293,6 +295,8 @@ int main(int argc, char **argv)
 
    printf("\nHistogram for time_last:\n");
    current = head;
+   printf("0-1s: %zu %% \n", (current->count_last/flow_count));
+   current = current->next;
    while(current->next != NULL){
       printf("%" PRIu64 "s: %zu %% \n", current->max_age, (current->count_last/flow_count));
       current = current->next;
