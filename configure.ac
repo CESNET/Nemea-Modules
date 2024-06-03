@@ -227,6 +227,7 @@ AC_CONFIG_FILES([Makefile
                  aggregator/Makefile
                  anonymizer/Makefile
                  backscatter/Makefile
+                 flow_age_stats/Makefile
                  biflow_aggregator/Makefile
                  bloom_history/Makefile
                  debug_sender/Makefile
