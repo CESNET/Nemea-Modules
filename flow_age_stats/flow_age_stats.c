@@ -114,7 +114,8 @@ bin* createNode(uint64_t max, size_t count){
         return NULL;
     }
     new_node->max_age = max;
-    new_node->count = count;
+    new_node->count_first = count;
+    new_node->count_last = count;
     new_node->next = NULL;
     return new_node;
 }
@@ -157,9 +158,9 @@ int main(int argc, char **argv)
    }
 
    //initialization of the structs for statistics like min, max, avg
-   stat* first = {0, UINT64_MAX, 0};
+   stat first = {0, UINT64_MAX, 0};
 
-   stat* last = {0, UINT64_MAX, 0};
+   stat last = {0, UINT64_MAX, 0};
 
    //initialization of age bins
     uint64_t values[] = {1, 5, 10, 20, 30, 60, 300, 600, 0};
@@ -219,7 +220,7 @@ int main(int argc, char **argv)
       flow_count++;
 
       //categorization into bins
-      bin* curr;
+      bin* curr = head;
       int first_inc = 0;// to make sure it only increments once
       int last_inc = 0;
       while (curr != NULL){
@@ -250,23 +251,23 @@ int main(int argc, char **argv)
          curr = curr->next;
       }
       
-      first->avg += first_diff;
-      last->avg += last_diff;
+      first.avg += first_diff;
+      last.avg += last_diff;
 
       //setting new max or min if needed for first
-      if(first->max < first_diff){
-         first->max = first_diff;
+      if(first.max < first_diff){
+         first.max = first_diff;
       }
-      else if (first->min > first_diff){
-         first->min = first_diff;
+      else if (first.min > first_diff){
+         first.min = first_diff;
       }
 
       //setting new max or min if needed for last
-      if(last->max < last_diff){
-         last->max = last_diff;
+      if(last.max < last_diff){
+         last.max = last_diff;
       }
-      else if (last->min > last_diff){
-         last->min = last_diff;
+      else if (last.min > last_diff){
+         last.min = last_diff;
       }
    }
 
