@@ -102,7 +102,7 @@ trap_module_info_t *module_info = NULL;
  * Module parameter argument types: int8, int16, int32, int64, uint8, uint16, uint32, uint64, float, string
  */
 #define MODULE_PARAMS(PARAM)\
-   PARAM('i', "long_opt", 1, "argument_type")
+   PARAM('i', "long_opt", "description," 1, "argument_type")
 
 
 
