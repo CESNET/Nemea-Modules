@@ -286,8 +286,10 @@ int main(int argc, char **argv)
    current = head;
    printf("0-1s: %zu %% \n", (current->count_first/flow_count));
    current = current->next;
+   uint64_t tmp = current->max_age;
    while(current->next != NULL){
-      printf("%" PRIu64 "s: %zu %% \n", current->max_age, (current->count_first/flow_count));
+      printf("%" PRIu64 "-%" PRIu64 "s: %zu %% \n", tmp, current->max_age, (current->count_first/flow_count));
+      tmp = current->max_age;
       current = current->next;
    }
    printf("600+s: %zu %% \n", (current->count_first/flow_count));
@@ -297,8 +299,10 @@ int main(int argc, char **argv)
    current = head;
    printf("0-1s: %zu %% \n", (current->count_last/flow_count));
    current = current->next;
+   tmp = current->max_age
    while(current->next != NULL){
-      printf("%" PRIu64 "s: %zu %% \n", current->max_age, (current->count_last/flow_count));
+      printf("%" PRIu64 "-%" PRIu64 "s: %zu %% \n", tmp, current->max_age, (current->count_last/flow_count));
+      tmp = current->max_age;
       current = current->next;
    }
    printf("600+s: %zu %% \n", (current->count_last/flow_count));
