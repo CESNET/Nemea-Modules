@@ -50,6 +50,7 @@
 #include <getopt.h>
 #include <libtrap/trap.h>
 #include <unirec/unirec.h>
+#include <inttypes.h>
 #include "fields.h"
 #include <time.h>
 
@@ -107,7 +108,7 @@ trap_module_info_t *module_info = NULL;
 /**
  * Function for creating the bins
 */
-bin* createNode(uint64_t max, size_t count){
+bin* createNode(uint64_t max, uint64_t count){
    bin* new_node = (bin*)malloc(sizeof(bin));
     if (new_node == NULL) {
         fprintf(stderr, "Error: Memory allocation failed\n");
@@ -165,10 +166,10 @@ int main(int argc, char **argv)
    //initialization of age bins
     uint64_t values[] = {1, 5, 10, 20, 30, 60, 300, 600, 0};
 
-    bin *head = create_node(values[0], 0);
+    bin *head = createNode(values[0], 0);
     bin *current = head;
     for (size_t i = 1; i < 9; ++i) {
-        current->next = create_node(values[i], 0);
+        current->next = createNode(values[i], 0);
         current = current->next;
     }
 
@@ -221,8 +222,8 @@ int main(int argc, char **argv)
 
       //categorization into bins
       bin* curr = head;
-      int first_inc = 0;// to make sure it only increments once
-      int last_inc = 0;
+      uint64_t first_inc = 0;// to make sure it only increments once
+      uint64_t last_inc = 0;
       while (curr != NULL){
          if (first_inc == 0){
             if((curr->max_age * 1000) >= first_diff){
@@ -275,23 +276,23 @@ int main(int argc, char **argv)
    double runtime = (double)(end_time - start_time) / CLOCKS_PER_SEC;
 
    printf("Runtime: %0.2lf\n", runtime);
-   printf("Number of flows processed: %d\n \n", flow_count);
-   printf("Minimal value for time_first(ms): %d\n", first->min);
-   printf("Maximal value for time_first(ms): %d\n", first->max);
-   printf("Minimal value for time_last(ms): %d\n", last->min);
-   printf("Maximal value for time_last(ms): %d\n \n", last->max);
+   printf("Number of flows processed: %zu\n \n", flow_count);
+   printf("Minimal value for time_first(ms): %" PRIu64 "\n", first.min);
+   printf("Maximal value for time_first(ms): %" PRIu64 "\n", first.max);
+   printf("Minimal value for time_last(ms): %" PRIu64 "\n", last.min);
+   printf("Maximal value for time_last(ms): %" PRIu64 "\n \n", last.max);
 
    printf("Histogram for time_first:\n");
    current = head;
    while(current != NULL){
-      printf("%ds: %d/%", current->max_age, (current->count_first\flow_count));
+      printf("%" PRIu64 "s: %zu %%", current->max_age, (current->count_first/flow_count));
       current = current->next;
    }
 
    printf("\nHistogram for time_last:\n");
    current = head;
    while(current != NULL){
-      printf("%ds: %d/%", current->max_age, (current->count_last\flow_count));
+      printf("%" PRIu64 "s: %zu %%", current->max_age, (current->count_last/flow_count));
       current = current->next;
    }
 
