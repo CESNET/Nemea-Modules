@@ -223,17 +223,17 @@ int main(int argc, char **argv)
 
       //categorization into bins
       bin* curr = head;
-      uint64_t first_inc = 0;// to make sure it only increments once
-      uint64_t last_inc = 0;
+      int first_inc = 0;// to make sure it only increments once
+      int last_inc = 0;
       while (curr != NULL){
          if (first_inc == 0){
-            if((curr->max_age * 1000) >= first_diff){
+            if(curr->max_age >= (first_diff/1000)){
                curr->count_first++;
                first_inc++;
             }
          }
          if (last_inc == 0){
-            if ((curr->max_age * 1000) >= last_diff){
+            if (curr->max_age >= last_diff/1000){
                curr->count_last++;
                last_inc++;
             }
@@ -276,12 +276,15 @@ int main(int argc, char **argv)
    clock_t end_time = clock();
    double runtime = (double)(end_time - start_time) / CLOCKS_PER_SEC;
 
-   printf("Runtime: %0.2lf\n", runtime);
+   printf("\nRuntime: %0.2lf\n", runtime);
    printf("Number of flows processed: %zu\n \n", flow_count);
    printf("Minimal value for time_first(ms): %" PRIu64 "\n", first.min);
    printf("Maximal value for time_first(ms): %" PRIu64 "\n", first.max);
+   printf("Average value for time_first(ms): %" PRIu64 "\n", (first.avg/flow_count));
    printf("Minimal value for time_last(ms): %" PRIu64 "\n", last.min);
    printf("Maximal value for time_last(ms): %" PRIu64 "\n \n", last.max);
+   printf("Average value for time_first(ms): %" PRIu64 "\n", (last.avg/flow_count));
+
 
    printf("Histogram for time_first:\n");
    current = head;
