@@ -102,7 +102,8 @@ trap_module_info_t *module_info = NULL;
  * in case the parameter does not need argument.
  * Module parameter argument types: int8, int16, int32, int64, uint8, uint16, uint32, uint64, float, string
  */
-#define MODULE_PARAMS(PARAM)
+#define MODULE_PARAMS(PARAM)\
+   PARAM('s', "file", "file for storing histograms", 0, "string")
 //TODO: Parameter for specifiyng a file, where to store the histograms
 
 
@@ -132,6 +133,7 @@ TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 int main(int argc, char **argv)
 {
    int ret;
+   signed char opt;
 
    /* **** TRAP initialization **** */
 
@@ -151,6 +153,19 @@ int main(int argc, char **argv)
     * Register signal handler.
     */
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
+   FILE* out = NULL;
+   while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
+      switch (opt) {
+      case 's':
+         out = fopen(optarg, "w");
+         break;
+      default:
+         fprintf(stderr, "Invalid arguments.\n");
+         FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS);
+         TRAP_DEFAULT_FINALIZATION();
+         return -1;
+      }
+   }
 
    /* **** Create UniRec templates **** */
    ur_template_t *in_tmplt = ur_create_input_template(0, "TIME_FIRST,TIME_LAST", NULL);
@@ -300,31 +315,32 @@ int main(int argc, char **argv)
    printf("Average value for time_last: %" PRIu64 "s\n \n", (last.avg/flow_count)/1000);
 
    //should be outputed to file if specified
-   printf("Histogram for time_first:\n");
-   current = head;
-   printf("0-1s: %0.2lf %% \n", ((double)(current->count_first * 100)/flow_count));
-   uint64_t tmp = current->max_age;
-   current = current->next;
-   while(current->next != NULL){
-      printf("%" PRIu64 "-%" PRIu64 "s: %0.2lf %% \n", tmp, current->max_age, ((double)(current->count_first * 100)/flow_count));
+   if(out != NULL){
+      fprintf(out, "Histogram for time_first:\n");
+      current = head;
+      fprintf(out, "0-1s: %0.2lf %% \n", ((double)(current->count_first * 100)/flow_count));
+      uint64_t tmp = current->max_age;
+      current = current->next;
+      while(current->next != NULL){
+         fprintf(out, "%" PRIu64 "-%" PRIu64 "s: %0.2lf %% \n", tmp, current->max_age, ((double)(current->count_first * 100)/flow_count));
+         tmp = current->max_age;
+         current = current->next;
+      }
+      fprintf(out, "600+s: %0.2lf %% \n", ((double)(current->count_first * 100)/flow_count));
+
+
+      fprintf(out, "\nHistogram for time_last:\n");
+      current = head;
+      fprintf(out, "0-1s: %0.2lf %% \n", ((double)(current->count_last * 100)/flow_count));
       tmp = current->max_age;
       current = current->next;
+      while(current->next != NULL){
+         fprintf(out, "%" PRIu64 "-%" PRIu64 "s: %0.2lf %% \n", tmp, current->max_age, ((double)(current->count_last * 100)/flow_count));
+         tmp = current->max_age;
+         current = current->next;
+      }
+      fprintf(out, "600+s: %0.2lf %% \n", ((double)(current->count_last * 100)/flow_count));
    }
-   printf("600+s: %0.2lf %% \n", ((double)(current->count_first * 100)/flow_count));
-
-
-   printf("\nHistogram for time_last:\n");
-   current = head;
-   printf("0-1s: %0.2lf %% \n", ((double)(current->count_last * 100)/flow_count));
-   tmp = current->max_age;
-   current = current->next;
-   while(current->next != NULL){
-      printf("%" PRIu64 "-%" PRIu64 "s: %0.2lf %% \n", tmp, current->max_age, ((double)(current->count_last * 100)/flow_count));
-      tmp = current->max_age;
-      current = current->next;
-   }
-   printf("600+s: %0.2lf %% \n", ((double)(current->count_last * 100)/flow_count));
-
 
    /* **** Cleanup **** */
    current = head;
