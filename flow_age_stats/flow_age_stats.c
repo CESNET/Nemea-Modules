@@ -154,11 +154,11 @@ int main(int argc, char **argv)
     */
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
    FILE* out = NULL;
+   char *file = NULL;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
       case 'f':
-         out = fopen(optarg, "w");
-         printf("%s\n", optarg);
+         file = optarg;
          break;
       default:
          fprintf(stderr, "Invalid arguments.\n");
@@ -167,7 +167,8 @@ int main(int argc, char **argv)
          return -1;
       }
    }
-
+   out = fopen(file, "w");
+   
    /* **** Create UniRec templates **** */
    ur_template_t *in_tmplt = ur_create_input_template(0, "TIME_FIRST,TIME_LAST", NULL);
    if (in_tmplt == NULL){
