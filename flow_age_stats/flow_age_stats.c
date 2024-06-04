@@ -92,7 +92,7 @@ trap_module_info_t *module_info = NULL;
 #define MODULE_BASIC_INFO(BASIC) \
   BASIC("Flow Age Stats module", \
         "This module finds min, max and avg of ages of flow data from input.\n" \
-        "The second function is making percentual histograms of flow ages.\n", 1, 0)
+        "The second function is making percentual histograms of flow ages and outputs them into a file when -f FILE is specified.\n", 1, 0)
   //BASIC(char *, char *, int, int)
 
 
@@ -103,7 +103,7 @@ trap_module_info_t *module_info = NULL;
  * Module parameter argument types: int8, int16, int32, int64, uint8, uint16, uint32, uint64, float, string
  */
 #define MODULE_PARAMS(PARAM)\
-   PARAM('f', "file", "file for storing histograms", required_argument, "string")
+   PARAM('f', "file", "output file for storing histograms", required_argument, "string")
 //TODO: Parameter for specifiyng a file, where to store the histograms
 
 
@@ -153,8 +153,12 @@ int main(int argc, char **argv)
     * Register signal handler.
     */
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
+
    FILE* out = NULL;
    char *file = NULL;
+   /**
+    * Handling of arguments
+   */
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
       case 'f':
@@ -182,7 +186,6 @@ int main(int argc, char **argv)
    stat last = {0, UINT64_MAX, 0};
 
    //initialization of age bins
-
     bin *head = createNode(1, 0);
     bin *current = head;
     for (uint64_t i = 10; i <= 600; i+=10) {
@@ -190,6 +193,7 @@ int main(int argc, char **argv)
         current = current->next;
     }
    current->next = createNode(0, 0);
+
    //initialization of time
    time_t rawTime;
    
@@ -198,7 +202,7 @@ int main(int argc, char **argv)
    size_t flow_count = 0;
    clock_t start_time = clock();
    
-   // Read data from input, process them and write to output
+   // Read data from input, process them and output them into file if specified
    while (!stop) {
       const void *in_rec;
       uint16_t in_rec_size;
@@ -256,6 +260,7 @@ int main(int argc, char **argv)
       bin* curr = head;
       int first_inc = 0;// to make sure it only increments once
       int last_inc = 0;
+      //loop for putting the flows into correct bins
       while (curr != NULL){
          if (first_inc == 0){
             if(curr->max_age >= (first_diff/1000)){
@@ -306,7 +311,7 @@ int main(int argc, char **argv)
    }
 
    clock_t end_time = clock();
-   double runtime = (double)(end_time - start_time) / CLOCKS_PER_SEC;
+   double runtime = (double)(end_time - start_time) / CLOCKS_PER_SEC;//calculating runtimes
 
    printf("\nRuntime: %0.2lfs\n", runtime);
    printf("Number of flows processed: %zu\n \n", flow_count);
@@ -346,6 +351,8 @@ int main(int argc, char **argv)
    }
 
    /* **** Cleanup **** */
+
+   //cleanup of bins
    current = head;
    while(current != NULL){
       bin* next = current->next;
