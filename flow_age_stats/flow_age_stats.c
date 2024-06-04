@@ -217,8 +217,8 @@ int main(int argc, char **argv)
          fprintf(stderr, "Error: Malloc for ur_time_t failed.\n");
          break;
       }
-      uint8_t wow = ur_time_from_string(received, time_received);
-      if(wow == 1){
+      uint8_t check = ur_time_from_string(received, time_received);
+      if(check == 1){
          fprintf(stderr, "Error: could not convert string to ur_time_t\n");
          break;
       }
@@ -287,14 +287,14 @@ int main(int argc, char **argv)
    clock_t end_time = clock();
    double runtime = (double)(end_time - start_time) / CLOCKS_PER_SEC;
 
-   printf("\nRuntime: %0.2lf\n", runtime);
+   printf("\nRuntime: %0.2lfs\n", runtime);
    printf("Number of flows processed: %zu\n \n", flow_count);
-   printf("Minimal value for time_first: %" PRIu64 "\n", first.min/1000);//from milliseconds to seconds
-   printf("Maximal value for time_first: %" PRIu64 "\n", first.max/1000);
-   printf("Average value for time_first: %" PRIu64 "\n", (first.avg/flow_count)/1000);
-   printf("Minimal value for time_last: %" PRIu64 "\n", last.min/1000);
-   printf("Maximal value for time_last: %" PRIu64 "\n", last.max/1000);
-   printf("Average value for time_last: %" PRIu64 "\n \n", (last.avg/flow_count)/1000);
+   printf("Minimal value for time_first: %" PRIu64 "s\n", first.min/1000);//from milliseconds to seconds
+   printf("Maximal value for time_first: %" PRIu64 "s\n", first.max/1000);
+   printf("Average value for time_first: %" PRIu64 "s\n", (first.avg/flow_count)/1000);
+   printf("Minimal value for time_last: %" PRIu64 "s\n", last.min/1000);
+   printf("Maximal value for time_last: %" PRIu64 "s\n", last.max/1000);
+   printf("Average value for time_last: %" PRIu64 "s\n \n", (last.avg/flow_count)/1000);
 
 
    printf("Histogram for time_first:\n");
