@@ -218,6 +218,7 @@ int main(int argc, char **argv)
       ur_time_t time_last = ur_get(in_tmplt, in_rec, F_TIME_LAST);
       //time difference between time at which the flow was received vs the time in the record itself
       uint64_t first_diff = ur_timediff(received, time_first);
+      printf("%" PRIu64 "\n", first_diff);
       uint64_t last_diff = ur_timediff(received, time_last);
       //time will be in milliseconds
 
@@ -298,7 +299,6 @@ int main(int argc, char **argv)
       tmp = current->max_age;
       current = current->next;
    }
-   printf("%zu\n", current->count_first);
    printf("600+s: %zu %% \n", ((current->count_first * 100)/flow_count));
 
 
@@ -312,7 +312,6 @@ int main(int argc, char **argv)
       tmp = current->max_age;
       current = current->next;
    }
-   printf("%zu\n", current->count_last);
    printf("600+s: %zu %% \n", ((current->count_last * 100)/flow_count));
 
 
