@@ -302,6 +302,7 @@ int main(int argc, char **argv)
       else if (last.min > last_diff){
          last.min = last_diff;
       }
+      free(received);
    }
 
    clock_t end_time = clock();
