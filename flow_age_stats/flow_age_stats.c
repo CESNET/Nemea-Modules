@@ -291,10 +291,10 @@ int main(int argc, char **argv)
    printf("Number of flows processed: %zu\n \n", flow_count);
    printf("Minimal value for time_first: %" PRIu64 "\n", first.min/1000);//from milliseconds to seconds
    printf("Maximal value for time_first: %" PRIu64 "\n", first.max/1000);
-   printf("Average value for time_first: %" PRIu64 "\n", (first.avg/flow_count * 1000));
+   printf("Average value for time_first: %" PRIu64 "\n", (first.avg/flow_count)/1000);
    printf("Minimal value for time_last: %" PRIu64 "\n", last.min/1000);
    printf("Maximal value for time_last: %" PRIu64 "\n", last.max/1000);
-   printf("Average value for time_last: %" PRIu64 "\n \n", (last.avg/flow_count * 1000));
+   printf("Average value for time_last: %" PRIu64 "\n \n", (last.avg/flow_count)/1000);
 
 
    printf("Histogram for time_first:\n");
