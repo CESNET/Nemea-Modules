@@ -156,7 +156,7 @@ int main(int argc, char **argv)
    FILE* out = NULL;
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
-      case 's':
+      case 'f':
          out = fopen(optarg, "w");
          printf("%s\n", optarg);
          break;
