@@ -227,6 +227,7 @@ int main(int argc, char **argv)
       ur_time_t time_last = ur_get(in_tmplt, in_rec, F_TIME_LAST);
       //time difference between time at which the flow was received vs the time in the record itself
       uint64_t first_diff = ur_timediff(*received, time_first);
+      printf("%" PRIu64 "\n", first_diff);
       uint64_t last_diff = ur_timediff(*received, time_last);
       //time will be in milliseconds
 
