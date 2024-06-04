@@ -103,7 +103,7 @@ trap_module_info_t *module_info = NULL;
  * Module parameter argument types: int8, int16, int32, int64, uint8, uint16, uint32, uint64, float, string
  */
 #define MODULE_PARAMS(PARAM)\
-   PARAM('f', "file", "file for storing histograms", 0, "string")
+   PARAM('f', "file", "file for storing histograms", required_argument, "string")
 //TODO: Parameter for specifiyng a file, where to store the histograms
 
 
@@ -168,7 +168,7 @@ int main(int argc, char **argv)
       }
    }
    out = fopen(file, "w");
-   
+
    /* **** Create UniRec templates **** */
    ur_template_t *in_tmplt = ur_create_input_template(0, "TIME_FIRST,TIME_LAST", NULL);
    if (in_tmplt == NULL){
