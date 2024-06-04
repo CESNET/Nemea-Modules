@@ -210,10 +210,10 @@ int main(int argc, char **argv)
       time(&rawTime);
       local = localtime(&rawTime);
       char time_received[20];
-      strftime(time_received, 20, "%Y-%m-%dT%H:%M:%S", local);
-      printf("%s", time_received);
+      strftime(time_received, 20, "%Y-%m-%dT%H:%M:%SZ", local);
 
-      ur_time_t received = ur_time_from_string(&received, time_received);
+      ur_time_t received;
+      ur_time_from_string(&received, time_received);
 
       ur_time_t time_first = ur_get(in_tmplt, in_rec, F_TIME_FIRST);
       ur_time_t time_last = ur_get(in_tmplt, in_rec, F_TIME_LAST);
@@ -236,7 +236,7 @@ int main(int argc, char **argv)
             }
          }
          if (last_inc == 0){
-            if (curr->max_age >= last_diff/1000){
+            if (curr->max_age >= (last_diff/1000)){
                curr->count_last++;
                last_inc++;
             }
@@ -281,12 +281,12 @@ int main(int argc, char **argv)
 
    printf("\nRuntime: %0.2lf\n", runtime);
    printf("Number of flows processed: %zu\n \n", flow_count);
-   printf("Minimal value for time_first(ms): %" PRIu64 "\n", first.min);
-   printf("Maximal value for time_first(ms): %" PRIu64 "\n", first.max);
-   printf("Average value for time_first(ms): %" PRIu64 "\n", (first.avg/flow_count));
-   printf("Minimal value for time_last(ms): %" PRIu64 "\n", last.min);
-   printf("Maximal value for time_last(ms): %" PRIu64 "\n", last.max);
-   printf("Average value for time_first(ms): %" PRIu64 "\n \n", (last.avg/flow_count));
+   printf("Minimal value for time_first: %" PRIu64 "\n", first.min/1000);//from milliseconds to seconds
+   printf("Maximal value for time_first: %" PRIu64 "\n", first.max/1000);
+   printf("Average value for time_first: %" PRIu64 "\n", (first.avg/flow_count * 1000));
+   printf("Minimal value for time_last: %" PRIu64 "\n", last.min/1000);
+   printf("Maximal value for time_last: %" PRIu64 "\n", last.max/1000);
+   printf("Average value for time_last: %" PRIu64 "\n \n", (last.avg/flow_count * 1000));
 
 
    printf("Histogram for time_first:\n");
