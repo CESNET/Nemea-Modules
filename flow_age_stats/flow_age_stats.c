@@ -159,7 +159,7 @@ int main(int argc, char **argv)
       return -1;
    }
 
-   //initialization of the structs for statistics like min, max, avg
+   //initialization of the structs for statistics like max, min, avg
    stat first = {0, UINT64_MAX, 0};
 
    stat last = {0, UINT64_MAX, 0};
@@ -226,8 +226,8 @@ int main(int argc, char **argv)
       ur_time_t time_first = ur_get(in_tmplt, in_rec, F_TIME_FIRST);
       ur_time_t time_last = ur_get(in_tmplt, in_rec, F_TIME_LAST);
       //time difference between time at which the flow was received vs the time in the record itself
-      uint64_t first_diff = ur_timediff(*received, time_first) - 7230000;
-      uint64_t last_diff = ur_timediff(*received, time_last) - 7230000;
+      uint64_t first_diff = ur_timediff(*received, time_first) - 7200000;
+      uint64_t last_diff = ur_timediff(*received, time_last) - 7200000;
       //time will be in milliseconds
 
       flow_count++;
