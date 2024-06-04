@@ -213,7 +213,11 @@ int main(int argc, char **argv)
       strftime(time_received, 20, "%Y-%m-%dT%H:%M:%SZ", local);
 
       ur_time_t received;
-      ur_time_from_string(&received, time_received);
+      uint8_t wow = ur_time_from_string(&received, time_received);
+      if(wow == 1){
+         fprintf(stderr, "Error: could not convert string to ur_time_t\n");
+         break;
+      }
 
       ur_time_t time_first = ur_get(in_tmplt, in_rec, F_TIME_FIRST);
       ur_time_t time_last = ur_get(in_tmplt, in_rec, F_TIME_LAST);
