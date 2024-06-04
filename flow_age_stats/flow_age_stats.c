@@ -176,7 +176,6 @@ int main(int argc, char **argv)
 
    //initialization of time
    time_t rawTime;
-   struct tm *local;
    
 
    /* **** Main processing loop **** */
@@ -210,9 +209,9 @@ int main(int argc, char **argv)
       time(&rawTime);
       struct tm* utc_timeinfo;
       #ifdef _WIN32
-      gmtime_s(&rawtime, &utc_timeinfo);
+      gmtime_s(&rawTime, &utc_timeinfo);
       #else
-      utc_timeinfo = gmtime(&rawtime);
+      utc_timeinfo = gmtime(&rawTime);
       #endif
       char time_received[20];
       strftime(time_received, 20, "%Y-%m-%dT%H:%M:%S", utc_timeinfo);
