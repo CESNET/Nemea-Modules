@@ -210,10 +210,14 @@ int main(int argc, char **argv)
       time(&rawTime);
       local = localtime(&rawTime);
       char time_received[20];
-      strftime(time_received, 20, "%Y-%m-%dT%H:%M:%SZ", local);
+      strftime(time_received, 20, "%Y-%m-%dT%H:%M:%S", local);
 
-      ur_time_t received;
-      uint8_t wow = ur_time_from_string(&received, time_received);
+      ur_time_t* received = malloc(sizeof(ur_time_t));
+      if(received == NULL){
+         fprintf(stderr, "Error: Malloc for ur_time_t failed.\n");
+         break;
+      }
+      uint8_t wow = ur_time_from_string(received, time_received);
       if(wow == 1){
          fprintf(stderr, "Error: could not convert string to ur_time_t\n");
          break;
@@ -222,8 +226,8 @@ int main(int argc, char **argv)
       ur_time_t time_first = ur_get(in_tmplt, in_rec, F_TIME_FIRST);
       ur_time_t time_last = ur_get(in_tmplt, in_rec, F_TIME_LAST);
       //time difference between time at which the flow was received vs the time in the record itself
-      uint64_t first_diff = ur_timediff(received, time_first);
-      uint64_t last_diff = ur_timediff(received, time_last);
+      uint64_t first_diff = ur_timediff(*received, time_first);
+      uint64_t last_diff = ur_timediff(*received, time_last);
       //time will be in milliseconds
 
       flow_count++;
