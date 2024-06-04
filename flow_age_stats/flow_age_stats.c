@@ -92,7 +92,7 @@ trap_module_info_t *module_info = NULL;
 #define MODULE_BASIC_INFO(BASIC) \
   BASIC("Flow Age Stats module", \
         "This module finds min, max and avg of ages of flow data from input.\n" \
-        "The second function is making percentual histograms of flow ages.\n", 1, 1)
+        "The second function is making percentual histograms of flow ages.\n", 1, 0)
   //BASIC(char *, char *, int, int)
 
 
@@ -103,7 +103,7 @@ trap_module_info_t *module_info = NULL;
  * Module parameter argument types: int8, int16, int32, int64, uint8, uint16, uint32, uint64, float, string
  */
 #define MODULE_PARAMS(PARAM)
-
+//TODO: Parameter for specifiyng a file, where to store the histograms
 
 
 /**
@@ -165,15 +165,14 @@ int main(int argc, char **argv)
    stat last = {0, UINT64_MAX, 0};
 
    //initialization of age bins
-    uint64_t values[] = {1, 5, 10, 20, 30, 60, 300, 600, 0};
 
-    bin *head = createNode(values[0], 0);
+    bin *head = createNode(1, 0);
     bin *current = head;
-    for (size_t i = 1; i < 9; ++i) {
-        current->next = createNode(values[i], 0);
+    for (unit64_t i = 10; i <= 600; i+=10) {
+        current->next = createNode(i, 0);
         current = current->next;
     }
-
+   current->next = createNode(0, 0);
    //initialization of time
    time_t rawTime;
    
@@ -300,7 +299,7 @@ int main(int argc, char **argv)
    printf("Maximal value for time_last: %" PRIu64 "s\n", last.max/1000);
    printf("Average value for time_last: %" PRIu64 "s\n \n", (last.avg/flow_count)/1000);
 
-
+   //should be outputed to file if specified
    printf("Histogram for time_first:\n");
    current = head;
    printf("0-1s: %zu %% \n", ((current->count_first * 100)/flow_count));
