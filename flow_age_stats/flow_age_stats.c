@@ -168,7 +168,7 @@ int main(int argc, char **argv)
 
     bin *head = createNode(1, 0);
     bin *current = head;
-    for (unit64_t i = 10; i <= 600; i+=10) {
+    for (uint64_t i = 10; i <= 600; i+=10) {
         current->next = createNode(i, 0);
         current = current->next;
     }
