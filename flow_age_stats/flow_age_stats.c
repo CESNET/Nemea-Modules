@@ -214,9 +214,11 @@ int main(int argc, char **argv)
 
       ur_time_t received = ur_time_from_string(&received, time_received);
 
+      ur_time_t time_first = ur_get(in_tmplt, in_rec, F_TIME_FIRST);
+      ur_time_t time_last = ur_get(in_tmplt, in_rec, F_TIME_LAST);
       //time difference between time at which the flow was received vs the time in the record itself
-      uint64_t first_diff = ur_timediff(received, ur_get(in_tmplt, in_rec, F_TIME_FIRST));
-      uint64_t last_diff = ur_timediff(received, ur_get(in_tmplt, in_rec, F_TIME_LAST));
+      uint64_t first_diff = ur_timediff(received, time_first);
+      uint64_t last_diff = ur_timediff(received, time_last);
       //time will be in milliseconds
 
       flow_count++;
@@ -282,34 +284,36 @@ int main(int argc, char **argv)
    printf("Maximal value for time_first(ms): %" PRIu64 "\n", first.max);
    printf("Average value for time_first(ms): %" PRIu64 "\n", (first.avg/flow_count));
    printf("Minimal value for time_last(ms): %" PRIu64 "\n", last.min);
-   printf("Maximal value for time_last(ms): %" PRIu64 "\n \n", last.max);
-   printf("Average value for time_first(ms): %" PRIu64 "\n", (last.avg/flow_count));
+   printf("Maximal value for time_last(ms): %" PRIu64 "\n", last.max);
+   printf("Average value for time_first(ms): %" PRIu64 "\n \n", (last.avg/flow_count));
 
 
    printf("Histogram for time_first:\n");
    current = head;
-   printf("0-1s: %zu %% \n", (current->count_first/flow_count));
+   printf("0-1s: %zu %% \n", ((current->count_first * 100)/flow_count));
    uint64_t tmp = current->max_age;
    current = current->next;
    while(current->next != NULL){
-      printf("%" PRIu64 "-%" PRIu64 "s: %zu %% \n", tmp, current->max_age, (current->count_first/flow_count));
+      printf("%" PRIu64 "-%" PRIu64 "s: %zu %% \n", tmp, current->max_age, ((current->count_first * 100)/flow_count));
       tmp = current->max_age;
       current = current->next;
    }
-   printf("600+s: %zu %% \n", (current->count_first/flow_count));
+   printf("%zu\n", current->count_first);
+   printf("600+s: %zu %% \n", ((current->count_first * 100)/flow_count));
 
 
    printf("\nHistogram for time_last:\n");
    current = head;
-   printf("0-1s: %zu %% \n", (current->count_last/flow_count));
+   printf("0-1s: %zu %% \n", ((current->count_last * 100)/flow_count));
    tmp = current->max_age;
    current = current->next;
    while(current->next != NULL){
-      printf("%" PRIu64 "-%" PRIu64 "s: %zu %% \n", tmp, current->max_age, (current->count_last/flow_count));
+      printf("%" PRIu64 "-%" PRIu64 "s: %zu %% \n", tmp, current->max_age, ((current->count_last * 100)/flow_count));
       tmp = current->max_age;
       current = current->next;
    }
-   printf("600+s: %zu %% \n", (current->count_last/flow_count));
+   printf("%zu\n", current->count_last);
+   printf("600+s: %zu %% \n", ((current->count_last * 100)/flow_count));
 
 
    /* **** Cleanup **** */
