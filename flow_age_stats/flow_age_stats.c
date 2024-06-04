@@ -93,18 +93,13 @@ trap_module_info_t *module_info = NULL;
   BASIC("Flow Age Stats module", \
         "This module finds min, max and avg of ages of flow data from input.\n" \
         "The second function is making percentual histograms of flow ages and outputs them into a file when -f FILE is specified.\n", 1, 0)
-  //BASIC(char *, char *, int, int)
 
 
 /**
- * Definition of module parameters - every parameter has short_opt, long_opt, description,
- * flag whether an argument is required or it is optional and argument type which is NULL
- * in case the parameter does not need argument.
- * Module parameter argument types: int8, int16, int32, int64, uint8, uint16, uint32, uint64, float, string
+ * Definition of module parameter
  */
 #define MODULE_PARAMS(PARAM)\
    PARAM('f', "file", "output file for storing histograms", required_argument, "string")
-//TODO: Parameter for specifiyng a file, where to store the histograms
 
 
 /**
