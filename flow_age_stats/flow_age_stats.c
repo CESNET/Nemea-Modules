@@ -208,9 +208,14 @@ int main(int argc, char **argv)
 
       // PROCESS THE DATA
       time(&rawTime);
-      local = localtime(&rawTime);
+      struct tm* utc_timeinfo;
+      #ifdef _WIN32
+      gmtime_s(&rawtime, &utc_timeinfo);
+      #else
+      utc_timeinfo = gmtime(&rawtime);
+      #endif
       char time_received[20];
-      strftime(time_received, 20, "%Y-%m-%dT%H:%M:%S", local);
+      strftime(time_received, 20, "%Y-%m-%dT%H:%M:%S", utc_timeinfo);
 
       ur_time_t* received = malloc(sizeof(ur_time_t));
       if(received == NULL){
@@ -226,8 +231,8 @@ int main(int argc, char **argv)
       ur_time_t time_first = ur_get(in_tmplt, in_rec, F_TIME_FIRST);
       ur_time_t time_last = ur_get(in_tmplt, in_rec, F_TIME_LAST);
       //time difference between time at which the flow was received vs the time in the record itself
-      uint64_t first_diff = ur_timediff(*received, time_first) - 7190000;
-      uint64_t last_diff = ur_timediff(*received, time_last) - 7190000;
+      uint64_t first_diff = ur_timediff(*received, time_first);
+      uint64_t last_diff = ur_timediff(*received, time_last);
       //time will be in milliseconds
 
       flow_count++;
