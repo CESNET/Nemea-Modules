@@ -310,39 +310,39 @@ int main(int argc, char **argv)
 
    printf("\nRuntime: %0.2lfs\n", runtime);
    printf("Number of flows processed: %zu\n \n", flow_count);
-   printf("Minimal value for time_first: %" PRIu64 "s\n", first.min/1000);//from milliseconds to seconds
-   printf("Maximal value for time_first: %" PRIu64 "s\n", first.max/1000);
-   printf("Average value for time_first: %" PRIu64 "s\n", (first.avg/flow_count)/1000);
-   printf("Minimal value for time_last: %" PRIu64 "s\n", last.min/1000);
-   printf("Maximal value for time_last: %" PRIu64 "s\n", last.max/1000);
-   printf("Average value for time_last: %" PRIu64 "s\n \n", (last.avg/flow_count)/1000);
+   printf("Minimal age of time_first: %0.2lf s\n", (double)first.min/1000);//from milliseconds to seconds
+   printf("Maximal age of time_first: %0.2lf s\n", (double)first.max/1000);
+   printf("Average age of time_first: %0.2lf s\n", (double)(first.avg/flow_count)/1000);
+   printf("Minimal age of time_last: %0.2lf s\n", (double)last.min/1000);
+   printf("Maximal age of time_last: %0.2lf s\n", (double)last.max/1000);
+   printf("Average age of time_last: %0.2lf s\n", (double)(last.avg/flow_count)/1000);
 
    //should be outputed to file if specified
    if(out != NULL){
       fprintf(out, "Histogram for time_first:\n");
       current = head;
-      fprintf(out, "0-1s: %0.2lf %% \n", ((double)(current->count_first * 100)/flow_count));
+      fprintf(out, "0-1s:\t%0.2lf%%\t%zu\n", ((double)(current->count_first * 100)/flow_count), current->count_first);
       uint64_t tmp = current->max_age;
       current = current->next;
       while(current->next != NULL){
-         fprintf(out, "%" PRIu64 "-%" PRIu64 "s: %0.2lf %% \n", tmp, current->max_age, ((double)(current->count_first * 100)/flow_count));
+         fprintf(out, "%" PRIu64 "-%" PRIu64 "s:\t%0.2lf%%\t%zu\n", tmp, current->max_age, ((double)(current->count_first * 100)/flow_count), current->count_first);
          tmp = current->max_age;
          current = current->next;
       }
-      fprintf(out, "600+s: %0.2lf %% \n", ((double)(current->count_first * 100)/flow_count));
+      fprintf(out, "600+s:\t%0.2lf%%\t%zu\n", ((double)(current->count_first * 100)/flow_count), current->count_first);
 
 
       fprintf(out, "\nHistogram for time_last:\n");
       current = head;
-      fprintf(out, "0-1s: %0.2lf %% \n", ((double)(current->count_last * 100)/flow_count));
+      fprintf(out, "0-1s:\t%0.2lf%%\t%zu\n", ((double)(current->count_last * 100)/flow_count), current->count_last);
       tmp = current->max_age;
       current = current->next;
       while(current->next != NULL){
-         fprintf(out, "%" PRIu64 "-%" PRIu64 "s: %0.2lf %% \n", tmp, current->max_age, ((double)(current->count_last * 100)/flow_count));
+         fprintf(out, "%" PRIu64 "-%" PRIu64 "s:\t%0.2lf%%\t%zu\n", tmp, current->max_age, ((double)(current->count_last * 100)/flow_count), current->count_last);
          tmp = current->max_age;
          current = current->next;
       }
-      fprintf(out, "600+s: %0.2lf %% \n", ((double)(current->count_last * 100)/flow_count));
+      fprintf(out, "600+s:\t%0.2lf%%\t%zu\n", ((double)(current->count_last * 100)/flow_count), current->count_last);
    }
 
    /* **** Cleanup **** */
