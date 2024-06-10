@@ -150,14 +150,14 @@ int main(int argc, char **argv)
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
    FILE* out = NULL;
-   char *file = NULL;
+   int file = NULL;
    /**
     * Handling of arguments
    */
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
       case 'f':
-         file = optarg;
+         file = atoi(optarg);
          break;
       default:
          fprintf(stderr, "Invalid arguments.\n");
@@ -166,7 +166,6 @@ int main(int argc, char **argv)
          return -1;
       }
    }
-   out = fopen(file, "w");
 
    /* **** Create UniRec templates **** */
    ur_template_t *in_tmplt = ur_create_input_template(0, "TIME_FIRST,TIME_LAST", NULL);
@@ -318,35 +317,34 @@ int main(int argc, char **argv)
    printf("Average age of time_last: %0.2lf s\n", (double)(last.avg/flow_count)/1000);
 
    //should be outputed to file if specified
-   if(out != NULL){
-      fprintf(out, "Histogram for time_first:\n");
+   if(file == 1){
+      out = fopen("time_first.txt", "w");
+      if (out == NULL){
+         fprintf(stderr, "Error: Could not open file.\n");
+         goto skip_output;
+      }
       current = head;
-      fprintf(out, "0-1s:\t%0.2lf%%\t%zu\n", ((double)(current->count_first * 100)/flow_count), current->count_first);
-      uint64_t tmp = current->max_age;
-      current = current->next;
-      while(current->next != NULL){
-         fprintf(out, "%" PRIu64 "-%" PRIu64 "s:\t%0.2lf%%\t%zu\n", tmp, current->max_age, ((double)(current->count_first * 100)/flow_count), current->count_first);
-         tmp = current->max_age;
+      while(current != NULL){
+         fprintf(out, "%" PRIu64 "\t%0.2lf%%\t%zu\n", current->max_age, ((double)(current->count_first * 100)/flow_count), current->count_first);
          current = current->next;
       }
-      fprintf(out, "600+s:\t%0.2lf%%\t%zu\n", ((double)(current->count_first * 100)/flow_count), current->count_first);
+      fclose(out);
 
-
-      fprintf(out, "\nHistogram for time_last:\n");
+      out = fopen("time_last.txt", "w");
+      if (out == NULL){
+         fprintf(stderr, "Error: Could not open file.\n");
+         goto skip_output;
+      }
       current = head;
-      fprintf(out, "0-1s:\t%0.2lf%%\t%zu\n", ((double)(current->count_last * 100)/flow_count), current->count_last);
-      tmp = current->max_age;
-      current = current->next;
-      while(current->next != NULL){
-         fprintf(out, "%" PRIu64 "-%" PRIu64 "s:\t%0.2lf%%\t%zu\n", tmp, current->max_age, ((double)(current->count_last * 100)/flow_count), current->count_last);
-         tmp = current->max_age;
+      while(current != NULL){
+         fprintf(out, "%" PRIu64 "\t%0.2lf\t%zu\n", current->max_age, ((double)(current->count_last * 100)/flow_count), current->count_last);
          current = current->next;
       }
-      fprintf(out, "600+s:\t%0.2lf%%\t%zu\n", ((double)(current->count_last * 100)/flow_count), current->count_last);
+      fclose(out);
    }
 
    /* **** Cleanup **** */
-
+   skip_output:
    //cleanup of bins
    current = head;
    while(current != NULL){
