@@ -16,4 +16,5 @@ Additionally the module can output two text files (time_first.txt, time_last.txt
 
 ## Graphs
 This module also comes with a script that makes use of GNUplot to make graphs from the data that is outputed into files. You can see how the graph looks like below.
+
 ![ExampleGraph](example.png)
