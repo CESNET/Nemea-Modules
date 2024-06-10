@@ -4,7 +4,7 @@
 ## Description
 This module is used for making statistics about the age of incoming flow data. The statistics produced are minimal, maximal and average values for both first time the flow is encountered and the last time the flow is encountered. 
 
-Additionally the module can output two text files (time_first.txt, time_last.txt) that make up a table of three columns. First is the max age of the flow. Second is the percentage of flows that are in that age group. Third is the flow count. 
+Additionally the module can output two text files (time_first.txt, time_last.txt) that formatted into a table of three columns. First is the max age of the flow. Second is the percentage of flows that are in that age group. Third is the flow count. 
 
 ## Interfaces
 - Input: One UniRec interface
