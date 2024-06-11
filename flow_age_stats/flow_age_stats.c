@@ -99,7 +99,7 @@ trap_module_info_t *module_info = NULL;
  * Definition of module parameter
  */
 #define MODULE_PARAMS(PARAM)\
-   PARAM('f', "file", "output file for storing histograms", required_argument, "string")
+   PARAM('t', "table", "store data about the flows in files", no_argument, "none")
 
 
 /**
@@ -156,8 +156,8 @@ int main(int argc, char **argv)
    */
    while ((opt = TRAP_GETOPT(argc, argv, module_getopt_string, long_options)) != -1) {
       switch (opt) {
-      case 'f':
-         file = atoi(optarg);
+      case 't':
+         file = 1;
          break;
       default:
          fprintf(stderr, "Invalid arguments.\n");
