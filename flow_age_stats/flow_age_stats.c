@@ -328,7 +328,15 @@ int main(int argc, char **argv)
       }
       current = head;
       while(current != NULL){
+         if (current->next == NULL){ // last bin - print label as "+" instead of "0"
+            fprintf(out, "%" PRIu64 "+\t%0.2lf%%\t%zu\n", current->max_age, ((double)(current->count_first * 100)/flow_count), current->count_first);
+            break;
+         }
          fprintf(out, "%" PRIu64 "\t%0.2lf%%\t%zu\n", current->max_age, ((double)(current->count_first * 100)/flow_count), current->count_first);
+         if (current->next->next == NULL) {
+            // second-to-last bin - store the end of this bin so we can use it in the last one (to print "+" after it)
+            current->next->max_age = current->max_age;
+         }
          current = current->next;
       }
       fclose(out);
@@ -340,7 +348,15 @@ int main(int argc, char **argv)
       }
       current = head;
       while(current != NULL){
-         fprintf(out, "%" PRIu64 "\t%0.2lf\t%zu\n", current->max_age, ((double)(current->count_last * 100)/flow_count), current->count_last);
+         if (current->next == NULL){ // last bin - print label as "+" instead of "0"
+            fprintf(out, "%" PRIu64 "+\t%0.2lf%%\t%zu\n", current->max_age, ((double)(current->count_last * 100)/flow_count), current->count_last);
+            break;
+         }
+         fprintf(out, "%" PRIu64 "\t%0.2lf%%\t%zu\n", current->max_age, ((double)(current->count_last * 100)/flow_count), current->count_last);
+         if (current->next->next == NULL) {
+            // second-to-last bin - store the end of this bin so we can use it in the last one (to print "+" after it)
+            current->next->max_age = current->max_age;
+         }
          current = current->next;
       }
       fclose(out);
