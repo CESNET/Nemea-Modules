@@ -1,11 +1,11 @@
 /**
  * \file flow_age_stats.c
- * \brief Module for flow data statistics outputed into a file or stdout.
+ * \brief Module computes statistics about flow data age.
  * \author Michal Matejka <xmatejm00@stud.fit.vutbr.cz>
  * \date 2024
  */
 /*
- * Copyright (C) 2013,2014,2015,2016 CESNET
+ * Copyright (C) 2024 CESNET
  *
  * LICENSE TERMS
  *
@@ -56,7 +56,7 @@
 #include <time.h>
 
 /**
- * Linked list structure for storing flows in a certain interval
+ * Linked list structure for storing histogram of flows ages
  */
 typedef struct bins_t {
    uint64_t max_age; //maximal duration of the bin TO DO
@@ -92,7 +92,7 @@ trap_module_info_t *module_info = NULL;
 #define MODULE_BASIC_INFO(BASIC) \
   BASIC("Flow Age Stats module", \
         "This module finds min, max and avg of ages of flow data from input.\n" \
-        "The second function is making percentual histograms of flow ages and outputs them into a file when -t is specified.\n", 1, 0)
+        "It can also make histograms of flow ages and output them into a file when -t is specified.\n", 1, 0)
 
 
 /**
@@ -221,6 +221,7 @@ int main(int argc, char **argv)
       }
 
       // PROCESS THE DATA
+      // TODO: there is probably a faster method to get current time in ur_time_t than by conversion from string
       time(&rawTime);
       struct tm* utc_timeinfo;
       #ifdef _WIN32
@@ -322,7 +323,7 @@ int main(int argc, char **argv)
    if(file == 1){
       out = fopen("time_first.txt", "w");
       if (out == NULL){
-         fprintf(stderr, "Error: Could not open file.\n");
+         fprintf(stderr, "Error: Could not open file 'time_first.txt'.\n");
          goto skip_output;
       }
       current = head;
@@ -334,7 +335,7 @@ int main(int argc, char **argv)
 
       out = fopen("time_last.txt", "w");
       if (out == NULL){
-         fprintf(stderr, "Error: Could not open file.\n");
+         fprintf(stderr, "Error: Could not open file 'time_last.txt'.\n");
          goto skip_output;
       }
       current = head;
