@@ -1,6 +1,6 @@
 /**
  * \file flow_age_stats.c
- * \brief Module computes statistics about flow data age.
+ * \brief Module for flow data statistics with or without FLOW_END_REASON outputed into a file or stdout.
  * \author Michal Matejka <xmatejm00@stud.fit.vutbr.cz>
  * \date 2024
  */
@@ -81,6 +81,7 @@ typedef struct stats_t {
 UR_FIELDS (
    time TIME_FIRST,
    time TIME_LAST,
+   uint8 FLOW_END_REASON,
 )
 
 trap_module_info_t *module_info = NULL;
@@ -99,24 +100,17 @@ trap_module_info_t *module_info = NULL;
  * Definition of module parameter
  */
 #define MODULE_PARAMS(PARAM)\
-   PARAM('t', "table", "store data about the flows in files", no_argument, "none")
+   PARAM('t', "table", "store data about the flows in files", no_argument, "none")\
+   PARAM('e', "end reason", "makes stats about the different flow_end_reason's and stores them in files", no_argument, "none")
 
+//declaration of functions
+bin* createNode(uint64_t max, uint64_t count);
+void categorizeIntoCats(category* curr, uint64_t first_diff, uint64_t last_diff, uint8_t end_reason);
+category* createCategory(category* next, uint8_t reason);
+void destroyCategory(category* current);
+void printCategories(category* head, int flow_count);
+void outputInFiles(category* head, int flow_count);
 
-/**
- * Function for creating the bins
-*/
-bin* createNode(uint64_t max, uint64_t count){
-   bin* new_node = (bin*)malloc(sizeof(bin));
-    if (new_node == NULL) {
-        fprintf(stderr, "Error: Memory allocation failed\n");
-        return NULL;
-    }
-    new_node->max_age = max;
-    new_node->count_first = count;
-    new_node->count_last = count;
-    new_node->next = NULL;
-    return new_node;
-}
 
 static int stop = 0;
 
@@ -173,20 +167,29 @@ int main(int argc, char **argv)
       fprintf(stderr, "Error: Input template could not be created.\n");
       return -1;
    }
+   if(endReas == 5){
+      in_tmplt = ur_define_fields_and_update_template("uint8 FLOW_END_REASON, time TIME_FIRST, time TIME_LAST", in_tmplt);
+   }
 
-   //initialization of the structs for statistics like max, min, avg
-   stat first = {0, UINT64_MAX, 0};
+   
 
-   stat last = {0, UINT64_MAX, 0};
-
-   //initialization of age bins
-    bin *head = createNode(1, 0);
-    bin *current = head;
-    for (uint64_t i = 10; i <= 600; i+=10) {
-        current->next = createNode(i, 0);
-        current = current->next;
-    }
-   current->next = createNode(0, 0);
+   category* head = createCategory(NULL, 0);
+   if(head == NULL){
+      destroyCategory(head);
+   }
+   category* curr = head;
+   //initialization of categories
+   if (endReas == 5) {
+      head->reason = 1;
+      for (int i = 2; i <= 5; ++i){
+         curr->next = createCategory(NULL, i);
+         if(curr->next == NULL){
+            goto failure;//jump to cleanup
+         }
+         curr = curr->next;
+      }
+      curr->next = createCategory(NULL, 0);
+   }
 
    //initialization of time
    time_t rawTime;
@@ -320,56 +323,18 @@ int main(int argc, char **argv)
    printf("Average age of time_last: %0.2lf s\n", (double)(last.avg/flow_count)/1000);
 
    //should be outputed to file if specified
-   if(file == 1){
-      out = fopen("time_first.txt", "w");
-      if (out == NULL){
-         fprintf(stderr, "Error: Could not open file 'time_first.txt'.\n");
-         goto skip_output;
-      }
-      current = head;
-      while(current != NULL){
-         if (current->next == NULL){ // last bin - print label as "+" instead of "0"
-            fprintf(out, "%" PRIu64 "+\t%0.2lf%%\t%zu\n", current->max_age, ((double)(current->count_first * 100)/flow_count), current->count_first);
-            break;
-         }
-         fprintf(out, "%" PRIu64 "\t%0.2lf%%\t%zu\n", current->max_age, ((double)(current->count_first * 100)/flow_count), current->count_first);
-         if (current->next->next == NULL) {
-            // second-to-last bin - store the end of this bin so we can use it in the last one (to print "+" after it)
-            current->next->max_age = current->max_age;
-         }
-         current = current->next;
-      }
-      fclose(out);
-
-      out = fopen("time_last.txt", "w");
-      if (out == NULL){
-         fprintf(stderr, "Error: Could not open file 'time_last.txt'.\n");
-         goto skip_output;
-      }
-      current = head;
-      while(current != NULL){
-         if (current->next == NULL){ // last bin - print label as "+" instead of "0"
-            fprintf(out, "%" PRIu64 "+\t%0.2lf%%\t%zu\n", current->max_age, ((double)(current->count_last * 100)/flow_count), current->count_last);
-            break;
-         }
-         fprintf(out, "%" PRIu64 "\t%0.2lf%%\t%zu\n", current->max_age, ((double)(current->count_last * 100)/flow_count), current->count_last);
-         if (current->next->next == NULL) {
-            // second-to-last bin - store the end of this bin so we can use it in the last one (to print "+" after it)
-            current->next->max_age = current->max_age;
-         }
-         current = current->next;
-      }
-      fclose(out);
+   if (file == 1){
+      outputInFiles(head, flow_count);
    }
-
+   
    /* **** Cleanup **** */
-   skip_output:
-   //cleanup of bins
-   current = head;
-   while(current != NULL){
-      bin* next = current->next;
-      free(current);
-      current = next;
+   failure:
+
+   // clean categories
+   while (head != NULL){
+      category* next = head->next;
+      destroyCategory(head);
+      head = next;
    }
    
    // Do all necessary cleanup in libtrap before exiting
@@ -384,3 +349,270 @@ int main(int argc, char **argv)
 
    return 0;
 }
+
+/**
+ * @brief Function for creating the bins
+ * 
+ * This function creates a Node in the bin list. 
+ * 
+ * @param max maximal age of the FLOW in this bin
+ * @param count counts inside the Node are initialized to this value
+*/
+bin* createNode(uint64_t max, uint64_t count){
+   bin* new_node = (bin*)malloc(sizeof(bin));
+    if (new_node == NULL) {
+        fprintf(stderr, "Error: Memory allocation failed\n");
+        return NULL;
+    }
+    new_node->max_age = max;
+    new_node->count_first = count;
+    new_node->count_last = count;
+    new_node->next = NULL;
+    return new_node;
+}
+
+/**
+ * @brief Function to create category_t
+ * 
+ * This function creates a dynamically allocated category for statistics about flow age stats,
+ * and based on the argument -e for FLOW_END_REASON.
+ * 
+ * @param next next category in list
+ * @param reason if -e is specified there are 5 different (default is 1) 
+ */
+category* createCategory(category* next, uint8_t reason){
+   category* newCat = (category*)malloc(sizeof(category));
+   if (newCat == NULL) {
+      fprintf(stderr, "Error: Memory allocation failed\n");
+      return NULL;
+   }
+   //creating bins
+   newCat->bins = createNode(1, 0);
+   bin *current = newCat->bins;
+   for (uint64_t i = 10; i <= 600; i+=10) {
+      current->next = createNode(i, 0);
+      if (current->next == NULL){
+         return NULL;
+      }
+      current = current->next;
+   }
+   current->next = createNode(0, 0);
+
+   //creating stat structs
+   newCat->first = (stat*)malloc(sizeof(stat));
+   if (newCat->first == NULL) {
+      fprintf(stderr, "Error: Memory allocation failed\n");
+      return NULL;
+   }
+   newCat->first->avg = 0;
+   newCat->first->min = UINT64_MAX;
+   newCat->first->max = 0;
+
+   newCat->last = (stat*)malloc(sizeof(stat));
+   if (newCat->last == NULL) {
+      fprintf(stderr, "Error: Memory allocation failed\n");
+      return NULL;
+   }
+   newCat->last->avg = 0;
+   newCat->last->min = UINT64_MAX;
+   newCat->last->max = 0;
+
+   newCat->next = next;
+   newCat->reason = reason;
+   newCat->count = 0;
+   return newCat;
+}
+
+/**
+ * @brief Function for destroying categories
+ * 
+ * This function frees the dynamically allocated categories. It also checks if the allocations failed
+ * beforehand in createCategory().
+ * 
+ * @param current category to be destroyed
+ */
+void destroyCategory(category* current){
+   if(current == NULL){
+      return;
+   }
+   //free bins
+   bin* curr = current->bins;
+   while (curr != NULL){
+      bin* next = curr->next;
+      free(curr);
+      curr = next;
+   }
+   //free stat structs
+   if(current->first == NULL){
+      return;
+   }
+   free(current->first);
+   if(current->last == NULL){
+      return;
+   }
+   free(current->last);
+   free(current);
+}
+
+/**
+ * @brief Function for categorization
+ * 
+ * This function goes through the list of categories and updates the statistics based on FLOW_END_REASON (if -e is specified)
+ * or by the default (which is 1). 
+ * 
+ * @param curr head of the category list
+ * @param first_diff difference of TIME_FIRST and current time (in ms)
+ * @param last_diff difference of TIME_LAST and current time (in ms)
+ * @param end_reason FLOW_END_REASON 
+ * 
+ */
+void categorizeIntoCats(category* curr, uint64_t first_diff, uint64_t last_diff, uint8_t end_reason){
+   while (curr != NULL){//loop for categorization
+      if(curr->reason != end_reason){
+         curr = curr->next;
+         continue;
+      }
+      curr->count++;
+      bin* tmp = curr->bins;
+      bool first_inc = true;
+      bool last_inc = true;
+      while (tmp != NULL){
+         if (first_inc){
+            if(tmp->max_age >= (first_diff/1000)){
+               tmp->count_first++;
+               first_inc = false;
+            }
+         }
+         if (last_inc){
+            if (tmp->max_age >= (last_diff/1000)){
+               tmp->count_last++;
+               last_inc = false;
+            }
+         }
+         if((!last_inc) && (!first_inc)){
+            break;
+         }
+         if(tmp->next == NULL){
+            if (first_inc){
+               tmp->count_first++;
+            }
+            if(last_inc){
+               tmp->count_last++;
+            }
+            break;
+         }
+         tmp = tmp->next;
+      }
+      curr->first->avg += first_diff;
+      curr->last->avg += last_diff;
+
+      //setting new max or min if needed for first
+      if(curr->first->max < first_diff){
+         curr->first->max = first_diff;
+      }
+      else if (curr->first->min > first_diff){
+         curr->first->min = first_diff;
+      }
+
+      //setting new max or min if needed for last
+      if(curr->last->max < last_diff){
+         curr->last->max = last_diff;
+      }
+      else if (curr->last->min > last_diff){
+         curr->last->min = last_diff;
+      }   
+      break;
+   }
+}
+
+/**
+ * @brief Function to print out basic statistics
+ * 
+ * Function prints out basic statistics of the flow age data. If -e is specified it prints out 5 separate
+ * statistics based on which FLOW_END_REASON was encountered.
+ * 
+ * @param head head of the list of categories
+ * @param flow_count count of flows that were received by module
+ */
+void printCategories(category* head, int flow_count){
+   int count = 0;
+   while(head != NULL){
+      count++;
+      switch(head->reason){
+         case 1:
+            printf("Stats for FLOW_END_REASON: idle timeout\nNumber of flows:%d\nPercentage of the flows with this reason: %0.2lf %%\n", head->count, ((double)head->count/flow_count) * 100);
+            break;
+         case 2:
+            printf("Stats for FLOW_END_REASON: active timeout\nNumber of flows:%d\nPercentage of the flows with this reason: %0.2lf %%\n", head->count, ((double)head->count/flow_count) * 100);
+            break;
+         case 3:
+            printf("Stats for FLOW_END_REASON: end of flow detected\nNumber of flows:%d\nPercentage of the flows with this reason: %0.2lf %%\n", head->count, ((double)head->count/flow_count) * 100);
+            break;
+         case 4:
+            printf("Stats for FLOW_END_REASON: forced end\nNumber of flows:%d\nPercentage of the flows with this reason: %0.2lf %%\n", head->count, ((double)head->count/flow_count) * 100);
+            break;
+         case 5:
+            printf("Stats for FLOW_END_REASON: lack of resources\nNumber of flows:%d\nPercentage of the flows with this reason: %0.2lf %%\n", head->count, ((double)head->count/flow_count) * 100);
+            break;
+         default:
+            if(count == 1){
+               printf("Stats for all flows encountered:\nNumber of flows:%d\n", head->count);
+            }
+            else{
+               printf("Stats for all flows without FLOW_END_REASON:\nNumber of flows:%d\nPercentage of the flows with this reason: %0.2lf %%\n", head->count, ((double)head->count/flow_count) * 100);
+            }
+            break;
+      }
+      printf("\tMinimal age of time_first: %0.2lf s\n", (double)head->first->min/1000);//from milliseconds to seconds
+      printf("\tMaximal age of time_first: %0.2lf s\n", (double)head->first->max/1000);
+      printf("\tAverage age of time_first: %0.2lf s\n", (double)(head->first->avg/flow_count)/1000);
+      printf("\tMinimal age of time_last: %0.2lf s\n", (double)head->last->min/1000);
+      printf("\tMaximal age of time_last: %0.2lf s\n", (double)head->last->max/1000);
+      printf("\tAverage age of time_last: %0.2lf s\n\n", (double)(head->last->avg/flow_count)/1000);
+      head = head->next;
+   }
+}
+
+/**
+ * @brief Function for outputting into files
+ * 
+ * This function outputs the tables into files. If the -e is specified tables for each FLOW_END_REASON are created.
+ * 
+ * @param head head of the category list
+ * @param flow_count count of flows encountered
+ */
+void outputInFiles(category* head, int flow_count){
+   char first_file[] = "0_time_first.txt";
+   char last_file[] = "0_time_last.txt";
+   FILE* out = NULL;
+
+   while (head != NULL){
+      first_file[0] = '0' + head->reason;
+      out = fopen(first_file, "w");
+      if (out == NULL){
+         fprintf(stderr, "Error: Could not open file.\n");
+         return;
+      }
+      bin* current = head->bins;
+      while(current != NULL){
+         fprintf(out, "%" PRIu64 "\t%0.2lf%%\t%zu\n", current->max_age, ((double)(current->count_first * 100)/flow_count), current->count_first);
+         current = current->next;
+      }
+      fclose(out);
+
+      last_file[0] = '0' + head->reason;
+      out = fopen(last_file, "w");
+      if (out == NULL){
+         fprintf(stderr, "Error: Could not open file.\n");
+         return;
+      }
+      current = head->bins;
+      while(current != NULL){
+         fprintf(out, "%" PRIu64 "\t%0.2lf\t%zu\n", current->max_age, ((double)(current->count_last * 100)/flow_count), current->count_last);
+         current = current->next;
+      }
+      fclose(out);
+      head = head->next;
+   }
+}
+
