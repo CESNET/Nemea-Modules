@@ -6,10 +6,11 @@
  * \author Tomas Jansky <janskto1@fit.cvut.cz>
  * \author Martin Zadnik <zadnik@cesnet.cz>
  * \author Tomas Cejka <cejkat@cesnet.cz>
+ * \date 2024
  * \date 2017
  */
 /*
- * Copyright (C) 2013-2018 CESNET
+ * Copyright (C) 2013-2024 CESNET
  *
  * LICENSE TERMS
  *
@@ -71,9 +72,14 @@ trap_module_info_t *module_info = NULL;
    PARAM('k', "key", "Specify secret key, the key must be 32 characters long string or 32B sized hex string starting with 0x", required_argument, "string") \
    PARAM('f', "file", "Specify file containing secret key, the key must be 32 characters long string or 32B sized hex string starting with 0x", required_argument, "string") \
    PARAM('M', "murmur", "Use MurmurHash3 instead of Rijndael cipher.", no_argument, "none") \
+   PARAM('S', "srcip", "Disable anonymization of SRC_IP.", no_argument, "none") \
+   PARAM('D', "dstip", "Disable anonymization of DST_IP.", no_argument, "none") \
    PARAM('d', "de-anonym", "Switch to de-anonymization mode.", no_argument, "none")
 
 static int stop = 0;
+
+static int disable_src_ip = 0;
+static int disable_dst_ip = 0;
 
 TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1);
 
@@ -331,6 +337,13 @@ int set_fields_present(ur_template_t *tmplt)
    int j = 0;
 
    for (i = 0; i < ANON_FIELDS_COUNT; i++) {
+      // check skip flags for src_ip and dst_ip (-S / -D) and skip these fields
+      if (disable_src_ip == 1 && strncmp(anon_field_names[i], "SRC_IP", 7) == 0) {
+         continue;
+      }
+      if (disable_dst_ip == 1 && strncmp(anon_field_names[i], "DST_IP", 7) == 0) {
+         continue;
+      }
       anon_fields[j] = ur_get_id_by_name(anon_field_names[i]);
       if (anon_fields[j] != UR_E_INVALID_NAME && ur_is_present(tmplt, anon_fields[j])) {
          j++;
@@ -414,6 +427,12 @@ int main(int argc, char **argv)
          break;
       case 'd':
          mode = DEANONYMIZATION;
+         break;
+      case 'S':
+         disable_src_ip = 1;
+         break;
+      case 'D':
+         disable_dst_ip = 1;
          break;
       default:
          fprintf(stderr, "Invalid arguments.\n");
