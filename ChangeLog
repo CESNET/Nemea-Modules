@@ -1,3 +1,7 @@
+2024-08-30 nemea-modules-2.26.0
+	* anonymizer: add options to skip anonymization of SRC_IP or DST_IP
+	* flow_age_stats: add new module to compute statistics about exported flows
+
 2024-05-09 nemea-modules-2.25.0
 	* blacklist2idea: rename Idea fields (In/Out)PacketsCount -> (In/Out)PacketCount)
 2024-02-08 nemea-modules-2.24.0
