@@ -1,3 +1,6 @@
+2024-08-29 (Tomas Cejka): anonymizer: option to skip SRC_IP (-S)/DST_IP (-D)
+2024-06-20 (Michalsus): Module flow_age_stats and script for graphs (#231)
+
 2024-05-09 (Tomas Cejka): blacklist2idea: fixed test reference after In/OutPacketCount change
 2024-04-24 (Pavel Siska): blacklist - rename Idea fields InPacketsCount -> InPacketCount OutPacketsCount -> OutPacketCount
 
