@@ -28,5 +28,7 @@ Anonymization key: 32 characters long string or 32B sized hex string starting wi
 
 Parameters: -k KEY     Specify anonymization key.
             -f FILE    Specify file containg anonymization key.
+            -S         Disable anonymization of SRC_IP.
+            -D         Disable anonymization of DST_IP.
             -M         Use MurmurHash3 instead of Rijndael cipher.
             -d         Switch to de-anonymization mode, i.e. do reverse transofmration of the addresses.
