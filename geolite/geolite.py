@@ -36,6 +36,7 @@
 
 
 import argparse
+from functools import lru_cache
 import pytrap
 import geoip2.database
 
@@ -58,6 +59,10 @@ parser.add_argument('-t', "--type",
                     help="type of GeoLite database",
                     choices=['country', 'city', 'asn'],
                     default="country")
+parser.add_argument('-c', "--cache",
+                    type=int,
+                    help="number of cached lookups. If set to 0, caching is disabled.",
+                    default=128)
 
 # parse command line arguments
 args = parser.parse_args()
@@ -88,9 +93,19 @@ fmtspec = ""
 trap.setRequiredFmt(0, fmttype, fmtspec)
 rec = pytrap.UnirecTemplate(fmtspec)
 
-
 # open GeoLite2 database reader
 with geoip2.database.Reader(args.db) as reader:
+    @lru_cache(maxsize=args.cache)
+    def lookup_in_database(lookup_ip):
+        #Function to look up the IP address in the GeoLite2 database.
+        if args.type == 'city':
+            return reader.city(lookup_ip)
+        elif args.type == 'country':
+            return reader.country(lookup_ip)
+        elif args.type == 'asn':
+            return reader.asn(lookup_ip)
+    
+
     # main loop
     while True:
         try:
@@ -114,12 +129,7 @@ with geoip2.database.Reader(args.db) as reader:
                 ip = rec.get(data, field)
                 output.ip = ip
                 try:
-                    if args.type == 'city':
-                        geolocation = reader.city(str(ip))
-                    elif args.type == 'country':
-                        geolocation = reader.country(str(ip))
-                    elif args.type == 'asn':
-                        geolocation = reader.asn(str(ip))
+                    geolocation = lookup_in_database(str(ip))
                 except:
                     continue
                 if geolocation is None:

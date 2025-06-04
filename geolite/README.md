@@ -31,8 +31,8 @@ Below are the fields that will be set for each database type:
   * uint32 `country_geoname_id`
   * uint32 `is_in_european_union`
   * string `city_name` 
-  * float `latitude`
-  * float `longitude`
+  * float  `latitude`
+  * float  `longitude`
   * uint32 `accuracy_radius`
 
 * `asn`
@@ -60,6 +60,10 @@ module takes the following parameters:
 * `-t` `--type` {country, city, asn}
   
   * Specify the type of GeoLite database. The default value is `country`.
+
+* `-c` `--cache` number
+
+  * Specify the number of lookup calls that will be cached. Set to `0` to disable caching. The default value is `128`.
 
 
 ## Example
