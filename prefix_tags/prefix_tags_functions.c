@@ -26,7 +26,7 @@ int update_output_format(ur_template_t *template_in, const void *data_in, ur_tem
    }
 
    // Add PREFIX_TAG field
-   *template_out = ur_expand_template("uint32 PREFIX_TAG", *template_out);
+   *template_out = ur_expand_template("uint32 PREFIX_TAG,uint32 PREFIX_TAG_DST", *template_out);
    if (*template_out == NULL) {
       return -1;
    }
