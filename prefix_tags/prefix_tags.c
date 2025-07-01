@@ -93,11 +93,17 @@ int prefix_tags(ipps_context_t *config) {
       ip_addr_t dst_ip = ur_get(template_in, data_in, F_DST_IP);
       prefix_tag = 0;
       prefix_tag_dst = 0;
-      
-      int src_res = is_from_configured_prefix(config, &src_ip, &prefix_tag);
-      int dst_res = is_from_configured_prefix(config, &dst_ip, &prefix_tag_dst);
+      int src_res = 0;
+      int dst_res = 0;
 
-      if ((CHECK_SRC_IP && src_res) || (CHECK_DST_IP && dst_res)) {
+      if (CHECK_SRC_IP || CHECK_BOTH){
+      	src_res = is_from_configured_prefix(config, &src_ip, &prefix_tag);
+      }
+      if ((!src_res && CHECK_DST_IP) || CHECK_BOTH){
+      	dst_res = is_from_configured_prefix(config, &dst_ip, &prefix_tag_dst);
+      }
+
+      if (src_res || dst_res) {
          debug_print("tagging %d\n", prefix_tag);
          // data_out should have the right size since TRAP_E_FORMAT_CHANGED _had_ to be returned before getting here
          ur_copy_fields(template_out, data_out, template_in, data_in);
