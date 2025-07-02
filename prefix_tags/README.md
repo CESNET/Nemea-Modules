@@ -17,8 +17,8 @@ Interfaces
 - Input: One UniRec interface
   - Template *MUST* contain fields `SRC_IP` or `DST_IP` (see cli options).
 - Output: One UniRec interface
-  - Output template is copied from input template with `PREFIX_TAG` field added.
-  - The module sends only records with matched `PREFIX_TAG`.
+  - Output template is copied from input template with `PREFIX_TAG` and `PREFIX_TAG_DST` fields added.
+  - The module sends only records with matched prefix.
 
 
 Usage
@@ -40,7 +40,7 @@ Parameters of module [OPTIONS]:
   -c  --config <string>   Configuration file.
   -d  --dst               Use only DST_IP field for prefix matching (default is both SRC_IP and DST_IP).
   -s  --src               Use only SRC_IP field for prefix matching (default is both SRC_IP and DST_IP).
-
+  -b  --both              Both SRC_IP and DST_IP is tagged. When -b is not enabled, the `PREFIX_TAG_DST` is always `0` and only PREFIX_TAG field is used
 Common TRAP parameters [COMMON]:
 --------------------------------
   -h [trap,1]             If no argument, print this message. If "trap" or 1 is given, print TRAP help.

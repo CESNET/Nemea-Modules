@@ -31,7 +31,8 @@
 UR_FIELDS (
    ipaddr SRC_IP,
    ipaddr DST_IP,
-   uint32 PREFIX_TAG
+   uint32 PREFIX_TAG,
+   uint32 PREFIX_TAG_DST
 )
 
 trap_module_info_t *module_info = NULL;
@@ -42,7 +43,8 @@ trap_module_info_t *module_info = NULL;
 #define MODULE_PARAMS(PARAM) \
    PARAM('c', "config", "Configuration file.", required_argument, "string") \
    PARAM('d', "dst", "Use only DST_IP field for prefix matching (default is both SRC_IP and DST_IP).", no_argument, "none") \
-   PARAM('s', "src", "Use only SRC_IP field for prefix matching (default is both SRC_IP and DST_IP).", no_argument, "none")
+   PARAM('s', "src", "Use only SRC_IP field for prefix matching (default is both SRC_IP and DST_IP).", no_argument, "none") \
+   PARAM('b', "both", "Tag both SRC_IP and DST_IP", no_argument,"none")
 
 static int stop = 0;
 
@@ -50,11 +52,13 @@ TRAP_DEFAULT_SIGNAL_HANDLER(stop = 1)
 
 int CHECK_SRC_IP = 1;
 int CHECK_DST_IP = 1;
+int CHECK_BOTH = 0;
 
 
 int prefix_tags(ipps_context_t *config) {
    int error = 0;
    uint32_t prefix_tag;
+   uint32_t prefix_tag_dst;
    const void *data_in = NULL;
    uint16_t data_in_size;
    void *data_out = NULL;
@@ -69,10 +73,9 @@ int prefix_tags(ipps_context_t *config) {
    while (stop == 0) {
       int recv_error = TRAP_RECEIVE(INTERFACE_IN, data_in, data_in_size, template_in);
       TRAP_DEFAULT_RECV_ERROR_HANDLING(recv_error, continue, error = -2; goto cleanup)
-
       if (recv_error == TRAP_E_FORMAT_CHANGED) {
          // Copy format to output interface and add PREFIX_TAG
-         error = update_output_format(template_in, data_in, &template_out, &data_out);
+	 error = update_output_format(template_in, data_in, &template_out, &data_out);
          if (error) {
             goto cleanup;
          }
@@ -88,15 +91,29 @@ int prefix_tags(ipps_context_t *config) {
 
       ip_addr_t src_ip = ur_get(template_in, data_in, F_SRC_IP);
       ip_addr_t dst_ip = ur_get(template_in, data_in, F_DST_IP);
+      prefix_tag = 0;
+      prefix_tag_dst = 0;
+      int src_res = 0;
+      int dst_res = 0;
 
-      if ((CHECK_SRC_IP && is_from_configured_prefix(config, &src_ip, &prefix_tag)) // Misusing short-circuit evaluation
-          || (CHECK_DST_IP && is_from_configured_prefix(config, &dst_ip, &prefix_tag))) {
+      if (CHECK_SRC_IP || CHECK_BOTH){
+      	src_res = is_from_configured_prefix(config, &src_ip, &prefix_tag);
+      }
+      if ((!src_res && CHECK_DST_IP) || CHECK_BOTH){
+      	dst_res = is_from_configured_prefix(config, &dst_ip, &prefix_tag_dst);
+      }
+
+      if (src_res || dst_res) {
          debug_print("tagging %d\n", prefix_tag);
          // data_out should have the right size since TRAP_E_FORMAT_CHANGED _had_ to be returned before getting here
          ur_copy_fields(template_out, data_out, template_in, data_in);
          // Set PREFIX_TAG field
-         ur_set(template_out, data_out, F_PREFIX_TAG, prefix_tag);
-
+	 if (CHECK_BOTH == 0) {
+         	ur_set(template_out, data_out, F_PREFIX_TAG, (prefix_tag!=0)?prefix_tag:prefix_tag_dst);
+	 } else {
+		ur_set(template_out, data_out, F_PREFIX_TAG, prefix_tag);
+	        ur_set(template_out, data_out, F_PREFIX_TAG_DST, prefix_tag_dst);	
+	 }
          uint16_t data_out_size = ur_rec_size(template_out, data_out);
          debug_print("data_out_size %d\n", data_out_size);
          int  send_error = trap_send(INTERFACE_OUT, data_out, data_out_size);
@@ -146,7 +163,9 @@ int main(int argc, char **argv)
       case 's':
          CHECK_DST_IP = 0;
          break;
-
+      case 'b':
+	 CHECK_BOTH = 1;
+	 break;
       }
    }
 
