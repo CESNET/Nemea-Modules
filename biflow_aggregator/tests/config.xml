@@ -1,0 +1,85 @@
+<?xml version="1.0"?>
+<aggregator>
+    <id name="packet_aggregation">
+        <field>
+            <type>SUM</type>
+            <name>PACKETS</name>
+        </field>
+    </id>
+    <id name="generic_flow_key_min_ports">
+		<field>
+			<name>FLOW_ID</name>
+			<type>KEY</type>
+		</field>
+
+		<field>
+			<name>SRC_PORT</name>
+			<type>MIN</type>
+		</field>
+		<field>
+			<name>DST_PORT</name>
+			<type>MIN</type>
+		</field>
+    </id>
+    <id name="src_dst_ip_all_aggregations">
+		<field>
+			<name>SRC_IP</name>
+			<type>KEY</type>
+		</field>
+		<field>
+			<name>DST_IP</name>
+			<type>KEY</type>
+		</field>
+
+		<field>
+			<name>SUM</name>
+			<type>SUM</type>
+		</field>
+		<field>
+			<name>MIN</name>
+			<type>MIN</type>
+		</field>
+        <field>
+			<name>MAX</name>
+			<type>MAX</type>
+		</field>
+        <field>
+			<name>FIRST_NON_EMPTY</name>
+			<type>FIRST_NON_EMPTY</type>
+		</field>
+        <field>
+			<name>LAST_NON_EMPTY</name>
+			<type>LAST_NON_EMPTY</type>
+		</field>
+        <field>
+			<name>FIRST</name>
+			<type>FIRST</type>
+		</field>
+        <field>
+			<name>LAST</name>
+			<type>LAST</type>
+		</field>
+        <field>
+			<name>AVG</name>
+			<type>AVG</type>
+		</field>
+        <field>
+			<name>BITOR</name>
+			<type>BITOR</type>
+		</field>
+        <field>
+			<name>STR_APPEND</name>
+			<type>APPEND</type>
+			<delimiter>:</delimiter>
+			<size>10</size>
+		</field>
+        <field>
+			<name>SORTED_MERGE_VALUE</name>
+			<type>SORTED_MERGE</type>
+			<delimiter>:</delimiter>
+			<sort_key>SORTED_MERGE_KEY</sort_key>
+			<sort_type>ASCENDING</sort_type>
+			<size>10</size>
+		</field>
+    </id>
+</aggregator>
