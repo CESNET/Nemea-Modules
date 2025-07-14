@@ -79,7 +79,9 @@ while not stop:
             trap.sendFlush(0)
         break
     rec.setData(data)
-    d = apply_mappings(rec.getDict(), mapping)
+    d = rec.getDict()
+    if mapping:
+        d = apply_mappings(d, mapping)
     j = json.dumps(d, default=default)
     if options.verbose:
         print(j)
