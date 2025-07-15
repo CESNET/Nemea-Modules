@@ -6,6 +6,13 @@
             <name>PACKETS</name>
         </field>
     </id>
+	<id name="unique_count">
+        <field>
+            <type>UNIQUE_COUNT</type>
+            <name>TEST</name>
+			<size>1000</size>
+        </field>
+    </id>
     <id name="generic_flow_key_min_ports">
 		<field>
 			<name>FLOW_ID</name>
