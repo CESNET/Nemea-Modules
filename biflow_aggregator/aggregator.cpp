@@ -184,6 +184,18 @@ int Field_template::assign_append() noexcept
     return 0;
 }
 
+template<typename T>
+int Field_template::assign_unique_count() noexcept
+{
+    typename_size = sizeof(T);
+    ag_fnc = unique_count<T>;
+    post_proc_fnc = Unique_count_data<T>::postprocessing;
+    init_fnc = Unique_count_data<T>::init;
+    deinit_fnc = Unique_count_data<T>::deinit;
+    ag_data_size = sizeof(Unique_count_data<T>);
+    return 0;
+}
+
 template<Field_type ag_type, typename T>
 int Field_template::assign_min_max() noexcept
 {
@@ -429,6 +441,23 @@ int Field_template::set_templates(const Field_type ag_type, const ur_field_type_
         case UR_TYPE_A_IP:     return assign_append<uint128_t>();
         default:
             std::cerr << "Only string and int, uint, float, double, mac, time, and IP array can be used to APPEND function." << std::endl;
+            return 1;
+        }
+    case UNIQUE_COUNT:
+        switch (ur_f_type) {
+        case UR_TYPE_UINT8:  return assign_unique_count<uint8_t>();
+        case UR_TYPE_INT8:   return assign_unique_count<int8_t>();
+        case UR_TYPE_UINT16: return assign_unique_count<uint16_t>();
+        case UR_TYPE_INT16:  return assign_unique_count<int16_t>();
+        case UR_TYPE_UINT32: return assign_unique_count<uint32_t>();
+        case UR_TYPE_INT32:  return assign_unique_count<int32_t>();
+        case UR_TYPE_UINT64: return assign_unique_count<uint64_t>();
+        case UR_TYPE_INT64:  return assign_unique_count<int64_t>();
+        case UR_TYPE_MAC:    return assign_unique_count<Mac_addr>();
+        case UR_TYPE_IP:     return assign_unique_count<uint128_t>();
+        case UR_TYPE_STRING:   return assign_unique_count<char>();
+        default:
+            std::cerr << "Only string and int, uint, float, double, mac, time, and IP array can be used to UNIQUE_COUNT function." << std::endl;
             return 1;
         }
     default:
@@ -732,8 +761,10 @@ int Field_template::set_templates_dir(const ur_field_type_t ur_f_type, const ur_
     }
 }
 
-Field::Field(const Field_config cfg, const ur_field_id_t ur_fid, const ur_field_id_t ur_r_fid) :
-    ur_fid(ur_fid), ur_r_fid(ur_r_fid), ur_sort_key_id(0), ur_sort_key_type()
+Field::Field(const Field_config cfg, const ur_field_id_t ur_fid_in, const ur_field_id_t ur_r_fid_in,
+    const ur_field_id_t ur_fid_out, const ur_field_id_t ur_r_fid_out) 
+    : ur_fid(ur_fid_in), ur_r_fid(ur_r_fid_in), ur_fid_out(ur_fid_out), 
+    ur_r_fid_out(ur_r_fid_out), ur_sort_key_id(0), ur_sort_key_type()
 {
     ur_field_type_t ur_field_type = ur_get_type(ur_fid);
 
@@ -810,6 +841,11 @@ void Fields::init(uint8_t *memory)
             break;
         case APPEND: {
             struct Config_append cfg = {data.first.limit, data.first.delimiter};
+            data.first.init(memory, &cfg);
+            break;
+        }
+        case UNIQUE_COUNT: {
+            struct Config_unique_count cfg = {data.first.limit};
             data.first.init(memory, &cfg);
             break;
         }
