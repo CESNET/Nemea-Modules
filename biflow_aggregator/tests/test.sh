@@ -32,7 +32,7 @@ run_test_with_global_timeout() {
     sleep 0.5
     die_if_not_running $LOGREPLAY_PID "Failed to start logreplay"
 
-    sleep 2
+    sleep 3
     wait $LOGREPLAY_PID
     kill $AGGREGATOR_PID 2>/dev/null
     sleep 0.2
