@@ -40,6 +40,7 @@ enum Field_type {
     LAST,
     LAST_NON_EMPTY,
     APPEND,
+    UNIQUE_COUNT,
     SORTED_MERGE,
     SORTED_MERGE_DIR,
     INVALID_TYPE,
@@ -94,6 +95,9 @@ class Field_template {
 
     template<typename T>
     int assign_append() noexcept;
+
+    template<typename T>
+    int assign_unique_count() noexcept;
 
     template<Field_type ag_type, typename T>
     int assign_min_max() noexcept;
@@ -275,7 +279,7 @@ struct Field_config {
     char delimiter;
 
     /**
-     * @brief Max size of append and sortd merge data
+     * @brief Max size of data
      */
     std::size_t limit;
 
@@ -302,6 +306,16 @@ public:
     ur_field_id_t ur_r_fid;
 
     /**
+     * @brief ID of output unirec field
+     */
+    ur_field_id_t ur_fid_out;
+
+    /**
+     * @brief Reverse ID of output unirec field
+     */
+    ur_field_id_t ur_r_fid_out;
+
+    /**
      * @brief ID of sort key unirec field
      * 
      * only for SORTED_MERGE;
@@ -321,8 +335,11 @@ public:
      * @param cfg      Field configuration
      * @param ur_fid   Field ID
      * @param ur_r_fid Reverse field ID
+     * @param ur_fid_out Output field ID
+     * @param ur_r_fid_out Reverse output field ID
      */
-    Field(const Field_config cfg, const ur_field_id_t ur_fid, const ur_field_id_t ur_r_fid);
+    Field(const Field_config cfg, const ur_field_id_t ur_fid, const ur_field_id_t ur_r_fid,
+        const ur_field_id_t ur_fid_out, const ur_field_id_t ur_r_fid_out);
 
     /**
      * @brief Call field init function.

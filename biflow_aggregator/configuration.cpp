@@ -71,6 +71,27 @@ bool Configuration::get_eof_termination() noexcept
     return _eof_terminate;
 }
 
+void Configuration::set_global_flush_configuration(const char *input)
+{
+    std::size_t mode_start_index; 
+    _global_flush_configuration.interval = std::stoul(input, &mode_start_index);
+    if (std::strcmp(input + mode_start_index, "a") == 0 ||
+        std::strcmp(input + mode_start_index, "absolute") == 0) {
+        _global_flush_configuration.type = Global_flush_configuration::Type::ABSOLUTE;
+    } else if (std::strcmp(input + mode_start_index, "r") == 0 ||
+               std::strcmp(input + mode_start_index, "relative") == 0 || 
+               std::strcmp(input + mode_start_index, "") == 0) {
+        _global_flush_configuration.type = Global_flush_configuration::Type::RELATIVE;
+    } else {
+        throw std::invalid_argument("Invalid flush timeout format. Expected: <interval> [a|absolute|r|relative|<empty for relative>].");
+    } 
+}
+
+Configuration::Global_flush_configuration Configuration::get_global_flush_configuration() noexcept
+{
+    return _global_flush_configuration;
+}
+
 void Configuration::print() noexcept
 {
     std::cout << "***** Configuration *****" << std::endl;
@@ -107,6 +128,7 @@ agg::Field_type Configuration::get_field_type(const char *input)
     if (!std::strcmp(input, "BITAND")) return agg::BIT_AND;
     if (!std::strcmp(input, "BITOR")) return agg::BIT_OR;
     if (!std::strcmp(input, "APPEND")) return agg::APPEND;
+    if (!std::strcmp(input, "UNIQUE_COUNT")) return agg::UNIQUE_COUNT;
     if (!std::strcmp(input, "SORTED_MERGE")) return agg::SORTED_MERGE;
     if (!std::strcmp(input, "SORTED_MERGE_DIR")) return agg::SORTED_MERGE_DIR;
     std::cerr << "Invalid type field. Given: " << input << ", Expected: KEY|SUM|MIN|MAX|AVG|FIRST|FIRST_NON_EMPTY|LAST|LAST_NON_EMPTY|BITAND|BITOR|APPEND|SORTED_MERGE|SORTED_MERGE_DIR." << std::endl;

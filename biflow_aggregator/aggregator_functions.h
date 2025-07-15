@@ -15,6 +15,7 @@
 
 #include <iostream>
 #include <limits>
+#include <nemea-common/BloomFilter.hpp>
 
 #include <unirec/unirec.h>
 
@@ -171,6 +172,50 @@ struct Append_data : Config_append {
         Append_data<T> *append = static_cast<Append_data<T>*>(mem);
         elem_cnt = append->data.size(); 
         return append->data.data();
+    }
+};
+
+/**
+ * @brief Configuration for unique count function 
+ */
+struct Config_unique_count {
+    std::size_t filter_size;
+};
+
+/**
+ * @brief Structure used to store data for unique count function.
+ */
+template<typename T>
+struct Unique_count_data : Config_unique_count {
+    bloom_filter filter;
+    std::size_t unique_count;
+
+    Unique_count_data(const bloom_parameters& parameters)
+    : filter(parameters)
+    {}
+
+    static inline void init(void* memory, const void* config)
+    {
+        const auto* config_unique_count = static_cast<const Config_unique_count*>(config);
+        bloom_parameters parameters;
+        parameters.projected_element_count = config_unique_count->filter_size;
+        parameters.false_positive_probability = 0.01;
+        parameters.compute_optimal_parameters();
+        new(memory) Unique_count_data<T>(parameters);
+    }
+
+    static inline void deinit(void* memory)
+    {
+        Unique_count_data<T>* unique_count_data = static_cast<Unique_count_data<T>*>(memory);
+        unique_count_data->unique_count = 0;
+        unique_count_data->~Unique_count_data<T>();
+    }
+
+    static inline const void* postprocessing(void* memory, std::size_t& elem_cnt) noexcept
+    {
+        Unique_count_data<T>* unique_count_data = static_cast<Unique_count_data<T>*>(memory);
+        elem_cnt = 1;
+        return static_cast<void*>(&unique_count_data->unique_count);
     }
 };
 
@@ -517,6 +562,32 @@ inline void append(const void *src, void *dst) noexcept
     else
         append->data.insert(append->data.end(), static_cast<const T*>(src_data->ptr_first), \
             static_cast<const T*>(src_data->ptr_first) + src_data->cnt_elements);
+}
+
+/**
+ * @brief Inserts element from src pointer into bloom filter.
+ * @tparam T template type variable.
+ * @param [in] src pointer to source of new data.
+ * @param [in,out] dst pointer to already stored data which will be updated (modified).
+ */
+template<typename T>
+inline void unique_count(const void* src, void* dst) noexcept
+{
+    Unique_count_data<T>* unique_count_data = static_cast<Unique_count_data<T>*>(dst);
+
+    if (std::is_same<T, char>::value) {
+        const ur_array_data* src_data = (static_cast<const ur_array_data*>(src));
+        if (src_data->cnt_elements != 0 && !unique_count_data->filter.contains(
+            static_cast<const unsigned char*>(src_data->ptr_first), src_data->cnt_elements)) {
+            unique_count_data->filter.insert(static_cast<const unsigned char*>(src_data->ptr_first), src_data->cnt_elements);
+            unique_count_data->unique_count++;
+        }
+        return;
+    }
+    if (!unique_count_data->filter.contains(static_cast<const unsigned char*>(src), sizeof(T))) {
+        unique_count_data->filter.insert(static_cast<const unsigned char*>(src), sizeof(T));
+        unique_count_data->unique_count++;
+    }    
 }
 
 template <typename T, typename K>
