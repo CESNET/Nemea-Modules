@@ -71,6 +71,27 @@ bool Configuration::get_eof_termination() noexcept
     return _eof_terminate;
 }
 
+void Configuration::set_global_flush_configuration(const char *input)
+{
+    std::size_t mode_start_index; 
+    _global_flush_configuration.interval = std::stoul(input, &mode_start_index);
+    if (std::strcmp(input + mode_start_index, "a") == 0 ||
+        std::strcmp(input + mode_start_index, "absolute") == 0) {
+        _global_flush_configuration.type = Global_flush_configuration::Type::ABSOLUTE;
+    } else if (std::strcmp(input + mode_start_index, "r") == 0 ||
+               std::strcmp(input + mode_start_index, "relative") == 0 || 
+               std::strcmp(input + mode_start_index, "") == 0) {
+        _global_flush_configuration.type = Global_flush_configuration::Type::RELATIVE;
+    } else {
+        throw std::invalid_argument("Invalid flush timeout format. Expected: <interval> [a|absolute|r|relative|<empty for relative>].");
+    } 
+}
+
+Configuration::Global_flush_configuration Configuration::get_global_flush_configuration() noexcept
+{
+    return _global_flush_configuration;
+}
+
 void Configuration::print() noexcept
 {
     std::cout << "***** Configuration *****" << std::endl;

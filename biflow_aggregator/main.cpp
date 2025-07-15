@@ -79,7 +79,8 @@ UR_FIELDS (
     PARAM('e', "eof", "End when receive EOF.", no_argument, "flag") \
     PARAM('s', "size", "Max number of elements in flow cache.", required_argument, "number") \
     PARAM('a', "active-timeout", "Active timeout.", required_argument, "number") \
-    PARAM('p', "passive-timeout", "Passive timeout.", required_argument, "number")
+    PARAM('p', "passive-timeout", "Passive timeout.", required_argument, "number") \
+    PARAM('g', "global-timeout", "Global timeout.", required_argument, "number")
 
 trap_module_info_t *module_info = NULL;
 static volatile int stop = 0;
@@ -364,6 +365,20 @@ void update_flow(
     if (pt != t_data->value.passive_timeout)
         dll.swap(t_data);
 }
+
+static void flush_all(agg::Aggregator<agg::FlowKey>& aggregator, 
+    ur_template_t* out_template, void* out_record, Dll<agg::Timeout_data>& dll) 
+{
+    for (auto flow_data : aggregator.flow_cache) {
+        proccess_and_send(aggregator, flow_data.first, flow_data.second, out_template, out_record);
+        agg::Flow_key_allocator::release_ptr(static_cast<uint8_t *>(flow_data.first.get_key().first));
+        agg::Flow_data_context_allocator::release_ptr(flow_data.second.ctx);        
+    }
+    dll.clear();
+    aggregator.flow_cache.clear();
+    trap_send_flush(0);
+}
+
 static int 
 do_mainloop(Configuration& config)
 {
@@ -383,8 +398,11 @@ do_mainloop(Configuration& config)
 
     time_t time_first;
     time_t time_last = 0;
+    time_t last_flush_time = 0;
     time_t t_passive = config.get_passive_timeout() >> 32;
     time_t t_active = config.get_active_timeout() >> 32;
+    const Configuration::Global_flush_configuration& flush_configuration 
+        = config.get_global_flush_configuration();
     std::size_t flow_cnt = 0;
     Dll<agg::Timeout_data> dll;
 
@@ -432,13 +450,7 @@ do_mainloop(Configuration& config)
 
             // clear all memory
             // flush all flows
-            for (auto flow_data : agg.flow_cache) {
-                proccess_and_send(agg, flow_data.first, flow_data.second, out_tmplt, out_rec);
-                agg::Flow_key_allocator::release_ptr(static_cast<uint8_t *>(flow_data.first.get_key().first));
-                agg::Flow_data_context_allocator::release_ptr(flow_data.second.ctx);
-            }
-
-            trap_send_flush(0);
+            flush_all(agg, out_tmplt, out_rec, dll);
 
             // Free previous record and temlate
             ur_free_template(out_tmplt);
@@ -489,6 +501,14 @@ do_mainloop(Configuration& config)
         if (timeouted == true) {
             trap_send_flush(0);
             timeouted = false;
+        }
+
+        if (unlikely(flush_configuration.is_set() && time_last - last_flush_time >= flush_configuration.interval)) {
+            last_flush_time = time_last;
+            if (flush_configuration.type == Configuration::Global_flush_configuration::Type::ABSOLUTE) {
+                last_flush_time = last_flush_time / flush_configuration.interval * flush_configuration.interval;
+            }    
+            flush_all(agg, out_tmplt, out_rec, dll);
         }
         
         bool is_key_reversed = key.generate(in_data, in_tmplt, config.is_biflow_key());
@@ -661,6 +681,9 @@ main(int argc, char **argv)
             break;
         case 's':
             config.set_flow_cache_size(optarg);
+            break;
+        case 'g':
+            config.set_global_flush_configuration(optarg);
             break;
         default:
             std::cerr << "Invalid argument " << opt << ", skipped..." << std::endl;
