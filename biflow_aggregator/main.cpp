@@ -198,10 +198,10 @@ proccess_and_send(agg::Aggregator<agg::FlowKey>& agg, const agg::FlowKey& key, c
             agg_data = field->post_processing(&flow_data.ctx->data[agg_field.second], size, elem_cnt);
         }
         if (ur_is_array(field->ur_fid)) {
-            ur_array_allocate(out_tmplt, out_rec, field->ur_fid, elem_cnt);
-            std::memcpy(ur_get_ptr_by_id(out_tmplt, out_rec, field->ur_fid), agg_data, size * elem_cnt);
+            ur_array_allocate(out_tmplt, out_rec, field->ur_fid_out, elem_cnt);
+            std::memcpy(ur_get_ptr_by_id(out_tmplt, out_rec, field->ur_fid_out), agg_data, size * elem_cnt);
         } else {
-            field_id = flow_data.reverse ? field->ur_r_fid : field->ur_fid;
+            field_id = flow_data.reverse ? field->ur_r_fid_out : field->ur_fid_out;
             std::memcpy(ur_get_ptr_by_id(out_tmplt, out_rec, field_id), agg_data, size);
         }
     }
@@ -249,8 +249,19 @@ static int process_format_change(
             if (ur_get_type(ur_fid) == UR_TYPE_STRING)
                 is_string_key = true;
             agg::Key_template::add(ur_fid, ur_r_fid);
+        } else if (field_cfg.type == agg::UNIQUE_COUNT) {
+            const int ur_fid_out = ur_define_field((field_cfg.name + "_UNIQUE_COUNT").c_str(), UR_TYPE_UINT32);
+            out_template.append("," + field_cfg.name + "_UNIQUE_COUNT");
+            int ur_r_fid_out = ur_fid_out;
+            if (ur_fid != ur_r_fid) {
+                ur_define_field((field_cfg.reverse_name + "_UNIQUE_COUNT").c_str(), UR_TYPE_UINT32);
+                out_template.append("," + field_cfg.reverse_name + "_UNIQUE_COUNT");
+            }
+            field_cfg.to_output = false;
+            agg::Field field(field_cfg, ur_fid, ur_r_fid, ur_fid_out, ur_r_fid_out);
+            agg.fields.add_field(field);
         } else {
-            agg::Field field(field_cfg, ur_fid, ur_r_fid);
+            agg::Field field(field_cfg, ur_fid, ur_r_fid, ur_fid, ur_r_fid);
             agg.fields.add_field(field);
         }
         if (field_cfg.to_output)

@@ -128,6 +128,7 @@ agg::Field_type Configuration::get_field_type(const char *input)
     if (!std::strcmp(input, "BITAND")) return agg::BIT_AND;
     if (!std::strcmp(input, "BITOR")) return agg::BIT_OR;
     if (!std::strcmp(input, "APPEND")) return agg::APPEND;
+    if (!std::strcmp(input, "UNIQUE_COUNT")) return agg::UNIQUE_COUNT;
     if (!std::strcmp(input, "SORTED_MERGE")) return agg::SORTED_MERGE;
     if (!std::strcmp(input, "SORTED_MERGE_DIR")) return agg::SORTED_MERGE_DIR;
     std::cerr << "Invalid type field. Given: " << input << ", Expected: KEY|SUM|MIN|MAX|AVG|FIRST|FIRST_NON_EMPTY|LAST|LAST_NON_EMPTY|BITAND|BITOR|APPEND|SORTED_MERGE|SORTED_MERGE_DIR." << std::endl;
