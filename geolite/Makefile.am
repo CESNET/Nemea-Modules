@@ -1,8 +1,8 @@
-EXTRA_DIST=geolite.py readme.md
+EXTRA_DIST=geolite.py README.md
 bin_SCRIPTS=geolite.py
 
 pkgdocdir=${docdir}/geolite
-pkgdoc_DATA=readme.md
+pkgdoc_DATA=README.md
 
 pylint:
 	pylint-3 geolite.py

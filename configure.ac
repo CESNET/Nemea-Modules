@@ -241,6 +241,7 @@ AC_CONFIG_FILES([Makefile
                  email_reporter/Makefile
                  flowcounter/Makefile
                  flow_meter/Makefile
+                 geolite/Makefile
                  googletest_example/Makefile
                  ipv6stats/Makefile
                  json_dump/Makefile
