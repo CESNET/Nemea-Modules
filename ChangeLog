@@ -1,3 +1,6 @@
+2025-07-02 nemea-modules-2.26.0
+	* prefix_tags: Added tagging capability for both SRC and DST IP addresses.
+	* anonymizer: option to skip SRC_IP (-S)/DST_IP (-D)
 2024-05-09 nemea-modules-2.25.0
 	* blacklist2idea: rename Idea fields (In/Out)PacketsCount -> (In/Out)PacketCount)
 2024-02-08 nemea-modules-2.24.0

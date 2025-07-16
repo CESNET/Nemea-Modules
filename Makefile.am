@@ -11,6 +11,7 @@ email_reporter \
 flow_age_stats \
 flowcounter \
 flow_meter \
+geolite \
 ipv6stats \
 json_dump \
 json_replay \
