@@ -419,7 +419,7 @@ do_mainloop(Configuration& config)
     while (unlikely(stop == false)) {
 
     	// Check timeouted flows
-        for (node<agg::Timeout_data> *t_data = dll.begin(); t_data != NULL; t_data = t_data->next) {
+        for (node<agg::Timeout_data> *t_data = dll.begin(); !flush_configuration.is_set() && t_data != NULL; t_data = t_data->next) {
             if (time_last >= t_data->value.passive_timeout) { // timeouted 
                 auto data = agg.flow_cache.find(t_data->value.key);
                 proccess_and_send(agg, data->first, data->second, out_tmplt, out_rec);
@@ -486,7 +486,7 @@ do_mainloop(Configuration& config)
             time_last = ur_time_get_sec(ur_get(in_tmplt, in_data, F_TIME_LAST));
 
         // Check timeouted flows
-        for (node<agg::Timeout_data> *t_data = dll.begin(); t_data != NULL; t_data = t_data->next) {
+        for (node<agg::Timeout_data> *t_data = dll.begin(); !flush_configuration.is_set() && t_data != NULL; t_data = t_data->next) {
             if (time_first >= t_data->value.passive_timeout || time_last >= t_data->value.active_timeout) { // timeouted 
                 auto data = agg.flow_cache.find(t_data->value.key);
                 proccess_and_send(agg, data->first, data->second, out_tmplt, out_rec);
