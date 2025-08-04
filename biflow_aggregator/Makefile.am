@@ -7,3 +7,8 @@ biflow_aggregator_LDADD=-lunirec -ltrap
 include ../aminclude.am
 
 TESTS = tests/test.sh
+
+EXTRA_DIST = tests/test.sh \
+	     tests/references \
+	     tests/inputs \
+	     tests/config.xml

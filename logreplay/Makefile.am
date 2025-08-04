@@ -6,3 +6,4 @@ pkgdocdir=${docdir}/logreplay
 pkgdoc_DATA=README.md
 EXTRA_DIST=README.md
 include ../aminclude.am
+check_PROGRAMS = logreplay

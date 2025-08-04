@@ -6,3 +6,4 @@ pkgdocdir=${docdir}/logger
 pkgdoc_DATA=README.md
 EXTRA_DIST=README.md csv2nf.sh
 include ../aminclude.am
+check_PROGRAMS = logger

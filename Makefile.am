@@ -1,10 +1,10 @@
 ACLOCAL_AMFLAGS = -I m4
 
+# Biflow aggregator depends on logger and logreplay
 SUBDIRS= \
 aggregator \
 anonymizer \
 backscatter \
-biflow_aggregator \
 debug_sender \
 device_classifier \
 email_reporter \
@@ -31,6 +31,7 @@ topn \
 traffic_repeater \
 unirec2json \
 endiverter \
+biflow_aggregator \
 googletest_example
 
 EXTRA_DIST = AUTHORS COPYING ChangeLog INSTALL NEWS README.md nfreader \
