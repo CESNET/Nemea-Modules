@@ -1,3 +1,6 @@
+2025-09-01 nemea-modules-2.27.0
+	* Biflow aggregator: Add UNIQUE_COUNT aggregation function
+	* rpm: add missing flow_age_stats
 2025-07-02 nemea-modules-2.26.0
 	* prefix_tags: Added tagging capability for both SRC and DST IP addresses.
 	* anonymizer: option to skip SRC_IP (-S)/DST_IP (-D)

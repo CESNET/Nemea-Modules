@@ -1,3 +1,11 @@
+2025-09-01 (Pavel Siska): rpm: add missing flow_age_stats binary
+2025-08-05 (Damir Zainullin): Biflow Aggregator - Fix pipeline
+2025-08-04 (Damir Zainullin): Biflow aggregator - Add UNIQUE_COUNT tests
+2025-08-04 (Damir Zainullin): Biflow aggregator - Add UNIQUE_COUNT aggregation function
+2025-08-04 (Damir Zainullin): Biflow aggregator - Add tests
+2025-08-04 (Damir Zainullin): Biflow aggregator - Update main.cpp
+2025-08-04 (Damir Zainullin): Biflow aggregator - Update configuration
+
 2025-07-01 (Karel Hynek): prefix_tags: improve performance by skipping prefix search unless necessary
 2025-07-01 (Karel Hynek): prefix_tags: Added tagging capability for both SRC and DST IP addresses.
 2024-08-29 (Tomas Cejka): anonymizer: option to skip SRC_IP (-S)/DST_IP (-D)
