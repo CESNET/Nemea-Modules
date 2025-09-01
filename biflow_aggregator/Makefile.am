@@ -5,3 +5,10 @@ biflow_aggregator_SOURCES=main.cpp fields.c fields.h configuration.cpp configura
                           rapidxml.hpp
 biflow_aggregator_LDADD=-lunirec -ltrap
 include ../aminclude.am
+
+TESTS = tests/test.sh
+
+EXTRA_DIST = tests/test.sh \
+	     tests/references \
+	     tests/inputs \
+	     tests/config.xml

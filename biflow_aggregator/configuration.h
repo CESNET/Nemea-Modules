@@ -23,6 +23,35 @@
  * @brief Class thas holds module configuration
  */
 class Configuration {
+public:
+
+    /**
+     * @brief Global flush configuration
+     * 
+     * Flush interval is used to flush all records in flow cache to output interface once per given amount of seconds.
+     * If not set, no flush is performed.
+     */
+    struct Global_flush_configuration {
+        enum class Type {
+            ABSOLUTE,    ///< Flows must be flushed every interval seconds starting from epoch
+            RELATIVE,    ///< Flows must be flushed every interval seconds starting from module start
+        } type;
+        time_t interval = 0; ///< Interval in seconds 
+
+        /**
+         * @brief Check if flush interval is set
+         * 
+         * @return true  Flush interval is set
+         * @return false Flush interval is not set
+         */
+        [[nodiscard]] inline
+        bool is_set() const noexcept
+        {
+            return interval > 0;
+        }
+    };
+
+private:
 
     /**
      * @brief Configuration of fields from config file.
@@ -45,6 +74,14 @@ class Configuration {
      */
     time_t _t_passive;
 
+    /**
+     * @brief Periodic flush configuration
+     * 
+     * If set, module flush all records in flow cache to output interface once per given amount of seconds.
+     * If flush interval is set to 0, no flush is performed.
+     */
+    Global_flush_configuration _global_flush_configuration;
+    
     /**
      * @brief active timeout
      * 
@@ -154,6 +191,20 @@ public:
      * @brief Get the active timeout object
      */
     time_t get_active_timeout() noexcept;
+
+    /**
+     * @brief Set the flush timeout
+     * 
+     * See _periodic_flush_configuration for more info.
+     * 
+     * @param input Timeout in text format.
+     */
+    void set_global_flush_configuration(const char *input);
+
+    /**
+     * @brief Get the flush timeout object
+     */
+    Global_flush_configuration get_global_flush_configuration() noexcept;
 
     /**
      * @brief Set the passive timeout

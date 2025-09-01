@@ -79,7 +79,8 @@ UR_FIELDS (
     PARAM('e', "eof", "End when receive EOF.", no_argument, "flag") \
     PARAM('s', "size", "Max number of elements in flow cache.", required_argument, "number") \
     PARAM('a', "active-timeout", "Active timeout.", required_argument, "number") \
-    PARAM('p', "passive-timeout", "Passive timeout.", required_argument, "number")
+    PARAM('p', "passive-timeout", "Passive timeout.", required_argument, "number") \
+    PARAM('g', "global-timeout", "Global timeout.", required_argument, "number")
 
 trap_module_info_t *module_info = NULL;
 static volatile int stop = 0;
@@ -197,10 +198,10 @@ proccess_and_send(agg::Aggregator<agg::FlowKey>& agg, const agg::FlowKey& key, c
             agg_data = field->post_processing(&flow_data.ctx->data[agg_field.second], size, elem_cnt);
         }
         if (ur_is_array(field->ur_fid)) {
-            ur_array_allocate(out_tmplt, out_rec, field->ur_fid, elem_cnt);
-            std::memcpy(ur_get_ptr_by_id(out_tmplt, out_rec, field->ur_fid), agg_data, size * elem_cnt);
+            ur_array_allocate(out_tmplt, out_rec, field->ur_fid_out, elem_cnt);
+            std::memcpy(ur_get_ptr_by_id(out_tmplt, out_rec, field->ur_fid_out), agg_data, size * elem_cnt);
         } else {
-            field_id = flow_data.reverse ? field->ur_r_fid : field->ur_fid;
+            field_id = flow_data.reverse ? field->ur_r_fid_out : field->ur_fid_out;
             std::memcpy(ur_get_ptr_by_id(out_tmplt, out_rec, field_id), agg_data, size);
         }
     }
@@ -248,8 +249,19 @@ static int process_format_change(
             if (ur_get_type(ur_fid) == UR_TYPE_STRING)
                 is_string_key = true;
             agg::Key_template::add(ur_fid, ur_r_fid);
+        } else if (field_cfg.type == agg::UNIQUE_COUNT) {
+            const int ur_fid_out = ur_define_field((field_cfg.name + "_UNIQUE_COUNT").c_str(), UR_TYPE_UINT32);
+            out_template.append("," + field_cfg.name + "_UNIQUE_COUNT");
+            int ur_r_fid_out = ur_fid_out;
+            if (ur_fid != ur_r_fid) {
+                ur_define_field((field_cfg.reverse_name + "_UNIQUE_COUNT").c_str(), UR_TYPE_UINT32);
+                out_template.append("," + field_cfg.reverse_name + "_UNIQUE_COUNT");
+            }
+            field_cfg.to_output = false;
+            agg::Field field(field_cfg, ur_fid, ur_r_fid, ur_fid_out, ur_r_fid_out);
+            agg.fields.add_field(field);
         } else {
-            agg::Field field(field_cfg, ur_fid, ur_r_fid);
+            agg::Field field(field_cfg, ur_fid, ur_r_fid, ur_fid, ur_r_fid);
             agg.fields.add_field(field);
         }
         if (field_cfg.to_output)
@@ -364,6 +376,20 @@ void update_flow(
     if (pt != t_data->value.passive_timeout)
         dll.swap(t_data);
 }
+
+static void flush_all(agg::Aggregator<agg::FlowKey>& aggregator, 
+    ur_template_t* out_template, void* out_record, Dll<agg::Timeout_data>& dll) 
+{
+    for (auto flow_data : aggregator.flow_cache) {
+        proccess_and_send(aggregator, flow_data.first, flow_data.second, out_template, out_record);
+        agg::Flow_key_allocator::release_ptr(static_cast<uint8_t *>(flow_data.first.get_key().first));
+        agg::Flow_data_context_allocator::release_ptr(flow_data.second.ctx);        
+    }
+    dll.clear();
+    aggregator.flow_cache.clear();
+    trap_send_flush(0);
+}
+
 static int 
 do_mainloop(Configuration& config)
 {
@@ -383,8 +409,11 @@ do_mainloop(Configuration& config)
 
     time_t time_first;
     time_t time_last = 0;
+    time_t last_flush_time = 0;
     time_t t_passive = config.get_passive_timeout() >> 32;
     time_t t_active = config.get_active_timeout() >> 32;
+    const Configuration::Global_flush_configuration& flush_configuration 
+        = config.get_global_flush_configuration();
     std::size_t flow_cnt = 0;
     Dll<agg::Timeout_data> dll;
 
@@ -401,7 +430,7 @@ do_mainloop(Configuration& config)
     while (unlikely(stop == false)) {
 
     	// Check timeouted flows
-        for (node<agg::Timeout_data> *t_data = dll.begin(); t_data != NULL; t_data = t_data->next) {
+        for (node<agg::Timeout_data> *t_data = dll.begin(); !flush_configuration.is_set() && t_data != NULL; t_data = t_data->next) {
             if (time_last >= t_data->value.passive_timeout) { // timeouted 
                 auto data = agg.flow_cache.find(t_data->value.key);
                 proccess_and_send(agg, data->first, data->second, out_tmplt, out_rec);
@@ -432,13 +461,7 @@ do_mainloop(Configuration& config)
 
             // clear all memory
             // flush all flows
-            for (auto flow_data : agg.flow_cache) {
-                proccess_and_send(agg, flow_data.first, flow_data.second, out_tmplt, out_rec);
-                agg::Flow_key_allocator::release_ptr(static_cast<uint8_t *>(flow_data.first.get_key().first));
-                agg::Flow_data_context_allocator::release_ptr(flow_data.second.ctx);
-            }
-
-            trap_send_flush(0);
+            flush_all(agg, out_tmplt, out_rec, dll);
 
             // Free previous record and temlate
             ur_free_template(out_tmplt);
@@ -474,7 +497,7 @@ do_mainloop(Configuration& config)
             time_last = ur_time_get_sec(ur_get(in_tmplt, in_data, F_TIME_LAST));
 
         // Check timeouted flows
-        for (node<agg::Timeout_data> *t_data = dll.begin(); t_data != NULL; t_data = t_data->next) {
+        for (node<agg::Timeout_data> *t_data = dll.begin(); !flush_configuration.is_set() && t_data != NULL; t_data = t_data->next) {
             if (time_first >= t_data->value.passive_timeout || time_last >= t_data->value.active_timeout) { // timeouted 
                 auto data = agg.flow_cache.find(t_data->value.key);
                 proccess_and_send(agg, data->first, data->second, out_tmplt, out_rec);
@@ -489,6 +512,14 @@ do_mainloop(Configuration& config)
         if (timeouted == true) {
             trap_send_flush(0);
             timeouted = false;
+        }
+
+        if (unlikely(flush_configuration.is_set() && time_last - last_flush_time >= flush_configuration.interval)) {
+            last_flush_time = time_last;
+            if (flush_configuration.type == Configuration::Global_flush_configuration::Type::ABSOLUTE) {
+                last_flush_time = last_flush_time / flush_configuration.interval * flush_configuration.interval;
+            }    
+            flush_all(agg, out_tmplt, out_rec, dll);
         }
         
         bool is_key_reversed = key.generate(in_data, in_tmplt, config.is_biflow_key());
@@ -661,6 +692,9 @@ main(int argc, char **argv)
             break;
         case 's':
             config.set_flow_cache_size(optarg);
+            break;
+        case 'g':
+            config.set_global_flush_configuration(optarg);
             break;
         default:
             std::cerr << "Invalid argument " << opt << ", skipped..." << std::endl;
