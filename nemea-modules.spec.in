@@ -71,6 +71,7 @@ ldconfig
 %{_bindir}/nemea/email_reporter.py
 %{_bindir}/nemea/endiverter
 %{_bindir}/nemea/flowcounter
+%{_bindir}/nemea/flow_age_stats
 %{_bindir}/nemea/flow_meter
 %{_bindir}/nemea/haddrscan2idea.py
 %{_bindir}/nemea/hoststats2idea.py
