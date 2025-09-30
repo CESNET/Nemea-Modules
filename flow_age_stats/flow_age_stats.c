@@ -150,7 +150,7 @@ int main(int argc, char **argv)
    TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER();
 
    FILE* out = NULL;
-   int file = NULL;
+   int file = 0;
    /**
     * Handling of arguments
    */
