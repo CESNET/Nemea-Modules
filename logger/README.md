@@ -18,6 +18,9 @@ This NEMEA module logs incoming UniRec records into stdout or into specified fil
 - `-n`             Add the number of interface the record was received on as the first field (or second when -T is specified).
 - `-c N`           Quit after N records are received.
 - `-d X`           Optionally modifies delimiter to inserted value X (implicitely ','). Delimiter has to be one character long, except for printable escape sequences.
+- `-p PATH`        Write output to rotating files using PATH as a strftime template (e.g., `/data/%Y-%m-%d/flows-%H:00.csv`). Cannot be combined with `-w` or `-a`. Parent directories are created automatically.
+- `-I N`           File rotation interval in seconds for `-p` mode (default: 3600). Timestamps are truncated to the interval boundary when computing the file path.
+- `-z`             Gzip the previous file when rotating to a new one. Requires `-p`.
 
 ### Common TRAP parameters
 - `-h [trap,1]`        Print help message for this module / for libtrap specific parameters.

@@ -62,6 +62,10 @@
 #include <unirec/unirec2csv.h>
 #include <ctype.h>
 #include <inttypes.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "fields.h"
 
 UR_FIELDS()
@@ -79,7 +83,10 @@ trap_module_info_t *module_info = NULL;
   PARAM('t', "title", "Write names of fields on the first line.", no_argument, "none") \
   PARAM('T', "time", "Add the time when the record was received as the first field.", no_argument, "none") \
   PARAM('c', "cut", "Quit after N records are received, 0 can be useful in combination with -t to print UniRec.", required_argument, "uint32") \
-  PARAM('d', "delimiter", "Optionally modifies delimiter to inserted value X (implicitly ','). Delimiter has to be one character, except for printable escape sequences.", required_argument, "string")
+  PARAM('d', "delimiter", "Optionally modifies delimiter to inserted value X (implicitly ','). Delimiter has to be one character, except for printable escape sequences.", required_argument, "string") \
+  PARAM('p', "path", "Write output to rotating files using PATH as a strftime template (e.g., /data/%Y-%m-%d/flows-%H:00.csv). Cannot be combined with -w or -a.", required_argument, "string") \
+  PARAM('I', "interval", "File rotation interval in seconds for -p mode (default: 3600). Timestamps are truncated to the interval boundary when computing the file path.", required_argument, "uint32") \
+  PARAM('z', "compress", "Gzip the previous file when rotating to a new one (requires -p).", no_argument, "none")
 
 /* If delimiter is escape sequence, assigns its value from input to delimiter var. */
 #define ESCAPE_SEQ(arg,err_cmd) do { \
@@ -116,7 +123,34 @@ unsigned int max_num_records = 0; // Exit after this number of records is receiv
 char enabled_max_num_records = 0; // Limit of message is set when non-zero
 
 static FILE *file; // Output file
+static char *path_template = NULL;
+static int rotation_interval = 3600;
+static char current_file_path[PATH_MAX] = "";
+static int compress_on_rotate = 0;
 
+
+static int mkdir_p(const char *path) {
+   char tmp[PATH_MAX];
+   char *p;
+   snprintf(tmp, sizeof(tmp), "%s", path);
+   size_t len = strlen(tmp);
+   if (len > 0 && tmp[len - 1] == '/') {
+      tmp[len - 1] = '\0';
+   }
+   for (p = tmp + 1; *p; p++) {
+      if (*p == '/') {
+         *p = '\0';
+         if (mkdir(tmp, 0755) != 0 && errno != EEXIST) {
+            return -1;
+         }
+         *p = '/';
+      }
+   }
+   if (mkdir(tmp, 0755) != 0 && errno != EEXIST) {
+      return -1;
+   }
+   return 0;
+}
 
 // Signal handler registered through TRAP_REGISTER_DEFAULT_SIGNAL_HANDLER()
 void trap_default_signal_handler(int signal)
@@ -134,6 +168,7 @@ void capture_data()
    uint8_t data_fmt = TRAP_FMT_UNKNOWN;
    urcsv_t *csv = NULL;
    char *str_out = NULL;
+   int header_per_file = print_title;
 
    if (verbose >= 1) {
       printf("Capturing started.\n");
@@ -179,7 +214,7 @@ void capture_data()
 
             csv = urcsv_init(in_template, delimiter);
 
-            if (print_title == 1 && out_template_defined == 1) {
+            if (path_template == NULL && print_title == 1 && out_template_defined == 1) {
                print_title = 0;
                // Print header - names of output UniRec fields
                if (print_time) {
@@ -226,6 +261,70 @@ void capture_data()
          }
       }
 
+      // Handle file rotation when using path template
+      if (path_template != NULL) {
+         char new_path[PATH_MAX];
+         time_t ts = time(NULL);
+         ts = (ts / rotation_interval) * rotation_interval;
+         struct tm tmp_tm;
+         localtime_r(&ts, &tmp_tm);
+         strftime(new_path, PATH_MAX, path_template, &tmp_tm);
+
+         if (strcmp(new_path, current_file_path) != 0) {
+            if (file != NULL && file != stdout) {
+               fclose(file);
+               if (compress_on_rotate && current_file_path[0] != '\0') {
+                  char cmd[PATH_MAX + 10];
+                  snprintf(cmd, sizeof(cmd), "gzip \"%s\"", current_file_path);
+                  system(cmd);
+               }
+            }
+            strncpy(current_file_path, new_path, PATH_MAX - 1);
+            current_file_path[PATH_MAX - 1] = '\0';
+
+            char dir_path[PATH_MAX];
+            strncpy(dir_path, current_file_path, PATH_MAX - 1);
+            dir_path[PATH_MAX - 1] = '\0';
+            char *last_slash = strrchr(dir_path, '/');
+            if (last_slash != NULL) {
+               *last_slash = '\0';
+               if (mkdir_p(dir_path) != 0) {
+                  fprintf(stderr, "Error: Failed to create directory '%s': %s\n",
+                          dir_path, strerror(errno));
+                  fail = 1;
+                  break;
+               }
+            }
+
+            file = fopen(current_file_path, "a");
+            if (file == NULL) {
+               fprintf(stderr, "Error: Can't open output file '%s': %s\n",
+                       current_file_path, strerror(errno));
+               fail = 1;
+               break;
+            }
+
+            if (verbose >= 0) {
+               printf("Opened new output file: %s\n", current_file_path);
+            }
+
+            if (header_per_file && csv != NULL) {
+               if (print_time) {
+                  fprintf(file, "time,");
+               }
+               str_out = urcsv_header(csv);
+               if (str_out == NULL) {
+                  fprintf(stderr, "Memory allocation error\n");
+                  fail = 1;
+                  break;
+               }
+               fprintf(file, "%s\n", str_out);
+               free(str_out);
+               fflush(file);
+            }
+         }
+      }
+
       // Print contents of received UniRec to output
       if (print_time) {
          char str[32];
@@ -249,6 +348,16 @@ void capture_data()
          break;
       }
    } // end while (!stop)
+
+   if (path_template != NULL && file != NULL && file != stdout) {
+      fclose(file);
+      file = NULL;
+      if (compress_on_rotate && current_file_path[0] != '\0') {
+         char cmd[PATH_MAX + 10];
+         snprintf(cmd, sizeof(cmd), "gzip \"%s\"", current_file_path);
+         system(cmd);
+      }
+   }
 
    urcsv_free(&csv);
 
@@ -338,11 +447,32 @@ int main(int argc, char **argv)
                             " or escape sequence.\n");
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return 1;
+      case 'z':
+         compress_on_rotate = 1;
+         break;
+      case 'p':
+         path_template = optarg;
+         break;
+      case 'I':
+         long_int_opt = strtol(optarg, NULL, 10);
+         if (long_int_opt <= 0) {
+            fprintf(stderr, "Error: -I parameter must be a positive integer.\n");
+            FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+            return 1;
+         }
+         rotation_interval = (int) long_int_opt;
+         break;
       default:
          fprintf(stderr, "Error: Invalid arguments.\n");
          FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
          return 1;
       }
+   }
+
+   if (path_template != NULL && out_filename != NULL) {
+      fprintf(stderr, "Error: -p cannot be combined with -w or -a.\n");
+      FREE_MODULE_INFO_STRUCT(MODULE_BASIC_INFO, MODULE_PARAMS)
+      return 1;
    }
 
    // ***** TRAP initialization *****
@@ -422,7 +552,7 @@ int main(int argc, char **argv)
          ret = 3;
          goto exit;
       }
-   } else {
+   } else if (path_template == NULL) {
       file = stdout;
    }
 
