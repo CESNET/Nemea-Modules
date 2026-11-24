@@ -38,6 +38,8 @@ class IdeaTemplate(object):
         self.rec = rec
         self.bl = bl
         self.protocol = ""
+        # encode potential { } characters in URL
+        bl["source"] = bl["source"].replace("{", "%7B").replace("}", "%7D")
 
         if rec["protocol"] in proto_conv:
             self.protocol = proto_conv[rec["protocol"]]
